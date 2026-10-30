@@ -1,3 +1,4 @@
+using Unciv.Models.Ruleset;
 using Unciv.Models.StatTypes;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 
@@ -80,12 +81,35 @@ public static class RulesetAssetKeys
         {
             fallbacks.Add(AssetKey.Of(Resource, resource.Name), AssetKey.Of(ResourceType, resource.ResourceType.ToString()));
         }
+        // T300: promotion levels share the icon of their base ("Accuracy II" shows "Accuracy"), a policy without art of its own shows its branch's icon
+        foreach (var promotion in ruleset.UnitPromotions.Keys)
+        {
+            var baseName = PromotionBaseName(promotion);
+            if (baseName != promotion) fallbacks.Add(AssetKey.Of(PromotionIcon, promotion), AssetKey.Of(PromotionIcon, baseName));
+            // the unique-unit "[Jaguar] ability" pseudo promotions show their unit
+            else if (promotion.StartsWith('[') && promotion.EndsWith("] ability", StringComparison.Ordinal))
+                fallbacks.Add(AssetKey.Of(PromotionIcon, promotion), AssetKey.Of(UnitIcon, promotion[1..^"] ability".Length]));
+        }
+        foreach (var policy in ruleset.Policies.Values.Where(p => p is not PolicyBranch))
+        {
+            fallbacks.Add(AssetKey.Of(PolicyIcon, policy.Name), AssetKey.Of(PolicyIcon, policy.Branch.Name));
+        }
         // C063: Unciv ships one emblem for every city-state
         foreach (var nation in ruleset.Nations.Values.Where(n => n.IsCityState))
         {
             fallbacks.Add(AssetKey.Of(NationIcon, nation.Name), AssetKey.Of(NationIcon, "CityState"));
         }
         return fallbacks;
+    }
+
+    /// <summary>T300: "Accuracy II" to "Accuracy": the promotion name without its trailing level numeral (I, II or III).</summary>
+    public static string PromotionBaseName(string promotion)
+    {
+        foreach (var suffix in new[] { " III", " II", " I" })
+        {
+            if (promotion.EndsWith(suffix, StringComparison.Ordinal)) return promotion[..^suffix.Length];
+        }
+        return promotion;
     }
 
     /// <summary>All keys the client may ask for given <paramref name="ruleset"/>, in ruleset order, defaults and fixed UI keys included.</summary>

@@ -771,6 +771,20 @@
       }
     ]
   },
+  "T300": {
+    "scenario": "icon-art",
+    "about": "No icon is a pair of letters any more. The top-bar resource chips (Iron, Pearls, Silver, Truffles, Wheat, Horses, Wine, Oil, Marble) show Unciv's pictorial icons (white silhouettes on the dark bar); an object without art (Bison, mod objects) gets the generic pictogram of its category (gem, hammer, house, flask, sword, scroll, chevrons).",
+    "shots": [
+      {
+        "golden": "icon-art/chips.png",
+        "caption": "The real HUD top bar at 1280x720 with ten resource chips: anvil, shells, goblet, truffle, wheat, horse, wine, oil, marble and (Bison, no art in Unciv) the generic gem."
+      },
+      {
+        "golden": "icon-art/gallery.png",
+        "caption": "Pack art of resources, improvements, buildings, techs, units, policies and promotions, and in the last rows the generic category pictograms a mod object without art receives."
+      }
+    ]
+  },
   "C044": {
     "scenario": "menu",
     "about": "In-game menu (Escape or the Menu button): save, load, new game, victory status, options, resign and main menu, with confirmations before destructive actions.",

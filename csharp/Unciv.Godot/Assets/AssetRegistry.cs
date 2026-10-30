@@ -38,7 +38,7 @@ public sealed class AssetRegistry
         if (cache.TryGetValue((key, typeof(T)), out var cached)) return (T)cached;
         var resolution = resolver.Resolve(key);
         T? result = null;
-        if (resolution.Path != null) result = LoadFile<T>(resolution.Path);
+        if (resolution.Path != null) result = LoadFile<T>(resolution.Path, resolution.Source == AssetSourceKind.Pack && IconTone.IsNormalised(key.Category));
         result ??= Generate<T>(key, UnitTypeOf(key));
         if (result is not Node3D) cache[(key, typeof(T))] = result;
         return result;
@@ -47,13 +47,28 @@ public sealed class AssetRegistry
     /// <summary>The stream of a sound (override <c>sound/&lt;name&gt;.ogg</c> or the generated tones), null for <see cref="UncivSound.Silent"/>.</summary>
     public AudioStream? Sound(UncivSound sound) => ProceduralSounds.KeyFor(sound) is { } key ? Get<AudioStream>(key) : null;
 
-    private static T? LoadFile<T>(string path) where T : class
+    private static T? LoadFile<T>(string path, bool lightenDark = false) where T : class
     {
         var loaded = GodotAssetFiles.Load(path);
+        if (lightenDark && loaded is ImageTexture texture) loaded = Lightened(texture);
         if (loaded is T direct) return direct;
         if (loaded is PackedScene scene && scene.Instantiate() is T instance) return instance;
         if (loaded != null) GD.PushWarning($"Asset file {path} is a {loaded.GetType().Name}, not usable as {typeof(T).Name}; using the placeholder");
         return null;
+    }
+
+    /// <summary>T300: a dark pack silhouette as a white one (see <see cref="IconTone"/>); other images unchanged.</summary>
+    private static ImageTexture Lightened(ImageTexture texture)
+    {
+        var image = texture.GetImage();
+        image.ClearMipmaps(); // the loaded texture carries its mip chain; GetData would return all of it
+        image.Convert(Image.Format.Rgba8);
+        var data = image.GetData();
+        if (!IconTone.IsDark(data)) return texture;
+        IconTone.MakeWhite(data);
+        var white = Image.CreateFromData(image.GetWidth(), image.GetHeight(), false, Image.Format.Rgba8, data);
+        white.GenerateMipmaps();
+        return ImageTexture.CreateFromImage(white);
     }
 
     /// <summary>The unit type a unit key falls back to (first unitType entry of its chain), used to pick the placeholder shape.</summary>

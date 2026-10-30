@@ -93,15 +93,8 @@
 - [T286 (ticket not Done or unknown)](#t286-ticket-not-done-or-unknown)
 - [T288 (ticket not Done or unknown)](#t288-ticket-not-done-or-unknown)
 - [T294 (ticket not Done or unknown)](#t294-ticket-not-done-or-unknown)
-- [T298 (ticket not Done or unknown)](#t298-ticket-not-done-or-unknown)
 - [T299 (ticket not Done or unknown)](#t299-ticket-not-done-or-unknown)
-- [T312 (ticket not Done or unknown)](#t312-ticket-not-done-or-unknown)
-- [T334 (ticket not Done or unknown)](#t334-ticket-not-done-or-unknown)
-- [T339 (ticket not Done or unknown)](#t339-ticket-not-done-or-unknown)
-- [T371 (ticket not Done or unknown)](#t371-ticket-not-done-or-unknown)
-- [T372 (ticket not Done or unknown)](#t372-ticket-not-done-or-unknown)
-- [T376 (ticket not Done or unknown)](#t376-ticket-not-done-or-unknown)
-- [T377 (ticket not Done or unknown)](#t377-ticket-not-done-or-unknown)
+- [T300 (ticket not Done or unknown)](#t300-ticket-not-done-or-unknown)
 - [Missing screenshots](#missing-screenshots)
 <!-- /toc -->
 
@@ -214,9 +207,9 @@ Join screen (address or invite, password, known hosts), fingerprint prompt, host
 
 Scenario `join`.
 
-![The join screen as it opens: an address-or-invite field, a password field, Join and Back; no known hosts yet. T339: a Browse public games button opens the relay's game list.](../Unciv.Godot.Harness/golden/join/empty.png)
+![The join screen as it opens: an address-or-invite field, a password field, Join and Back; no known hosts yet.](../Unciv.Godot.Harness/golden/join/empty.png)
 
-*The join screen as it opens: an address-or-invite field, a password field, Join and Back; no known hosts yet. T339: a Browse public games button opens the relay's game list.* (`join/empty.png`)
+*The join screen as it opens: an address-or-invite field, a password field, Join and Back; no known hosts yet.* (`join/empty.png`)
 
 ![First time at an address: the host's key fingerprint is shown with the advice to continue only if the host told you that fingerprint; nothing has been sent yet.](../Unciv.Godot.Harness/golden/join/trust.png)
 
@@ -395,10 +388,6 @@ Scenario `saveload`.
 ![The damaged and truncated files listed in the warning colour as Damaged next to the good saves.](../Unciv.Godot.Harness/golden/saveload/damaged.png)
 
 *The damaged and truncated files listed in the warning colour as Damaged next to the good saves.* (`saveload/damaged.png`)
-
-![T385: the game screen after loading Alpha. No floating Saves button bottom right and no status label bottom left; the outcome shows as a toast under the notifications.](../Unciv.Godot.Harness/golden/saveload/loaded.png)
-
-*T385: the game screen after loading Alpha. No floating Saves button bottom right and no status label bottom left; the outcome shows as a toast under the notifications.* (`saveload/loaded.png`)
 
 ## C017 City screen A: info, tiles, specialists, focus
 
@@ -762,9 +751,9 @@ Host screen: game, map, rules and network settings, port-forward hint, Start hos
 
 Scenario `host-screen`.
 
-![Network tab: turn timer (5 min chosen), the scale-with-the-game checkbox (on) and its shortest turn (1 min chosen), password and port. T339: the List this game publicly option is off and disabled, with the reason, while no relay is set.](../Unciv.Godot.Harness/golden/host-screen/network.png)
+![Network tab: turn timer (5 min chosen), the scale-with-the-game checkbox (on) and its shortest turn (1 min chosen), password and port.](../Unciv.Godot.Harness/golden/host-screen/network.png)
 
-*Network tab: turn timer (5 min chosen), the scale-with-the-game checkbox (on) and its shortest turn (1 min chosen), password and port. T339: the List this game publicly option is off and disabled, with the reason, while no relay is set.* (`host-screen/network.png`)
+*Network tab: turn timer (5 min chosen), the scale-with-the-game checkbox (on) and its shortest turn (1 min chosen), password and port.* (`host-screen/network.png`)
 
 ![Network tab scrolled down: the addresses of this computer (the internet address chosen) and the port-forward hint.](../Unciv.Godot.Harness/golden/host-screen/network-address.png)
 
@@ -1759,9 +1748,9 @@ Host screen dynamic turn timer: checkbox and shortest-turn choice under the turn
 
 Scenario `host-screen`.
 
-![Turn timer 5 min with 'Scale each turn's time with the game' checked and the shortest turn set to 1 min. T339: the List this game publicly option is off and disabled, with the reason, while no relay is set.](../Unciv.Godot.Harness/golden/host-screen/network.png)
+![Turn timer 5 min with 'Scale each turn's time with the game' checked and the shortest turn set to 1 min.](../Unciv.Godot.Harness/golden/host-screen/network.png)
 
-*Turn timer 5 min with 'Scale each turn's time with the game' checked and the shortest turn set to 1 min. T339: the List this game publicly option is off and disabled, with the reason, while no relay is set.* (`host-screen/network.png`)
+*Turn timer 5 min with 'Scale each turn's time with the game' checked and the shortest turn set to 1 min.* (`host-screen/network.png`)
 
 ## T256 (ticket not Done or unknown)
 
@@ -1890,20 +1879,6 @@ Documentation images rendered on an NVIDIA GeForce RTX 5060 Ti (Forward+, Vulkan
 
 *Option 4 (bronze hoplite, recommended second baseline) against the current Warrior.* (`design/images/units/warrior-options/d4-vs-current.jpg`, documentation image, not a golden)
 
-## T298 (ticket not Done or unknown)
-
-Territory borders: shared edges and remembered owners on fogged tiles.
-
-Scenario `borders`.
-
-![Japan (white) runs on into the dimmed, remembered tiles with no border where sight ends; where it meets Greece (blue) both ribbons show.](../Unciv.Godot.Harness/golden/borders/shared-and-fogged.png)
-
-*Japan (white) runs on into the dimmed, remembered tiles with no border where sight ends; where it meets Greece (blue) both ribbons show.* (`borders/shared-and-fogged.png`)
-
-![The edge Japan and Greece share, close up: each civ's ribbon lies on its own side of the edge, side by side.](../Unciv.Godot.Harness/golden/borders/shared-edge-close.png)
-
-*The edge Japan and Greece share, close up: each civ's ribbon lies on its own side of the edge, side by side.* (`borders/shared-edge-close.png`)
-
 ## T299 (ticket not Done or unknown)
 
 Tutorial pop-ups and the floating task card can be removed for good: a 'Never show tutorials' button on the popup and on the card (plus an X that hides the card for the session) turns the persisted Show tutorials setting off; it is also a toggle in Settings > Gameplay. Phone-sized touch targets (400 dpi).
@@ -1922,220 +1897,19 @@ Scenario `tutorial-dismiss`.
 
 *After Never show tutorials: no popup and no card.* (`tutorial-dismiss/gone.png`)
 
-## T312 (ticket not Done or unknown)
+## T300 (ticket not Done or unknown)
 
-Multi-resolution layout pass: every main screen at 1366x768, 1920x1080, 2560x1440, 3440x1440 (ultrawide) and 3840x2160 on the real GPU, six screens per sheet.
+No icon is a pair of letters any more. The top-bar resource chips (Iron, Pearls, Silver, Truffles, Wheat, Horses, Wine, Oil, Marble) show Unciv's pictorial icons (white silhouettes on the dark bar); an object without art (Bison, mod objects) gets the generic pictogram of its category (gem, hammer, house, flask, sword, scroll, chevrons).
 
+Scenario `icon-art`.
 
-Real-GPU (RTX 5060 Ti, Vulkan) renders of the layout-matrix scenario (design/images/layout/README.md); not goldens.
+![The real HUD top bar at 1280x720 with ten resource chips: anvil, shells, goblet, truffle, wheat, horse, wine, oil, marble and (Bison, no art in Unciv) the generic gem.](../Unciv.Godot.Harness/golden/icon-art/chips.png)
 
-![1366x768: HUD, game menu, city, tech, policies, diplomacy.](design/images/layout/1366x768-0.jpg)
+*The real HUD top bar at 1280x720 with ten resource chips: anvil, shells, goblet, truffle, wheat, horse, wine, oil, marble and (Bison, no art in Unciv) the generic gem.* (`icon-art/chips.png`)
 
-*1366x768: HUD, game menu, city, tech, policies, diplomacy.* (`design/images/layout/1366x768-0.jpg`, documentation image, not a golden)
+![Pack art of resources, improvements, buildings, techs, units, policies and promotions, and in the last rows the generic category pictograms a mod object without art receives.](../Unciv.Godot.Harness/golden/icon-art/gallery.png)
 
-![1366x768: trade, overview (stats, cities, units), espionage, Civilopedia.](design/images/layout/1366x768-1.jpg)
-
-*1366x768: trade, overview (stats, cities, units), espionage, Civilopedia.* (`design/images/layout/1366x768-1.jpg`, documentation image, not a golden)
-
-![1366x768: main menu, new game, host, lobby, join, options.](design/images/layout/1366x768-2.jpg)
-
-*1366x768: main menu, new game, host, lobby, join, options.* (`design/images/layout/1366x768-2.jpg`, documentation image, not a golden)
-
-![1920x1080: HUD, game menu, city, tech, policies, diplomacy.](design/images/layout/1920x1080-0.jpg)
-
-*1920x1080: HUD, game menu, city, tech, policies, diplomacy.* (`design/images/layout/1920x1080-0.jpg`, documentation image, not a golden)
-
-![1920x1080: trade, overview (stats, cities, units), espionage, Civilopedia.](design/images/layout/1920x1080-1.jpg)
-
-*1920x1080: trade, overview (stats, cities, units), espionage, Civilopedia.* (`design/images/layout/1920x1080-1.jpg`, documentation image, not a golden)
-
-![1920x1080: main menu, new game, host, lobby, join, options.](design/images/layout/1920x1080-2.jpg)
-
-*1920x1080: main menu, new game, host, lobby, join, options.* (`design/images/layout/1920x1080-2.jpg`, documentation image, not a golden)
-
-![2560x1440: HUD, game menu, city, tech, policies, diplomacy.](design/images/layout/2560x1440-0.jpg)
-
-*2560x1440: HUD, game menu, city, tech, policies, diplomacy.* (`design/images/layout/2560x1440-0.jpg`, documentation image, not a golden)
-
-![2560x1440: trade, overview (stats, cities, units), espionage, Civilopedia.](design/images/layout/2560x1440-1.jpg)
-
-*2560x1440: trade, overview (stats, cities, units), espionage, Civilopedia.* (`design/images/layout/2560x1440-1.jpg`, documentation image, not a golden)
-
-![2560x1440: main menu, new game, host, lobby, join, options.](design/images/layout/2560x1440-2.jpg)
-
-*2560x1440: main menu, new game, host, lobby, join, options.* (`design/images/layout/2560x1440-2.jpg`, documentation image, not a golden)
-
-![3440x1440: HUD, game menu, city, tech, policies, diplomacy.](design/images/layout/3440x1440-0.jpg)
-
-*3440x1440: HUD, game menu, city, tech, policies, diplomacy.* (`design/images/layout/3440x1440-0.jpg`, documentation image, not a golden)
-
-![3440x1440: trade, overview (stats, cities, units), espionage, Civilopedia.](design/images/layout/3440x1440-1.jpg)
-
-*3440x1440: trade, overview (stats, cities, units), espionage, Civilopedia.* (`design/images/layout/3440x1440-1.jpg`, documentation image, not a golden)
-
-![3440x1440: main menu, new game, host, lobby, join, options.](design/images/layout/3440x1440-2.jpg)
-
-*3440x1440: main menu, new game, host, lobby, join, options.* (`design/images/layout/3440x1440-2.jpg`, documentation image, not a golden)
-
-![3840x2160: HUD, game menu, city, tech, policies, diplomacy.](design/images/layout/3840x2160-0.jpg)
-
-*3840x2160: HUD, game menu, city, tech, policies, diplomacy.* (`design/images/layout/3840x2160-0.jpg`, documentation image, not a golden)
-
-![3840x2160: trade, overview (stats, cities, units), espionage, Civilopedia.](design/images/layout/3840x2160-1.jpg)
-
-*3840x2160: trade, overview (stats, cities, units), espionage, Civilopedia.* (`design/images/layout/3840x2160-1.jpg`, documentation image, not a golden)
-
-![3840x2160: main menu, new game, host, lobby, join, options.](design/images/layout/3840x2160-2.jpg)
-
-*3840x2160: main menu, new game, host, lobby, join, options.* (`design/images/layout/3840x2160-2.jpg`, documentation image, not a golden)
-
-## T334 (ticket not Done or unknown)
-
-T334: the main menu of two client instances on one computer, started with --profile=alpha and --profile=beta, and of one without a profile.
-
-Scenario `two-instances`.
-
-![Main menu of the instance started with --profile=alpha: a line 'Profile: alpha' under the logo (the window title is 'Unciv - alpha').](../Unciv.Godot.Harness/golden/two-instances/menu-alpha.png)
-
-*Main menu of the instance started with --profile=alpha: a line 'Profile: alpha' under the logo (the window title is 'Unciv - alpha').* (`two-instances/menu-alpha.png`)
-
-![The same menu for --profile=beta: 'Profile: beta', so two windows are told apart.](../Unciv.Godot.Harness/golden/two-instances/menu-beta.png)
-
-*The same menu for --profile=beta: 'Profile: beta', so two windows are told apart.* (`two-instances/menu-beta.png`)
-
-![Main menu with no profile (unchanged behaviour): no profile line.](../Unciv.Godot.Harness/golden/two-instances/menu-default.png)
-
-*Main menu with no profile (unchanged behaviour): no profile line.* (`two-instances/menu-default.png`)
-
-## T339 (ticket not Done or unknown)
-
-Browse games: the public game list of the configured relay, verified, with search, filters, a detail pane, a join dialog and a screen for each state (no relay, offline, too old, error, empty, no match).
-
-Scenario `browse`.
-
-![No relay address is set (there is no default relay): says so and offers Open Options; nothing was sent.](../Unciv.Godot.Harness/golden/browse/no-relay.png)
-
-*No relay address is set (there is no default relay): says so and offers Open Options; nothing was sent.* (`browse/no-relay.png`)
-
-![The relay could not be reached: points at the relay address and the internet connection; Refresh tries again.](../Unciv.Godot.Harness/golden/browse/offline.png)
-
-*The relay could not be reached: points at the relay address and the internet connection; Refresh tries again.* (`browse/offline.png`)
-
-![The relay is older than this game and cannot show its list.](../Unciv.Godot.Harness/golden/browse/too-old.png)
-
-*The relay is older than this game and cannot show its list.* (`browse/too-old.png`)
-
-![The relay answered something that is not its protocol: a plain error sentence and no list.](../Unciv.Godot.Harness/golden/browse/error.png)
-
-*The relay answered something that is not its protocol: a plain error sentence and no list.* (`browse/error.png`)
-
-![The relay is fine but nobody lists a game: says how to list one.](../Unciv.Godot.Harness/golden/browse/empty.png)
-
-*The relay is fine but nobody lists a game: says how to list one.* (`browse/empty.png`)
-
-![Five listed games with name, host, password flag, rules, speed and players/slots; a game on another protocol is greyed out with the reason, and Join is off until a game is picked.](../Unciv.Godot.Harness/golden/browse/list.png)
-
-*Five listed games with name, host, password flag, rules, speed and players/slots; a game on another protocol is greyed out with the reason, and Join is off until a game is picked.* (`browse/list.png`)
-
-![A game with a mod this machine lacks: the details name the mod, say joining offers to download it, label the player counts as reported by the host and show the host key as first time seen.](../Unciv.Godot.Harness/golden/browse/selected-mod.png)
-
-*A game with a mod this machine lacks: the details name the mod, say joining offers to download it, label the player counts as reported by the host and show the host key as first time seen.* (`browse/selected-mod.png`)
-
-![The search matches nothing: told apart from an empty relay.](../Unciv.Godot.Harness/golden/browse/no-match.png)
-
-*The search matches nothing: told apart from an empty relay.* (`browse/no-match.png`)
-
-![Join dialog for a host not met before: says the name and key come from whoever listed the game and that joining trusts the key from now on.](../Unciv.Godot.Harness/golden/browse/join-stranger.png)
-
-*Join dialog for a host not met before: says the name and key come from whoever listed the game and that joining trusts the key from now on.* (`browse/join-stranger.png`)
-
-![Join dialog for a password game from a known host: asks for the password and refuses an empty one.](../Unciv.Godot.Harness/golden/browse/join-password.png)
-
-*Join dialog for a password game from a known host: asks for the password and refuses an empty one.* (`browse/join-password.png`)
-
-## T371 (ticket not Done or unknown)
-
-Relay settings (Options, Multiplayer tab: address, fingerprint, Reach me through the relay, relays agreed to with Forget) and the relay trust prompt for an invite that names a relay that is not the configured one.
-
-Scenario `relay`.
-
-![Fresh install: empty address and fingerprint fields, the built-in relay named as in use, the switch usable, and what the relay's operator can see.](../Unciv.Godot.Harness/golden/relay/settings-empty.png)
-
-*Fresh install: empty address and fingerprint fields, the built-in relay named as in use, the switch usable, and what the relay's operator can see.* (`relay/settings-empty.png`)
-
-![A bare host name is refused beside the field with an example address; the typed text stays and nothing is saved.](../Unciv.Godot.Harness/golden/relay/settings-invalid.png)
-
-*A bare host name is refused beside the field with an example address; the typed text stays and nothing is saved.* (`relay/settings-invalid.png`)
-
-![A valid address and relay fingerprint are saved as soon as they are valid; no problem text and the switch is usable.](../Unciv.Godot.Harness/golden/relay/settings-saved.png)
-
-*A valid address and relay fingerprint are saved as soon as they are valid; no problem text and the switch is usable.* (`relay/settings-saved.png`)
-
-![Relays the player agreed to use for an invite are listed with a Forget button each.](../Unciv.Godot.Harness/golden/relay/settings-accepted.png)
-
-*Relays the player agreed to use for an invite are listed with a Forget button each.* (`relay/settings-accepted.png`)
-
-![An invite names another relay: the prompt names it, says what its operator can see and that yes is remembered for that relay only; nothing has been sent yet.](../Unciv.Godot.Harness/golden/relay/prompt.png)
-
-*An invite names another relay: the prompt names it, says what its operator can see and that yes is remembered for that relay only; nothing has been sent yet.* (`relay/prompt.png`)
-
-## T372 (ticket not Done or unknown)
-
-T372: a host and a joiner through a local Unciv.Relay: the friend joins by relay invite, both get ready and the joiner's game opens.
-
-Scenario `relay-session`.
-
-![The host's lobby after a friend joined through the relay: the friend sits in slot 2; Start waits for both to be ready.](../Unciv.Godot.Harness/golden/relay-session/host-lobby.png)
-
-*The host's lobby after a friend joined through the relay: the friend sits in slot 2; Start waits for both to be ready.* (`relay-session/host-lobby.png`)
-
-![The friend's lobby, reached through the relay with the pasted invite: own seat marked (you), settings read-only, only Ready and chat.](../Unciv.Godot.Harness/golden/relay-session/joiner-lobby.png)
-
-*The friend's lobby, reached through the relay with the pasted invite: own seat marked (you), settings read-only, only Ready and chat.* (`relay-session/joiner-lobby.png`)
-
-![The joiner's game screen, opened from the first snapshot that reached it through the relay.](../Unciv.Godot.Harness/golden/relay-session/game.png)
-
-*The joiner's game screen, opened from the first snapshot that reached it through the relay.* (`relay-session/game.png`)
-
-## T376 (ticket not Done or unknown)
-
-AutoPlay animations: skip, fast or normal while a run plays (no backlog behind the turns); the option in the Gameplay options.
-
-Scenario `autoplay-animations`.
-
-![Options, Gameplay tab, AutoPlay section: the AutoPlay animations picker set to Skip, between the turns slider and Full AutoPlay AI.](../Unciv.Godot.Harness/golden/autoplay-animations/options.png)
-
-*Options, Gameplay tab, AutoPlay section: the AutoPlay animations picker set to Skip, between the turns slider and Full AutoPlay AI.* (`autoplay-animations/options.png`)
-
-## T377 (ticket not Done or unknown)
-
-Border rendering fix: closed, mitred two-tone outlines of constant pixel width, checked on screen at several tilts, zooms and UI scales.
-
-Scenario `borders`.
-
-![Low tilt: the outlines stay closed and of one thickness.](../Unciv.Godot.Harness/golden/borders/low-tilt.png)
-
-*Low tilt: the outlines stay closed and of one thickness.* (`borders/low-tilt.png`)
-
-![The default view at 150% UI scale: thin two-tone outlines joined at every corner.](../Unciv.Godot.Harness/golden/borders/default-view.png)
-
-*The default view at 150% UI scale: thin two-tone outlines joined at every corner.* (`borders/default-view.png`)
-
-![Steep tilt and a turned map: the band keeps its width on slanted sides.](../Unciv.Godot.Harness/golden/borders/steep-yawed.png)
-
-*Steep tilt and a turned map: the band keeps its width on slanted sides.* (`borders/steep-yawed.png`)
-
-![Zoomed far out at 250% UI scale: the outline is still a few pixels wide and closed.](../Unciv.Godot.Harness/golden/borders/far-zoom-large-ui.png)
-
-*Zoomed far out at 250% UI scale: the outline is still a few pixels wide and closed.* (`borders/far-zoom-large-ui.png`)
-
-![Zoomed in on a turned map: the outline is capped at four scaled pixels, corners mitred.](../Unciv.Godot.Harness/golden/borders/close-yawed.png)
-
-*Zoomed in on a turned map: the outline is capped at four scaled pixels, corners mitred.* (`borders/close-yawed.png`)
-
-![Stress map, twelve crowded territories: closed outlines, shared edges in both colours, none on the ocean.](../Unciv.Godot.Harness/golden/borders-stress/whole-map.png)
-
-*Stress map, twelve crowded territories: closed outlines, shared edges in both colours, none on the ocean.* (`borders-stress/whole-map.png`)
+*Pack art of resources, improvements, buildings, techs, units, policies and promotions, and in the last rows the generic category pictograms a mod object without art receives.* (`icon-art/gallery.png`)
 
 ## Missing screenshots
 
@@ -2160,5 +1934,3 @@ Done tickets with nothing meaningful to show.
 - **C077 Victory, defeat and vote result screens**: Victory, defeat, resigned, victory status and World Congress result as Modals: shown under C024 (victory/*, defeat/*), C044 (menu/victory-status, menu/resigned) and C053 (vote-result/*), whose captions and goldens were re-recorded.
 - **C078 Hotkeys v2 and key hints**: Hotkeys v2 and key hints: the Keys tab is shown under C044 (options/listening, options/rebound), whose goldens were re-recorded; the key hints are tooltips with no golden of their own.
 - **C092 City management at scale: bulk actions and reusable build queues**: Bulk city actions on the overview cities tab: shown under C023 (overview/cities, overview/cities-bulk).
-- **C099 Android shell behaviour: back button, safe area, orientation, lifecycle autosave, virtual keyboard, hide Host, permissions**: Android shell behaviour (back button, insets, lifecycle, keyboard, hidden Host and window mode). The pure logic is unit-tested (AndroidShellTests); the feel needs a device or emulator.
-- **T311 (ticket not Done or unknown)**: A scale model, not a screen: the real-GPU scale sheet (tools/scale-sheet.sh) renders the HUD and menu at each common window size on demand and is deliberately not a CI golden; the all-screens pass with screenshots is T312.

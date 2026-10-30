@@ -9,6 +9,7 @@ settings
 settings-graphics
 props-3d
 hud
+icon-art
 flat-city
 saveload
 city-a

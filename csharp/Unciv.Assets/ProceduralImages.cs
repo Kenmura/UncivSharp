@@ -48,7 +48,7 @@ public static class ProceduralImages
     public static Rgb IconColour(AssetKey key) =>
         key.Category == RulesetAssetKeys.StatIcon ? PlaceholderPalette.ForStat(key.Name) : key.Category == RulesetAssetKeys.StatusIcon ? PlaceholderPalette.ForStatus(key.Name) : PlaceholderPalette.FromHash(key.Category + "/" + key.Name, 170, 200);
 
-    /// <summary>64x64 icon: coloured shape with a dark outline and the name's initials in a bitmap font. Transparent outside the shape.</summary>
+    /// <summary>64x64 icon: coloured shape with a dark outline and the pictogram of the key's category (T300; the name's initials only live on unit billboards). Transparent outside the shape.</summary>
     public static PixelImage Icon(AssetKey key)
     {
         var fill = IconColour(key);
@@ -66,7 +66,15 @@ public static class ProceduralImages
                 data[o] = colour.R; data[o + 1] = colour.G; data[o + 2] = colour.B; data[o + 3] = 255;
             }
         }
-        GlyphFont.Draw(data, IconSize, IconSize, GlyphFont.Initials(key.Name), PlaceholderPalette.IconGlyph, scale: 3);
+        // T300: the category's pictogram (never initials), sized to what the badge shape leaves free
+        var (box, centreY) = shape switch
+        {
+            IconShape.Diamond => (30, IconSize / 2),
+            IconShape.Triangle => (28, IconSize / 2 + 6),
+            IconShape.Ring => (30, IconSize / 2),
+            _ => (42, IconSize / 2),
+        };
+        Pictograms.Draw(data, IconSize, Pictograms.KindFor(key.Category), box, IconSize / 2, centreY);
         return new PixelImage(IconSize, IconSize, data);
     }
 

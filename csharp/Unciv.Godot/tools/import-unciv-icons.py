@@ -44,6 +44,20 @@ EXCLUDED = {
     "icon/nation/Iroquois": "Ravignir 5Hex-Tileset, no licence stated",
     "icon/nation/Songhai": "Ravignir 5Hex-Tileset, no licence stated",
     "icon/nation/The Huns": "Wikiquote file, licence not stated in Credits.md",
+    # T300: the same rule for the gameplay icons (resources, improvements, buildings, units, promotions)
+    "icon/resource/Circle": "not a resource: the round backdrop Unciv draws behind its resource icons",
+    "icon/improvement/Remove Forest": "Flaticon 'axe'",
+    "icon/improvement/Remove Jungle": "Flaticon 'axe'",
+    "icon/improvement/Remove Railroad": "GitHub contributor icon, no licence stated",
+    "icon/improvement/Remove Road": "GitHub contributor icon, no licence stated",
+    "icon/building/Heroic Epic": "derived from a Wikimedia photograph of the Iwo Jima Memorial, licence not stated in Credits.md",
+    "icon/building/Satrap's Court": "Flaticon 'mansion'",
+    "icon/building/Bomb Shelter": "Flaticon 'war shelter'",
+    "icon/unit/Persian Immortal": "Flaticon 'hoplite'",
+    "icon/unit/Anti-Aircraft Gun": "VectorStock 'artillery'",
+    "icon/unit/Nuclear Submarine": "Flaticon 'submarine'",
+    "icon/promotion/Flight Deck": "GitHub contributor icon, no licence stated",
+    "icon/promotion/Armor Plating": "GitHub contributor icon, no licence stated",
 }
 
 # (category, source folder under the repo root, licence, credit section of docs/Credits.md, stems to take or None for all)
@@ -53,15 +67,19 @@ GROUPS = [
     ("icon/action", "android/Images.ConstructionIcons/UnitActionIcons", "CC-BY-3.0", "Others", None),
     ("icon/notification", "android/Images.Icons/NotificationIcons", "CC-BY-3.0", "Others", None),
     ("icon/ui", "android/Images.Icons/OtherIcons", "CC-BY-3.0", "Others", UI_ICONS),
+    # T300: the gameplay icons, file names equal the ruleset names (the client falls back from "Accuracy II" to "Accuracy" and from a policy to its branch)
+    ("icon/resource", "android/Images.Icons/ResourceIcons", "CC-BY-3.0", "Resources", None),
+    ("icon/improvement", "android/Images.Icons/ImprovementIcons", "CC-BY-3.0", "Improvements", None),
+    ("icon/building", "android/Images.ConstructionIcons/BuildingIcons", "CC-BY-3.0", "Buildings", None),
+    ("icon/tech", "android/Images.Tech/TechIcons", "CC-BY-3.0", "Technologies", None),
+    ("icon/policy", "android/Images.PolicyIcons/PolicyIcons", "CC-BY-3.0", "Social Policies", None),
+    ("icon/policy", "android/Images.PolicyIcons/PolicyBranchIcons", "CC-BY-3.0", "Social Policies", None),
+    ("icon/promotion", "android/Images.UnitPromotionIcons/UnitPromotionIcons", "CC-BY-3.0", "Promotions", None),
+    ("icon/unit", "android/Images.ConstructionIcons/UnitIcons", "CC-BY-3.0", "Units", None),
 ]
 
-# C080: 3D models committed in the pack (made by make-unit-model.py, not copied from the Kotlin repo): key -> path in the pack. Their licence travels in CREDITS.md.
-MODELS = {"unit/Warrior": "models/unit/Warrior.glb"}
-MODEL_CREDITS = (
-    "## Models\n\n"
-    "-   `models/unit/Warrior.glb`: the Barbarian of the [KayKit Adventurers Character Pack 1.0](https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0) "
-    "by Kay Lousberg (https://kaylousberg.com), licensed CC0 1.0 (no attribution required); reduced and renamed by `Unciv.Godot/tools/make-unit-model.py`\n"
-)
+# C083 moved the unit models into their own pack (Packs/units, with its own manifest and CREDITS.md); nothing but icons is in this pack any more.
+MODELS: dict[str, str] = {}
 
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
@@ -126,7 +144,7 @@ def render_credits(credits_text):
     ]
     for section in dict.fromkeys(g[3] for g in GROUPS):
         lines += [f"## {section}", "", credit_section(credits_text, section), ""]
-    return "\n".join(lines) + "\n" + MODEL_CREDITS
+    return "\n".join(lines) + "\n"
 
 
 def main(argv):
