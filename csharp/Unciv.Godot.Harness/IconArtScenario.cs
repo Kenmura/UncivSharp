@@ -6,6 +6,7 @@ using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Ui;
 using Unciv.Harness;
 using Unciv.Queries.Empire;
+using Unciv.Utils;
 
 namespace Unciv.GodotHarness;
 
