@@ -40,6 +40,7 @@ public sealed class IconArtScenario : Scenario
         var registry = AssetRegistry.ForRuleset(game.Ruleset);
         screen.Start(localHost, registry);
         var hud = screen.Hud;
+        var uiTheme = screen.SharedTheme.NotNull();
         hud.HoldBanner = true;
         var bar = new EmpireTopBarResult(12, -3500, 214, 7f, 11f, 3f, 2f, 9, 0, 40, 200,
             Resources.Select((name, i) => new TopBarResource(name, "Strategic", 3 + i)).ToList());
@@ -55,7 +56,7 @@ public sealed class IconArtScenario : Scenario
         {
             var box = new VBoxContainer { Name = "Cell_" + key.Name.Replace(' ', '_') };
             var holder = new CenterContainer();
-            holder.AddChild(new IconLabel(screen.SharedTheme!, key, ""));
+            holder.AddChild(new IconLabel(uiTheme, key, ""));
             box.AddChild(holder);
             box.AddChild(new Label { Text = label, HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelSmall });
             return box;
@@ -63,7 +64,7 @@ public sealed class IconArtScenario : Scenario
 
         void BuildGallery()
         {
-            gallery = new PanelContainer { Name = "IconGallery", ThemeTypeVariation = UiVariants.PanelCard, Theme = screen.SharedTheme!.Theme };
+            gallery = new PanelContainer { Name = "IconGallery", ThemeTypeVariation = UiVariants.PanelCard, Theme = uiTheme.Theme };
             gallery.SetAnchorsPreset(Control.LayoutPreset.Center);
             gallery.GrowHorizontal = Control.GrowDirection.Both;
             gallery.GrowVertical = Control.GrowDirection.Both;
