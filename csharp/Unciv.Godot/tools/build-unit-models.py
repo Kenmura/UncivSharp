@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """C083 (from C080): builds the bundled unit model pack `Unciv.Godot/Packs/units` from KayKit's "Adventurers Character Pack 1.0" (CC0 1.0, Kay Lousberg, https://kaylousberg.com).
 
-    python3 -I Unciv.Godot/tools/build-unit-models.py <KayKit Characters/gltf folder> [<pack folder, default Unciv.Godot/Packs/units>]
+    python3 -I Unciv.Godot/tools/fetch-kaykit.py                       # T389: stages the pinned, hash-checked CC0 sources in Unciv.Godot/tools/kaykit-src (git-ignored)
+    python3 -I Unciv.Godot/tools/build-unit-models.py [<KayKit Characters/gltf folder, default Unciv.Godot/tools/kaykit-src>] [<pack folder, default Unciv.Godot/Packs/units>]
 
 Stdlib only, no Blender (a Blender route for new art is `blender-export-unit.py`; both produce the same contract, see design/UNIT-MODELS.md section 1). Only the glTF JSON and the binary
 chunk are rewritten. The unit list is the data file `attachments.json` of the pack:
@@ -277,10 +278,19 @@ HORSE_VARIANTS = {
     # T387: the mounted figures seen from above differ by SHAPE (a horse is a narrow box from the front, so the trappings spread sideways and upwards):
     # the camel gets a tall swayed neck with a raised head and two wide hanging pannier bags, the cavalry a broad flat saddle blanket and a bedroll across the rump, the Hakkapeliitta two tall upright
     # wings behind the rider (a V from the front), the Keshik a standard with a crossbar and hanging tails and two wide quivers
-    "camel2": [("body", (0.0, 0.58, -0.02), (0.20, 0.30, 0.24)), ("neck", (0.0, 0.78, 0.36), (0.10, 0.46, 0.10)), ("head", (0.0, 1.04, 0.5), (0.10, 0.12, 0.22)), ("head", (0.0, 1.14, 0.44), (0.04, 0.12, 0.04)),
+    "camel2": [("body", (0.0, 0.58, -0.02), (0.20, 0.30, 0.24)), ("neck", (0.0, 0.78, 0.36), (0.17, 0.46, 0.17)), ("head", (0.0, 1.04, 0.5), (0.15, 0.15, 0.26)), ("head", (0.0, 1.14, 0.44), (0.04, 0.12, 0.04)),
                ("body", (0.0, 0.2, 0.0), (0.30, 0.04, 0.5)), ("body", (0.15, 0.36, -0.02), (0.08, 0.34, 0.30)), ("body", (-0.15, 0.36, -0.02), (0.08, 0.34, 0.30)), ("body", (0.0, 0.84, -0.02), (0.06, 0.14, 0.14))],
     "blanket2": [("body", (0.0, 0.445, 0.0), (0.64, 0.03, 0.5)), ("body", (0.0, 0.6, -0.31), (0.58, 0.14, 0.14)), ("body", (0.0, 0.38, 0.27), (0.30, 0.22, 0.04)), ("body", (0.0, 0.5, 0.26), (0.5, 0.05, 0.06))],
     "wings": [("body", (0.27, 0.78, -0.26), (0.03, 0.34, 0.34)), ("body", (-0.27, 0.78, -0.26), (0.03, 0.34, 0.34)), ("body", (0.13, 0.6, -0.26), (0.26, 0.05, 0.3)), ("body", (-0.13, 0.6, -0.26), (0.26, 0.05, 0.3)), ("head", (0.0, 0.78, 0.44), (0.05, 0.16, 0.05))],
+    # T389: the six riders on plain or lightly dressed horses (Horseman, Horse Archer, Cossack, Knight, Lancer, Khan) differ from the front and back by what spreads sideways and upwards: saddle packs and
+    # a chest strap, a pair of tall quivers and a bow bar, a bedroll across the pommel and drapes, a fan of crest spikes, two tall lances, wide hanging flaps
+    "packs": [("body", (0.21, 0.3, -0.08), (0.1, 0.24, 0.28)), ("body", (-0.21, 0.3, -0.08), (0.1, 0.24, 0.28)), ("body", (0.0, 0.42, 0.28), (0.4, 0.05, 0.05))],
+    "quivers": [("body", (0.2, 0.7, -0.26), (0.09, 0.5, 0.09)), ("body", (-0.2, 0.7, -0.26), (0.09, 0.5, 0.09)), ("body", (0.0, 0.98, -0.26), (0.7, 0.05, 0.05)), ("body", (0.33, 1.06, -0.26), (0.05, 0.16, 0.05)),
+                ("body", (-0.33, 1.06, -0.26), (0.05, 0.16, 0.05)), ("body", (0.0, 0.44, 0.3), (0.36, 0.06, 0.06))],
+    "bedroll": [("body", (0.0, 0.54, 0.22), (0.56, 0.11, 0.11)), ("body", (0.17, 0.28, 0.0), (0.04, 0.32, 0.4)), ("body", (-0.17, 0.28, 0.0), (0.04, 0.32, 0.4))],
+    "fan": [("head", (0.0, 0.82, 0.42), (0.04, 0.24, 0.04)), ("head", (0.09, 0.78, 0.42), (0.04, 0.2, 0.04)), ("head", (-0.09, 0.78, 0.42), (0.04, 0.2, 0.04)), ("head", (0.0, 0.7, 0.44), (0.24, 0.04, 0.04))],
+    "lances": [("body", (0.24, 0.8, 0.05), (0.03, 0.9, 0.03)), ("body", (-0.24, 0.8, 0.05), (0.03, 0.9, 0.03)), ("body", (0.24, 1.15, 0.05), (0.14, 0.12, 0.02)), ("body", (-0.24, 1.15, 0.05), (0.14, 0.12, 0.02))],
+    "flaps": [("body", (0.25, 0.24, 0.0), (0.05, 0.34, 0.5)), ("body", (-0.25, 0.24, 0.0), (0.05, 0.34, 0.5)), ("body", (0.0, 0.47, 0.0), (0.54, 0.03, 0.46))],
     "tuq": [("body", (0.0, 0.8, -0.30), (0.03, 0.8, 0.03)), ("body", (0.0, 1.2, -0.30), (0.46, 0.03, 0.03)), ("body", (0.2, 1.04, -0.30), (0.04, 0.3, 0.04)), ("body", (-0.2, 1.04, -0.30), (0.04, 0.3, 0.04)),
             ("body", (0.0, 1.0, -0.30), (0.08, 0.1, 0.08)), ("body", (0.17, 0.56, -0.26), (0.10, 0.34, 0.12)), ("body", (-0.17, 0.56, -0.26), (0.10, 0.34, 0.12))],
 }
@@ -584,6 +594,12 @@ def clips_for(data, unit):
 
 _STYLE = []
 
+# T389: the sizes the figures are DRAWN at are baked into the models. T383/T384 enlarged them at run time (UnitVisuals.FootFigureBoost 1.3, MountedFigureBoost 1.5) because the KayKit sources were not
+# in the repository; `fetch-kaykit.py` stages them now, so the builders produce the final size and the client draws every model at its own size. RIDER_EXTRA makes the rider larger against his mount.
+FOOT_BOOST = 1.3
+MOUNTED_BOOST = 1.5
+RIDER_EXTRA = 1.3
+
 
 def style_module():
     if _STYLE:
@@ -606,9 +622,9 @@ def main(source, pack):
             continue
         doc, binary = read_glb(os.path.join(source, data["bodies"][unit["body"]]))
         if "style" in unit:  # T295: the gritty unit style (build-unit-style.py)
-            doc, binary = style_module().build(source, unit["body"], unit["keep"], clips_for(data, unit), unit["style"], look=unit.get("look"), height=unit.get("height", 0.85))  # T382: a small figure (Rifleman, Minuteman) can ask for more height
+            doc, binary = style_module().build(source, unit["body"], unit["keep"], clips_for(data, unit), unit["style"], look=unit.get("look"), height=unit.get("height", 0.85) * FOOT_BOOST, cap=FOOT_BOOST)  # T382: a small figure (Rifleman, Minuteman) can ask for more height
         else:
-            doc, binary = reduce_body(doc, binary, set(unit["keep"]), clips_for(data, unit), data["height"])
+            doc, binary = reduce_body(doc, binary, set(unit["keep"]), clips_for(data, unit), data["height"] * FOOT_BOOST)
         path = os.path.join(models, name + ".glb")
         print(f"unit/{name}: {write_glb(path, doc, binary)} bytes")
         keys[f"unit/{name}"] = f"models/unit/{name}.glb"
@@ -619,11 +635,11 @@ def main(source, pack):
         rider, rider_bin = read_glb(os.path.join(source, data["bodies"][unit["body"]]))
         clips = clips_for(data, unit)
         if "style" in unit:  # T295
-            rider, rider_bin = style_module().build(source, unit["body"], unit["keep"], clips, unit["style"], seat=mounted["seat"], rider_height=mounted["riderHeight"], look=unit.get("look"))
+            rider, rider_bin = style_module().build(source, unit["body"], unit["keep"], clips, unit["style"], seat=mounted["seat"], rider_height=mounted["riderHeight"] * MOUNTED_BOOST * RIDER_EXTRA, look=unit.get("look"), cap=MOUNTED_BOOST)
         else:
-            rider, rider_bin = reduce_body(rider, rider_bin, set(unit["keep"]), clips, mounted["riderHeight"], seat=mounted["seat"])
+            rider, rider_bin = reduce_body(rider, rider_bin, set(unit["keep"]), clips, mounted["riderHeight"] * MOUNTED_BOOST * RIDER_EXTRA, seat=mounted["seat"])
         mount = unit.get("mount", {})
-        scale = mount.get("scale", 1.0)
+        scale = mount.get("scale", 1.0) * MOUNTED_BOOST
         kind = mount.get("kind", "horse")
         _, _, _, body_y, feet, follows_body = MOUNTS[kind]
         horse, horse_bin, tracks = build_horse(scale, mount.get("colour"), kind, mount.get("variant"))
@@ -645,7 +661,11 @@ def main(source, pack):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (2, 3):
+    if len(sys.argv) > 3:
         print(__doc__)
         sys.exit(64)
-    main(sys.argv[1], sys.argv[2] if len(sys.argv) == 3 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Packs", "units"))
+    here = os.path.dirname(os.path.abspath(__file__))
+    source = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "kaykit-src")
+    if not os.path.exists(os.path.join(source, "Barbarian.glb")):
+        sys.exit(f"{source}: no KayKit sources; run `python3 -I Unciv.Godot/tools/fetch-kaykit.py` first (or pass the Characters/gltf folder of the pack)")
+    main(source, sys.argv[2] if len(sys.argv) == 3 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Packs", "units"))

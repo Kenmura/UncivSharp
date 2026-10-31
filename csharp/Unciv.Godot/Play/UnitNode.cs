@@ -84,7 +84,6 @@ public partial class UnitNode : Node3D
     /// <summary>C085: whether the unit is hidden for standing outside the camera's footprint.</summary>
     public bool Culled { get; private set; }
 
-    private float leadBoost = 1f;
 
     /// <summary>
     /// C085: draws the whole formation (<paramref name="far"/> false) or just its lead figure, enlarged to a lone figure and standing in the tile's middle (true). Hidden figures are neither
@@ -97,7 +96,7 @@ public partial class UnitNode : Node3D
         for (var i = 0; i < figures.Count; i++)
         {
             var (position, scale) = fullSlots[i];
-            if (far && i == 0) (position, scale) = (Vector3.Zero, Vector3.One * (UnitVisuals.Formation(1)[0].Scale * leadBoost));
+            if (far && i == 0) (position, scale) = (Vector3.Zero, Vector3.One * UnitVisuals.Formation(1)[0].Scale);
             figures[i].Visible = !far || i == 0;
             formationSlots[i] = position;
             if (i == 0 && figures[i].Scale != scale) MapMaterials.OutlineUnit(figures[i].GetChild<Node3D>(0), scale.X); // T384: the rim keeps its width on screen when the lead figure grows to a lone figure
@@ -182,11 +181,9 @@ public partial class UnitNode : Node3D
                 animators.Add(new UnitAnimator(player, phase));
                 animatorFigures.Add(i);
             }
-            var boost = !animatorFigures.Contains(i) ? 1f : model.FindChild("HorseMesh", true, false) == null ? UnitVisuals.FootFigureBoost : UnitVisuals.MountedFigureBoost; // T383/T384: figures with a skeleton are drawn larger, riders more than walkers
-            MapMaterials.OutlineUnit(model, formation[i].Scale * boost); // T384: the rim width follows the figure's scale
-            if (i == 0) leadBoost = boost;
+            MapMaterials.OutlineUnit(model, formation[i].Scale); // T384: the rim width follows the figure's scale
             if (i > 0) model.GetNodeOrNull("Glyphs")?.Free(); // one initials billboard for the whole group
-            var figure = new Node3D { Name = "Figure" + i, Position = new Vector3(formation[i].X, 0f, formation[i].Z), Scale = Vector3.One * (formation[i].Scale * boost) };
+            var figure = new Node3D { Name = "Figure" + i, Position = new Vector3(formation[i].X, 0f, formation[i].Z), Scale = Vector3.One * formation[i].Scale };
             figure.AddChild(model);
             AddChild(figure);
             figures.Add(figure);

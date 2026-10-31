@@ -298,12 +298,12 @@ public sealed class UnitModelContractTests
     [Fact]
     public void TooTallOrTooShortFail()
     {
-        Assert.Contains("height", Assert.Single(UnitModelContract.Check(Make(Feet, [0.1f, 1.8f, 0.1f]))));
+        Assert.Contains("height", Assert.Single(UnitModelContract.Check(Make(Feet, [0.1f, 2.2f, 0.1f]))));
         Assert.Contains("height", Assert.Single(UnitModelContract.Check(Make(Feet, [0.1f, 0.1f, 0.1f]))));
     }
 
     [Fact]
-    public void TooWideFails() => Assert.Contains("radius", Assert.Single(UnitModelContract.Check(Make([-1.3f, 0f, -0.1f], [0.1f, 0.7f, 0.1f]))));
+    public void TooWideFails() => Assert.Contains("radius", Assert.Single(UnitModelContract.Check(Make([-1.9f, 0f, -0.1f], [0.1f, 0.7f, 0.1f]))));
 
     [Fact]
     public void MissingTeamColorMaterialFails() => Assert.Contains("TeamColor", Assert.Single(UnitModelContract.Check(Make(Feet, Head, material: "Skin"))));
@@ -314,8 +314,8 @@ public sealed class UnitModelContractTests
     [Fact]
     public void ANodeScaleCountsForAnUnskinnedMeshButNotForItsOwnSkinnedOne()
     {
-        // 2 units tall box scaled by 0.35 is 0.7 tall; as a skinned mesh the node's own scale is ignored, so it is 2 tall
-        float[] tall = [0.1f, 2f, 0.1f];
+        // 2.6 units tall box scaled by 0.35 is 0.91 tall; as a skinned mesh the node's own scale is ignored, so it is 2.6 tall
+        float[] tall = [0.1f, 2.6f, 0.1f];
         const string scale = ",\"scale\":[0.35,0.35,0.35]";
         Assert.Empty(UnitModelContract.Check(Make(Feet, tall, nodeExtra: scale)));
         Assert.Contains("height", Assert.Single(UnitModelContract.Check(Make(Feet, tall, nodeExtra: scale, skin: true))));

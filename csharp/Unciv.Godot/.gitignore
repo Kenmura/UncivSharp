@@ -7,3 +7,6 @@ build/
 *.slnx
 *.uid
 Content/
+
+# T389: KayKit source bodies staged by tools/fetch-kaykit.py
+/tools/kaykit-src/

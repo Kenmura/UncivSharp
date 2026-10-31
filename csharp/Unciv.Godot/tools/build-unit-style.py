@@ -991,7 +991,7 @@ LOOKS = {
     "great_inquisitor": {"tint": dict(paint=dict(cloth=(0.28, 0.04, 0.07), wool=(0.22, 0.03, 0.06)))},
     "settler": {"linen": dict(paint=dict(cloth=(0.9,0.84,0.62), wool=(0.8,0.72,0.5)))},
     "axe": {
-        "tuft": dict(paint=dict(wool=(0.92,0.42,0.36), fur=(0.96,0.5,0.42), hide=(0.88,0.4,0.34), skin=(0.42,0.26,0.17)), hat="tuft", mantle=0.7), "cat": dict(paint=dict(fur=(0.9,0.6,0.1), wool=(0.82,0.58,0.12), hide=(0.8,0.5,0.1)), hat="cat", mantle=0.6, back="back_shield"), "horned": dict(paint=dict(fur=(0.05,0.045,0.05), wool=(0.30,0.09,0.07), hide=(0.05,0.045,0.05)), hat="horns", mantle=1.5, axe2=1.42), "raider": dict(paint=dict(fur=(0.85,0.85,0.82), wool=(0.40,0.42,0.47), hide=(0.7,0.7,0.68)), hat="crest_cap", back="pack", shield=1.4),
+        "tuft": dict(paint=dict(wool=(0.92,0.42,0.36), fur=(0.96,0.5,0.42), hide=(0.88,0.4,0.34), skin=(0.42,0.26,0.17)), hat="tuft", mantle=0.7), "cat": dict(paint=dict(fur=(0.9,0.6,0.1), wool=(0.82,0.58,0.12), hide=(0.8,0.5,0.1)), hat="cat", mantle=0.6, back="back_shield"), "horned": dict(paint=dict(fur=(0.05,0.045,0.05), wool=(0.30,0.09,0.07), hide=(0.05,0.045,0.05)), hat="horns", mantle=1.5, axe2=1.42), "raider": dict(paint=dict(fur=(0.92,0.92,0.9), wool=(0.28,0.34,0.52), hide=(0.7,0.7,0.68)), hat="crest_cap", back="pack", shield=1.4),
         "carnyx": dict(paint=dict(wool=(0.18,0.34,0.75), skin=(0.25,0.4,0.75), fur=(0.5,0.35,0.18)), hat=None, back="carnyx"), "mohawk": dict(paint=dict(wool=(0.62,0.26,0.14), skin=(0.72,0.34,0.2), fur=(0.62,0.1,0.08)), hat="mohawk", mantle=0.0), "wolf": dict(paint=dict(wool=(0.55,0.6,0.72), fur=(0.45,0.52,0.65), hide=(0.4,0.45,0.6)), hat="ushanka", mantle=1.6),
         "khan": dict(hat="horns", mantle=1.4), "cossack": dict(hat="kalpak"), "mali": dict(hat="turban", back="back_shield"),
     },
@@ -1018,7 +1018,7 @@ LOOKS = {
         "legion": dict(paint=dict(wool=(0.9,0.84,0.6), cloth=(0.9,0.84,0.6)), hat="kepi_cloth", back="bigpack"), "infantry": dict(paint=dict(wool=(0.62,0.56,0.38), iron=(0.7,0.62,0.38)), hat="stahl", back="radio"), "marine": dict(paint=dict(wool=(0.1,0.18,0.45), cloth=(0.12,0.22,0.55)), hat="boonie", gun=dict(scope=True, thick=1.5), bandolier=True), "para": dict(paint=dict(wool=(0.22,0.4,0.18), cloth=(0.22,0.4,0.18)), hat="beret", back="big_chute"),
         "mech": dict(paint=dict(wool=(0.1,0.1,0.12)), hat="cap", back=["plates", "launcher"]),
     },
-    "crew": {"mg": dict(gun="mg", hat="stahl"), "gatling": dict(gun="gatling", hat="pith"), "at": dict(gun="at", hat="brodie"), "aa": dict(gun="aa", hat="cap"), "sam": dict(gun="sam", hat="beret")},
+    "crew": {"mg": dict(gun="mg", hat="stahl"), "gatling": dict(gun="gatling", hat="pith"), "at": dict(gun="at", hat="brodie"), "aa": dict(gun="aa", hat="cap"), "sam": dict(gun="sam", hat="beret", paint=dict(iron=(0.45, 0.55, 0.28), dark=(0.34, 0.42, 0.2), cloth=(0.45, 0.55, 0.28)))},
 }
 
 
@@ -1051,11 +1051,11 @@ def repaint(prims, paint):
 LAST = {}  # development: the fit of the last unit built (see build)
 
 
-def build(folder, body, keep, clips, style_name, seat=None, rider_height=None, height=0.85, look=None):
+def build(folder, body, keep, clips, style_name, seat=None, rider_height=None, height=0.85, look=None, cap=1.0):
     """The styled model of one unit as (doc, binary): the same contract as `bum.reduce_body` (one skeleton, six clips, TeamColor, feet at y = 0).
 
     T310: the figure's scale comes from the proportioned BODY (its height must come out as `height`), never from its gear: a hat, a long gun or a pike must not shrink the unit. The gear is
-    built to fit the contract caps (radius 1.05 in the bind pose, total height 1.33; T315); `asset.extras.bodyFit` records the scale actually used over the full-size scale (1.0 = full size) and
+    built to fit the contract caps (radius 1.05 in the bind pose, total height 1.33; T315; T389: times `cap`, the baked draw size); `asset.extras.bodyFit` records the scale actually used over the full-size scale (1.0 = full size) and
     `UnitSilhouetteTests` demands at least 0.97."""
     rider = bool(seat)
     look_name = look
@@ -1098,11 +1098,11 @@ def build(folder, body, keep, clips, style_name, seat=None, rider_height=None, h
     else:
         full = height / (plain_hi[1] - plain_lo[1])
         radius = max(abs(lo[0]), abs(hi[0]), abs(lo[2]), abs(hi[2]))  # the contract measures the bind pose (arms out, a long gun held sideways): at most 1.05 (T315: contract 1.1)
-        scale = min(full, 1.33 / (hi[1] - lo[1]), 1.05 / radius)
+        scale = min(full, 1.33 * cap / (hi[1] - lo[1]), 1.05 * cap / radius)
         fit = scale / full
         rig["scale"] = [scale] * 3
         rig["translation"] = [0.0, -lo[1] * scale, 0.0]
-        LAST.update(fit=fit, radius_fit=1.05 / radius / full, height_fit=1.33 / (hi[1] - lo[1]) / full)
+        LAST.update(fit=fit, radius_fit=1.05 * cap / radius / full, height_fit=1.33 * cap / (hi[1] - lo[1]) / full)
         if os.environ.get("UNCIV_STYLE_DEBUG"):
             print(f"  fit {style_name}/{look_name}: {fit:.3f} (radius {LAST['radius_fit']:.3f}, height {LAST['height_fit']:.3f})", file=sys.stderr)
     m.doc["asset"] = {"version": "2.0", "generator": "build-unit-style.py (T295)", "extras": {"bodyFit": round(fit, 3)}}

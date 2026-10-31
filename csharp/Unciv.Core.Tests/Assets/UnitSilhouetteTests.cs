@@ -13,7 +13,10 @@ namespace Unciv.Core.Tests.Assets;
 /// </summary>
 public sealed class UnitSilhouetteTests
 {
-    private const int W = 40, H = 56;
+    /// <summary>T389: the frame is 60x90 (was 40x56) at the SAME pixel density (<see cref="PixelsPerUnit"/>, 56 pixels per 1.15 world units): the models now carry their drawn size (foot 1.3, mounted 1.5 times the old one), and the old frame would have cut them off at 0.9 tile units.</summary>
+    private const int W = 60, H = 90;
+    private const float PixelsPerUnit = 56f / 1.15f;
+    private const float FeetRow = H - 0.22f * 56f;
     private const float Pitch = 50f * MathF.PI / 180f;
     /// <summary>Two foot units of different styles (axe, spear, bow, rifle, ...): at least this far apart (1 - intersection over union), averaged over the four sides. T310: checked for EVERY pair of units, not one
     /// representative per style.</summary>
@@ -135,10 +138,10 @@ public sealed class UnitSilhouetteTests
     private static bool[] Rasterise(IEnumerable<(Vector2 A, Vector2 B, Vector2 C)> tris, int scale)
     {
         int w = W * scale, h = H * scale;
-        // a fixed scale: one world unit is 1/1.15 of the mask's height, so a taller or wider unit really covers more of it; the origin is the middle of the feet
+        // a fixed scale: one world unit is 1/1.15 of the old 56 pixel mask height, so a taller or wider unit really covers more of it; the origin is the middle of the feet
         var mask = new bool[w * h];
-        float Sx(float x) => w / 2f + x * (h / 1.15f);
-        float Sy(float y) => h * 0.78f - y * (h / 1.15f);
+        float Sx(float x) => w / 2f + x * PixelsPerUnit * scale;
+        float Sy(float y) => FeetRow * scale - y * PixelsPerUnit * scale;
         foreach (var (a, b, c) in tris)
         {
             var pa = new Vector2(Sx(a.X), Sy(a.Y));
@@ -285,7 +288,7 @@ public sealed class UnitSilhouetteTests
                     var a = Vector3.Transform(t.A, yaw);
                     var b = Vector3.Transform(t.B, yaw);
                     var c = Vector3.Transform(t.C, yaw);
-                    Vector2 Screen(Vector3 v) { var p = Project(v); return new Vector2(W / 2f + p.X * (H / 1.15f), H * 0.78f - p.Y * (H / 1.15f)); }
+                    Vector2 Screen(Vector3 v) { var p = Project(v); return new Vector2(W / 2f + p.X * PixelsPerUnit, FeetRow - p.Y * PixelsPerUnit); }
                     float Near(Vector3 v) => v.Z * MathF.Cos(Pitch) + v.Y * MathF.Sin(Pitch);
                     var (sa, sb, sc) = (Screen(a), Screen(b), Screen(c));
                     var area = Edge(sa, sb, sc);
@@ -782,12 +785,8 @@ public sealed class UnitSilhouetteTests
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
-    /// <summary>T383: foot figures (skeleton, no mount) are drawn at least this much larger than their modelled size (UnitNode applies it; the harness unit-visuals scenario checks the nodes).</summary>
-    [Fact]
-    public void FootFiguresAreDrawnLargerThanTheyAreModelled() => Assert.True(Unciv.Assets.UnitVisuals.FootFigureBoost >= 1.25f);
-
-    /// <summary>T383: every foot figure, as drawn (mask pixels of the model times the square of <see cref="Unciv.Assets.UnitVisuals.FootFigureBoost"/>), covers at least this many pixels of the 40x56 frame (measured minimum 634, Crossbowman).</summary>
-    private const int MinT383DrawnFootCoverage = 600;
+    /// <summary>T383: every foot figure, as drawn (T389: the models carry their drawn size, so the mask pixels are the drawn pixels), covers at least this many pixels of the 40x56 frame (T389: measured minimum 747, Crossbowman; raised from 600, Archer, Crossbowman, Scout, Bowman, Slinger, Atlatlist, Mehal Sefari and Infantry are modelled at height 0.95).</summary>
+    private const int MinT383DrawnFootCoverage = 740;
 
     [Fact]
     public void EveryFootFigureAsDrawnIsBigEnough()
@@ -795,14 +794,14 @@ public sealed class UnitSilhouetteTests
         var failures = new List<string>();
         foreach (var name in Units().Foot.Select(it => it.Name).Concat(["Rifleman", "Minuteman", "Musketman"]).Distinct())
         {
-            var pixels = Masks(name).Average(m => m.Count(on => on)) * Unciv.Assets.UnitVisuals.FootFigureBoost * Unciv.Assets.UnitVisuals.FootFigureBoost;
+            var pixels = Masks(name).Average(m => m.Count(on => on));
             if (pixels < MinT383DrawnFootCoverage) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{name} covers {pixels:0} pixels as drawn, need {MinT383DrawnFootCoverage}"));
         }
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
-    /// <summary>T384: every mounted figure, as drawn (mask pixels times the square of <see cref="Unciv.Assets.UnitVisuals.MountedFigureBoost"/>), covers at least this many pixels of the 40x56 frame (measured minimum 1123, Horse Archer; the T383 size, unboosted, was 499).</summary>
-    private const int MinT384DrawnMountedCoverage = 1000;
+    /// <summary>T384: every mounted figure, as drawn (T389: the model's own mask pixels), covers at least this many pixels of the 40x56 frame (T389: measured minimum 1311, Chariot Archer, raised from 1000; was 1123, Horse Archer; the T383 size, unboosted, was 499).</summary>
+    private const int MinT384DrawnMountedCoverage = 1300;
 
     [Fact]
     public void EveryMountedFigureAsDrawnIsBigEnough()
@@ -810,18 +809,14 @@ public sealed class UnitSilhouetteTests
         var failures = new List<string>();
         foreach (var name in Units().Mounted.Select(it => it.Name))
         {
-            var pixels = Masks(name).Average(m => m.Count(on => on)) * Unciv.Assets.UnitVisuals.MountedFigureBoost * Unciv.Assets.UnitVisuals.MountedFigureBoost;
+            var pixels = Masks(name).Average(m => m.Count(on => on));
             if (pixels < MinT384DrawnMountedCoverage) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{name} covers {pixels:0} pixels as drawn, need {MinT384DrawnMountedCoverage}"));
         }
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
-    /// <summary>T384: riders are drawn larger than walkers (they were not boosted at all in T383).</summary>
-    [Fact]
-    public void MountedFiguresAreDrawnLargerThanFootFigures() => Assert.True(Unciv.Assets.UnitVisuals.MountedFigureBoost >= Unciv.Assets.UnitVisuals.FootFigureBoost + 0.15f);
-
-    /// <summary>T387: the five mounted figures that were told apart by colour more than by shape from above (Camel Archer, War Elephant, Cavalry, Hakkapeliitta, Keshik), their outlines (average of the four sides, 40x56) at least this far apart (measured minimum 0.284, Cavalry and Hakkapeliitta; before T387 0.244, Camel Archer and Cavalry) AND whose mounts' coats are at least <see cref="MinT387MountedCoat"/> apart (linear RGB).</summary>
-    private const float MinT387MountedOutline = 0.28f;
+    /// <summary>T387: the five mounted figures that were told apart by colour more than by shape from above (Camel Archer, War Elephant, Cavalry, Hakkapeliitta, Keshik), their outlines (average of the four sides, 60x90 since T389) at least this far apart (T389: measured minimum 0.302, raised from 0.28; was 0.284, Cavalry and Hakkapeliitta; before T387 0.244, Camel Archer and Cavalry) AND whose mounts' coats are at least <see cref="MinT387MountedCoat"/> apart (linear RGB).</summary>
+    private const float MinT387MountedOutline = 0.30f;
 
     private const float MinT387MountedCoat = 0.25f;
 
@@ -839,5 +834,26 @@ public sealed class UnitSilhouetteTests
                 if (d < MinT387MountedOutline) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{names[i]} and {names[j]}: outlines differ by {d:0.000}, need {MinT387MountedOutline:0.00}"));
             }
         Assert.True(failures.Count == 0, string.Join(" | ", failures));
+    }
+
+    /// <summary>T389: the six riders of plain or lightly dressed horses (Horseman, Horse Archer, Cossack, Knight, Lancer, Khan), seen from the front and the back (sides 0 and 2, where a horse is a narrow stack under
+    /// its rider), at least this far apart by outline alone (measured minimum 0.305, Knight and Lancer; before T389 the three plain-horse riders were plain boxes).</summary>
+    private const float MinT389FrontBackOutline = 0.30f;
+
+    [Fact]
+    public void ThePlainHorseRidersDifferByShapeFromTheFrontAndBack()
+    {
+        string[] names = ["Horseman", "Horse Archer", "Cossack", "Knight", "Lancer", "Khan"];
+        var failures = new List<string>();
+        float min = 9f;
+        for (int i = 0; i < names.Length; i++)
+            for (int j = i + 1; j < names.Length; j++)
+            {
+                var (a, b) = (Masks(names[i]), Masks(names[j]));
+                float d = new[] { 0, 2 }.Average(side => 1f - (float)a[side].Zip(b[side], (x, y) => x && y).Count(on => on) / a[side].Zip(b[side], (x, y) => x || y).Count(on => on));
+                min = MathF.Min(min, d);
+                if (d < MinT389FrontBackOutline) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{names[i]} and {names[j]}: front and back outlines differ by {d:0.000}, need {MinT389FrontBackOutline:0.00}"));
+            }
+        Assert.True(failures.Count == 0 && min > 0f, string.Join(" | ", failures) + string.Create(CultureInfo.InvariantCulture, $" MIN={min:0.000}"));
     }
 }

@@ -25,10 +25,10 @@ public static class UnitModelContract
     public static readonly IReadOnlyList<string> ClipNames = [IdleClip, WalkClip, AttackClip, RangedAttackClip, HitClip, DeathClip];
 
     public const float MinHeight = 0.4f;
-    /// <summary>T315: 1.35 (was 1.0) so a spear, pike or lance can be longer than the man (a figure stands 0.85 high); the body itself is still 0.85.</summary>
-    public const float MaxHeight = 1.35f;
-    /// <summary>Wider than the 0.25 of the plan because a rig stands in its bind pose (arms out, a crossbow held out front) here (0.5 until C083 added the crossbow bodies; T315: 1.1, because in the bind pose a held spear or pike lies forward at full length: it stands up in the idle pose, so only the bind pose is this wide); the footprint of the playing animation is the art pipeline's concern.</summary>
-    public const float MaxRadius = 1.1f;
+    /// <summary>T315: 1.35 (was 1.0) so a spear, pike or lance can be longer than the man (a figure stands 0.85 high); the body itself is still 0.85. T389: 2.0, because the models now carry the size they are drawn at (foot figures 1.3 and mounted figures 1.5 times the old size, the African Forest Elephant is 1.575 high) instead of the client enlarging them at run time.</summary>
+    public const float MaxHeight = 2.0f;
+    /// <summary>T389: 1.65 (was 1.1, the baked 1.5 mounted size; a chariot's rider with his spear is 1.106 wide). Wider than the 0.25 of the plan because a rig stands in its bind pose (arms out, a crossbow held out front) here (0.5 until C083 added the crossbow bodies; T315: 1.1, because in the bind pose a held spear or pike lies forward at full length: it stands up in the idle pose, so only the bind pose is this wide); the footprint of the playing animation is the art pipeline's concern.</summary>
+    public const float MaxRadius = 1.65f;
     public const float FeetTolerance = 0.02f;
 
     /// <summary>Everything wrong with the file, empty when it satisfies the contract.</summary>
