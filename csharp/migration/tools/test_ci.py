@@ -190,6 +190,74 @@ class ClientPlatforms(unittest.TestCase):
         self.assertIn("Unciv-client-$platform.zip", package)
 
 
+class ReleaseAndroid(unittest.TestCase):
+    """T391: release.py builds the (NOT device-tested) APK as an optional client; missing prerequisites only warn."""
+
+    def setUp(self):
+        self.rel = ClientPlatforms().load("release")
+        self.assets = ClientPlatforms().load("release_assets")
+
+    def test_android_is_an_extra_platform_not_a_desktop_archive(self):
+        self.assertEqual(self.rel.ANDROID_PLATFORM, "android")
+        self.assertNotIn("android", self.rel.CLIENT_PLATFORMS)
+        self.assertEqual(self.rel.ANDROID_MISSING_EXIT, 3)
+        self.assertIn("exit 3", (REPO / "csharp" / "Unciv.Godot" / "tools" / "package.sh").read_text(encoding="utf-8"))
+
+    def test_dry_run_lists_android_and_the_skip_flags_remove_it(self):
+        def dry(*flags):
+            r = subprocess.run(["python3", "-I", str(HERE / "release.py"), "T1", "--dry-run", *flags], capture_output=True, text=True)
+            return r.stdout
+        self.assertIn("'android'", dry())
+        self.assertIn("'android'", dry("--client-only"))
+        for flag in ("--no-android", "--linux-only", "--cli-only"):
+            self.assertNotIn("android", dry(flag).split("dry run")[-1], flag)
+
+    def build(self, code, apk_files):
+        import zipfile
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            fake = mock.Mock(returncode=code, stdout="", stderr="needs sdk")
+            if code == 0:
+                (t / "csharp").mkdir()
+                apk = t / "csharp" / "Unciv.Godot" / "build" / "android" / "Unciv.apk"
+                apk.parent.mkdir(parents=True)
+                with zipfile.ZipFile(apk, "w") as z:
+                    for n in apk_files:
+                        z.writestr(n, "x")
+            with mock.patch.object(self.rel, "CSHARP", t / "csharp"), mock.patch.object(self.rel.subprocess, "run", return_value=fake):
+                stage = t / "stage"
+                stage.mkdir()
+                with mock.patch("sys.stderr") as err:
+                    ok = self.rel.build_android(stage)
+                warned = "".join(c.args[0] for c in err.write.call_args_list)
+                return ok, (stage / "client-android" / self.assets.ANDROID_APK).exists(), warned
+
+    def test_missing_prerequisites_leave_it_out_with_a_warning(self):
+        ok, present, warned = self.build(3, [])
+        self.assertFalse(ok)
+        self.assertFalse(present)
+        self.assertIn("WARNING android", warned)
+        self.assertIn("missing", warned)
+
+    def test_build_failure_also_only_warns(self):
+        ok, _, warned = self.build(1, [])
+        self.assertFalse(ok)
+        self.assertIn("exit 1", warned)
+
+    def test_good_apk_is_copied_under_the_release_name(self):
+        ok, present, _ = self.build(0, ["lib/arm64-v8a/libgodot_android.so"])
+        self.assertTrue(ok)
+        self.assertTrue(present)
+
+    def test_apk_without_the_arm64_library_is_left_out(self):
+        ok, present, warned = self.build(0, ["AndroidManifest.xml"])
+        self.assertFalse(ok)
+        self.assertFalse(present)
+        self.assertIn("arm64", warned)
+
+
 class CheckPackage(unittest.TestCase):
     """T258: check_package.py accepts a complete archive and names what is missing or too small."""
 

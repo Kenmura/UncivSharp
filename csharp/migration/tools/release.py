@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the CLI and the Godot client from the current (clean) tree and publish them to <repo>/csharp-releases/.
 
-Usage: release.py T### [--cli-only | --client-only] [--linux-only] [--keep N] [--force] [--dry-run] [--keep-tmp]
+Usage: release.py T### [--cli-only | --client-only] [--linux-only] [--no-android] [--keep N] [--force] [--dry-run] [--keep-tmp]
 
 ticket.py runs this after every `state T### Done`. The folder sits next to `csharp/` in the main checkout (never inside a worktree, which is
 removed when its agent finishes):
@@ -14,6 +14,9 @@ removed when its agent finishes):
     csharp-releases/<ticket>-<shortsha>/client-linux/   Unciv.Godot/tools/package.sh linux (self-contained: Godot export with the .NET runtime, data/jsons, fonts, LICENSE, notices)
     csharp-releases/<ticket>-<shortsha>/client-windows/ and client-macos/   the same for the other platforms (T258; --linux-only skips them). Only the Linux build is ever run
                                                        (smoke-export.sh in CI); Windows and macOS are checked for file presence and size (check_package.py) and are UNVERIFIED otherwise.
+    csharp-releases/<ticket>-<shortsha>/client-android/Unciv-client-android-arm64.apk   package.sh android (T391): the debug-signed arm64 APK, checked like release_assets.py verify
+                                                       (a zip holding the arm64 Godot library). NOT device-tested (T278). Optional: with no Android SDK / JDK / export templates (or any build
+                                                       failure) it is left out with a WARNING and the release goes on. --linux-only, --cli-only and --no-android skip it.
     csharp-releases/<ticket>-<shortsha>/manifest.json   ticket, commit, tree, build time, what was built
     csharp-releases/latest -> newest version (only moves forward: a build of a commit older than the current latest never replaces it)
     csharp-releases/releases.log                         one line per release
@@ -40,6 +43,8 @@ RID = "linux-x64"
 SERVER_RIDS = ["linux-x64", "win-x64"]  # T266: release_assets.SERVER_RIDS (a unit test keeps them equal)
 RELAY_RIDS = ["linux-x64", "win-x64"]  # T366: release_assets.RELAY_RIDS (a unit test keeps them equal)
 CLIENT_PLATFORMS = ["linux", "windows", "macos"]  # T258: default client platforms; T279 builds the same list, in the same order, as release archives
+ANDROID_PLATFORM = "android"  # T391: optional extra client (package.sh android -> build/android/Unciv.apk); not a desktop archive, so not in CLIENT_PLATFORMS
+ANDROID_MISSING_EXIT = 3  # package.sh android exits 3 when the SDK / JDK / export templates are missing
 
 
 def git(*args, check=True):
@@ -92,6 +97,39 @@ def run(name, cmd, crash_retries=0):
     if r.returncode:
         print("\n".join((r.stdout + r.stderr).splitlines()[-30:]), file=sys.stderr)
         die(f"{name} failed (exit {r.returncode})" + (f" after {crash_retries + 1} attempts" if r.returncode in CRASH_CODES and crash_retries else ""))
+
+
+def build_android(stage):
+    """T391: build the debug-signed arm64 APK and copy it to stage/client-android. Returns True when it was built and checked; False (with a WARNING) when
+    the Android prerequisites are missing or the build fails: the APK is optional and never fails a release."""
+    cmd = in_container(f"cd {shlex.quote(str(CSHARP))} && Unciv.Godot/tools/package.sh {ANDROID_PLATFORM}")
+    print(f"release: package client ({ANDROID_PLATFORM}) ...", flush=True)
+    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    if r.returncode:
+        print("\n".join((r.stdout + r.stderr).splitlines()[-30:]), file=sys.stderr)
+        why = "the Android SDK / JDK / export templates are missing" if r.returncode == ANDROID_MISSING_EXIT else f"the build failed (exit {r.returncode})"
+        print(f"release: WARNING android client left out of this release: {why} (see Unciv.Godot/tools/install-export-templates.sh; the other clients are unaffected)", file=sys.stderr)
+        return False
+    assets = _assets()
+    apk = CSHARP / "Unciv.Godot" / "build" / "android" / "Unciv.apk"
+    out = stage / "client-android"
+    out.mkdir()
+    shutil.copy2(apk, out / assets.ANDROID_APK)
+    problems = assets.check_apk(out / assets.ANDROID_APK)
+    if problems:
+        shutil.rmtree(out, ignore_errors=True)
+        print(f"release: WARNING android client left out of this release: {problems[0]}", file=sys.stderr)
+        return False
+    return True
+
+
+def _assets():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("release_assets", HERE / "tools" / "release_assets.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def smoke_cli(cli_dir):
@@ -170,22 +208,23 @@ def point_latest(root, name):
 
 def main(argv):
     if not argv or argv[0].startswith("-"):
-        die("usage: release.py T### [--cli-only | --client-only] [--linux-only] [--keep N] [--force] [--dry-run] [--keep-tmp]", 2)
+        die("usage: release.py T### [--cli-only | --client-only] [--linux-only] [--no-android] [--keep N] [--force] [--dry-run] [--keep-tmp]", 2)
     tid, opts = argv[0], argv[1:]
     cli = "--client-only" not in opts
     client = "--cli-only" not in opts
     platforms = ["linux"] if "--linux-only" in opts else CLIENT_PLATFORMS
+    android = client and "--linux-only" not in opts and "--no-android" not in opts
     force, dry = "--force" in opts, "--dry-run" in opts
     keep = int(opts[opts.index("--keep") + 1]) if "--keep" in opts else KEEP_DEFAULT
-    if git("status", "--porcelain").stdout.strip():
-        die("the worktree has uncommitted changes; a release must be built from a committed tree")
     sha = git("rev-parse", "HEAD").stdout.strip()
     tree = git("rev-parse", "HEAD^{tree}").stdout.strip()
     name = f"{tid}-{sha[:9]}"
     root = releases_root()
     print(f"release: {tid} @ {sha[:9]} -> {root}/{name}")
+    if not dry and git("status", "--porcelain").stdout.strip():
+        die("the worktree has uncommitted changes; a release must be built from a committed tree")
     if dry:
-        print(f"release: dry run (cli={cli}, client={client}, platforms={platforms}, keep={keep})")
+        print(f"release: dry run (cli={cli}, client={client}, platforms={platforms + ([ANDROID_PLATFORM] if android else [])}, keep={keep})")
         return
     root.mkdir(parents=True, exist_ok=True)
     if not force:
@@ -250,6 +289,8 @@ def main(argv):
                     continue
                 shutil.copytree(CSHARP / "Unciv.Godot" / "build" / platform, stage / f"client-{platform}", symlinks=True)
                 built.append(f"client-{platform}")
+            if android and build_android(stage):
+                built.append("client-android")
         manifest = {"ticket": tid, "commit": sha, "tree": tree, "built": int(time.time()), "contents": built}
         (stage / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
         with open(root / ".lock", "w") as lock:

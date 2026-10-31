@@ -250,6 +250,17 @@ def write_sums(directory):
     return lines
 
 
+def check_apk(path):
+    """T391: problems with an APK file (a zip holding the arm64 Godot library); release.py uses the same check for its local build."""
+    try:
+        with zipfile.ZipFile(path) as apk:
+            if "lib/arm64-v8a/libgodot_android.so" not in apk.namelist():
+                return [f"{ANDROID_APK}: lacks lib/arm64-v8a/libgodot_android.so"]
+    except (zipfile.BadZipFile, OSError):
+        return [f"{ANDROID_APK}: not a zip/APK"]
+    return []
+
+
 def verify(directory):
     """Problems (empty when fine): the file set is exactly the expected one plus SHA256SUMS, the sums match, client archives pass check_package."""
     directory = Path(directory)
@@ -263,12 +274,7 @@ def verify(directory):
         digest, _, name = line.partition("  ")
         if hashlib.sha256((directory / name).read_bytes()).hexdigest() != digest:
             problems.append(f"{name}: checksum does not match {SUMS}")
-    try:
-        with zipfile.ZipFile(directory / ANDROID_APK) as apk:
-            if "lib/arm64-v8a/libgodot_android.so" not in apk.namelist():
-                problems.append(f"{ANDROID_APK}: lacks lib/arm64-v8a/libgodot_android.so")
-    except zipfile.BadZipFile:
-        problems.append(f"{ANDROID_APK}: not a zip/APK")
+    problems += check_apk(directory / ANDROID_APK)
     checker = _load("check_package")
     for platform, name in client_archive_names().items():
         problems += [f"{name}: {p}" for p in checker.check(platform, directory / name)]
