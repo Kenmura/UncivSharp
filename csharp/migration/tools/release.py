@@ -114,7 +114,12 @@ def build_android(stage):
     apk = CSHARP / "Unciv.Godot" / "build" / "android" / "Unciv.apk"
     out = stage / "client-android"
     out.mkdir()
-    shutil.copy2(apk, out / assets.ANDROID_APK)
+    try:
+        shutil.copy2(apk, out / assets.ANDROID_APK)
+    except OSError as e:  # package.sh exited 0 but left no APK: still only a warning
+        shutil.rmtree(out, ignore_errors=True)
+        print(f"release: WARNING android client left out of this release: no APK produced ({e})", file=sys.stderr)
+        return False
     problems = assets.check_apk(out / assets.ANDROID_APK)
     if problems:
         shutil.rmtree(out, ignore_errors=True)

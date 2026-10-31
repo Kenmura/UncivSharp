@@ -251,6 +251,19 @@ class ReleaseAndroid(unittest.TestCase):
         self.assertTrue(ok)
         self.assertTrue(present)
 
+    def test_exit_zero_without_an_apk_only_warns(self):
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            (t / "csharp").mkdir()
+            stage = t / "stage"
+            stage.mkdir()
+            with mock.patch.object(self.rel, "CSHARP", t / "csharp"), mock.patch.object(self.rel.subprocess, "run", return_value=mock.Mock(returncode=0, stdout="", stderr="")):
+                with mock.patch("sys.stderr"):
+                    self.assertFalse(self.rel.build_android(stage))
+            self.assertFalse((stage / "client-android").exists())
+
     def test_apk_without_the_arm64_library_is_left_out(self):
         ok, present, warned = self.build(0, ["AndroidManifest.xml"])
         self.assertFalse(ok)
