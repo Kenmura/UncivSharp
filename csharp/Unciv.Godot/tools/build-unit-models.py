@@ -382,7 +382,13 @@ def head_part(size, forward=0.08):
     return ("head", *rotated_box(NECK_TOP, (0.0, 0.0, forward), size, HEAD_TILT))
 
 
-SHAPED_HORSE_PARTS = [p for p in HORSE_PARTS if p[0] not in ("neck", "head", "tail")] + [
+def hoofed_leg(joint, x, z):
+    """T396: a leg with a thigh, a thin shank and a hoof instead of one stick, so the legs read under a dressed horse (rigid on the leg joint, in the horse's frame)."""
+    back = -0.02 if z < 0 else 0.0
+    return [(joint, (x, 0.19, z + back), (0.09, 0.14, 0.11)), (joint, (x, 0.075, z), (0.05, 0.13, 0.05)), (joint, (x, 0.02, z + 0.012), (0.07, 0.04, 0.09))]
+
+
+SHAPED_HORSE_PARTS = [p for p in HORSE_PARTS if p[0] not in ("neck", "head", "tail") and not p[0].startswith("leg_")] + [leg for j, x, z in (("leg_fl", 0.07, 0.20), ("leg_fr", -0.07, 0.20), ("leg_bl", 0.07, -0.20), ("leg_br", -0.07, -0.20)) for leg in hoofed_leg(j, x, z)] + [
     ("body", (0.0, 0.34, 0.17), (0.22, 0.25, 0.20)),  # deep chest
     ("body", (0.0, 0.33, -0.19), (0.21, 0.23, 0.17)),  # round rump
     neck_part((0.10, 0.34, 0.13)),
@@ -403,6 +409,34 @@ HORSE_VARIANTS["drape"] = [("body", (0.0, 0.22, -0.38), (0.32, 0.4, 0.04)), ("bo
 HORSE_VARIANTS["cantle"][3] = ("head", (0.0, NECK_TOP[1] + 0.12, NECK_TOP[2] + 0.04), (0.12, 0.2, 0.05))
 HORSE_VARIANTS["fan"] = [("head", (0.0, NECK_TOP[1] + 0.16, NECK_TOP[2]), (0.04, 0.24, 0.04)), ("head", (0.09, NECK_TOP[1] + 0.12, NECK_TOP[2]), (0.04, 0.2, 0.04)), ("head", (-0.09, NECK_TOP[1] + 0.12, NECK_TOP[2]), (0.04, 0.2, 0.04)),
                          ("head", (0.0, NECK_TOP[1] + 0.04, NECK_TOP[2] + 0.02), (0.24, 0.04, 0.04))]
+
+
+def hem(x, top, height, half, tabs=(-0.1, 0.1), tab_drop=0.09, thick=0.03):
+    """T396: a side cloth that stops at the belly: a panel from `top` down `height` over the barrel plus short tabs below it (a scalloped hem) that leave the legs at +-0.2 free. The old cloths hung 0.36 tall from the
+    back to the ground and hid the legs and the whole body from the side (a cloth box); the silhouette from the front and the back is unchanged (the panels stay at the same width)."""
+    centre = top - height / 2
+    parts = [("body", (x, centre, 0.0), (thick, height, half * 2))]
+    parts += [("body", (x, top - height - tab_drop / 2, z), (thick, tab_drop, 0.1)) for z in tabs]
+    return parts
+
+
+def hem_pair(x, top, height, half, **kw):
+    return hem(x, top, height, half, **kw) + hem(-x, top, height, half, **kw)
+
+
+def flare(z, sign, angle=0.6):
+    """T396: a cloth hanging in front of the chest (sign +1) or behind the rump (-1) and flaring outwards at the hem, seen in profile as a swallow tail."""
+    return ("body", *rotated_box((0.0, 0.4, 0.3 * sign), (0.0, -0.17, 0.0), (0.26, 0.36, 0.03), -sign * angle))
+
+
+HORSE_VARIANTS["caparison"] = hem_pair(0.125, 0.39, 0.17, 0.25, tabs=(-0.1, 0.0, 0.1), tab_drop=0.15) + [flare(0.3, 1), flare(-0.3, -1)]
+# the Mandekalu Cavalry's plain long robe: a straight side cloth without tabs and flat front and back cloths (the Knight's caparison has a scalloped hem and flared cloths)
+HORSE_VARIANTS["robe"] = hem_pair(0.125, 0.4, 0.2, 0.25, tabs=()) + [("body", (0.0, 0.33, 0.29), (0.26, 0.22, 0.03)), ("body", (0.0, 0.33, -0.29), (0.26, 0.22, 0.03))]
+HORSE_VARIANTS["barded"] = hem_pair(0.115, 0.41, 0.19, 0.22, tabs=(-0.08, 0.08), tab_drop=0.09) + HORSE_VARIANTS["barded"][2:]
+HORSE_VARIANTS["cataphract"] = hem_pair(0.13, 0.41, 0.2, 0.28, tabs=(-0.12, 0.0, 0.12), tab_drop=0.12) + [("body", (0.0, 0.33, 0.29), (0.28, 0.24, 0.03)), ("body", (0.0, 0.33, -0.29), (0.28, 0.24, 0.03))] + HORSE_VARIANTS["cataphract"][4:]
+HORSE_VARIANTS["bedroll"] = [("body", (0.0, 0.54, 0.22), (0.56, 0.11, 0.11))] + hem_pair(0.17, 0.4, 0.16, 0.2, tabs=(), thick=0.04)
+HORSE_VARIANTS["drape"] = [("body", (0.0, 0.3, -0.38), (0.32, 0.26, 0.04)), ("body", (0.0, 0.29, 0.36), (0.3, 0.24, 0.04)), ("body", (0.0, 0.5, -0.36), (0.3, 0.08, 0.18))]
+HORSE_VARIANTS["flaps"] = hem_pair(0.25, 0.44, 0.14, 0.25, tabs=(-0.12, 0.0, 0.12), tab_drop=0.12, thick=0.05) + [("body", (0.0, 0.47, 0.0), (0.54, 0.03, 0.46))]
 HORSE_VARIANTS["wings"][4] = ("head", (0.0, NECK_TOP[1] + 0.14, NECK_TOP[2] + 0.02), (0.05, 0.16, 0.05))
 
 def build_horse(scale=1.0, colour=None, kind="horse", variant=None):

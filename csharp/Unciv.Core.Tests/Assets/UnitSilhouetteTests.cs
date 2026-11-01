@@ -883,4 +883,31 @@ public sealed class UnitSilhouetteTests
         if (coat < MinT393HorsemanKhanCoat) failures.Add(string.Create(CultureInfo.InvariantCulture, $"Horseman and Khan: coats differ by {coat:0.000}, need {MinT393HorsemanKhanCoat:0.00}"));
         Assert.True(failures.Count == 0, string.Join(" | ", failures) + string.Create(CultureInfo.InvariantCulture, $" MIN={min:0.000} {worst} COAT={coat:0.000}"));
     }
+
+    /// <summary>T396: the legs of every horse are visible from the side. The fine side masks (sides 1 and 3, 3x) are cut by pixel rows just above the hooves (rows 2, 6, 10, 14 and 18 above the lowest filled row, 0.07 to 0.4 of a leg): in each of them
+    /// the front legs and the rear legs must be two separate shapes (at least two runs of filled pixels). A shape guard rather than an outline distance: T393's distance test passed on the old box horses (0.179 against 0.17), and the old
+    /// cloths (a caparison, plate barding, flaps, a bedroll, hanging 0.36 tall from the back to the ground) merged both pairs of legs into one block in these rows (Knight, Cataphract, Cossack, Khan: one run; mutation-checked by
+    /// restoring the T393 models). The camel keeps its own legs and is left out.</summary>
+    private static readonly int[] LegRows = [2, 6, 10, 14, 18];
+
+    [Fact]
+    public void EveryHorseShowsItsFrontAndRearLegsFromTheSide()
+    {
+        var (_, mounted) = Units();
+        var failures = new List<string>();
+        foreach (var u in mounted.Where(u => u.Mount.StartsWith("horse", StringComparison.Ordinal) && !u.Mount.Contains("camel", StringComparison.Ordinal)))
+            foreach (int side in new[] { 1, 3 })
+            {
+                var m = Masks(u.Name, FineScale)[side];
+                int w = W * FineScale, h = H * FineScale;
+                int bottom = Enumerable.Range(0, h).Last(y => Enumerable.Range(0, w).Any(x => m[y * w + x]));
+                foreach (int dy in LegRows)
+                {
+                    int y = bottom - dy, runs = 0;
+                    for (int x = 0; x < w; x++) if (m[y * w + x] && (x == 0 || !m[y * w + x - 1])) runs++;
+                    if (runs < 2) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{u.Name} side {side}: {runs} run(s) {dy} rows above the hooves (legs hidden)"));
+                }
+            }
+        Assert.True(failures.Count == 0, string.Join(" | ", failures));
+    }
 }
