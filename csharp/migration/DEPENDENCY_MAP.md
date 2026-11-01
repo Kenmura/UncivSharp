@@ -89,7 +89,8 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T355 T357 T394 T404
-- in progress: T402 T403
+- in progress: T402
+- in review: T403
 - blocked: T290
 - waiting: T275 T313 T314 T317 T318 T321 T326 T328 T329 T330 T331 T332 T333 T335 T340 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363 T400 T401
 
@@ -177,4 +178,4 @@ xychart-beta
 | T400 | Available (waiting on ) | none | 0 | Pictorial icons for the Brave New World objects still on the generic category pictogram (about 130 buildings, units, policies, promotions, resources) |
 | T401 | Available (waiting on ) | T274 | 0 | Host migration: crash election for a relay-only successor (voters reach the successor through its relay room) |
 | T402 | In-Progress [Claude] | none | 0 | Flaky gate tests: RelayOperationsTests SIGHUP certificate reload and CliTests under load |
-| T403 | In-Progress [Claude] | none | 0 | Android client export segfaults (Godot exit 139) in release T303-89c5c6258; latest release lacks an APK |
+| T403 | Needs-Review [Claude] | none | 0 | Android client export segfaults (Godot exit 139) in release T303-89c5c6258; latest release lacks an APK |
