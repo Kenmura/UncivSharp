@@ -19,9 +19,9 @@ Work is completed phase by phase (`phases.txt`; `ticket.py ready`/`next` list ea
 
 | Phase | Done | Remaining | Ready | In flight | Remaining tickets |
 |---|---|---|---|---|---|
-| Phase 1: CLI (headless engine) | 231/232 | 1 | 1 | 0 | [T402](backlog/T402.md) |
+| Phase 1: CLI (headless engine) | 231/231 | 0 | 0 | 0 | complete |
 | Phase 2: single player (Godot client) | 57/57 | 0 | 0 | 0 | complete |
-| Phase 3: multiplayer | 74/77 | 3 | 3 | 0 | [T355](backlog/T355.md) [T357](backlog/T357.md) [T394](backlog/T394.md) |
+| Phase 3: multiplayer | 74/78 | 4 | 4 | 0 | [T355](backlog/T355.md) [T357](backlog/T357.md) [T394](backlog/T394.md) [T402](backlog/T402.md) |
 | Phase 4: queued plans (UI redesign, unit models, BNW) | 75/81 | 6 | 0 | 0 | [T317](backlog/T317.md) [T318](backlog/T318.md) [T321](backlog/T321.md) [T326](backlog/T326.md) [T328](backlog/T328.md) [T329](backlog/T329.md) |
 | Phase 5: owner issue backlog (Android, performance, ultra graphics, dedicated server, resiliency) | 55/88 | 33 | 0 | 2 | [T275](backlog/T275.md) [T278](backlog/T278.md) [T290](backlog/T290.md) [T301](backlog/T301.md) [T303](backlog/T303.md) [T305](backlog/T305.md) [T306](backlog/T306.md) [T313](backlog/T313.md) [T314](backlog/T314.md) [T325](backlog/T325.md) [T330](backlog/T330.md) [T331](backlog/T331.md) [T332](backlog/T332.md) [T333](backlog/T333.md) [T335](backlog/T335.md) [T340](backlog/T340.md) [T341](backlog/T341.md) [T342](backlog/T342.md) [T343](backlog/T343.md) [T344](backlog/T344.md) [T345](backlog/T345.md) [T346](backlog/T346.md) [T347](backlog/T347.md) [T348](backlog/T348.md) [T349](backlog/T349.md) [T350](backlog/T350.md) [T351](backlog/T351.md) [T352](backlog/T352.md) [T353](backlog/T353.md) [T362](backlog/T362.md) [T363](backlog/T363.md) [T400](backlog/T400.md) [T401](backlog/T401.md) |
 
