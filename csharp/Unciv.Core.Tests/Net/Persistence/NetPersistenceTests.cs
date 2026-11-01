@@ -997,7 +997,7 @@ public sealed class NetPersistenceTests : IDisposable
             FailNextWrite = false;
             inner.Write(buffer, offset, count / 2);
             inner.Flush();
-            throw new IOException("No space left on device");
+            throw new IOException("simulated full disk (T402: must not match the TMP EXHAUSTED text the gate hides)");
         }
 
         protected override void Dispose(bool disposing)

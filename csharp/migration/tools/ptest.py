@@ -419,7 +419,7 @@ def run_main():
 
     quota = [f for f in failures if runtmp.mentions_exhaustion(f[1])]
     logs_mention = any(runtmp.mentions_exhaustion(open(os.path.join(d, "output.log"), errors="replace").read()) for _l, _t, _p, d, _g in running)
-    if quota or logs_mention:
+    if quota or (logs_mention and (bad or failures)):
         # one clear cause instead of dozens of opaque failures (T402)
         print("ptest: TMP EXHAUSTED during the run: %d of %d failure(s) are 'Disk quota exceeded' / 'No space left on device', "
               "not test defects. %s" % (len(quota), len(failures), runtmp.exhaustion_message() or
