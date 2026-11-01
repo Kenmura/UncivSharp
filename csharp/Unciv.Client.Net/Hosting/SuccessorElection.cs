@@ -25,6 +25,7 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
     private CancellationTokenSource? acceptStop;
     private Task? acceptLoop;
     private string? fingerprint;
+    private int? standbyPort; // set while this election has taken the announced port from the standby listener
 
     /// <summary>The cycle in progress (null while idle), for tests and the host screen; read only.</summary>
     public ElectionTally? Tally
@@ -68,7 +69,11 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
         finally
         {
             lock (gate) tally = null;
-            if (promotion.Host == null) await StopListeningAsync().ConfigureAwait(false);
+            if (promotion.Host == null)
+            {
+                await StopListeningAsync().ConfigureAwait(false);
+                await RestoreStandbyListenerAsync().ConfigureAwait(false);
+            }
         }
     }
 
@@ -124,13 +129,33 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
     {
         if (listener != null) return;
         if (successor.Endpoints.Count == 0) return; // a relay-only successor has no announced TCP port; voters cannot reach it (recorded in the ticket Notes)
-        promotion.Listener?.Stop(); // T282: the standby listener holds the announced port until the election takes it over
         var port = PortOfEndpoint(successor.Endpoints[0]);
+        if (promotion.Listener != null)
+        {
+            promotion.Listener.Stop(); // T282: the standby listener holds the announced port until the election takes it over
+            standbyPort = port;
+        }
         var started = new TcpTlsListener(certificate, port, TimeSpan.FromSeconds(5));
         started.Start();
         listener = started;
         acceptStop = new CancellationTokenSource();
         acceptLoop = AcceptLoopAsync(started, acceptStop.Token);
+    }
+
+    // The host came back (or the session ended) without a promotion: the port goes back to a standby listener, so the host's reprobe still finds a ready successor. A stopped StandbyListener cannot restart, so a new one takes over its relay room.
+    private async Task RestoreStandbyListenerAsync()
+    {
+        if (standbyPort is not { } port || promotion.Listener is not { } old) return;
+        standbyPort = null;
+        var fresh = new StandbyListener(certificate, port, relay: old.DetachRelay()) { ConnectionLimit = old.ConnectionLimit, ConnectionLifetime = old.ConnectionLifetime };
+        try { fresh.Start(); }
+        catch (System.Net.Sockets.SocketException)
+        {
+            await fresh.DisposeAsync().ConfigureAwait(false); // the port was taken meanwhile: the host's reprobe will say so
+            return;
+        }
+        promotion.Listener = fresh;
+        await old.DisposeAsync().ConfigureAwait(false);
     }
 
     private async Task AcceptLoopAsync(TcpTlsListener tcp, CancellationToken token)

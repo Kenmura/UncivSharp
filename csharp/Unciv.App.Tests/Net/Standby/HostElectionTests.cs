@@ -567,6 +567,46 @@ public sealed class HostElectionTests : IDisposable
         Assert.Null(rig.Successor.Promotion!.Host);
     }
 
+    // T282 hand-off: the successor keeps a StandbyListener on the announced port; the election takes the port for the vote and gives it to the promoted host, or back to a standby listener when the host returned.
+    private static async Task<string?> ProbeAsync(int port) =>
+        await new TlsEndpointProber().PresentedFingerprintAsync("127.0.0.1", port, TimeSpan.FromSeconds(3), CancellationToken.None);
+
+    [Fact]
+    public async Task A6_TheElectionTakesThePortFromTheStandbyListener_AndAHostThatReturnsGetsItBackAsAStandbyListener()
+    {
+        var rig = await ReadyAsync("a6-standby-back", tcp: true);
+        var fingerprint = HostCertificate.GetFingerprint(rig.SuccessorCert);
+        rig.Successor.Promotion!.Listener = Track(new StandbyListener(rig.SuccessorCert, rig.SuccessorPort));
+        rig.Successor.Promotion.Listener!.Start();
+        Assert.True(HostKey.Matches(await ProbeAsync(rig.SuccessorPort), fingerprint));
+        var info = rig.Successor.Session.Successor!;
+        var election = rig.Successor.Election!;
+
+        using var cancel = new CancellationTokenSource();
+        var running = election.Handler(new HostLossInfo(rig.Host.GameId, 0, info.Successor!, info.Roster, true, 0, false), cancel.Token);
+        await WaitUntilAsync(() => election.Tally != null, "the election never started");
+        Assert.Null(rig.Successor.Promotion.Host);
+        await cancel.CancelAsync(); // the old host answered again
+        Assert.Null(await running);
+
+        Assert.True(HostKey.Matches(await ProbeAsync(rig.SuccessorPort), fingerprint), "the port was not given back to a standby listener");
+        Assert.NotNull(rig.Successor.Promotion.Listener);
+    }
+
+    [Fact]
+    public async Task A6_TheElectionWithAStandbyListenerOnThePort_PromotesAHostThatListensOnThatPort()
+    {
+        var rig = await ReadyAsync("a6-standby-port", tcp: true);
+        rig.Successor.Promotion!.Listener = Track(new StandbyListener(rig.SuccessorCert, rig.SuccessorPort));
+        rig.Successor.Promotion.Listener!.Start();
+        await MidTurnAsync(rig);
+        await KillHostAsync(rig);
+        await AdvanceAsync(25);
+        await rig.Third.Tap.WaitAsync<HostChanged>(it => it.Epoch == 1);
+        var promoted = rig.Successor.Promotion.Host!;
+        Assert.Equal(rig.SuccessorPort, promoted.Port);
+    }
+
     [Fact]
     public async Task A8_HostAndSuccessorBothGone_ClientsGiveUp_AndTheStandbyDirectoryResumesAtTheNextEpoch()
     {
