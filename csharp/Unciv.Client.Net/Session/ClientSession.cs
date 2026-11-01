@@ -10,6 +10,7 @@ using Unciv.Net.Mods;
 using Unciv.Net.Relay;
 using Unciv.Net.Remote;
 using Unciv.Net.Standby;
+using Unciv.Net.Turns;
 using Unciv.Queries;
 using CommandResult = Unciv.Net.CommandResult;
 
@@ -96,6 +97,31 @@ public sealed class ClientSessionOptions
     public Action<PromotionProof>? PersistEpochProof { get; init; }
 
     public int MaxReconnectAttempts { get; init; } = 5;
+
+    // ---- T274: crash election (design/HOST-MIGRATION.md section 2)
+
+    /// <summary>T274: the election timers (host-loss window, reconnect grace, give-up time). The defaults are the design's.</summary>
+    public ElectionLimits Election { get; init; } = new();
+
+    /// <summary>T274: the clock of the loss timers (the default is the system clock; tests pass a manual one).</summary>
+    public IClock? Clock { get; init; }
+
+    /// <summary>T274: how often a session without its host retries it and looks at the successor (the election runs on this poll, not on <see cref="ReconnectDelay"/>).</summary>
+    public TimeSpan ElectionPoll { get; init; } = TimeSpan.FromSeconds(3);
+
+    /// <summary>T274: the epoch this player already voted for (with <see cref="VotedCandidate"/>), loaded by the UI layer from its per-game store: a player votes for one candidate per epoch and never for another after a restart.</summary>
+    public int? VotedEpoch { get; init; }
+
+    public string? VotedCandidate { get; init; }
+
+    /// <summary>T274: called before a vote is sent, so the UI layer persists "voted for this candidate at this epoch".</summary>
+    public Action<int, string>? PersistVote { get; init; }
+
+    /// <summary>
+    /// T274: only for the designated successor's own session. Called in the background when its link to the host has been dead for the host-loss window (or the player forces a take-over); it runs the election
+    /// (<c>SuccessorElection.Handler</c>), promotes the standby copy at quorum and returns the connector of its own new host, or null when it was cancelled (the host came back). A throw gives up the election.
+    /// </summary>
+    public Func<HostLossInfo, CancellationToken, Task<Func<CancellationToken, Task<ITransport>>?>>? OnHostLost { get; init; }
 
     /// <summary>T292: waits before resubscribe attempt n (1-based) after the host answered a subscribe or stopped its stream with <c>standby-protocol</c>. The default backs off 1, 2, 4, ... 30 seconds; tests pass an immediate one.</summary>
     public Func<int, CancellationToken, Task> StandbyResubscribeDelay { get; init; } =
@@ -193,6 +219,22 @@ public sealed class ClientSession : IAsyncDisposable
     private PromotionProof? epochProof;
     private PromotionProof? pendingProof;
 
+    // T274: crash election state (receive-loop task only, except where noted).
+    private bool redirectIsElection;
+    private long lossStart = -1; // clock time of the last frame from the lost host, -1 while connected
+    private long lastFrameAt;
+    private bool lossAnnounced;
+    private int votedEpoch;
+    private string? votedCandidate;
+    private int voteRotation;
+    private volatile bool forceTakeOver;
+    private bool electionDisabled;
+    private bool staleWelcome; // the host answered below the epoch this session knows, and the handshake only continues so that it can be fenced
+    private bool skipElectionStep; // the old host was just seen alive: the next pass reconnects to it instead of looking at the successor again
+    private Task<Func<CancellationToken, Task<ITransport>>?>? electionTask;
+    private CancellationTokenSource? electionCts;
+    private readonly IClock clock;
+
     // T272: standby replication (receive-loop state; one connection at a time).
     // T292: the frames are applied (and fsynced) by a worker, not the receive loop, so a slow disk never delays heartbeats, pongs or the game stream. Everything below up to standbyHave is guarded by standbyGate
     // (the worker applies under it; closing the store waits for the frame in progress).
@@ -232,6 +274,9 @@ public sealed class ClientSession : IAsyncDisposable
         hostAddress = options.HostAddress;
         expectedFingerprint = options.ExpectedFingerprint;
         epochProof = options.EpochProof;
+        clock = options.Clock ?? SystemClock.Instance;
+        votedEpoch = options.VotedEpoch ?? 0;
+        votedCandidate = options.VotedCandidate;
         var random = options.Random ?? SystemSecureRandom.Instance;
         Span<byte> bytes = stackalloc byte[6];
         random.Fill(bytes);
@@ -684,10 +729,7 @@ public sealed class ClientSession : IAsyncDisposable
             Emit(new ProtocolError(ClientCodes.InternalError));
             await EndAsync(ClientCodes.InternalError, refused: false).ConfigureAwait(false);
         }
-        catch (OperationCanceledException)
-        {
-            await EndAsync("disposed", refused: false).ConfigureAwait(false);
-        }
+        catch (OperationCanceledException) { await EndAsync("disposed", refused: false).ConfigureAwait(false); }
     }
 
     private async Task RunLoopAsync()
@@ -696,6 +738,17 @@ public sealed class ClientSession : IAsyncDisposable
         var attempt = 0;
         while (!stopped)
         {
+            // T274: "Take over now" does not wait for the old host (which may be alive): the election step runs at once.
+            if (redirect == null && forceTakeOver && IsSuccessorSelf() && !electionDisabled)
+            {
+                await ElectionStepAsync(token).ConfigureAwait(false);
+                if (redirect == null)
+                {
+                    try { await Task.Delay(options.ElectionPoll, token).ConfigureAwait(false); }
+                    catch (OperationCanceledException) { break; }
+                    continue;
+                }
+            }
             ITransport? current = null;
             string? connectCode = null; // T338: why a relay refused, so the player is told "host gone" and not just "could not connect"
             connectionSettled = false;
@@ -726,6 +779,27 @@ public sealed class ClientSession : IAsyncDisposable
                 desyncAnnounced = true;
                 Emit(new Desynchronized("reconnect"));
             }
+            if (ElectionMode())
+            {
+                // T274: with a reachable successor announced, the attempt cap gives way to the give-up time; the successor is looked at (voted for, or promoted) on every poll.
+                var lost = lossStart >= 0 ? lossStart : lastFrameAt;
+                if (clock.NowMillis - lost >= options.Election.GiveUpSeconds * 1000L)
+                {
+                    Emit(new ElectionGaveUp());
+                    await EndAsync(ClientCodes.GaveUp, refused: false).ConfigureAwait(false);
+                    return;
+                }
+                SetState(ClientSessionState.Reconnecting);
+                FailWaiters();
+                if (redirect == null && !skipElectionStep) await ElectionStepAsync(token).ConfigureAwait(false);
+                skipElectionStep = false;
+                if (stopped) break;
+                attempt++;
+                if (redirect != null && redirectIsElection && !redirectAnnounced) continue; // the successor is the host now: connect to it at once
+                try { await Task.Delay(options.ElectionPoll, token).ConfigureAwait(false); }
+                catch (OperationCanceledException) { break; }
+                continue;
+            }
             if (++attempt > options.MaxReconnectAttempts)
             {
                 await EndAsync("reconnect-failed", refused: false).ConfigureAwait(false);
@@ -737,6 +811,189 @@ public sealed class ClientSession : IAsyncDisposable
             catch (OperationCanceledException) { break; }
         }
     }
+
+    // ------------------------------------------------------------ T274: crash election
+
+    private bool IsSuccessorSelf() =>
+        options.OnHostLost != null && Successor?.Successor is { } info && string.Equals(info.KeyId, options.Identity.PlayerKey, StringComparison.Ordinal);
+
+    // An election runs while a reachable successor is announced (the host names one only after its probe passed) and this session can take part (vote through ConnectEndpoint, or be the successor with OnHostLost);
+    // an election redirect that has not joined yet also stays in it. After a joined redirect the session is an ordinary client of its new host (a second election needs a new designation, not supported).
+    private bool ElectionMode()
+    {
+        if (electionDisabled || !everJoined || gameId == null) return false;
+        if (redirectIsElection && !redirectAnnounced) return true;
+        if (redirect != null || (!gameStarted && Game.Snapshot == null)) return false;
+        return Successor?.Successor != null && (IsSuccessorSelf() || options.ConnectEndpoint != null);
+    }
+
+    private HostLossInfo BuildLossInfo(SuccessorInfo info, bool forced) => new(
+        gameId!, connectionEpoch, info, Successor?.Roster ?? [],
+        clock.NowMillis - lastFrameAt < options.Election.RosterMaxAgeSeconds * 1000L, StandbyHaveSeq, forced);
+
+    private async Task ElectionStepAsync(CancellationToken token)
+    {
+        if (Successor?.Successor is not { } info || gameId == null) return;
+        var forced = forceTakeOver;
+        var lost = lossStart >= 0 ? lossStart : lastFrameAt;
+        var window = Math.Max(options.Election.HostLossSeconds, options.Election.ReconnectGraceSeconds) * 1000L;
+        if (!forced && clock.NowMillis - lost < window) return;
+        if (!lossAnnounced)
+        {
+            lossAnnounced = true;
+            Emit(new HostLossDetected(connectionEpoch));
+        }
+        if (IsSuccessorSelf()) await StepAsSuccessorAsync(info, forced, token).ConfigureAwait(false);
+        else await VoteAsync(info, token).ConfigureAwait(false);
+    }
+
+    private async Task StepAsSuccessorAsync(SuccessorInfo info, bool forced, CancellationToken token)
+    {
+        if (electionTask == null)
+        {
+            electionCts = CancellationTokenSource.CreateLinkedTokenSource(token);
+            var load = BuildLossInfo(info, forced);
+            var ct = electionCts.Token;
+            electionTask = Task.Run(() => options.OnHostLost!(load, ct), CancellationToken.None);
+        }
+        if (!electionTask.IsCompleted) return;
+        var task = electionTask;
+        electionTask = null;
+        electionCts?.Dispose();
+        electionCts = null;
+        try
+        {
+            var connector = await task.ConfigureAwait(false);
+            if (connector != null) StartElectionRedirect(info, connector);
+        }
+        catch (OperationCanceledException) { /* the host came back (or the session ended) */ }
+        catch (Exception)
+        {
+            Emit(new ProtocolError(ClientCodes.BadPromotion)); // this process could not promote; nobody else can host the game from here
+            electionDisabled = true;
+            forceTakeOver = false;
+        }
+    }
+
+    private void CancelElection()
+    {
+        lossStart = -1;
+        lossAnnounced = false;
+        forceTakeOver = false;
+        electionCts?.Cancel();
+    }
+
+    private void StartElectionRedirect(SuccessorInfo info, Func<CancellationToken, Task<ITransport>>? connector)
+    {
+        redirect = new HostHandoff { GameId = gameId!, Epoch = connectionEpoch + 1, Successor = info, FinalSeq = -1, FinalHash = "" };
+        redirectIsElection = true;
+        redirectPrepared = true;
+        redirectAnnounced = false;
+        redirectConnector = connector;
+        hostAddress = info.Endpoints[0];
+        expectedFingerprint = info.Fingerprint;
+        forceTakeOver = false;
+    }
+
+    /// <summary>
+    /// T274: the successor's player forces the take-over ("Take over now"): the link to the old host is dropped and the successor promotes at once, with no quorum (an explicit local action, fenced by the epoch like any promotion).
+    /// Other players who still reach the old host refuse the new host (<see cref="ClientCodes.HostStillAlive"/>) and stay with it. False when this session is not the announced successor's or no game runs.
+    /// </summary>
+    public async Task<bool> TakeOverNowAsync()
+    {
+        if (stopped || !everJoined || gameId == null || electionDisabled || redirect != null || !IsSuccessorSelf()) return false;
+        forceTakeOver = true;
+        var current = transport;
+        if (current != null)
+        {
+            try { await current.CloseAsync().ConfigureAwait(false); }
+            catch (Exception e) when (IsConnectionGone(e)) { /* already gone */ }
+        }
+        return true;
+    }
+
+    // A voter: once the host has been gone for the loss window, say Hello at the successor's endpoint. A successor still waiting for its own window answers not-host-yet; one that issues a challenge gets this player's signed vote
+    // (persisted before it is sent: one candidate per epoch); one that already is the host answers with a Welcome, and the session follows it like a hand-off.
+    private async Task VoteAsync(SuccessorInfo info, CancellationToken token)
+    {
+        var connectEndpoint = options.ConnectEndpoint;
+        if (connectEndpoint == null || info.Endpoints.Count == 0) return;
+        var epoch = connectionEpoch + 1;
+        if (votedEpoch == epoch && !string.Equals(votedCandidate, info.KeyId, StringComparison.Ordinal)) return; // never a second candidate for the same epoch
+        var endpoint = info.Endpoints[voteRotation++ % info.Endpoints.Count];
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(token);
+        limit.CancelAfter(options.HandshakeTimeout);
+        ITransport? probe = null;
+        try
+        {
+            probe = await connectEndpoint(endpoint, limit.Token).ConfigureAwait(false);
+            await probe.SendAsync(ProtocolCodec.Encode(BuildHello()), limit.Token).ConfigureAwait(false);
+            var frame = await probe.ReceiveAsync(limit.Token).ConfigureAwait(false);
+            if (frame == null) return;
+            switch (ProtocolCodec.Decode(frame))
+            {
+                case ElectionChallenge challenge when challenge.Epoch == epoch && string.Equals(challenge.GameId, gameId, StringComparison.Ordinal) && HostKey.Matches(challenge.HostKeyFingerprint, info.Fingerprint):
+                    votedEpoch = epoch;
+                    votedCandidate = info.KeyId;
+                    options.PersistVote?.Invoke(epoch, info.KeyId);
+                    var vote = options.Identity.SignLossVote(gameId!, epoch, info.KeyId, Game.Snapshot?.Seq ?? -1, challenge.Nonce);
+                    await probe.SendAsync(ProtocolCodec.Encode(vote), limit.Token).ConfigureAwait(false);
+                    var reply = await probe.ReceiveAsync(limit.Token).ConfigureAwait(false);
+                    if (reply != null && ProtocolCodec.Decode(reply) is HostLossVoteResult result) Emit(new VoteCast(epoch, info.KeyId, result.Accepted));
+                    break;
+                case Welcome welcome when (welcome.Epoch ?? 0) == epoch && HostKey.Matches(welcome.HostKeyFingerprint, info.Fingerprint):
+                    StartElectionRedirect(info, null);
+                    break;
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception) { /* unreachable, refused, malformed: tried again on the next poll */ }
+        finally
+        {
+            if (probe != null)
+            {
+                try { await probe.CloseAsync().ConfigureAwait(false); } catch (Exception e) when (e is IOException or ObjectDisposedException or InvalidOperationException) { }
+            }
+        }
+    }
+
+    // A higher-epoch host is only followed by a player who really lost the old one: a last look at the old address, and a Welcome from it means the host is alive (a take-over on a healthy host).
+    private async Task<bool> OldHostAliveAsync(CancellationToken token)
+    {
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(token);
+        limit.CancelAfter(TimeSpan.FromSeconds(3));
+        ITransport? probe = null;
+        try
+        {
+            probe = await connect(limit.Token).ConfigureAwait(false);
+            await probe.SendAsync(ProtocolCodec.Encode(BuildHello()), limit.Token).ConfigureAwait(false);
+            var frame = await probe.ReceiveAsync(limit.Token).ConfigureAwait(false);
+            return frame != null && ProtocolCodec.Decode(frame) is Welcome welcome && (welcome.Epoch ?? 0) <= connectionEpoch;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch (Exception) { return false; }
+        finally
+        {
+            if (probe != null)
+            {
+                try { await probe.CloseAsync().ConfigureAwait(false); } catch (Exception e) when (e is IOException or ObjectDisposedException or InvalidOperationException) { }
+            }
+        }
+    }
+
+    private Hello BuildHello() => new()
+    {
+        Protocol = ProtocolVersion.Current,
+        ClientVersion = options.ClientVersion,
+        RulesetHash = options.RulesetHash,
+        ModList = options.ModList,
+        ModSync = options.ModSync != null ? true : null,
+        ModChecksums = options.ModSync != null && options.ModChecksums != null ? new Dictionary<string, string>(options.ModChecksums) : null,
+        GameId = gameId != null && knownEpoch > 0 ? gameId : null,
+        KnownEpoch = gameId != null && knownEpoch > 0 ? knownEpoch : null,
+        HostMigration = options.AdvertiseHostMigration ? true : null,
+        EpochProof = gameId != null && knownEpoch > 0 && epochProof is { } held && held.Epoch == knownEpoch && string.Equals(held.GameId, gameId, StringComparison.Ordinal) ? held : null
+    };
 
     // The connection factory of the session, or, while a hand-off redirect runs, the successor: its own connector (the promoted process) or one of the announced endpoints (rotated per attempt).
     private async Task<ITransport> ConnectAsync(int attempt, CancellationToken token)
@@ -792,6 +1049,7 @@ public sealed class ClientSession : IAsyncDisposable
     {
         transport = current;
         connectionSettled = false;
+        lastFrameAt = clock.NowMillis;
         awaitingSnapshot = false;
         CloseStandbyStore(); // each connection subscribes anew, resuming from what is on disk
         var token = timer.Token;
@@ -800,19 +1058,7 @@ public sealed class ClientSession : IAsyncDisposable
         try
         {
             if (!everJoined) SetState(ClientSessionState.Joining);
-            await SendAsync(new Hello
-            {
-                Protocol = ProtocolVersion.Current,
-                ClientVersion = options.ClientVersion,
-                RulesetHash = options.RulesetHash,
-                ModList = options.ModList,
-                ModSync = options.ModSync != null ? true : null,
-                ModChecksums = options.ModSync != null && options.ModChecksums != null ? new Dictionary<string, string>(options.ModChecksums) : null,
-                GameId = gameId != null && knownEpoch > 0 ? gameId : null,
-                KnownEpoch = gameId != null && knownEpoch > 0 ? knownEpoch : null,
-                HostMigration = options.AdvertiseHostMigration ? true : null,
-                EpochProof = gameId != null && knownEpoch > 0 && epochProof is { } held && held.Epoch == knownEpoch && string.Equals(held.GameId, gameId, StringComparison.Ordinal) ? held : null
-            }, token).ConfigureAwait(false);
+            await SendAsync(BuildHello(), token).ConfigureAwait(false);
 
             keepAliveTask = RunKeepAliveAsync(keepAlive.Token);
             while (!stopped)
@@ -825,20 +1071,18 @@ public sealed class ClientSession : IAsyncDisposable
                     catch (OperationCanceledException) when (silence.IsCancellationRequested && !token.IsCancellationRequested) { break; }
                 }
                 if (frame == null) break;
+                lastFrameAt = clock.NowMillis;
                 if (!await HandleAsync(ProtocolCodec.Decode(frame), token).ConfigureAwait(false)) break;
             }
         }
         catch (OperationCanceledException) when (!lifetimeToken.IsCancellationRequested) { handshakeTimedOut = true; }
         catch (OperationCanceledException) { }
         catch (Exception e) when (IsConnectionGone(e)) { /* a dead transport ends this connection; the loop decides about reconnecting */ }
-        catch (Exception)
-        {
-            // A hostile or buggy host (undecodable frame, handler fault) ends this connection like a dead one, but the UI gets told.
-            Emit(new ProtocolError(ClientCodes.InternalError));
-        }
+        catch (Exception) { Emit(new ProtocolError(ClientCodes.InternalError)); } // a hostile or buggy host (undecodable frame, handler fault) ends this connection like a dead one, but the UI gets told
         finally
         {
             transport = null;
+            if (connectionSettled && lossStart < 0) lossStart = lastFrameAt; // the host was lost: the loss window runs from the last word of it
             CloseStandbyStore();
             await keepAlive.CancelAsync().ConfigureAwait(false);
             try { await keepAliveTask.ConfigureAwait(false); } catch (OperationCanceledException) { }
@@ -862,6 +1106,9 @@ public sealed class ClientSession : IAsyncDisposable
         {
             case Welcome welcome:
                 return await HandleWelcomeAsync(welcome, token).ConfigureAwait(false);
+            case JoinOk when staleWelcome:
+                await EndAsync(ClientCodes.StaleEpoch, refused: true).ConfigureAwait(false);
+                return false;
             case JoinOk ok:
                 if (ok.Successor != null) HandleSuccessor(ok.Successor); // before the join completes, so a caller that awaited the join sees it
                 await HandleJoinOkAsync(token).ConfigureAwait(false);
@@ -966,6 +1213,7 @@ public sealed class ClientSession : IAsyncDisposable
         }
         gameId ??= handoff.GameId;
         redirect = handoff;
+        redirectIsElection = false;
         redirectPrepared = false;
         redirectAnnounced = false;
         redirectConnector = null;
@@ -1072,12 +1320,34 @@ public sealed class ClientSession : IAsyncDisposable
 
         // T269: the host key is trusted by now. A host below the epoch this client has seen is a superseded one: a hard stop, like a changed host key.
         var epoch = welcome.Epoch ?? 0;
+        staleWelcome = false;
         if (epoch < knownEpoch)
         {
-            await EndAsync(ClientCodes.StaleEpoch, refused: true).ConfigureAwait(false);
-            return false;
+            if (epochProof == null || gameId == null)
+            {
+                await EndAsync(ClientCodes.StaleEpoch, refused: true).ConfigureAwait(false);
+                return false;
+            }
+            // T274: this player holds the promotion proof for the newer epoch (sent in Hello). The superseded host is told by finishing the handshake, so it can verify the proof and fence itself for good;
+            // it answers stale-epoch and this session ends. A host that would admit the seat anyway is refused at JoinOk.
+            staleWelcome = true;
+            await SendAsync(new Join { Password = options.Password, PlayerKey = options.Identity.PlayerKey, DisplayName = options.DisplayName, InviteToken = options.InviteToken }, token).ConfigureAwait(false);
+            await SendAsync(new Auth { Proof = options.Identity.Sign(welcome.HostKeyFingerprint, welcome.SessionId, welcome.Challenge) }, token).ConfigureAwait(false);
+            return true;
         }
         pendingProof = null;
+        if (redirect != null && !redirectAnnounced && redirectIsElection && redirectConnector == null && await OldHostAliveAsync(token).ConfigureAwait(false))
+        {
+            // T274 (c'): this player can still reach the old host, so a host at a higher epoch is a take-over on a healthy game: not followed, nobody votes, the old address is used again.
+            Emit(new ProtocolError(ClientCodes.HostStillAlive));
+            redirect = null;
+            redirectIsElection = false;
+            redirectConnector = null;
+            skipElectionStep = true;
+            hostAddress = options.HostAddress;
+            expectedFingerprint = options.ExpectedFingerprint;
+            return false;
+        }
         if (redirect != null && !redirectAnnounced)
         {
             // Redirected by a hand-off: the host here must be the successor the old host named, promoted to exactly the announced epoch, and say so with the successor's own signature.
@@ -1151,6 +1421,7 @@ public sealed class ClientSession : IAsyncDisposable
     {
         handshakeTimer?.CancelAfter(Timeout.InfiniteTimeSpan);
         var firstJoin = !everJoined;
+        CancelElection(); // a host (the old one back, or the promoted one) accepted this seat: the loss is over
         everJoined = true;
         if (pendingEpoch > knownEpoch)
         {

@@ -43,6 +43,12 @@ public static class ClientCodes
 
     /// <summary>T273: the host a hand-off sent this client to did not prove it is the promoted successor (no valid, matching <c>Welcome.Promotion</c>): a hard stop.</summary>
     public const string BadPromotion = "bad-promotion";
+
+    /// <summary>T274: a client that still reaches its host refuses a host at a higher epoch (a take-over by a successor on a healthy host); it stays with the host it has.</summary>
+    public const string HostStillAlive = "host-still-alive";
+
+    /// <summary>T274: neither the host nor the successor could be reached for the give-up time; the session ended (the UI shows the manual hand-off help).</summary>
+    public const string GaveUp = "gave-up";
 }
 
 /// <summary>The final answer to one submitted command. <see cref="Code"/> is a host code or a <see cref="ClientCodes"/> value, never free text.</summary>
@@ -109,3 +115,22 @@ public sealed record HostChanged(int Epoch) : ClientEvent;
 
 /// <summary>T273: the new host did not have the last <see cref="LostCommands"/> commands this client had applied (they were never replicated); the mirror was replaced and the UI should say so.</summary>
 public sealed record HostRolledBack(long LostCommands) : ClientEvent;
+
+/// <summary>T274: this session has been without its host for the host-loss window (once per outage). A voter now votes for the successor; the successor starts its election.</summary>
+public sealed record HostLossDetected(int Epoch) : ClientEvent;
+
+/// <summary>T274: this player voted for <see cref="Candidate"/> to become host at <see cref="Epoch"/>; <see cref="Accepted"/> is whether the successor counted it (not whether it won).</summary>
+public sealed record VoteCast(int Epoch, string Candidate, bool Accepted) : ClientEvent;
+
+/// <summary>T274: neither host nor successor came back within the give-up time. The session ends right after; the UI shows the manual hand-off help (the successor's <c>standby/&lt;gameId&gt;/</c> directory is a normal game directory).</summary>
+public sealed record ElectionGaveUp : ClientEvent;
+
+/// <summary>T274: what the designated successor's election needs to know when its own link to the host has been dead for the host-loss window (or when the player forces a take-over).</summary>
+/// <param name="GameId">The game of this session.</param>
+/// <param name="OldEpoch">The epoch of the host that was lost; the election is for <c>OldEpoch + 1</c>.</param>
+/// <param name="Successor">The announcement of this player as successor (endpoints and certificate fingerprint).</param>
+/// <param name="Roster">The seats the host last announced, with who was connected and which seat is the host's own.</param>
+/// <param name="RosterFresh">False when the host was silent longer than the roster age limit: every seat then counts.</param>
+/// <param name="HaveSeq">The last log seq of this player's standby copy.</param>
+/// <param name="Forced">The player pressed "Take over now": no quorum is needed (an explicit local action, fenced like any promotion).</param>
+public sealed record HostLossInfo(string GameId, int OldEpoch, SuccessorInfo Successor, IReadOnlyList<SuccessorSeat> Roster, bool RosterFresh, long HaveSeq, bool Forced);

@@ -42,7 +42,8 @@ public sealed record InProcessHostOptions
 
 /// <summary>
 /// T273: how a standby copy becomes the host (design/HOST-MIGRATION.md section 2). <see cref="InProcessHost.ResumeFromDirectory"/> first checks what it opened against the old host's <c>HostHandoff</c>
-/// (<see cref="FinalSeq"/>, <see cref="FinalHash"/>: the promoted game must reproduce the state hash of the old host at the hand-off point, else nothing is promoted), then raises the epoch to
+/// (<see cref="FinalSeq"/>, <see cref="FinalHash"/>: the promoted game must reproduce the state hash of the old host at the hand-off point, else nothing is promoted; both null for a T274 crash election, where the
+/// copy's own tail is the best there is and the old host's state is unknown), then raises the epoch to
 /// <see cref="Epoch"/> and stores the successor's signed <see cref="Proof"/> in <c>game.json</c> and the log header, and finally treats the old host's seat (<see cref="DepartedKeyId"/>) as a clean leave
 /// (the T267 rule: its civ stays human, its turn is force-ended, the AI takes over at the next boundary unless that player reconnects).
 /// </summary>
@@ -50,9 +51,12 @@ public sealed record HostPromotion
 {
     public required int Epoch { get; init; }
     public required PromotionProof Proof { get; init; }
-    public required long FinalSeq { get; init; }
-    public required string FinalHash { get; init; }
+    public long? FinalSeq { get; init; }
+    public string? FinalHash { get; init; }
     public string? DepartedKeyId { get; init; }
+
+    /// <summary>T274: the key of the crashed host's own seat after an election: unlike <see cref="DepartedKeyId"/> it did not leave, it dropped (the grace period and the K absent turns of T267 apply).</summary>
+    public string? DroppedKeyId { get; init; }
 }
 
 /// <summary>
@@ -83,6 +87,9 @@ public sealed class InProcessHost : IAsyncDisposable
         this.options = options;
         random = options.Random ?? SystemSecureRandom.Instance;
         Report = report;
+        host.HostKeyId = store.ReadMeta().Slots.GetValueOrDefault(hostCivId)?.PlayerKey;
+        host.OnSuperseded = epoch => Superseded?.Invoke(epoch);
+        if (store.ReadMeta() is { } held && held.SeenEpoch > held.HostEpoch) _ = host.SupersedeAsync(held.SeenEpoch); // a directory the old host's own restart reopens: superseded from the start
         if (options.TickInterval is { } interval && interval > TimeSpan.Zero)
         {
             background.Add(host.RunTickLoopAsync(interval, cts.Token));
@@ -90,6 +97,12 @@ public sealed class InProcessHost : IAsyncDisposable
     }
 
     public GameHost Host => host;
+
+    /// <summary>T274: another host took this game over (a verified promotion proof arrived, or this directory was already superseded); the epoch that superseded it. Raised on the host actor.</summary>
+    public event Action<int>? Superseded;
+
+    /// <summary>T274: true when this host is superseded and neither advances nor serves the game (the UI offers to export the directory or join the new host as a player).</summary>
+    public bool IsSuperseded => host.IsSuperseded;
 
     public string GameId => store.GameId;
 
@@ -154,6 +167,15 @@ public sealed class InProcessHost : IAsyncDisposable
             if (promotion != null)
             {
                 opened.Store.PromoteTo(promotion.Epoch, promotion.Proof); // idempotent for a retry of the same promotion
+                var dropped = promotion.DroppedKeyId == null ? null : meta.Slots.FirstOrDefault(x => string.Equals(x.Value.PlayerKey, promotion.DroppedKeyId, StringComparison.Ordinal)).Key;
+                if (dropped != null && !string.Equals(dropped, hostCiv, StringComparison.Ordinal))
+                {
+                    host.EnqueueAsync(() =>
+                    {
+                        host.TurnTimer.Disconnect(dropped); // the old host crashed: its player dropped (T267 grace and K rules), unlike a clean quit
+                        return Task.CompletedTask;
+                    }).GetAwaiter().GetResult();
+                }
                 var departed = promotion.DepartedKeyId == null ? null : meta.Slots.FirstOrDefault(x => string.Equals(x.Value.PlayerKey, promotion.DepartedKeyId, StringComparison.Ordinal)).Key;
                 if (departed != null && !string.Equals(departed, hostCiv, StringComparison.Ordinal))
                 {
@@ -186,10 +208,10 @@ public sealed class InProcessHost : IAsyncDisposable
     private static void VerifyPromotable(OpenedGame opened, HostPromotion promotion)
     {
         if (opened.Report.Outcome != RecoveryOutcome.Recovered) throw new GameStoreException("standby-invalid: the standby copy did not recover cleanly");
-        if (opened.Store.LastSeq != promotion.FinalSeq) throw new GameStoreException($"standby-incomplete: the standby copy ends at {opened.Store.LastSeq}, the hand-off at {promotion.FinalSeq}");
+        if (promotion.FinalSeq is { } finalSeq && opened.Store.LastSeq != finalSeq) throw new GameStoreException($"standby-incomplete: the standby copy ends at {opened.Store.LastSeq}, the hand-off at {promotion.FinalSeq}");
         if (!PlayerKeys.VerifyPromotion(promotion.Proof)) throw new GameStoreException("standby-invalid: the promotion proof does not verify");
         var hash = ReplayVerifier.FullHash(opened.Session.Game).ToString("x16", System.Globalization.CultureInfo.InvariantCulture);
-        if (!string.Equals(hash, promotion.FinalHash, StringComparison.OrdinalIgnoreCase)) throw new GameStoreException("standby-diverged: the standby copy's state hash differs from the old host's");
+        if (promotion.FinalHash != null && !string.Equals(hash, promotion.FinalHash, StringComparison.OrdinalIgnoreCase)) throw new GameStoreException("standby-diverged: the standby copy's state hash differs from the old host's");
         var held = opened.Store.ReadMeta();
         if (held.HostEpoch == promotion.Epoch && held.Promotion is { } stored && string.Equals(stored.KeyId, promotion.Proof.KeyId, StringComparison.Ordinal)
             && string.Equals(stored.Fingerprint, promotion.Proof.Fingerprint, StringComparison.Ordinal)) return;
@@ -211,6 +233,7 @@ public sealed class InProcessHost : IAsyncDisposable
     /// </summary>
     public ITransport ConnectLoopback()
     {
+        ObjectDisposedException.ThrowIf(stopped, this);
         var (client, hostEnd) = InMemoryTransport.CreatePair();
         _ = AdmitAsync(hostEnd, cts.Token);
         return client;
@@ -282,6 +305,22 @@ public sealed class InProcessHost : IAsyncDisposable
             await StopAsync().ConfigureAwait(false); // whatever happened, the host ends cleanly (a plain HostClosing for anyone not handed off)
         }
         return refusal;
+    }
+
+    /// <summary>T274: stops this host the way a crash would (listener and every connection closed, nothing flushed, no clean marker); tests and fatal paths. The directory stays as a crash left it.</summary>
+    public async Task KillAsync()
+    {
+        if (stopped) return;
+        stopped = true;
+        listener?.Stop();
+        cts.Cancel();
+        foreach (var task in background)
+        {
+            try { await task.ConfigureAwait(false); }
+            catch (OperationCanceledException) { }
+        }
+        await host.KillAsync().ConfigureAwait(false);
+        cts.Dispose();
     }
 
     /// <summary>Clean stop: no new connections, the current command finishes, a half-resolved round is completed, then snapshot, clean marker, and HostClosing to every client.</summary>
@@ -390,7 +429,11 @@ public sealed class InProcessHost : IAsyncDisposable
             {
                 // A seat holder claims a newer host. Only a promotion proof signed by the successor this host designated makes it supersede this host for good (it is remembered across a restart);
                 // a bare claim, which any seat holder could forge, refuses just this connection (T273, the T269 residual risk).
-                if (ProvesPromotion(hello.EpochProof, claimedEpoch)) store.RaiseEpochs(epochs.HostEpoch, claimedEpoch);
+                if (ProvesPromotion(hello.EpochProof, claimedEpoch))
+                {
+                    store.RaiseEpochs(epochs.HostEpoch, claimedEpoch);
+                    _ = host.SupersedeAsync(claimedEpoch); // T274: superseded-host mode, the players still here are told and dropped
+                }
                 await RefuseAsync(transport, JoinRefusedCodes.StaleEpoch);
                 return;
             }

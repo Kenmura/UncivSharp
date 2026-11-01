@@ -56,6 +56,15 @@ public static class PromotionMessage
         AuthMessage.Frame(Domain, gameId, epoch.ToString(System.Globalization.CultureInfo.InvariantCulture), hostFingerprint);
 }
 
+/// <summary>T274: the signed statement of a host-loss vote (game, epoch, candidate, last applied seq, the successor's nonce), in its own domain.</summary>
+public static class HostLossMessage
+{
+    private const string Domain = "unciv-hostloss-v1";
+
+    public static byte[] Build(string gameId, int epoch, string candidateKeyId, long lastSeq, string nonce) =>
+        AuthMessage.Frame(Domain, gameId, epoch.ToString(System.Globalization.CultureInfo.InvariantCulture), candidateKeyId, lastSeq.ToString(System.Globalization.CultureInfo.InvariantCulture), nonce);
+}
+
 /// <summary>The client's ECDSA P-256 identity. <see cref="PlayerKey"/> (base64url SPKI) is what goes into <c>Join.PlayerKey</c>.</summary>
 public sealed class ClientIdentity : IDisposable
 {
@@ -104,6 +113,18 @@ public sealed class ClientIdentity : IDisposable
     public string SignPromotion(string gameId, int epoch, string hostFingerprint) =>
         Base64Url.Encode(key.SignData(PromotionMessage.Build(gameId, epoch, hostFingerprint), HashAlgorithmName.SHA256));
 
+    /// <summary>T274: signs a <see cref="HostLossVote"/> for <paramref name="candidateKeyId"/> to become host of <paramref name="gameId"/> at <paramref name="epoch"/>, bound to the successor's <paramref name="nonce"/>.</summary>
+    public HostLossVote SignLossVote(string gameId, int epoch, string candidateKeyId, long lastSeq, string nonce) => new()
+    {
+        GameId = gameId,
+        Epoch = epoch,
+        CandidateKeyId = candidateKeyId,
+        LastSeq = lastSeq,
+        Nonce = nonce,
+        KeyId = PlayerKey,
+        Signature = Base64Url.Encode(key.SignData(HostLossMessage.Build(gameId, epoch, candidateKeyId, lastSeq, nonce), HashAlgorithmName.SHA256)),
+    };
+
     public void Dispose() => key.Dispose();
 }
 
@@ -115,24 +136,29 @@ public static class PlayerKeys
 
     public static bool VerifyProof(string? playerKey, string hostFingerprint, string sessionId, string challenge, string? proof)
     {
-        var signature = Base64Url.TryDecode(proof);
+        return VerifySigned(playerKey, proof, () => AuthMessage.Build(hostFingerprint, sessionId, challenge));
+    }
+
+    private static bool VerifySigned(string? key, string? signatureText, Func<byte[]> message)
+    {
+        var signature = Base64Url.TryDecode(signatureText);
         if (signature == null || signature.Length != 64) return false;
-        using var ecdsa = TryImport(playerKey);
+        using var ecdsa = TryImport(key);
         if (ecdsa == null) return false;
-        try { return ecdsa.VerifyData(AuthMessage.Build(hostFingerprint, sessionId, challenge), signature, HashAlgorithmName.SHA256); }
+        try { return ecdsa.VerifyData(message(), signature, HashAlgorithmName.SHA256); }
         catch (CryptographicException) { return false; }
     }
 
     /// <summary>T273: true when <paramref name="proof"/> is a valid signature of its own game, epoch and fingerprint by its own <c>KeyId</c>. Says nothing about whether that key may promote: the caller compares <c>KeyId</c> with the designation.</summary>
     public static bool VerifyPromotion(PromotionProof? proof)
     {
-        if (proof == null) return false;
-        var signature = Base64Url.TryDecode(proof.Signature);
-        if (signature == null || signature.Length != 64) return false;
-        using var ecdsa = TryImport(proof.KeyId);
-        if (ecdsa == null) return false;
-        try { return ecdsa.VerifyData(PromotionMessage.Build(proof.GameId, proof.Epoch, proof.Fingerprint), signature, HashAlgorithmName.SHA256); }
-        catch (CryptographicException) { return false; }
+        return proof != null && VerifySigned(proof.KeyId, proof.Signature, () => PromotionMessage.Build(proof.GameId, proof.Epoch, proof.Fingerprint));
+    }
+
+    /// <summary>T274: true when <paramref name="vote"/> carries a valid signature of its own fields by its own <c>KeyId</c>. Whether that key may vote (is a seat, is online) is the tally's decision.</summary>
+    public static bool VerifyLossVote(HostLossVote vote)
+    {
+        return VerifySigned(vote.KeyId, vote.Signature, () => HostLossMessage.Build(vote.GameId, vote.Epoch, vote.CandidateKeyId, vote.LastSeq, vote.Nonce));
     }
 
     internal static bool IsP256(ECDsa key) =>

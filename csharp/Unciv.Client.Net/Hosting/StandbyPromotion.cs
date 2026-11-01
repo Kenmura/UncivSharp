@@ -40,29 +40,68 @@ public sealed class StandbyPromotion(string standbyRoot, ClientIdentity identity
         return Task.FromResult<Func<CancellationToken, Task<ITransport>>?>(_ => Task.FromResult(host.ConnectLoopback()));
     }
 
-    private InProcessHost Promote(HostHandoff handoff)
+    private InProcessHost Promote(HostHandoff handoff) =>
+        PromoteCore(handoff.GameId, handoff.Epoch, handoff.Successor, new HostPromotionFacts(handoff.FinalSeq, handoff.FinalHash, handoff.DepartedKeyId, null));
+
+    /// <summary>What distinguishes a promotion: a graceful hand-off knows the old host's final seq and hash and that its seat left cleanly; a crash election knows neither and the crashed host's seat dropped.</summary>
+    private sealed record HostPromotionFacts(long? FinalSeq, string? FinalHash, string? DepartedKeyId, string? DroppedKeyId);
+
+    /// <summary>
+    /// T274: promotes the standby copy after a crash election (or "Take over now") at <paramref name="epoch"/>: there is no final seq or hash to check (the old host is gone), the copy must still recover cleanly and the
+    /// epoch must rise. <paramref name="droppedKeyId"/> is the key of the crashed host's own seat (it dropped: the T267 grace and K rules apply). Returns the loopback connector of the new host for this player's own session.
+    /// A second call returns the same host (a promotion happens once).
+    /// </summary>
+    public Func<CancellationToken, Task<ITransport>> PromoteAfterCrash(string gameId, int epoch, SuccessorInfo successor, string? droppedKeyId)
+    {
+        var host = Host ?? PromoteCore(gameId, epoch, successor, new HostPromotionFacts(null, null, null, droppedKeyId));
+        return _ => Task.FromResult(host.ConnectLoopback());
+    }
+
+    /// <summary>
+    /// T274, the manual fallback when host and successor are both gone and no session runs ("Host saved game" on the standby directory): resumes <c>standby/&lt;gameId&gt;/</c> as the host at the stored epoch plus one on
+    /// <paramref name="port"/>, fenced like any promotion, so the old host cannot return unnoticed. The caller's own player connects with <see cref="InProcessHost.ConnectLoopback"/>.
+    /// </summary>
+    public InProcessHost TakeOverFromDisk(string gameId, int port)
+    {
+        var directory = StandbyStore.DirectoryFor(standbyRoot, gameId);
+        if (directory == null || !System.IO.Directory.Exists(directory)) throw new HostingException("There is no standby copy of this game");
+        int epoch;
+        try
+        {
+            using var opened = FileGameStore.Open(directory, hostOptions?.Store);
+            epoch = opened.Store.ReadMeta().HostEpoch + 1;
+        }
+        catch (Exception e) when (e is GameStoreException or IOException or System.Text.Json.JsonException)
+        {
+            throw new HostingException("The standby copy cannot be opened: " + e.Message, e);
+        }
+        var successor = new SuccessorInfo { KeyId = identity.PlayerKey, Endpoints = [$"127.0.0.1:{port}"], Fingerprint = HostCertificate.GetFingerprint(certificate) };
+        return Host ?? PromoteCore(gameId, epoch, successor, new HostPromotionFacts(null, null, null, null));
+    }
+
+    private InProcessHost PromoteCore(string gameId, int epoch, SuccessorInfo successor, HostPromotionFacts facts)
     {
         if (Host != null) throw new HostingException("This player already promoted a standby copy");
         var fingerprint = HostCertificate.GetFingerprint(certificate);
-        if (!HostKey.Matches(fingerprint, handoff.Successor.Fingerprint)) throw new HostingException("This player's certificate is not the announced successor fingerprint");
-        var directory = StandbyStore.DirectoryFor(standbyRoot, handoff.GameId);
+        if (!HostKey.Matches(fingerprint, successor.Fingerprint)) throw new HostingException("This player's certificate is not the announced successor fingerprint");
+        var directory = StandbyStore.DirectoryFor(standbyRoot, gameId);
         if (directory == null || !System.IO.Directory.Exists(directory)) throw new HostingException("There is no standby copy of this game");
-        var port = handoff.Successor.Endpoints.Count == 0 ? 0 : PortOf(handoff.Successor.Endpoints); // a relay-only successor has no announced port: its local listener takes any free one
+        var port = successor.Endpoints.Count == 0 ? 0 : PortOf(successor.Endpoints); // a relay-only successor has no announced port: its local listener takes any free one
 
         var proof = new PromotionProof
         {
-            GameId = handoff.GameId,
-            Epoch = handoff.Epoch,
+            GameId = gameId,
+            Epoch = epoch,
             KeyId = identity.PlayerKey,
             Fingerprint = fingerprint,
-            Signature = identity.SignPromotion(handoff.GameId, handoff.Epoch, fingerprint),
+            Signature = identity.SignPromotion(gameId, epoch, fingerprint),
         };
         InProcessHost host;
         try
         {
             host = InProcessHost.ResumeFromDirectory(directory, identity.PlayerKey, (hostOptions ?? new InProcessHostOptions()) with
             {
-                Promotion = new HostPromotion { Epoch = handoff.Epoch, Proof = proof, FinalSeq = handoff.FinalSeq, FinalHash = handoff.FinalHash, DepartedKeyId = handoff.DepartedKeyId },
+                Promotion = new HostPromotion { Epoch = epoch, Proof = proof, FinalSeq = facts.FinalSeq, FinalHash = facts.FinalHash, DepartedKeyId = facts.DepartedKeyId, DroppedKeyId = facts.DroppedKeyId },
             });
         }
         catch (Exception e) when (e is GameStoreException or IOException or System.Text.Json.JsonException)

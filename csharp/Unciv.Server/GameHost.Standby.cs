@@ -10,6 +10,9 @@ public sealed partial class GameHost
     /// <summary>Who is designated as backup host and whether they consented and were probed. Persisted in <c>game.json</c>.</summary>
     public StandbyCoordinator Standby { get; }
 
+    /// <summary>T274: the key of the host process's own player (an in-process host), so the roster it announces marks that seat (<see cref="SuccessorSeat.IsHost"/>) and a crash election does not count it. Null for a dedicated host.</summary>
+    public string? HostKeyId { get; set; }
+
     private StandbyCoordinator InitStandby(StandbyCoordinator? given)
     {
         if (given != null)
@@ -57,6 +60,7 @@ public sealed partial class GameHost
             {
                 KeyId = binding.PlayerKey,
                 Connected = sessions.Values.Any(it => it.IsOpen && string.Equals(it.BoundCivId, civId, StringComparison.Ordinal)),
+                IsHost = HostKeyId != null && string.Equals(binding.PlayerKey, HostKeyId, StringComparison.Ordinal) ? true : null,
             });
         }
         return roster;

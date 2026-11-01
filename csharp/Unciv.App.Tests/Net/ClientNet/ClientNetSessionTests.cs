@@ -101,6 +101,32 @@ public sealed class ClientNetSessionTests
     }
 
     [Fact]
+    public async Task Join_HostBelowTheStoredEpoch_ThatHoldsAPromotionProof_CompletesTheHandshakeSoTheHostCanBeFenced_ThenStops()
+    {
+        await using var rig = new ClientNetRig(id => new ClientSessionOptions
+        {
+            Identity = id,
+            DisplayName = "A",
+            RulesetHash = "h",
+            ExpectedFingerprint = ClientNetRig.Fingerprint,
+            GameId = "g1",
+            KnownEpoch = 2,
+            EpochProof = new PromotionProof { GameId = "g1", Epoch = 2, KeyId = "k", Fingerprint = "f", Signature = "s" }
+        });
+        var host = rig.NewConnection();
+        var join = rig.Session.JoinAsync();
+        var hello = await host.ReceiveAsync<Hello>();
+        Assert.Equal(2, hello.EpochProof?.Epoch);
+        await host.SendAsync(new Welcome { Protocol = ProtocolVersion.Current, SessionId = "s", Challenge = "c", HostKeyFingerprint = ClientNetRig.Fingerprint, RequiresPassword = false, Epoch = 1 });
+        await host.ReceiveAsync<Join>();
+        await host.ReceiveAsync<Auth>();
+        await host.SendAsync(new JoinOk()); // a host that did not fence itself would admit the seat: the client still refuses to play there
+        var result = await join;
+        Assert.False(result.Joined);
+        Assert.Equal(ClientCodes.StaleEpoch, result.Code);
+    }
+
+    [Fact]
     public async Task Join_HostBelowTheStoredEpoch_IsAHardStop()
     {
         await using var rig = new ClientNetRig(id => new ClientSessionOptions

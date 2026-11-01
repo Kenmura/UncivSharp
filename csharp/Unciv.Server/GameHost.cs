@@ -116,6 +116,7 @@ public sealed partial class GameHost : IAsyncDisposable
     private Task? actorTask;
     private readonly bool announceRoster;
     private bool closed;
+    private bool superseded;
 
     public GameHost(
         GameSession session,
@@ -370,6 +371,7 @@ public sealed partial class GameHost : IAsyncDisposable
     /// <summary>Advances turn timer and triggers turn resolution if deadlines or disconnects expired.</summary>
     public void Tick()
     {
+        if (superseded) return; // another host owns the game now: nothing here may advance it
         DropIdleSessions();
         SendDueResyncs();
         PostReprobe(); // T282
@@ -432,6 +434,53 @@ public sealed partial class GameHost : IAsyncDisposable
         sessions.Clear();
         store?.CloseCleanly(session.Game);
     }
+
+    /// <summary>
+    /// T274: the crash-simulating stop (tests, and a fatal path that must not look clean): every connection is closed without a word, nothing is flushed or marked clean, the actor stops. What is on disk is what a crash
+    /// would have left (the store is only released).
+    /// </summary>
+    public async Task KillAsync()
+    {
+        if (closed) return;
+        closed = true;
+        try
+        {
+            await EnqueueAsync(async () =>
+            {
+                foreach (var s in sessions.Values.ToList()) await s.Transport.CloseAsync();
+                sessions.Clear();
+            }).ConfigureAwait(false);
+        }
+        catch (InvalidOperationException) { /* the mailbox closed meanwhile */ }
+        await StopActorAsync().ConfigureAwait(false);
+        store?.Dispose();
+    }
+
+    /// <summary>T274: true once <see cref="SupersedeAsync"/> ran: another host took the game over at a higher epoch; this host no longer advances or serves it.</summary>
+    public bool IsSuperseded => Volatile.Read(ref superseded);
+
+    /// <summary>T274: raised on the actor when this host became superseded, with the epoch that superseded it.</summary>
+    public Action<int>? OnSuperseded { get; set; }
+
+    /// <summary>
+    /// T274, superseded-host mode: another host took over at <paramref name="epoch"/> (a verified promotion proof, T273). Every connected session is told <c>stale-epoch</c> and closed, the standby stream stops, the turn timer
+    /// no longer ticks and the directory is not touched again; joins are already refused by the stored epochs. The process can export the directory or join the new host as a player.
+    /// </summary>
+    public Task SupersedeAsync(int epoch) => EnqueueAsync(async () =>
+    {
+        if (superseded || closed) return;
+        Volatile.Write(ref superseded, true);
+        StopStandbyStream();
+        foreach (var s in sessions.Values.ToList())
+        {
+            await SafeSendAsync(s, new Error { Code = ErrorCodes.StaleEpoch });
+            await s.Transport.CloseAsync();
+            remoteQueries.EndSession(s.SessionId);
+            gate.EndSession(s.SessionId);
+        }
+        sessions.Clear();
+        OnSuperseded?.Invoke(epoch);
+    });
 
     private async Task StopActorAsync()
     {

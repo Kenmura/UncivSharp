@@ -36,6 +36,9 @@ public static class ErrorCodes
 
     /// <summary>T282: a standby listener (a backup host that has not taken over) refuses everything but <c>Hello</c>: this endpoint is not a host yet.</summary>
     public const string NotHostYet = "not-host-yet";
+
+    /// <summary>T274: a <c>HostLossVote</c> that cannot count (wrong game, epoch or candidate, a nonce that was not issued or is used up or expired, an unknown or offline seat, a bad signature). One code, no oracle for which check failed.</summary>
+    public const string VoteRefused = "vote-refused";
 }
 
 /// <summary>Base of every wire message. The JSON frame is the record's fields plus a <c>type</c> discriminator (see <see cref="ProtocolCodec"/>).</summary>
@@ -476,6 +479,9 @@ public sealed record SuccessorSeat
 {
     public required string KeyId { get; init; }
     public required bool Connected { get; init; }
+
+    /// <summary>T274: true for the seat of the host's own player (an in-process host); an election never counts it (it died with the host). Absent for every other seat and for a dedicated host.</summary>
+    public bool? IsHost { get; init; }
 }
 
 /// <summary>
@@ -488,6 +494,44 @@ public sealed record HostSuccessor : Message
     public SuccessorInfo? Successor { get; init; }
     public required string Status { get; init; }
     public required List<SuccessorSeat> Roster { get; init; }
+}
+
+// ---------------------------------------------------------------- crash election (T274, design/HOST-MIGRATION.md section 2)
+
+/// <summary>
+/// Successor to a client that lost the host and said <c>Hello</c> at the successor's announced endpoint, once the successor's own host-loss window has elapsed (before that it answers <see cref="ErrorCodes.NotHostYet"/>).
+/// <c>Epoch</c> is the epoch being elected (the old epoch plus one); <c>Nonce</c> is fresh for this request, valid once, for one election window, and the client's <see cref="HostLossVote"/> must be signed over it.
+/// </summary>
+public sealed record ElectionChallenge : Message
+{
+    public required string GameId { get; init; }
+    public required int Epoch { get; init; }
+    public required string Nonce { get; init; }
+
+    /// <summary>The successor's host key fingerprint; the client checks it against the announced one before it votes.</summary>
+    public required string HostKeyFingerprint { get; init; }
+}
+
+/// <summary>
+/// Client to successor: "I lost the host, I vote for <c>CandidateKeyId</c> to become host at <c>Epoch</c>". Signed with the player key <c>KeyId</c> over game id, epoch, candidate, <c>LastSeq</c> (the last command this client applied, informational)
+/// and the successor's <c>Nonce</c> (<see cref="Unciv.Net.Identity.PlayerKeys.VerifyLossVote"/>), so a vote cannot be replayed across games, epochs, candidates or outages. A client votes for one candidate per epoch.
+/// </summary>
+public sealed record HostLossVote : Message
+{
+    public required string GameId { get; init; }
+    public required int Epoch { get; init; }
+    public required string CandidateKeyId { get; init; }
+    public required long LastSeq { get; init; }
+    public required string Nonce { get; init; }
+    public required string KeyId { get; init; }
+    public required string Signature { get; init; }
+}
+
+/// <summary>Successor to voter: the vote was counted (<c>Accepted</c>) or not (<c>Code</c> is <see cref="ErrorCodes.VoteRefused"/>). Counted is not elected: the successor promotes only at quorum.</summary>
+public sealed record HostLossVoteResult : Message
+{
+    public required bool Accepted { get; init; }
+    public string? Code { get; init; }
 }
 
 public sealed record Error : Message
