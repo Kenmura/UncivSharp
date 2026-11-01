@@ -271,6 +271,44 @@ ls -l certs
 Edit `NAME` and `DEST` first if yours differ. `ls -l certs` must show both files owned by `10001`. Then do Step 5 (setup B column) and Step 6.
 Certificate files are mounted read-only at `/certs` in the container (that is why `UNCIV_RELAY_CERT=/certs/fullchain.pem`).
 
+### Worked example: setup B with the certificate of Nginx Proxy Manager
+
+This is how the project owner's relay (`civsharp.nickthorsen.com:47830`) is deployed: Docker Compose in `~/uncivRelay/csharp/Unciv.Relay/deploy`, `restart: unless-stopped` (already in
+`compose.yml`; the systemd unit is not used), the relay itself terminates TLS and offers ALPN `unciv-relay/1`, and Nginx Proxy Manager (NPM) only keeps the Let's Encrypt certificate
+renewed. There is no nginx stream configuration and NPM is unchanged. Instead of copying the certificate (7B.2) the relay reads NPM's folder through the read-only `/certs` mount:
+
+```
+cp env.mode-b-npm.example .env
+nano .env        # RELAY_CERT_DIR (NPM's letsencrypt folder) and npm-N (see: ls <that folder>/live)
+docker compose up -d --build
+```
+
+- Mount the whole `letsencrypt` folder: the files in `live/npm-N/` are symlinks into `archive/`, which a mount of `live/npm-N` alone would break.
+- The container user (uid 10001) must be able to read the key. NPM's files normally belong to root; make them readable to 10001 (for example a group or ACL on the folder) or fall back to
+  7B.2's copy script. Which of these the owner used is not recorded here. A key readable by every local user is not acceptable on a shared machine.
+- The relay re-reads the certificate when the files change (and on SIGHUP), so an NPM renewal needs no restart. `docker compose logs relay` logs `certificate-reloaded` after one; that renewal
+  path has not been observed on the real server yet (checklist row R9 in `deploy/CONNECTIVITY.md`).
+- `UNCIV_RELAY_CONTACT=me@nickthorsen.com` is what `/v1/info` shows as `contact`; after changing `.env` run `docker compose up -d` (it recreates the container only when needed).
+- Logs: files in the data volume are deleted after 7 days (`UNCIV_RELAY_LOG_RETENTION_DAYS`, default 7); stdout through `docker compose logs relay`, bounded by the container runtime's log settings.
+- The container health check (`healthcheck.sh`, `GET /healthz` on the loopback HTTP side) is part of `compose.yml`; `docker compose ps` must say `healthy`.
+
+Verify, in this order (replace the name with yours). On the server:
+
+```
+docker compose ps                                       # Up ... (healthy)
+curl -s http://127.0.0.1:47831/healthz                  # ok rooms=0 splices=0
+curl -s http://127.0.0.1:47831/v1/info                  # JSON; "contact":"me@nickthorsen.com"
+```
+
+From a machine on a DIFFERENT network than the server (a phone on mobile data, not the home Wi-Fi; a machine behind the same router can hit NAT hairpinning and prove nothing):
+
+```
+openssl s_client -connect civsharp.nickthorsen.com:47830 -servername civsharp.nickthorsen.com -alpn unciv-relay/1 </dev/null 2>&1 | grep -E "subject=|Verif|ALPN|Verify return"
+```
+
+Expected: your domain (or the wildcard) in `subject=`/the chain, `Verify return code: 0 (ok)`, `ALPN protocol: unciv-relay/1`. The full manual checklist, with what is verified and what is not, is
+`Unciv.Relay/deploy/CONNECTIVITY.md`.
+
 ## Step 7, setup C: no domain, self-signed
 
 Nothing to install: do Step 5 (setup C column) and Step 6. The relay creates its own certificate once (`relay.pfx` in its data volume) and prints its fingerprint:
@@ -410,6 +448,9 @@ Verified with Podman 5.8 (Docker-compatible; Docker itself was not available) an
 - setup A: `nginx -t` passes, and a dedicated server dialled through nginx (TLS, ALPN, PROXY protocol) into the container and was listed by `GET /v1/games`;
   setups B and C start with the documented variables, serve their certificates and register a room;
 - `SIGHUP`, graceful stop (exit code 0), restart keeping `relay-secret`, and the ban file commands above.
+
+T356 (the owner's relay, setup B): the relay binary with a PEM chain in NPM's `live/npm-N/` layout answers `openssl s_client -alpn unciv-relay/1` with a verified chain, refuses another ALPN, shows
+`UNCIV_RELAY_CONTACT` in `/v1/info` and logs `certificate-reloaded` when the files are replaced. The per-row status of the real deployment (what the owner ran, what nobody has) is `deploy/CONNECTIVITY.md`.
 
 NOT tested here: Docker Engine proper (the host-network and `docker kill` details), Let's Encrypt/certbot against the real service (the commands follow certbot's documentation),
 the Ubuntu/Debian package names, IPv6, and the SNI variant with a real hostname (its routing by name was checked with `openssl s_client -servername`). The real deployment (T356) exercises

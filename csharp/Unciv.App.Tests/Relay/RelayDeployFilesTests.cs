@@ -85,11 +85,29 @@ public sealed partial class RelayDeployFilesTests
     }
 
     [Fact]
+    public void TheModeBNginxProxyManagerExampleIsAValidRelayConfiguration()
+    {
+        // T356: the owner's deployment shape (relay holds the certificate, read from NPM's mount, no PROXY protocol, contact set)
+        var env = Regex.Matches(Read("env.mode-b-npm.example"), @"^(UNCIV_RELAY_[A-Z0-9_]+)=(.*)$", RegexOptions.Multiline, TimeSpan.FromSeconds(5)).ToDictionary(m => m.Groups[1].Value, m => m.Groups[2].Value.Trim());
+        Assert.All(env.Keys, k => Assert.Contains(k, EnvFileLine().Matches(Read(".env.example")).Select(m => m.Groups[1].Value)));
+        var container = new Dictionary<string, string> { ["UNCIV_RELAY_BIND"] = "0.0.0.0", ["UNCIV_RELAY_DATA_DIR"] = "/data" };
+        foreach (var (key, value) in env) container[key] = value;
+        var o = RelayOptions.ParseWithConfig([], _ => null, name => container.GetValueOrDefault(name));
+        Assert.Equal(RelayTlsMode.Certificate, o.TlsMode);
+        Assert.False(o.ProxyProtocol);
+        Assert.Equal("/certs/live/npm-N/fullchain.pem", o.CertFile);
+        Assert.Equal(["civsharp.nickthorsen.com"], o.PublicNames);
+        Assert.Equal("me@nickthorsen.com", o.Contact);
+        Assert.Equal(7, o.LogRetentionDays);
+        Assert.Contains("0.0.0.0:47830", Read("env.mode-b-npm.example"), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void DeployFilesAreNotIgnoredByGit()
     {
         // T368: the deploy files were once covered by a global "deploy/" ignore rule and never committed. Ask git itself when it is available.
         var repo = RelayHostTests.RepoCsharpRoot();
-        var files = new[] { "Dockerfile", "Dockerfile.dockerignore", "compose.yml", ".env.example", "healthcheck.sh", "unciv-relay.service", "certs/.gitkeep", "nginx/relay.conf.example", "nginx/relay-sni.conf.example", "nginx/relay-http.conf.example" };
+        var files = new[] { "Dockerfile", "Dockerfile.dockerignore", "compose.yml", ".env.example", "healthcheck.sh", "unciv-relay.service", "env.mode-b-npm.example", "CONNECTIVITY.md", "certs/.gitkeep", "nginx/relay.conf.example", "nginx/relay-sni.conf.example", "nginx/relay-http.conf.example" };
         foreach (var file in files) Assert.True(File.Exists(Path.Combine(Deploy, file)), file);
         Assert.True(File.Exists(Path.Combine(repo, "Unciv.Relay", "SETUP.md")));
         if (!Directory.Exists(Path.Combine(repo, "..", ".git")) && !File.Exists(Path.Combine(repo, "..", ".git"))) return;
