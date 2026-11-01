@@ -123,6 +123,8 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
     private void StartListening(SuccessorInfo successor)
     {
         if (listener != null) return;
+        if (successor.Endpoints.Count == 0) return; // a relay-only successor has no announced TCP port; voters cannot reach it (recorded in the ticket Notes)
+        promotion.Listener?.Stop(); // T282: the standby listener holds the announced port until the election takes it over
         var port = PortOfEndpoint(successor.Endpoints[0]);
         var started = new TcpTlsListener(certificate, port, TimeSpan.FromSeconds(5));
         started.Start();
