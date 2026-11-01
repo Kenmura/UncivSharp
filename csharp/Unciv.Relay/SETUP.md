@@ -284,7 +284,7 @@ docker compose up -d --build
 ```
 
 - Mount the whole `letsencrypt` folder: the files in `live/npm-N/` are symlinks into `archive/`, which a mount of `live/npm-N` alone would break.
-- The container user (uid 10001) must be able to read the key. NPM's files normally belong to root; make them readable to 10001 (for example a group or ACL on the folder) or fall back to
+- The container user (uid 10001) must be able to read the key AND traverse `live/`, `archive/` and `npm-N/` (certbot-style folders are often mode 0700 root; the container has no capabilities, so root-only means unreadable). Tested here: the relative `live/` to `archive/` symlinks resolve inside the mount and a renewal that repoints them is picked up. NPM's files normally belong to root; make them readable to 10001 (for example a group or ACL on the folder) or fall back to
   7B.2's copy script. Which of these the owner used is not recorded here. A key readable by every local user is not acceptable on a shared machine.
 - The relay re-reads the certificate when the files change (and on SIGHUP), so an NPM renewal needs no restart. `docker compose logs relay` logs `certificate-reloaded` after one; that renewal
   path has not been observed on the real server yet (checklist row R9 in `deploy/CONNECTIVITY.md`).

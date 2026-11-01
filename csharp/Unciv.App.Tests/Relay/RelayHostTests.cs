@@ -342,10 +342,11 @@ public sealed class RelayHostTests
         // R13 (the source half that T337 owns): only relay.example.org, loopback and the owner-approved nickthorsen.com (T356) appear in the relay project and its deployment files.
         var root = RepoCsharpRoot();
         var hostLike = new Regex(@"\b[a-z0-9-]+(\.[a-z0-9-]+)*\.(org|com|net|io|dev|app|eu|de)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-        var allowed = new[] { "relay.example.org", "example.org", "example.net", "www.w3.org", "github.com", "docs.docker.com", "nginx.org", "letsencrypt.org", "prometheus.io", "caddyserver.com", "systemd.io", "learn.microsoft.com", "datatracker.ietf.org", "www.haproxy.org", "unciv.app", "microsoft.net", "system.net", "unciv.net", "mcr.microsoft.com", "nickthorsen.com" };
+        var allowed = new[] { "relay.example.org", "example.org", "example.net", "www.w3.org", "github.com", "docs.docker.com", "nginx.org", "letsencrypt.org", "prometheus.io", "caddyserver.com", "systemd.io", "learn.microsoft.com", "datatracker.ietf.org", "www.haproxy.org", "unciv.app", "microsoft.net", "system.net", "unciv.net", "mcr.microsoft.com" };
+        var owner = new[] { "civsharp.nickthorsen.com", "nickthorsen.com" }; // exactly the owner's relay host and the domain of its abuse-contact address; no other subdomain (review of T356)
         foreach (var file in RelayFiles(root))
             foreach (var match in hostLike.Matches(File.ReadAllText(file)).Select(m => m.Value))
-                Assert.True(allowed.Any(a => match.EndsWith(a, StringComparison.OrdinalIgnoreCase)) || Regex.IsMatch(match, @"^\w+\.(cs|json|conf|csproj|txt|md|yml|sh)$"), $"{Path.GetFileName(file)} names '{match}'");
+                Assert.True(allowed.Any(a => match.EndsWith(a, StringComparison.OrdinalIgnoreCase)) || owner.Contains(match, StringComparer.OrdinalIgnoreCase) || Regex.IsMatch(match, @"^\w+\.(cs|json|conf|csproj|txt|md|yml|sh)$"), $"{Path.GetFileName(file)} names '{match}'");
     }
 
     internal static string RepoCsharpRoot()
