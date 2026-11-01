@@ -271,6 +271,104 @@ class ReleaseAndroid(unittest.TestCase):
         self.assertIn("arm64", warned)
 
 
+class ReleaseLatestNeedsApk(unittest.TestCase):
+    """T403: package.sh android is retried after a Godot crash, and `latest` never moves to a release without client-android (unless --no-android)."""
+
+    def setUp(self):
+        self.rel = ClientPlatforms().load("release")
+
+    def test_blocker_rule(self):
+        self.assertIsNone(self.rel.latest_blocker(["cli", "client-linux", "client-android"], False))
+        self.assertIsNone(self.rel.latest_blocker(["cli", "client-linux"], True))
+        self.assertIn("client-android", self.rel.latest_blocker(["cli", "client-linux"], False))
+        self.assertIn("--no-android", self.rel.latest_blocker([], False))
+
+    def test_android_crash_is_retried_with_a_cache_clear_and_then_succeeds(self):
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            apk = t / "csharp" / "Unciv.Godot" / "build" / "android" / "Unciv.apk"
+            apk.parent.mkdir(parents=True)
+            import zipfile
+            with zipfile.ZipFile(apk, "w") as z:
+                z.writestr("lib/arm64-v8a/libgodot_android.so", "x")
+            runs = [mock.Mock(returncode=139, stdout="", stderr="Segmentation fault"), mock.Mock(returncode=0, stdout="", stderr="")]
+            stage = t / "stage"
+            stage.mkdir()
+            with mock.patch.object(self.rel, "CSHARP", t / "csharp"), mock.patch.object(self.rel.subprocess, "run", side_effect=runs) as sub, \
+                    mock.patch.object(self.rel, "clear_import_cache") as clear, mock.patch("sys.stderr"):
+                self.assertTrue(self.rel.build_android(stage))
+            self.assertEqual(sub.call_count, 2)
+            clear.assert_called_once()
+
+    def test_android_crash_every_time_gives_up_after_the_retries_and_only_warns(self):
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as t:
+            stage = Path(t) / "stage"
+            stage.mkdir()
+            crash = mock.Mock(returncode=139, stdout="", stderr="Segmentation fault")
+            with mock.patch.object(self.rel, "CSHARP", Path(t) / "csharp"), mock.patch.object(self.rel.subprocess, "run", return_value=crash) as sub, \
+                    mock.patch.object(self.rel, "clear_import_cache"), mock.patch("sys.stderr"):
+                self.assertFalse(self.rel.build_android(stage))
+            self.assertEqual(sub.call_count, self.rel.CRASH_RETRIES + 1)
+
+    def release(self, android_ok, flags=(), prior_latest=None):
+        """Run main() for a fake commit against a temp releases dir with every build mocked; returns (exit code or None, latest target or None, releases.log)."""
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            root = t / "csharp-releases"
+            root.mkdir()
+            (t / "csharp" / "Unciv.Godot" / "build" / "linux").mkdir(parents=True)
+            if prior_latest:
+                (root / prior_latest).mkdir()
+                (root / prior_latest / "manifest.json").write_text('{"commit": "aaaa", "tree": "old", "contents": ["client-android"]}')
+                (root / "latest").symlink_to(prior_latest)
+
+            def fake_git(*args, check=True):
+                out = {"rev-parse": "f" * 40}.get(args[0], "")
+                return mock.Mock(returncode=0 if args[0] != "cat-file" else 1, stdout=out, stderr="")
+
+            def fake_android(stage):
+                if android_ok:
+                    (stage / "client-android").mkdir()
+                return android_ok
+
+            code = None
+            with mock.patch.object(self.rel, "CSHARP", t / "csharp"), mock.patch.object(self.rel, "git", fake_git), mock.patch.object(self.rel, "releases_root", return_value=root), \
+                    mock.patch.object(self.rel, "run"), mock.patch.object(self.rel, "CLIENT_PLATFORMS", ["linux"]), mock.patch.object(self.rel, "build_android", fake_android), mock.patch.object(self.rel, "smoke_cli"), \
+                    mock.patch.object(self.rel, "prune", return_value=[]), mock.patch("sys.stderr"), mock.patch("sys.stdout"):
+                try:
+                    self.rel.main(["T1", "--client-only", *flags])
+                except SystemExit as e:
+                    code = e.code
+            latest = (root / "latest").readlink().name if (root / "latest").is_symlink() else None
+            return code, latest, (root / "releases.log").read_text()
+
+    def test_a_release_without_android_is_published_but_latest_stays(self):
+        code, latest, log = self.release(False, prior_latest="T0-aaaa")
+        self.assertEqual(code, 1)
+        self.assertEqual(latest, "T0-aaaa")
+        self.assertIn("latest kept: no client-android", log)
+
+    def test_a_release_without_android_does_not_create_latest(self):
+        code, latest, _ = self.release(False)
+        self.assertEqual((code, latest), (1, None))
+
+    def test_no_android_flag_lets_latest_move(self):
+        code, latest, _ = self.release(False, flags=("--no-android",), prior_latest="T0-aaaa")
+        self.assertIsNone(code)
+        self.assertEqual(latest, "T1-" + "f" * 9)
+
+    def test_a_release_with_android_moves_latest(self):
+        code, latest, _ = self.release(True, prior_latest="T0-aaaa")
+        self.assertIsNone(code)
+        self.assertEqual(latest, "T1-" + "f" * 9)
+
+
 class CheckPackage(unittest.TestCase):
     """T258: check_package.py accepts a complete archive and names what is missing or too small."""
 

@@ -19,6 +19,8 @@ removed when its agent finishes):
                                                        failure) it is left out with a WARNING and the release goes on. --linux-only, --cli-only and --no-android skip it.
     csharp-releases/<ticket>-<shortsha>/manifest.json   ticket, commit, tree, build time, what was built
     csharp-releases/latest -> newest version (only moves forward: a build of a commit older than the current latest never replaces it)
+                                                       T403: and only to a release that holds client-android (the owner needs an APK from latest at all times). A release without it is still
+                                                       published but latest stays, and release.py exits 1; --no-android is the explicit opt-out. package.sh android is retried after a Godot crash like the desktop clients.
     csharp-releases/releases.log                         one line per release
 
 The newest --keep (default 5) versions are kept. Builds run in the dotnet-dev container when `dotnet` is not on PATH, like the Green gate.
@@ -103,8 +105,15 @@ def build_android(stage):
     """T391: build the debug-signed arm64 APK and copy it to stage/client-android. Returns True when it was built and checked; False (with a WARNING) when
     the Android prerequisites are missing or the build fails: the APK is optional and never fails a release."""
     cmd = in_container(f"cd {shlex.quote(str(CSHARP))} && Unciv.Godot/tools/package.sh {ANDROID_PLATFORM}")
-    print(f"release: package client ({ANDROID_PLATFORM}) ...", flush=True)
-    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    r = None
+    for attempt in range(CRASH_RETRIES + 1):  # T403: like the desktop clients, a Godot crash (exit 139 once) is retried after clearing the import cache
+        print(f"release: package client ({ANDROID_PLATFORM}) ..." + (f" (retry {attempt} after a crash)" if attempt else ""), flush=True)
+        r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if r.returncode in CRASH_CODES and attempt < CRASH_RETRIES:
+            print(f"release: package client ({ANDROID_PLATFORM}) crashed (exit {r.returncode}); clearing the Godot import cache and retrying", file=sys.stderr)
+            clear_import_cache()
+            continue
+        break
     if r.returncode:
         print("\n".join((r.stdout + r.stderr).splitlines()[-30:]), file=sys.stderr)
         why = "the Android SDK / JDK / export templates are missing" if r.returncode == ANDROID_MISSING_EXIT else f"the build failed (exit {r.returncode})"
@@ -204,6 +213,14 @@ def is_newer(new_sha, old_sha):
     return git("merge-base", "--is-ancestor", new_sha, old_sha, check=False).returncode != 0
 
 
+def latest_blocker(built, no_android):
+    """T403: why `latest` must not move to a release holding `built`, or None. The owner needs an APK from `latest` at all times, so a release without
+    client-android never becomes latest unless the operator passed --no-android (a deliberate APK-less release; --cli-only/--linux-only alone are not enough)."""
+    if no_android or "client-android" in built:
+        return None
+    return "it has no client-android (the APK build failed or was skipped); pass --no-android to release without one, or fix the cause and re-run with --force"
+
+
 def point_latest(root, name):
     tmp = root / ".latest.tmp"
     tmp.unlink(missing_ok=True)
@@ -235,7 +252,8 @@ def main(argv):
     if not force:
         for d in versions(root):
             try:
-                if json.loads((d / "manifest.json").read_text()).get("tree") == tree:
+                prior = json.loads((d / "manifest.json").read_text())
+                if prior.get("tree") == tree and latest_blocker(prior.get("contents", []), "--no-android" in opts) is None:  # an APK-less build of the tree is retried
                     print(f"release: tree {tree[:9]} already released as {d.name}; nothing to build")
                     return
             except ValueError:
@@ -309,17 +327,20 @@ def main(argv):
                     old = json.loads((root / "latest" / "manifest.json").read_text()).get("commit")
                 except ValueError:
                     old = None
-            moved = is_newer(sha, old)
+            blocker = latest_blocker(built, "--no-android" in opts)
+            moved = blocker is None and is_newer(sha, old)
             if moved:
                 point_latest(root, name)
             gone = prune(root, keep)
             with open(root / "releases.log", "a") as log:
-                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {tid} {sha[:9]} {','.join(built)}{'' if moved else ' (latest kept: newer commit already released)'}\n")
+                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {tid} {sha[:9]} {','.join(built)}{'' if moved else ' (latest kept: ' + ('no client-android' if blocker else 'newer commit already released') + ')'}\n")
     finally:
         shutil.rmtree(stage, ignore_errors=True)
-    print(f"release: published {dest}" + (" and moved latest" if moved else " (latest not moved: a newer commit is already there)"))
+    print(f"release: published {dest}" + (" and moved latest" if moved else " (latest not moved: " + (blocker or "a newer commit is already there") + ")"))
     if gone:
         print(f"release: pruned {', '.join(gone)}")
+    if blocker:
+        die(f"latest not moved: {blocker}")
 
 
 def run_with_tmp(argv):

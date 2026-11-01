@@ -157,7 +157,7 @@ Local releases (`csharp-releases/`, git-ignored) are built by `release.py` below
   `state T### Done`) builds the tree it is run on into `<main checkout>/csharp-releases/<ticket>-<shortsha>/`:
   `cli/` (`dotnet publish Unciv.Cli`, self-contained linux-x64, so `./Unciv.Cli` runs with no dotnet installed), `server-linux-x64/` and `server-win-x64/`
   (`dotnet publish Unciv.Server`, self-contained, rulesets and the run guide bundled, T266; the Linux one is started and stopped by the smoke, the Windows one is UNVERIFIED and only warns on failure), `relay-linux-x64/` and `relay-win-x64/` (`dotnet publish Unciv.Relay`, self-contained, with README.md, SETUP.md and deploy/, T366; the same smoke rules), `client-linux/` (the
-  `package.sh` output below) and `manifest.json`. `csharp-releases/latest` only ever moves forward, the newest 5 versions are kept, and a tree
+  `package.sh` output below) and `manifest.json`. `csharp-releases/latest` only ever moves forward, only to a release that holds `client-android` (T403; `--no-android` opts out), the newest 5 versions are kept, and a tree
   already released (same git tree id) is not rebuilt without `--force`. After building, the CLI is smoke-run with an empty `PATH`.
 - `Unciv.Godot/tools/package.sh [linux|windows]` does the client: `dotnet build -c Release`, `godot --headless --export-release` with the presets in
   `export_presets.cfg`, then copies `data/jsons`, fonts, `LICENSE` and `THIRD_PARTY_NOTICES.md` next to the executable. Output is
@@ -170,7 +170,7 @@ Local releases (`csharp-releases/`, git-ignored) are built by `release.py` below
 The headless export crashes intermittently (about 1 in 15 fresh imports, more under load) in Godot's threaded font import: exit 139 (SIGSEGV),
 134 (SIGABRT) or 132 (SIGILL), sometimes leaving `Unciv.Godot/.godot/imported` half written. It is not a project bug; the retry is the fix:
 
-- `release.py` retries a crashed export twice after deleting `.godot/imported` and `.godot/exported` (exit codes 139, 134, 132 and raw signals).
+- `release.py` retries a crashed export (desktop clients and, since T403, `package.sh android`) twice after deleting `.godot/imported` and `.godot/exported` (exit codes 139, 134, 132 and raw signals).
 - `Unciv.Godot/tools/retry-on-crash.sh <retries> <command...>` does the same for scripts and CI (`retry-on-crash.sh 2 Unciv.Godot/tools/package.sh linux`).
   Any other exit code is a real failure and is returned immediately.
 - Other symptoms: "export produced no .NET assemblies folder (data_*)" means the export failed without a crash code, read the Godot output above it;
