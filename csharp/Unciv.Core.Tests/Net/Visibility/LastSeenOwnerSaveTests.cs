@@ -5,7 +5,6 @@ using Unciv.Logic.Files;
 using Unciv.Logic.Map;
 using Unciv.Models.Metadata;
 using Unciv.Models.Ruleset;
-using Unciv.Net;
 using Unciv.Net.Visibility;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 
@@ -37,7 +36,16 @@ public sealed class LastSeenOwnerSaveTests : IDisposable
         throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
     }
 
-    private GameInfo NewGame() => GameStarter.StartNewGame(
+    private GameInfo NewGame()
+    {
+        var game = StartGame();
+        var babylon = game.GetCivilization("Babylon"); // found the capital (a new game starts with settlers only), which also runs a sight update
+        var settler = babylon.Units.GetCivUnits().First(it => it.BaseUnit.IsCityFounder());
+        babylon.AddCity(settler.CurrentTile.Position, settler);
+        return game;
+    }
+
+    private GameInfo StartGame() => GameStarter.StartNewGame(
         new GameSetupInfo(
             new GameParameters
             {
