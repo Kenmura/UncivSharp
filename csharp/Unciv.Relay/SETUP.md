@@ -14,6 +14,7 @@
 - [Step 6: start the relay](#step-6-start-the-relay)
 - [Step 7, setup A: nginx terminates TLS](#step-7-setup-a-nginx-terminates-tls)
 - [Step 7, setup B: the relay holds the certificate](#step-7-setup-b-the-relay-holds-the-certificate)
+  - [Worked example: setup B with the certificate of Nginx Proxy Manager](#worked-example-setup-b-with-the-certificate-of-nginx-proxy-manager)
 - [Step 7, setup C: no domain, self-signed](#step-7-setup-c-no-domain-self-signed)
 - [Step 8: check that it works](#step-8-check-that-it-works)
 - [Step 9: tell your players](#step-9-tell-your-players)

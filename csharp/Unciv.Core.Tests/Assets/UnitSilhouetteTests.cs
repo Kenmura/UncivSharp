@@ -116,14 +116,14 @@ public sealed class UnitSilhouetteTests
         }
     }
 
-    private static bool[][] BuildMasks(string unit, int scale)
+    private static bool[][] BuildMasks(string unit, int scale, string? onlyRoot = null)
     {
         var glb = File.ReadAllBytes(Path.Combine(Pack, "models", "unit", unit + ".glb"));
         var jsonLength = BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12));
         using var doc = JsonDocument.Parse(glb.AsMemory(20, jsonLength));
         var root = doc.RootElement;
         var binStart = 20 + jsonLength + 8;
-        var triangles = Triangles(root, glb, binStart);
+        var triangles = Triangles(root, glb, binStart, onlyRoot);
         var masks = new bool[4][];
         for (var side = 0; side < 4; side++)
         {
@@ -171,7 +171,7 @@ public sealed class UnitSilhouetteTests
 
     private static float Edge(Vector2 a, Vector2 b, Vector2 p) => (p.X - a.X) * (b.Y - a.Y) - (p.Y - a.Y) * (b.X - a.X);
 
-    private static List<(Vector3 A, Vector3 B, Vector3 C)> Triangles(JsonElement root, byte[] glb, int binStart)
+    private static List<(Vector3 A, Vector3 B, Vector3 C)> Triangles(JsonElement root, byte[] glb, int binStart, string? onlyRoot = null)
     {
         var nodes = root.GetProperty("nodes");
         var meshes = root.GetProperty("meshes");
@@ -179,7 +179,8 @@ public sealed class UnitSilhouetteTests
         var views = root.GetProperty("bufferViews");
         var result = new List<(Vector3, Vector3, Vector3)>();
         var pending = new Stack<(int, Matrix4x4)>();
-        foreach (var n in root.GetProperty("scenes")[0].GetProperty("nodes").EnumerateArray()) pending.Push((n.GetInt32(), Matrix4x4.Identity));
+        foreach (var n in root.GetProperty("scenes")[0].GetProperty("nodes").EnumerateArray())
+            if (onlyRoot == null || nodes[n.GetInt32()].GetProperty("name").GetString() == onlyRoot) pending.Push((n.GetInt32(), Matrix4x4.Identity));
         while (pending.Count > 0)
         {
             var (index, parent) = pending.Pop();
@@ -800,8 +801,8 @@ public sealed class UnitSilhouetteTests
         Assert.True(failures.Count == 0, string.Join("\n", failures));
     }
 
-    /// <summary>T384: every mounted figure, as drawn (T389: the model's own mask pixels), covers at least this many pixels of the 40x56 frame (T389: measured minimum 1311, Chariot Archer, raised from 1000; was 1123, Horse Archer; the T383 size, unboosted, was 499).</summary>
-    private const int MinT384DrawnMountedCoverage = 1300;
+    /// <summary>T384: every mounted figure, as drawn (T389: the model's own mask pixels), covers at least this many pixels of the 40x56 frame (T397: measured minimum 1694, Chariot Archer, raised from 1300 because the riders are 1.35 times larger; T389: measured minimum 1311, Chariot Archer, raised from 1000; was 1123, Horse Archer; the T383 size, unboosted, was 499).</summary>
+    private const int MinT384DrawnMountedCoverage = 1600;
 
     [Fact]
     public void EveryMountedFigureAsDrawnIsBigEnough()
@@ -909,5 +910,41 @@ public sealed class UnitSilhouetteTests
                 }
             }
         Assert.True(failures.Count == 0, string.Join(" | ", failures));
+    }
+
+    /// <summary>T397: the rider alone (the scene root named Rig; the horse is the other roots), as masks of the four sides.</summary>
+    private static bool[][] RiderMasks(string unit) => BuildMasks(unit, 1, "Rig");
+
+    private static readonly string[] HorsebackRiders = ["Horseman", "Horse Archer", "Knight", "Lancer", "Cossack", "Cataphract", "Khan", "Conquistador", "Hussar", "Keshik", "Sipahi", "Companion Cavalry", "Mandekalu Cavalry", "Hakkapeliitta", "Cavalry", "Camel Archer"];
+
+    /// <summary>T397: every rider of a horse or camel (the elephants' riders sit in a tower and keep their size), without his mount, covers at least this many pixels of the 60x90 frame averaged over the four sides.
+    /// Measured minimum 930 (Horse Archer); before T397 the riders (a small body, a head stretched into a pole under a hat twice as wide as the shoulders) covered as few as 493 (Horse Archer), 645 (Cavalry) and 736 (Keshik).</summary>
+    private const int MinT397RiderCoverage = 900;
+
+    /// <summary>T397: the luminance (0.3 r + 0.59 g + 0.11 b of the coat factor) a mount's coat may have at most. Measured maximum 0.39 (Horseman); a white or cream coat vanishes on snow and sand: before T397 Cossack (0.62),
+    /// Cataphract (0.52) and Hakkapeliitta (0.75) were pale on pale. The elephants keep their grey skins and are left out.</summary>
+    private const float MaxT397CoatLuminance = 0.42f;
+
+    [Fact]
+    public void EveryHorsebackRiderIsABodyAndNotAHatOnAPole()
+    {
+        var failures = new List<string>();
+        foreach (var name in HorsebackRiders)
+        {
+            float coverage = (float)RiderMasks(name).Average(m => m.Count(on => on));
+            if (coverage < MinT397RiderCoverage) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{name}: rider covers {coverage:0} pixels, need {MinT397RiderCoverage}"));
+        }
+        Assert.True(failures.Count == 0, string.Join(" | ", failures));
+    }
+
+    [Fact]
+    public void NoHorseCoatIsPaleOnSnowAndSand()
+    {
+        var (_, mounted) = Units();
+        var failures = mounted.Where(u => u.Mount.StartsWith("horse", StringComparison.Ordinal) || u.Mount.Contains("camel", StringComparison.Ordinal))
+            .Select(u => (u.Name, Lum: 0.3f * u.Horse.X + 0.59f * u.Horse.Y + 0.11f * u.Horse.Z))
+            .Where(c => c.Lum > MaxT397CoatLuminance)
+            .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Name}: coat luminance {c.Lum:0.00}, at most {MaxT397CoatLuminance:0.00}"));
+        Assert.True(!failures.Any(), string.Join(" | ", failures));
     }
 }

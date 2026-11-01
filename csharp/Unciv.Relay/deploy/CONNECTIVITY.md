@@ -1,5 +1,12 @@
 # Manual connectivity matrix for civsharp.nickthorsen.com:47830 (T356)
 
+<!-- toc -->
+## Contents
+
+- [How to run the rows that are open](#how-to-run-the-rows-that-are-open)
+- [Local run (what R5 and R6 did)](#local-run-what-r5-and-r6-did)
+<!-- /toc -->
+
 The project owner's relay: Docker Compose, TLS and ALPN `unciv-relay/1` from the relay itself (setup B, see SETUP.md "Worked example"), NPM's Let's Encrypt certificate mounted read-only.
 Status words: **VERIFIED** (someone ran it and reported the result), **VERIFIED-LOCAL** (run against a local relay binary with a self-made certificate, not the real server),
 **UNVERIFIED** (nobody has run it, or the run was not independent), **BLOCKED** (needs something that does not exist yet). Nothing here is assumed: a row stays UNVERIFIED until a result is written next to it.

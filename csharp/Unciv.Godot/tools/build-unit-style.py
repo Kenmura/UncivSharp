@@ -80,9 +80,15 @@ P_ROBE = dict(scales={**P_REAL["scales"], "hips": (0.8, 1.0, 0.66), "spine": (0.
                       "upperleg.l": (0.8, 2.0, 0.7), "upperleg.r": (0.8, 2.0, 0.7), "lowerleg.l": (0.72, 2.0, 0.7), "lowerleg.r": (0.72, 2.0, 0.7)}, lift={"head": [0, 0.05, 0]})
 
 
+RIDER_BODY = {"hips": (0.95, 1.0, 0.85), "spine": (0.95, 1.0, 0.8), "chest": (1.12, 1.08, 0.85), "head": (0.5, 0.5, 0.5),
+              "upperarm.l": (1, 1.0, 1.0), "upperarm.r": (1, 1.0, 1.0), "lowerarm.l": (1, 1.0, 1.0), "lowerarm.r": (1, 1.0, 1.0)}
+
+
 def rider_props(p):
-    """A rider keeps his seated legs: only widths and the head change (the saddle, the seat clips and the horse's size stay as they are)."""
+    """A rider keeps his seated legs and his arm lengths (the saddle, the seat clips and the horse's size stay as they are). T397: the torso is broad and deep and the head is a head: until T395 the
+    head kept its full height with a foot soldier's narrow width (a pole), so riders were a thin stack under a hat; RIDER_BODY is the rider's own build."""
     sc = {k: (v[0], 1.0, v[2]) if k not in LEGS else (1, 1, 1) for k, v in p["scales"].items()}
+    sc.update(RIDER_BODY)
     return dict(scales=sc, lift={})
 
 
@@ -816,8 +822,13 @@ def lance(node, length=2.2, flag=True):
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------- the styles
 
+RIDER_PAINT = {"iron": (0.5, 0.52, 0.58)}  # T397: a rider's blade and shield were charcoal (0.2): a black bar and a black slab beside every horse; steel reads as a sword
+RIDER_HAT = 1.7  # T397: a rider's hat, over a foot soldier's (it was 2.1: the hats were bigger than the riders)
+RIDER_GEAR = 0.95  # T397: a rider's sword, axe, shield and crossbow, over a foot soldier's (it was 1.45 when riders were small: with riders drawn 2.0 against 1.3 they dwarfed the man)
+
+
 def _k(rider):
-    return 2.1 if rider else 1.0
+    return RIDER_HAT if rider else 1.0
 
 
 def _std_extras(c, rider, look, defaults):
@@ -840,7 +851,7 @@ BACKS = {
 def style_axe(rider, look):
     """Fur barbarians. Looks: a hat (horns, cat head, mohawk, feather headdress or none), a mantle size, a back load, a weapon scale."""
     def extras(c):
-        out = fur_mantle(c, look.get("mantle", 1.0) * (1.7 if rider else 1.0)) if look.get("mantle", 1.0) else []
+        out = fur_mantle(c, look.get("mantle", 1.0) * (1.15 if rider else 1.0)) if look.get("mantle", 1.0) else []
         if look.get("kilt", True):
             out += fur_kilt(c)
         out += leg_wraps(c) + _std_extras(c, rider, look, {})
@@ -861,7 +872,7 @@ def style_sword(rider, look):
         if look.get("lance"):
             out += lance("Spear", look["lance"])
         return out + _std_extras(c, rider, look, {})
-    att = {"Rectangle_Shield": look.get("rect", 1.38), "Round_Shield": look.get("round", 1.2), "Badge_Shield": look.get("badge", 1.3), "Spike_Shield": 1.3, "1H_Sword": look.get("sword", 1.12), "2H_Sword": look.get("sword2", 1.1),
+    att = {"Rectangle_Shield": look.get("rect", 1.38), "Round_Shield": look.get("round", 1.2), "Badge_Shield": look.get("badge", 1.3), "Spike_Shield": look.get("spike", 1.3), "1H_Sword": look.get("sword", 1.12), "2H_Sword": look.get("sword2", 1.1),
            "1H_Sword_Offhand": 1.25, "Knight_Helmet": look.get("helm", 1.25)}
     nodes = (lambda c, h: hold(h, "handslot.r", "Spear", SWORD_FRAME)) if look.get("lance") else None
     return Style(P_BRUTE, drop=("1H_Sword",) if look.get("lance") else (), att=big(ATT_KNIGHT, **att), nodes=nodes, extras=extras, cls=make_classify("Knight"))
@@ -997,7 +1008,7 @@ LOOKS = {
     },
     "sword": {
         "swordsman": dict(paint=dict(metal=(0.18,0.34,0.72), iron=(0.5,0.55,0.62), wool=(0.15,0.3,0.62))),
-        "great": dict(paint=dict(metal=(0.88,0.88,0.94), wool=(0.6,0.12,0.15), iron=(0.82,0.82,0.88)), hat="great", plume=False, tabard=0.4, sword2=0.85), "tiara": dict(paint=dict(wool=(0.12,0.16,0.55), metal=(0.15,0.2,0.65), iron=(0.85,0.7,0.22)), hat="tiara", plume=False, badge=1.45), "legion": dict(paint=dict(metal=(0.62,0.08,0.08), wool=(0.62,0.1,0.08), iron=(0.7,0.7,0.72)), hat="crest_stahl", plume=False, rect=1.5),
+        "great": dict(paint=dict(metal=(0.88,0.88,0.94), wool=(0.6,0.12,0.15), iron=(0.82,0.82,0.88)), hat="great", plume=False, tabard=0.4, sword2=0.85), "knight": dict(paint=dict(metal=(0.88,0.88,0.94), wool=(0.6,0.12,0.15), iron=(0.82,0.82,0.88)), hat="great", plume=True, plume_h=0.45, spike=1.8, tabard=0.4, sword2=0.85), "tiara": dict(paint=dict(wool=(0.12,0.16,0.55), metal=(0.15,0.2,0.65), iron=(0.85,0.7,0.22)), hat="tiara", plume=False, badge=1.45), "legion": dict(paint=dict(metal=(0.62,0.08,0.08), wool=(0.62,0.1,0.08), iron=(0.7,0.7,0.72)), hat="crest_stahl", plume=False, rect=1.5),
         "lands": dict(paint=dict(metal=(0.92,0.76,0.1), wool=(0.85,0.7,0.1), iron=(0.5,0.5,0.55)), hat="kettle", plume=False, sword2=0.82, back="bedroll"), "samurai": dict(paint=dict(metal=(0.78,0.1,0.52), wool=(0.12,0.12,0.2), iron=(0.1,0.1,0.14)), hat="kabuto_crescent", plume=False, back="pole", sword2=0.82), "crest": dict(hat="crest_stahl", plume=False),
         "plain_cap": dict(hat="cap", plume_h=0.3), "conq": dict(hat="kettle", plume=True, plume_h=0.6), "sipahi": dict(hat="turban", plume=False), "hakka": dict(hat="slouch_plume", plume=False, back="bigpole"),
         "cav": dict(hat="kepi", plume=False, lance=2.2), "hussar": dict(hat="kalpak", plume=False), "cata": dict(hat="kabuto", plume_h=0.3),
@@ -1006,7 +1017,7 @@ LOOKS = {
     "bow": {
         "archer": dict(paint=dict(wool=(0.1,0.14,0.32), cloth=(0.1,0.14,0.32))),
         "phrygian": dict(paint=dict(wool=(0.45,0.2,0.55)), hat="phrygian", quiver=False, size=1.0), "kalpak": dict(paint=dict(wool=(0.7,0.3,0.12)), hat="kalpak", size=1.2), "kettle": dict(paint=dict(wool=(0.1,0.3,0.4)), hat="kettle", size=1.5), "repeater": dict(paint=dict(wool=(0.85,0.7,0.2)), hat="jingasa", bow="repeater", size=1.2, quiver=False),
-        "rider_kalpak": dict(hat="kalpak"), "rider_turban": dict(hat="turban"),
+        "rider_kalpak": dict(hat="kalpak"), "rider_turban": dict(hat="turban"), "rider_cone": dict(hat="cone", size=1.0),
     },
     "javelin": {"sling": dict(paint=dict(wool=(0.7,0.58,0.38)), hat="cap", held="sling"), "atlatl": dict(paint=dict(wool=(0.6,0.28,0.1)), hat="fan", held="atlatl"), "skirm": dict(paint=dict(wool=(0.4,0.42,0.15)), back="pack")},
     "musket": {
@@ -1072,7 +1083,7 @@ def build(folder, body, keep, clips, style_name, seat=None, rider_height=None, h
     plain_lo, plain_hi = _body_bounds(m)  # the proportioned body before any gear
     att = style.att
     if seat:  # T308: a rider is drawn at 0.5 of a foot soldier's height, so his gear is oversized to keep the class readable
-        att = {k: tuple(v * 1.45 for v in f) if k.endswith(("Shield", "Sword", "Sword_Offhand", "Axe", "Axe_Offhand", "Crossbow")) else f for k, f in att.items()}
+        att = {k: tuple(v * RIDER_GEAR for v in f) if k.endswith(("Shield", "Sword", "Sword_Offhand", "Axe", "Axe_Offhand", "Crossbow")) else f for k, f in att.items()}
     bwo.scale_attachments(m, att)
     ctx = bwo.Ctx(m, newpos)
     style.nodes(ctx, H(m))
@@ -1083,7 +1094,7 @@ def build(folder, body, keep, clips, style_name, seat=None, rider_height=None, h
     for pr in prims:
         if pr.mat == "wood":
             pr.mat = "leather"  # a wood material renders white in Godot 4.7 (T294, cause not found)
-    repaint(prims, look.get("paint"))
+    repaint(prims, {**(RIDER_PAINT if seat else {}), **(look.get("paint") or {})})
     used = {pr.mat for pr in prims}
     if "team" not in used:
         prims += tabard(ctx, width=0.5)

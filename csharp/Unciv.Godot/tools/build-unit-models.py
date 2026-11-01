@@ -424,12 +424,12 @@ def hem_pair(x, top, height, half, **kw):
     return hem(x, top, height, half, **kw) + hem(-x, top, height, half, **kw)
 
 
-def flare(z, sign, angle=0.6):
+def flare(z, sign, angle=0.6, width=0.26):
     """T396: a cloth hanging in front of the chest (sign +1) or behind the rump (-1) and flaring outwards at the hem, seen in profile as a swallow tail."""
-    return ("body", *rotated_box((0.0, 0.4, 0.3 * sign), (0.0, -0.17, 0.0), (0.26, 0.36, 0.03), -sign * angle))
+    return ("body", *rotated_box((0.0, 0.4, 0.3 * sign), (0.0, -0.17, 0.0), (width, 0.36, 0.03), -sign * angle))
 
 
-HORSE_VARIANTS["caparison"] = hem_pair(0.125, 0.39, 0.17, 0.25, tabs=(-0.1, 0.0, 0.1), tab_drop=0.15) + [flare(0.3, 1), flare(-0.3, -1)]
+HORSE_VARIANTS["caparison"] = hem_pair(0.125, 0.39, 0.17, 0.25, tabs=(-0.1, 0.0, 0.1), tab_drop=0.15) + [flare(0.3, 1, width=0.4), flare(-0.3, -1, width=0.4)]
 # the Mandekalu Cavalry's plain long robe: a straight side cloth without tabs and flat front and back cloths (the Knight's caparison has a scalloped hem and flared cloths)
 HORSE_VARIANTS["robe"] = hem_pair(0.125, 0.4, 0.2, 0.25, tabs=()) + [("body", (0.0, 0.33, 0.29), (0.26, 0.22, 0.03)), ("body", (0.0, 0.33, -0.29), (0.26, 0.22, 0.03))]
 HORSE_VARIANTS["barded"] = hem_pair(0.115, 0.41, 0.19, 0.22, tabs=(-0.08, 0.08), tab_drop=0.09) + HORSE_VARIANTS["barded"][2:]
@@ -674,7 +674,8 @@ _STYLE = []
 # in the repository; `fetch-kaykit.py` stages them now, so the builders produce the final size and the client draws every model at its own size. RIDER_EXTRA makes the rider larger against his mount.
 FOOT_BOOST = 1.3
 MOUNTED_BOOST = 1.5
-RIDER_EXTRA = 1.3
+RIDER_EXTRA = 1.75
+ELEPHANT_RIDER_EXTRA = 1.3  # T397: the howdah riders keep the T389 size (they sit in a tower, not on a back; the three elephants stay told apart at it)
 
 
 def style_module():
@@ -710,10 +711,11 @@ def main(source, pack):
             continue
         rider, rider_bin = read_glb(os.path.join(source, data["bodies"][unit["body"]]))
         clips = clips_for(data, unit)
+        rider_extra = ELEPHANT_RIDER_EXTRA if unit.get("mount", {}).get("kind") == "elephant" else RIDER_EXTRA
         if "style" in unit:  # T295
-            rider, rider_bin = style_module().build(source, unit["body"], unit["keep"], clips, unit["style"], seat=mounted["seat"], rider_height=mounted["riderHeight"] * MOUNTED_BOOST * RIDER_EXTRA, look=unit.get("look"), cap=MOUNTED_BOOST)
+            rider, rider_bin = style_module().build(source, unit["body"], unit["keep"], clips, unit["style"], seat=mounted["seat"], rider_height=mounted["riderHeight"] * MOUNTED_BOOST * rider_extra, look=unit.get("look"), cap=MOUNTED_BOOST)
         else:
-            rider, rider_bin = reduce_body(rider, rider_bin, set(unit["keep"]), clips, mounted["riderHeight"] * MOUNTED_BOOST * RIDER_EXTRA, seat=mounted["seat"])
+            rider, rider_bin = reduce_body(rider, rider_bin, set(unit["keep"]), clips, mounted["riderHeight"] * MOUNTED_BOOST * rider_extra, seat=mounted["seat"])
         mount = unit.get("mount", {})
         scale = mount.get("scale", 1.0) * MOUNTED_BOOST
         kind = mount.get("kind", "horse")
