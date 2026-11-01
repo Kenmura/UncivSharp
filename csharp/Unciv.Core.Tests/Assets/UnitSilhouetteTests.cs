@@ -947,4 +947,121 @@ public sealed class UnitSilhouetteTests
             .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Name}: coat luminance {c.Lum:0.00}, at most {MaxT397CoatLuminance:0.00}"));
         Assert.True(!failures.Any(), string.Join(" | ", failures));
     }
+
+    /// <summary>T398: the head gear of the four riders whose hats were dishes (every vertex of the rider's mesh weighted to the head joint: head, hat, plume) is at most this wide across, in world units at the model's own size: the
+    /// turbans of Sipahi, Mandekalu Cavalry and Camel Archer at most 0.45 (before T398 0.52, 0.55, 0.55; now 0.30, 0.29, 0.32) and the Conquistador's kettle at most 0.65 (before 0.76, now 0.59: its outline against the Cataphract now
+    /// comes from the high cantle behind the rider, not from the brim). The shoulders are 0.62 wide.</summary>
+    private static readonly (string Name, float Max)[] HeadGearLimits = [("Sipahi", 0.45f), ("Mandekalu Cavalry", 0.45f), ("Camel Archer", 0.45f), ("Conquistador", 0.65f)];
+
+    /// <summary>T398: the rider's own bow (a rider of the bow style, the horse excluded) spans at most this many world units sideways or lengthways: before T398 it measured 1.9 to 2.0 (Camel Archer, Chariot Archer), more than a tile
+    /// (the hexagon is 2 across), so the bow reached the neighbour at yaw 90. Measured maximum 1.35.</summary>
+    private const float MaxT398RiderSpan = 1.5f;
+
+    /// <summary>T398: no elephant's skin is paler than this luminance (0.3 r + 0.59 g + 0.11 b of the factor): before T398 Naresuan's (0.60) and the War Elephant's (0.43) grey vanished on snow and sand. Measured maximum 0.21.</summary>
+    private const float MaxT398ElephantLuminance = 0.30f;
+
+    [Fact]
+    public void NoRiderHatIsADishWiderThanHisShoulders()
+    {
+        var failures = new List<string>();
+        foreach (var (name, limit) in HeadGearLimits)
+        {
+            var glb = File.ReadAllBytes(Path.Combine(Pack, "models", "unit", name + ".glb"));
+            var jsonLength = BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12));
+            using var doc = JsonDocument.Parse(glb.AsMemory(20, jsonLength));
+            var width = HeadGearWidth(doc.RootElement, glb, 20 + jsonLength + 8);
+            if (width > limit) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{name}: head gear {width:0.00} across, at most {limit:0.00}"));
+        }
+        Assert.True(failures.Count == 0, string.Join(" | ", failures));
+    }
+
+    /// <summary>The across (X) extent of the rider's vertices weighted to the joint named head, in the rider's world size.</summary>
+    private static float HeadGearWidth(JsonElement root, byte[] glb, int binStart)
+    {
+        var nodes = root.GetProperty("nodes");
+        var rig = Enumerable.Range(0, nodes.GetArrayLength()).First(i => nodes[i].GetProperty("name").GetString() == "Rig");
+        var matrix = Local(nodes[rig]);
+        var headNodes = Enumerable.Range(0, nodes.GetArrayLength()).Where(i => nodes[i].GetProperty("name").GetString() == "head" && IsUnder(nodes, rig, i)).ToHashSet();
+        float lo = float.MaxValue, hi = float.MinValue;
+        foreach (var skin in root.GetProperty("skins").EnumerateArray())
+        {
+            var joints = skin.GetProperty("joints").EnumerateArray().Select(j => j.GetInt32()).ToArray();
+            if (!joints.Any(headNodes.Contains)) continue;
+            foreach (var node in nodes.EnumerateArray().Where(n => n.TryGetProperty("mesh", out _) && n.TryGetProperty("skin", out _)))
+                foreach (var prim in root.GetProperty("meshes")[node.GetProperty("mesh").GetInt32()].GetProperty("primitives").EnumerateArray())
+                {
+                    var attributes = prim.GetProperty("attributes");
+                    if (!attributes.TryGetProperty("JOINTS_0", out var jointAccessor)) continue;
+                    var accessors = root.GetProperty("accessors");
+                    var views = root.GetProperty("bufferViews");
+                    var pos = ReadVec3(accessors[attributes.GetProperty("POSITION").GetInt32()], views, glb, binStart);
+                    var acc = accessors[jointAccessor.GetInt32()];
+                    int size = acc.GetProperty("componentType").GetInt32() == 5121 ? 1 : 2, offset = Offset(acc, views, binStart);
+                    for (int v = 0; v < pos.Length; v++)
+                    {
+                        int joint = size == 1 ? glb[offset + v * 4] : BitConverter.ToUInt16(glb, offset + v * 8);
+                        if (!headNodes.Contains(joints[joint])) continue;
+                        float x = Vector3.Transform(pos[v], matrix).X;
+                        lo = MathF.Min(lo, x);
+                        hi = MathF.Max(hi, x);
+                    }
+                }
+        }
+        return hi - lo;
+    }
+
+    private static bool IsUnder(JsonElement nodes, int root, int target)
+    {
+        var stack = new Stack<int>([root]);
+        while (stack.Count > 0)
+        {
+            int n = stack.Pop();
+            if (n == target) return true;
+            if (nodes[n].TryGetProperty("children", out var children)) foreach (var c in children.EnumerateArray()) stack.Push(c.GetInt32());
+        }
+        return false;
+    }
+
+    [Fact]
+    public void NoRiderBowReachesTheNeighbourTile()
+    {
+        var (_, mounted) = Units();
+        var failures = new List<string>();
+        foreach (var u in mounted.Where(u => u.Style == "bow"))
+        {
+            var glb = File.ReadAllBytes(Path.Combine(Pack, "models", "unit", u.Name + ".glb"));
+            var jsonLength = BinaryPrimitives.ReadInt32LittleEndian(glb.AsSpan(12));
+            using var doc = JsonDocument.Parse(glb.AsMemory(20, jsonLength));
+            var vertices = Triangles(doc.RootElement, glb, 20 + jsonLength + 8, "Rig").SelectMany(t => new[] { t.A, t.B, t.C }).ToList();
+            float across = vertices.Max(v => v.X) - vertices.Min(v => v.X), along = vertices.Max(v => v.Z) - vertices.Min(v => v.Z);
+            if (MathF.Max(across, along) > MaxT398RiderSpan) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{u.Name}: the rider spans {across:0.00} across and {along:0.00} along, at most {MaxT398RiderSpan:0.0}"));
+        }
+        Assert.True(failures.Count == 0, string.Join(" | ", failures));
+    }
+
+    [Fact]
+    public void NoElephantSkinIsPaleOnSnowAndSand()
+    {
+        var (_, mounted) = Units();
+        var failures = mounted.Where(u => u.Mount.StartsWith("elephant", StringComparison.Ordinal))
+            .Select(u => (u.Name, Lum: 0.3f * u.Horse.X + 0.59f * u.Horse.Y + 0.11f * u.Horse.Z))
+            .Where(c => c.Lum > MaxT398ElephantLuminance)
+            .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Name}: skin luminance {c.Lum:0.00}, at most {MaxT398ElephantLuminance:0.00}"));
+        Assert.True(!failures.Any(), string.Join(" | ", failures));
+    }
+
+    /// <summary>T398: a violet coat (blue over red over green) is at most this saturated ((max - min) / max of the factor): the Knight's (0.20, 0.06, 0.28) was 0.79, the loudest colour on the map; it is 0.54 now (the coat-distance rule against Sipahi, Mandekalu
+    /// and Hussar keeps it from going greyer).</summary>
+    private const float MaxT398VioletSaturation = 0.60f;
+
+    [Fact]
+    public void NoMountWearsALoudVioletCoat()
+    {
+        var (_, mounted) = Units();
+        var failures = mounted.Where(u => u.Horse.Z > u.Horse.X && u.Horse.X > u.Horse.Y)
+            .Select(u => (u.Name, Saturation: (u.Horse.Z - u.Horse.Y) / u.Horse.Z))
+            .Where(c => c.Saturation > MaxT398VioletSaturation)
+            .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Name}: violet coat saturation {c.Saturation:0.00}, at most {MaxT398VioletSaturation:0.00}"));
+        Assert.True(!failures.Any(), string.Join(" | ", failures));
+    }
 }

@@ -516,6 +516,9 @@ HATS = {
     "slouch": ("leather", 0.40, 0.18, 0.20, 0.16), "kabuto": ("iron", 0.32, 0.18, 0.18, 0.10), "tiara": ("gold", 0.20, 0.18, 0.36, 0.20), "great": ("iron", 0.21, 0.19, 0.30, 0.20),
     "cap": ("iron", 0.20, 0.17, 0.14, 0.10), "kalpak": ("fur", 0.22, 0.21, 0.36, 0.12), "phrygian": ("team", 0.18, 0.17, 0.34, 0.03, True), "kettle": ("iron", 0.44, 0.17, 0.14, 0.10),
     "bonnet": ("wool", 0.26, 0.2, 0.2, 0.2), "cone": ("iron", 0.2, 0.17, 0.3, 0.02, True),
+    # T398: a rider's hats are drawn 1.7 times a foot soldier's, and the kettle (brim 0.44), the turban (a cream ball 0.28 across) and the cone (a brim wider than the head) became dishes wider than the shoulders
+    # and a dark round hat from behind. These keep each hat's identity (a brimmed iron kettle, a cream turban, a pointed cap) at a head-sized width.
+    "r_kettle": ("iron", 0.34, 0.17, 0.14, 0.11), "r_turban": ("bone", 0.17, 0.165, 0.22, 0.10), "r_turban2": ("bone", 0.14, 0.135, 0.2, 0.09), "r_cone": ("fur", 0.17, 0.16, 0.40, 0.02, True),
 }
 
 
@@ -557,6 +560,18 @@ def mohawk(c, k=1.0, height=0.55, mat="team"):
     return [box_prim([cx, y0 + 0.08 + height * k / 2, cz - 0.02], [0.07, height * k / 2, 0.3 * k], mat, PAL[mat], c.only("head"))]
 
 
+def ridge(c, k=1.0, mat="team", n=5, height=0.3):
+    """T398: a row of spikes standing on the crown from the brow to the nape (the elephant riders' crest). The old mohawk was one flat slab 0.3 k deep and 0.28 k tall: beside and above the head it read as a
+    detached board, from behind as a bar through the figure; spikes that start ON the head and fall away at both ends read as hair."""
+    cx, y0, cz = _head(c)
+    out = []
+    for i in range(n):
+        t = i / (n - 1) * 2 - 1
+        h = height * k * (1.0 - 0.45 * t * t)
+        out.append(lathe([(0.05 * k, y0 + 0.0), (0.035 * k, y0 + h * 0.5), (0.0, y0 + h)], 6, [cx, 0, cz + t * 0.12 * k], mat, PAL[mat], c.only("head")))
+    return out
+
+
 def feathers(c, k=1.0, n=7, length=0.36, spread=1.1):
     cx, y0, cz = _head(c)
     out = []
@@ -588,7 +603,7 @@ def havelock(c, k=1.0, mat="cloth"):
 
 
 HAT_BUILD = {
-    "horns": lambda c, k: hat(c, "cap", k) + horns(c, k), "cat": lambda c, k: hat(c, "bonnet", k) + ears(c, k), "mohawk": lambda c, k: mohawk(c, k), "feathers": lambda c, k: feathers(c, k),
+    "horns": lambda c, k: hat(c, "cap", k) + horns(c, k), "cat": lambda c, k: hat(c, "bonnet", k) + ears(c, k), "mohawk": lambda c, k: mohawk(c, k), "ridge": lambda c, k: ridge(c, k), "feathers": lambda c, k: feathers(c, k),
     "crest_stahl": lambda c, k: hat(c, "stahl", k) + crest_across(c, k), "crest_cap": lambda c, k: hat(c, "cap", k) + crest_across(c, k, "team", 0.26),
     "kabuto_crescent": lambda c, k: hat(c, "kabuto", k) + crescent(c, k), "slouch_plume": lambda c, k: hat(c, "slouch", k) + feathers(c, k, 3, 0.3, 0.5),
     "beret_plume": lambda c, k: hat(c, "beret", k) + feathers(c, k, 5, 0.3, 0.9), "kepi_cloth": lambda c, k: hat(c, "kepi", k) + havelock(c, k),
@@ -824,6 +839,7 @@ def lance(node, length=2.2, flag=True):
 
 RIDER_PAINT = {"iron": (0.5, 0.52, 0.58)}  # T397: a rider's blade and shield were charcoal (0.2): a black bar and a black slab beside every horse; steel reads as a sword
 RIDER_HAT = 1.7  # T397: a rider's hat, over a foot soldier's (it was 2.1: the hats were bigger than the riders)
+RIDER_BOW = 0.95  # T398: a rider's bow over a foot archer's (it was 1.4: the limbs spanned 1.9 world units sideways, a whole tile, and reached the neighbour at yaw 90)
 RIDER_GEAR = 0.95  # T397: a rider's sword, axe, shield and crossbow, over a foot soldier's (it was 1.45 when riders were small: with riders drawn 2.0 against 1.3 they dwarfed the man)
 
 
@@ -888,7 +904,7 @@ def style_spear(rider, look):
 
 
 def style_bow(rider, look):
-    size = look.get("size", 1.35) * (1.4 if rider else 1.0)
+    size = look.get("size", 1.35) * (RIDER_BOW if rider else 1.0)
     return Style(P_LEAN, drop=("1H_Crossbow", "2H_Crossbow"), att=ATT_ROGUE, nodes=lambda c, h: hold(h, "handslot.r", "Bow", XBOW_FRAME),
                  extras=lambda c: bow_parts_look("Bow", size, look.get("bow")) + (quiver(c) if look.get("quiver", True) else []) + (hat_hood(c) if "hat" not in look else headgear(c, look["hat"], _k(rider))) + _std_extras(c, rider, {k: v for k, v in look.items() if k != "hat"}, {})
                  + tabard(c, top=c.pos["chest"][1] + 0.1, bottom=c.pos["hips"][1] - 0.05, width=0.5) + leg_wraps(c), cls=make_classify("Rogue", bare=False))
@@ -1004,20 +1020,20 @@ LOOKS = {
     "axe": {
         "tuft": dict(paint=dict(wool=(0.92,0.42,0.36), fur=(0.96,0.5,0.42), hide=(0.88,0.4,0.34), skin=(0.42,0.26,0.17)), hat="tuft", mantle=0.7), "cat": dict(paint=dict(fur=(0.9,0.6,0.1), wool=(0.82,0.58,0.12), hide=(0.8,0.5,0.1)), hat="cat", mantle=0.6, back="back_shield"), "horned": dict(paint=dict(fur=(0.05,0.045,0.05), wool=(0.30,0.09,0.07), hide=(0.05,0.045,0.05)), hat="horns", mantle=1.5, axe2=1.42), "raider": dict(paint=dict(fur=(0.92,0.92,0.9), wool=(0.28,0.34,0.52), hide=(0.7,0.7,0.68)), hat="crest_cap", back="pack", shield=1.4),
         "carnyx": dict(paint=dict(wool=(0.18,0.34,0.75), skin=(0.25,0.4,0.75), fur=(0.5,0.35,0.18)), hat=None, back="carnyx"), "mohawk": dict(paint=dict(wool=(0.62,0.26,0.14), skin=(0.72,0.34,0.2), fur=(0.62,0.1,0.08)), hat="mohawk", mantle=0.0), "wolf": dict(paint=dict(wool=(0.55,0.6,0.72), fur=(0.45,0.52,0.65), hide=(0.4,0.45,0.6)), hat="ushanka", mantle=1.6),
-        "khan": dict(hat="horns", mantle=1.4), "cossack": dict(hat="kalpak"), "mali": dict(hat="turban", back="back_shield"),
+        "khan": dict(hat="horns", mantle=1.4), "cossack": dict(hat="kalpak"), "mali": dict(hat="r_turban2", back="back_shield"), "ridge": dict(paint=dict(wool=(0.62,0.26,0.14), skin=(0.72,0.34,0.2), fur=(0.62,0.1,0.08)), hat="ridge", mantle=0.0),
     },
     "sword": {
         "swordsman": dict(paint=dict(metal=(0.18,0.34,0.72), iron=(0.5,0.55,0.62), wool=(0.15,0.3,0.62))),
         "great": dict(paint=dict(metal=(0.88,0.88,0.94), wool=(0.6,0.12,0.15), iron=(0.82,0.82,0.88)), hat="great", plume=False, tabard=0.4, sword2=0.85), "knight": dict(paint=dict(metal=(0.88,0.88,0.94), wool=(0.6,0.12,0.15), iron=(0.82,0.82,0.88)), hat="great", plume=True, plume_h=0.45, spike=1.8, tabard=0.4, sword2=0.85), "tiara": dict(paint=dict(wool=(0.12,0.16,0.55), metal=(0.15,0.2,0.65), iron=(0.85,0.7,0.22)), hat="tiara", plume=False, badge=1.45), "legion": dict(paint=dict(metal=(0.62,0.08,0.08), wool=(0.62,0.1,0.08), iron=(0.7,0.7,0.72)), hat="crest_stahl", plume=False, rect=1.5),
         "lands": dict(paint=dict(metal=(0.92,0.76,0.1), wool=(0.85,0.7,0.1), iron=(0.5,0.5,0.55)), hat="kettle", plume=False, sword2=0.82, back="bedroll"), "samurai": dict(paint=dict(metal=(0.78,0.1,0.52), wool=(0.12,0.12,0.2), iron=(0.1,0.1,0.14)), hat="kabuto_crescent", plume=False, back="pole", sword2=0.82), "crest": dict(hat="crest_stahl", plume=False),
-        "plain_cap": dict(hat="cap", plume_h=0.3), "conq": dict(hat="kettle", plume=True, plume_h=0.6), "sipahi": dict(hat="turban", plume=False), "hakka": dict(hat="slouch_plume", plume=False, back="bigpole"),
+        "plain_cap": dict(hat="cap", plume_h=0.3), "conq": dict(hat="r_kettle", plume=True, plume_h=0.6), "sipahi": dict(hat="r_turban", plume=False), "hakka": dict(hat="slouch_plume", plume=False, back="bigpole"),
         "cav": dict(hat="kepi", plume=False, lance=2.2), "hussar": dict(hat="kalpak", plume=False), "cata": dict(hat="kabuto", plume_h=0.3),
     },
     "spear": {"spearman": dict(paint=dict(metal=(0.2,0.65,0.8), wool=(0.15,0.5,0.65), leather=(0.45,0.3,0.12))), "hoplite": dict(paint=dict(wool=(0.6,0.12,0.1), iron=(0.55,0.36,0.16), metal=(0.58,0.38,0.16)), hat="crest_cap", round=1.5, length=1.6), "pike": dict(paint=dict(metal=(0.16,0.15,0.17), wool=(0.45,0.45,0.15), iron=(0.6,0.6,0.64)), hat="morion", spike=0.9, length=2.55, back="back_sword"), "lancer": dict(length=2.4)},
     "bow": {
         "archer": dict(paint=dict(wool=(0.1,0.14,0.32), cloth=(0.1,0.14,0.32))),
         "phrygian": dict(paint=dict(wool=(0.45,0.2,0.55)), hat="phrygian", quiver=False, size=1.0), "kalpak": dict(paint=dict(wool=(0.7,0.3,0.12)), hat="kalpak", size=1.2), "kettle": dict(paint=dict(wool=(0.1,0.3,0.4)), hat="kettle", size=1.5), "repeater": dict(paint=dict(wool=(0.85,0.7,0.2)), hat="jingasa", bow="repeater", size=1.2, quiver=False),
-        "rider_kalpak": dict(hat="kalpak"), "rider_turban": dict(hat="turban"), "rider_cone": dict(hat="cone", size=1.0),
+        "rider_kalpak": dict(hat="kalpak"), "rider_turban": dict(hat="r_turban"), "rider_cone": dict(hat="r_cone", size=1.5),
     },
     "javelin": {"sling": dict(paint=dict(wool=(0.7,0.58,0.38)), hat="cap", held="sling"), "atlatl": dict(paint=dict(wool=(0.6,0.28,0.1)), hat="fan", held="atlatl"), "skirm": dict(paint=dict(wool=(0.4,0.42,0.15)), back="pack")},
     "musket": {
