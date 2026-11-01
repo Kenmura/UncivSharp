@@ -380,6 +380,20 @@ public sealed class NetVisibilityTests
     }
 
     [Fact]
+    public void LastSeenOwner_FollowsACityChangingHandsWhileTheCivWatches()
+    {
+        var center = foreignCity.GetCenterTile();
+        var fogCenter = fogCity.GetCenterTile();
+        a.SetLastSeenOwner(center.Position, f.CivId);
+        a.SetLastSeenOwner(fogCenter.Position, f.CivId);
+        ApplyVision();
+        foreignCity.MoveToCiv(h); // conquest and annexation change the owner of every city tile without going through SetOwningCity
+        fogCity.MoveToCiv(h);
+        Assert.Equal(h.CivId, a.GetLastSeenOwner(center.Position)); // a watched the city change hands
+        Assert.Equal(f.CivId, a.GetLastSeenOwner(fogCenter.Position)); // a did not see this one
+    }
+
+    [Fact]
     public void LastSeenOwner_FollowsAChangeOnlyWhileTheCivCanSeeTheTile()
     {
         var seenTile = game.GetTile(new HexCoord(2, 0));

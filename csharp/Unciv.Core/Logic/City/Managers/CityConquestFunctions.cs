@@ -389,7 +389,11 @@ public class CityConquestFunctions(CityObject city)
 
         if (newCiv.HasUnique(UniqueType.MayNotAnnexCities)) MakePuppet();
 
-        foreach (var tile in city.GetTiles().ToList()) tile.SetRoadOwnerToOwningCiv(); // T293
+        foreach (var tile in city.GetTiles().ToList())
+        {
+            tile.SetRoadOwnerToOwningCiv(); // T293
+            tile.RememberOwnerForViewers(); // T303: the tiles changed owner without SetOwningCity, and a civ watching them saw it
+        }
         city.TryUpdateRoadStatus();
         city.CityStats.Update();
 
