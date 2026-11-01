@@ -2032,7 +2032,7 @@
     "shots": [
       {
         "golden": "relay/settings-empty.png",
-        "caption": "Fresh install: no default relay, empty address and fingerprint fields, the switch disabled, and what the relay's operator can see."
+        "caption": "Fresh install: empty address and fingerprint fields, the built-in relay named as in use, the switch usable, and what the relay's operator can see."
       },
       {
         "golden": "relay/settings-invalid.png",

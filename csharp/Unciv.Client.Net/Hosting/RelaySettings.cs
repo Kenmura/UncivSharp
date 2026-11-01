@@ -16,13 +16,20 @@ namespace Unciv.Client.Net.Hosting;
 public sealed record RelayChoice(RelayEndpoint Endpoint, RelayDialOptions Dial, bool NeedsPrompt);
 
 /// <summary>
-/// T338: the player's relay settings, <c>relay.json</c> in the user folder (design/RELAY.md sections 4, 5 and 8). There is NO default relay in the source (R13): a fresh install has none, and the
-/// Host screen offers "Reach me through a relay" only once <see cref="Url"/> is set. An owner's own build may ship an uncommitted <c>relay-default.json</c> next to the client; it is read only when the
-/// player has no <c>relay.json</c> yet, and the value it fills in is visible and editable in the settings like any other.
+/// T338: the player's relay settings, <c>relay.json</c> in the user folder (design/RELAY.md sections 4, 5 and 8). T392: every build carries <see cref="DefaultUrl"/> as the built-in relay, used while
+/// <see cref="Url"/> is empty, so a fresh install offers "Reach me through a relay" and joins relay invites with no setup. A relay the player types always wins; clearing it restores the default. There is no
+/// fingerprint pin on the default: its trust is the relay's public (Let's Encrypt) certificate. A build can still be pointed elsewhere with a <c>relay-default.json</c> next to the client, read only when the
+/// player has no <c>relay.json</c> yet; the value it fills in is visible and editable in the settings like any other.
 /// </summary>
 public sealed class RelaySettings
 {
-    /// <summary><c>unciv-relay://host[:port][?fp=...]</c>, or null/empty for no relay.</summary>
+    /// <summary>T392: the relay every build ships with (owner-approved, public). TLS + ALPN <c>unciv-relay/1</c> on this port; abuse contact in Unciv.Relay/SETUP.md.</summary>
+    public const string DefaultUrl = "unciv-relay://civsharp.nickthorsen.com:47830";
+
+    /// <summary>The built-in relay, <see cref="DefaultUrl"/> parsed.</summary>
+    public static RelayEndpoint DefaultEndpoint { get; } = RelayEndpoint.TryParse(DefaultUrl, out var builtIn) ? builtIn! : throw new InvalidOperationException("DefaultUrl is not a relay URL");
+
+    /// <summary><c>unciv-relay://host[:port][?fp=...]</c> the player set; null/empty means the built-in <see cref="DefaultUrl"/> is used.</summary>
     [JsonPropertyName("url")]
     public string? Url { get; set; }
 
@@ -40,11 +47,15 @@ public sealed class RelaySettings
 
     private List<string> acceptedRelays = [];
 
-    /// <summary>The configured relay; null when none is set or the text is not a relay URL.</summary>
+    /// <summary>True while the player has set no relay, so <see cref="DefaultEndpoint"/> is in use.</summary>
     [JsonIgnore]
-    public RelayEndpoint? Endpoint => RelayEndpoint.TryParse(Url, out var endpoint) ? endpoint : null;
+    public bool UsingDefault => string.IsNullOrWhiteSpace(Url);
 
-    /// <summary>True when hosting should register on the relay: one is set and the player did not turn it off.</summary>
+    /// <summary>The relay in use: the player's own when set (null if the text is not a relay URL), else the built-in default.</summary>
+    [JsonIgnore]
+    public RelayEndpoint? Endpoint => UsingDefault ? DefaultEndpoint : RelayEndpoint.TryParse(Url, out var endpoint) ? endpoint : null;
+
+    /// <summary>True when hosting should register on the relay: there is one (the default counts) and the player did not turn it off.</summary>
     [JsonIgnore]
     public bool HostThroughRelay => ReachMeThroughRelay && Endpoint != null;
 
@@ -78,7 +89,7 @@ public sealed class RelaySettings
     /// <summary>T371: the player no longer agrees to connect through <paramref name="key"/> (<c>host:port</c>); the next invite naming it asks again.</summary>
     public bool Forget(string key) => AcceptedRelays.RemoveAll(it => string.Equals(it, key, StringComparison.OrdinalIgnoreCase)) > 0;
 
-    /// <summary>Reads <paramref name="path"/>; a missing or damaged file is "no relay" (a damaged one is never trusted into a default), then <paramref name="defaultPath"/> for an owner's own build.</summary>
+    /// <summary>Reads <paramref name="path"/>; a missing or damaged file means the built-in default relay (a damaged one is never trusted into <paramref name="defaultPath"/>), which otherwise fills a missing file for a build pointed at another relay.</summary>
     public static RelaySettings Load(string path, string? defaultPath = null)
     {
         foreach (var candidate in new[] { path, defaultPath })

@@ -28,7 +28,7 @@ public sealed class RelayScenario : Scenario
 
     public override IReadOnlyList<string> Checklist =>
     [
-        "Is it clear that there is no default relay and where to put the address?",
+        "Is it clear that a built-in relay is in use and where to put another address?",
         "Does the relay prompt say what the relay's operator can see and that the answer does not change your relay setting?",
         "Is a rejected address or fingerprint explained next to the field, without losing what was typed?",
     ];
@@ -99,9 +99,9 @@ public sealed class RelayScenario : Scenario
         private ScenarioStep[] Settings() =>
         [
             new Act("open the Multiplayer tab", () => options.Panel.SelectTab(options.Panel.TabNames.ToList().IndexOf("Multiplayer"))),
-            new AssertQuery("a fresh install has the tab, empty fields, the switch off limits and nothing on disk", () =>
-                options.Panel.SelectedTab >= 0 && options.Panel.TabNames[options.Panel.SelectedTab] == "Multiplayer" && Editor.UrlField.Text == "" && Editor.FingerprintField.Text == "" && Editor.ReachToggle.Disabled && !File.Exists(path)),
-            new Capture("settings-empty", "Options, Multiplayer tab on a fresh install: no default relay, empty address and fingerprint fields with an explanation, the Reach me through the relay switch disabled, what the operator can see."),
+            new AssertQuery("a fresh install has the tab, empty fields, the built-in relay named as in use, the switch usable and nothing on disk", () =>
+                options.Panel.SelectedTab >= 0 && options.Panel.TabNames[options.Panel.SelectedTab] == "Multiplayer" && Editor.UrlField.Text == "" && Editor.FingerprintField.Text == "" && !Editor.ReachToggle.Disabled && Editor.InUseText.Contains("civsharp.nickthorsen.com:47830", StringComparison.Ordinal) && Editor.InUseText.Contains("built-in", StringComparison.Ordinal) && !File.Exists(path)),
+            new Capture("settings-empty", "Options, Multiplayer tab on a fresh install: empty address and fingerprint fields, a line naming the built-in relay in use, the Reach me through the relay switch usable, what the operator can see."),
             new Act("a bare host name is not a relay address", () => Type(Editor.UrlField, "relay.example.org")),
             new AssertQuery("it says what an address looks like and nothing was written", () => Editor.UrlProblem.Contains("unciv-relay://", StringComparison.Ordinal) && !File.Exists(path) && Editor.UrlField.Text == "relay.example.org"),
             new Capture("settings-invalid", "A bare host name is refused next to the field with an example of a relay address; the typed text stays and nothing is saved."),

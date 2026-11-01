@@ -2059,9 +2059,9 @@ Relay settings (Options, Multiplayer tab: address, fingerprint, Reach me through
 
 Scenario `relay`.
 
-![Fresh install: no default relay, empty address and fingerprint fields, the switch disabled, and what the relay's operator can see.](../Unciv.Godot.Harness/golden/relay/settings-empty.png)
+![Fresh install: empty address and fingerprint fields, the built-in relay named as in use, the switch usable, and what the relay's operator can see.](../Unciv.Godot.Harness/golden/relay/settings-empty.png)
 
-*Fresh install: no default relay, empty address and fingerprint fields, the switch disabled, and what the relay's operator can see.* (`relay/settings-empty.png`)
+*Fresh install: empty address and fingerprint fields, the built-in relay named as in use, the switch usable, and what the relay's operator can see.* (`relay/settings-empty.png`)
 
 ![A bare host name is refused beside the field with an example address; the typed text stays and nothing is saved.](../Unciv.Godot.Harness/golden/relay/settings-invalid.png)
 

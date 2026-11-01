@@ -5,7 +5,7 @@ using Unciv.Net.Identity;
 namespace Unciv.Net.Relay;
 
 /// <summary>
-/// T338: the relay a player or a dedicated server points at: <c>unciv-relay://host[:port][?fp=&lt;relay fingerprint&gt;]</c> (design/RELAY.md section 8). The software ships with no default one (R13).
+/// T338: the relay a player or a dedicated server points at: <c>unciv-relay://host[:port][?fp=&lt;relay fingerprint&gt;]</c> (design/RELAY.md section 8). T392: every build ships one default relay (RelaySettings.DefaultUrl) that a player's own setting overrides.
 /// <see cref="Fingerprint"/> pins the relay's own TLS certificate (a self-signed standalone relay); without it the certificate must be valid for <see cref="Host"/>, or the player must have
 /// accepted the relay in a prompt (the inner TLS, not the relay certificate, authenticates the host).
 /// </summary>

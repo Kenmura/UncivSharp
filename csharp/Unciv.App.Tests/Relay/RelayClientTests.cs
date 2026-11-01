@@ -203,7 +203,7 @@ public sealed class RelayClientTests
     }
 
     [Fact]
-    public void RelaySettings_FreshInstallHasNoRelay_AndTheOwnersDefaultFileOnlyFillsAMissingOne()
+    public void RelaySettings_FreshInstallUsesTheBuiltInRelay_AUserRelayOverridesIt_AndClearingRestoresIt()
     {
         var dir = Directory.CreateTempSubdirectory("unciv-relay-settings-").FullName;
         try
@@ -211,14 +211,18 @@ public sealed class RelayClientTests
             var path = Path.Combine(dir, "relay.json");
             var defaults = Path.Combine(dir, "relay-default.json");
             var fresh = RelaySettings.Load(path, defaults);
-            Assert.Null(fresh.Endpoint);
-            Assert.False(fresh.HostThroughRelay);
-            Assert.True(fresh.ReachMeThroughRelay); // on by default once a relay is set
+            Assert.True(fresh.UsingDefault);
+            Assert.Equal("civsharp.nickthorsen.com", fresh.Endpoint!.Host);
+            Assert.Equal(47830, fresh.Endpoint.Port);
+            Assert.Null(fresh.Endpoint.Fingerprint); // no pin: trust is the public certificate
+            Assert.True(fresh.HostThroughRelay);
+            Assert.True(fresh.ReachMeThroughRelay);
+            Assert.Equal("civsharp.nickthorsen.com:47830", RelaySettings.DefaultEndpoint.Key);
 
             File.WriteAllText(defaults, """{"url":"unciv-relay://relay.example.org"}""");
-            var filled = RelaySettings.Load(path, defaults);
+            var filled = RelaySettings.Load(path, defaults); // a build pointed at another relay
             Assert.Equal("relay.example.org", filled.Endpoint!.Host);
-            Assert.True(filled.HostThroughRelay);
+            Assert.False(filled.UsingDefault);
 
             filled.Url = "unciv-relay://other.example.org:1";
             filled.ReachMeThroughRelay = false;
@@ -226,16 +230,35 @@ public sealed class RelayClientTests
             filled.Remember(new RelayEndpoint("FRIEND.example.net", 47830));
             filled.Save(path);
             var back = RelaySettings.Load(path, defaults);
-            Assert.Equal("other.example.org", back.Endpoint!.Host);
+            Assert.Equal("other.example.org", back.Endpoint!.Host); // the user's relay wins
             Assert.False(back.HostThroughRelay);
             Assert.Single(back.AcceptedRelays);
 
+            back.Url = null; // cleared in the settings
+            back.Save(path);
+            var cleared = RelaySettings.Load(path, defaults);
+            Assert.True(cleared.UsingDefault);
+            Assert.Equal("civsharp.nickthorsen.com", cleared.Endpoint!.Host); // a saved empty url is not refilled from relay-default.json
+
             File.WriteAllText(path, "{ damaged");
-            Assert.Null(RelaySettings.Load(path, defaults).Endpoint); // a damaged file is never papered over with the default
+            Assert.Equal("civsharp.nickthorsen.com", RelaySettings.Load(path, defaults).Endpoint!.Host); // a damaged file is never papered over with relay-default.json
             Assert.Null(RelaySettings.Problem(""));
             Assert.NotNull(RelaySettings.Problem("relay.example.org"));
+            Assert.Null(new RelaySettings { Url = "not a relay" }.Endpoint); // a typed but invalid value is not silently replaced by the default
         }
         finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    [Fact]
+    public void RelaySettings_TheBuiltInRelayJoinsItsOwnInvitesWithoutAPrompt_AndOtherRelaysStillAsk()
+    {
+        var fresh = new RelaySettings();
+        var own = fresh.Choose("CIVSHARP.nickthorsen.com", 47830);
+        Assert.False(own.NeedsPrompt);
+        Assert.False(own.Dial.TrustAnyCertificate); // the public certificate is verified
+        Assert.True(fresh.Choose("civsharp.nickthorsen.com", 47831).NeedsPrompt);
+        Assert.True(fresh.Choose("relay.example.org", 47830).NeedsPrompt);
+        Assert.True(new RelaySettings { Url = "unciv-relay://mine.example.org" }.Choose("civsharp.nickthorsen.com", 47830).NeedsPrompt); // a user relay replaces the default for the no-prompt rule
     }
 
     [Fact]
@@ -313,7 +336,7 @@ public sealed class RelayClientTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
-    // R13: no source file, fixture or config names a relay other than the placeholder or loopback.
+    // R13 (T392): no source file, fixture or config names a relay other than the placeholder, loopback or the one built-in default relay.
     [Fact]
     public void NoRelayHostnameOtherThanThePlaceholderIsInTheSource()
     {

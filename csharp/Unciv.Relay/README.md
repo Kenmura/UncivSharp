@@ -22,7 +22,7 @@
 A host that cannot open a port (NAT, CGNAT, a firewall) dials OUT to the relay, which splices each joiner to that host. The game's own end-to-end TLS 1.3 (pinned host key fingerprint)
 runs through the splice, so the relay can neither read nor change game data, passwords or tokens. It can also list public games in a lobby directory. It has no accounts, no database and
 no game logic, and it never opens an outbound connection of any kind (it cannot be used as a proxy). The design, protocol and threat model are in `migration/design/RELAY.md`.
-The software has **no default relay**: nobody's relay is used unless a player or a server operator types its address.
+Every client build (desktop and Android) ships one **built-in default relay**, `unciv-relay://civsharp.nickthorsen.com:47830` (constant `RelaySettings.DefaultUrl`, no fingerprint pin: trust is its public Let's Encrypt certificate). It is used while the player has set no relay; a relay typed in Options always wins and clearing the field restores the default. To point a build at another relay without editing source, ship a `relay-default.json` (`{"url":"unciv-relay://relay.example.org"}`) next to the client: it fills in for players with no `relay.json` yet. Dedicated servers have no default (`--relay` is explicit).
 
 ## Quick start
 

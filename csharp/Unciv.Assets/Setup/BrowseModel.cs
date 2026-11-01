@@ -9,7 +9,7 @@ namespace Unciv.GodotClient.Setup;
 /// <summary>Where the Browse games screen is in its life; each state has its own sentence (<see cref="BrowseModel.StateText"/>) and none is mistaken for another.</summary>
 public enum BrowseStatus
 {
-    /// <summary>No relay address is set: the browser has nothing to ask. There is no default relay.</summary>
+    /// <summary>No relay address is set: the browser has nothing to ask. T392: only reachable when the player's relay text is invalid, as the built-in default is used while it is empty.</summary>
     NoRelay,
     Loading,
     /// <summary>The relay could not be reached or did not answer.</summary>

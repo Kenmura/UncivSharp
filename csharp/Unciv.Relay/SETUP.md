@@ -27,7 +27,7 @@
 
 A **relay** is a small server that lets players host a game without opening a port on their home router. The host's game dials OUT to your relay; joiners connect to your relay, which
 forwards the bytes to the host. The game's own end-to-end encryption runs through the relay, so you cannot read or change game data, passwords or tokens. Optionally the relay also shows
-a list of public games. There is no default relay in the game: nobody uses yours unless a player types its address. Design and threat model: `csharp/migration/design/RELAY.md`;
+a list of public games. The game ships one built-in default relay (`civsharp.nickthorsen.com:47830`, the owner's); yours is used only by players who type its address in Options (or by a build shipped with a `relay-default.json` naming it; see README). Design and threat model: `csharp/migration/design/RELAY.md`;
 every option: `csharp/Unciv.Relay/README.md` and `--help`.
 
 You need one Linux server with a public IP address (a small VPS is enough; 1 vCPU and 512 MB RAM handle the default limits) and, for setups A and B, a domain name you control.

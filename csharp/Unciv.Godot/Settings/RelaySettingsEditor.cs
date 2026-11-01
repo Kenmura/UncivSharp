@@ -18,13 +18,14 @@ public sealed class RelaySettingsStore(Func<RelaySettings> load, Func<RelaySetti
 /// <summary>
 /// T371 (design/RELAY.md sections 4 and 9): the "Multiplayer" page of the options. The relay address (checked by <see cref="RelaySettings.Problem"/> as it is typed), the optional fingerprint that pins the relay's own
 /// certificate, the "Reach me through the relay" switch (only usable once a relay is set), what the relay can and cannot see, and the relays the player agreed to use for an invite, each with a Forget button.
-/// A value is saved the moment it is valid; an invalid one says why and leaves the saved setting alone. There is no default relay: a fresh install shows empty fields.
+/// A value is saved the moment it is valid; an invalid one says why and leaves the saved setting alone. T392: a fresh install shows empty fields and a line saying the built-in relay is in use; clearing the address restores it.
 /// </summary>
 public sealed class RelaySettingsEditor
 {
     private readonly UiTheme theme;
     private readonly RelaySettingsStore store;
     private readonly Label urlProblem = new() { Name = "RelayUrlProblem", AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
+    private readonly Label inUse = new() { Name = "RelayInUse", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Label saveProblem = new() { Name = "RelaySaveProblem", AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
     private readonly Label fingerprintProblem = new() { Name = "RelayFingerprintProblem", AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
     private readonly VBoxContainer acceptedBox = new() { Name = "AcceptedRelays" };
@@ -42,7 +43,8 @@ public sealed class RelaySettingsEditor
         var heading = new Label { ThemeTypeVariation = UiVariants.LabelOverline };
         Translate(() => heading.Text = "Relay".Tr());
         page.AddChild(heading);
-        page.AddChild(Describe("A relay lets friends reach your game without opening a port, and lists public games. There is no default relay: enter the address your host or group uses.", UiVariants.LabelSecondary));
+        page.AddChild(Describe("A relay lets friends reach your game without opening a port, and lists public games. Leave the address empty to use the built-in relay, or enter the address your host or group uses.", UiVariants.LabelSecondary));
+        page.AddChild(inUse);
         page.AddChild(Labelled("Relay address", UrlField));
         page.AddChild(urlProblem);
         page.AddChild(Labelled("Relay fingerprint (pins a self-signed relay, optional)", FingerprintField));
@@ -81,6 +83,9 @@ public sealed class RelaySettingsEditor
     /// <summary>T380: the sentence shown when the settings file could not be written, else empty.</summary>
     public string SaveProblem => saveProblem.Visible ? saveProblem.Text : "";
 
+    /// <summary>T392: which relay is in use, e.g. "Relay in use: civsharp.nickthorsen.com:47830 (built-in)".</summary>
+    public string InUseText => inUse.Text;
+
     public string FingerprintProblem => fingerprintProblem.Visible ? fingerprintProblem.Text : "";
 
     /// <summary>The relays (host:port) the player agreed to, with the Forget button of each.</summary>
@@ -98,6 +103,7 @@ public sealed class RelaySettingsEditor
             FingerprintField.Text = fingerprint;
             ReachToggle.ButtonPressed = settings.ReachMeThroughRelay;
             ReachToggle.Disabled = settings.Endpoint == null;
+            ShowInUse(settings);
             urlProblem.Visible = false;
             fingerprintProblem.Visible = false;
             saveProblem.Visible = false;
@@ -112,6 +118,7 @@ public sealed class RelaySettingsEditor
     public void Retranslate()
     {
         foreach (var translate in translators) translate();
+        ShowInUse(store.Load());
         urlProblem.Text = UrlProblemText;
         fingerprintProblem.Text = FingerprintProblemText;
     }
@@ -161,6 +168,15 @@ public sealed class RelaySettingsEditor
         settings.Url = string.IsNullOrWhiteSpace(url) ? null : url;
         Saved(store.Save(settings));
         ReachToggle.Disabled = settings.Endpoint == null;
+        ShowInUse(settings);
+    }
+
+    // T392: not translated through Tr as a whole: it carries the relay's port number
+    private void ShowInUse(RelaySettings settings)
+    {
+        inUse.Text = settings.Endpoint is { } relay
+            ? "Relay in use:".Tr() + " " + relay.Key + (settings.UsingDefault ? " " + "(built-in)".Tr() : "")
+            : "";
     }
 
     // T380: a failed write is said out loud; every reader reloads from disk, so the change did not take effect.

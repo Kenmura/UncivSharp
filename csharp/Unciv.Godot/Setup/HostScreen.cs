@@ -364,6 +364,8 @@ public partial class HostScreen : Control
         hostingPanel.AddChild(CopyInviteButton);
         RelayInviteBox = new VBoxContainer { Name = "RelayInviteBox", Visible = false };
         RelayInviteBox.AddChild(new Label { Text = "Invite through the relay (works behind any router):".Tr() });
+        RelayInUseLabel = new Label { Name = "RelayInUseLabel", Text = "" };
+        RelayInviteBox.AddChild(RelayInUseLabel);
         RelayInviteField = new LineEdit { Name = "RelayInviteField", Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         RelayInviteBox.AddChild(RelayInviteField);
         CopyRelayInviteButton = new Button { Text = "Copy relay invite".Tr(), Name = "CopyRelayInviteButton" };
@@ -410,6 +412,9 @@ public partial class HostScreen : Control
         listingStatus.Text = (listing != null ? "Listed on the relay while you host. Untick to remove it." : Form.ListPublicly ? "This game's name cannot be listed." : BrowseModel.ListingHelp(true, true)).Tr();
     }
 
+    /// <summary>T392: which relay this game is reached through (its host and port), shown above the relay invite.</summary>
+    public Label RelayInUseLabel { get; private set; } = null!; // JUSTIFY: T392 assigned by BuildHostingPanel, which the constructor runs
+
     public VBoxContainer RelayInviteBox { get; private set; } = null!; // JUSTIFY: T338 assigned by BuildHostingPanel, which the constructor runs
 
     public LineEdit RelayInviteField { get; private set; } = null!; // JUSTIFY: T338 assigned by BuildHostingPanel, which the constructor runs
@@ -449,6 +454,7 @@ public partial class HostScreen : Control
         }
         InviteField.Text = session.Invite(InviteAddress);
         RelayInviteBox.Visible = session.Relay != null;
+        RelayInUseLabel.Text = env.Relay() is { } inUse ? "Relay in use:".Tr() + " " + inUse.Key : "";
         RelayInviteField.Text = RelayInvite;
         if (session.Relay is { Room: null }) _ = RefreshRelayInviteWhenReadyAsync(session);
         addressNote.Text = AddressNoteText(session.Port);
