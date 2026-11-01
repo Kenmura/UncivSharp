@@ -112,7 +112,8 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T355 T357 T394
-- in progress: T300 T301 T303 T399
+- in progress: T300 T301 T303
+- in review: T399
 - blocked: T290
 - waiting: T313 T314 T317 T318 T321 T326 T328 T329 T330 T331 T332 T333 T335 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363
 
@@ -200,4 +201,4 @@ xychart-beta
 | T353 | Available (waiting on ) | none | 0 | Sound and music: effects and a soundtrack from CC0 or original sources (no Civ 5 audio) |
 | T362 | Available (waiting on ) | T334 | 0 | Two real client processes host and join on the real GPU (manual two-profile smoke) |
 | T363 | Available (waiting on ) | none | 0 | QuickStart and harness scenario games still start on Vanilla/Gods & Kings: move them to BNW and regenerate goldens |
-| T399 | In-Progress [Claude] | none | 0 | Unit legibility pass 10: Cavalry slab and pale blue on snow, Naresuan's brown on sand, lone violet Knight, thin rider bows at yaw 0 |
+| T399 | Needs-Review [Claude] | none | 0 | Unit legibility pass 10: Cavalry slab and pale blue on snow, Naresuan's brown on sand, lone violet Knight, thin rider bows at yaw 0 |
