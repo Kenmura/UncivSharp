@@ -313,6 +313,8 @@ def main():
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     runtmp.acquire()
     try:
+        if not runtmp.require_space():
+            return 1
         return run_main()
     finally:
         stop_children()
@@ -415,6 +417,14 @@ def run_main():
                 print("\n".join(open(os.path.join(d, "output.log")).read().splitlines()[-25:]))
             bad = bad or rc != 0 or (ran == 0 and not tolerant)
 
+    quota = [f for f in failures if runtmp.mentions_exhaustion(f[1])]
+    logs_mention = any(runtmp.mentions_exhaustion(open(os.path.join(d, "output.log"), errors="replace").read()) for _l, _t, _p, d, _g in running)
+    if quota or logs_mention:
+        # one clear cause instead of dozens of opaque failures (T402)
+        print("ptest: TMP EXHAUSTED during the run: %d of %d failure(s) are 'Disk quota exceeded' / 'No space left on device', "
+              "not test defects. %s" % (len(quota), len(failures), runtmp.exhaustion_message() or
+              "Space was free again at the end (something else filled it meanwhile): `python3 -I tools/reap.py --scratch`, then rerun."), file=sys.stderr)
+        failures = [f for f in failures if f not in quota]
     for name, msg in failures[:30]:
         print("FAILED %s\n    %s" % (name, "\n    ".join(msg.splitlines()[:6])))
     if len(failures) > 30:

@@ -18,7 +18,7 @@ namespace Unciv.Core.Tests.Net.Robustness;
 [Collection("RulesetCache")]
 public sealed class NetFrameLossTests : IDisposable
 {
-    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(120); // T402: a failure bound only (success returns at once); generous so a gate under heavy shared load never trips it
     private static readonly string Fingerprint = HostKey.Fingerprint(new byte[] { 9, 8, 7, 6 });
 
     public NetFrameLossTests()

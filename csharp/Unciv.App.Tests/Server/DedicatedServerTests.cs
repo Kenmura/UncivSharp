@@ -17,7 +17,7 @@ namespace Unciv.Core.Tests.Server;
 [Collection("RulesetCache")]
 public sealed partial class DedicatedServerTests : IDisposable
 {
-    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(180); // T402: a failure bound only (success returns at once); generous so a gate under heavy shared load never trips it
     private readonly string root = Directory.CreateTempSubdirectory("unciv-server-").FullName;
 
     public DedicatedServerTests()

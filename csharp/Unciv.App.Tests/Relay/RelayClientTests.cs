@@ -20,7 +20,7 @@ namespace Unciv.Core.Tests.Relay;
 [Collection("RulesetCache")]
 public sealed class RelayClientTests
 {
-    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(180); // T402: a failure bound only (success returns at once); generous so a gate under heavy shared load never trips it
 
     private static Task<RelayRig> RigAsync(RelayMode mode = RelayMode.Plain, Func<RelayOptions, RelayOptions>? tweak = null) =>
         RelayRig.StartAsync(mode, o => (tweak ?? (x => x))(o with { PublicNames = [RelayRig.PublicName, "127.0.0.1"] }));

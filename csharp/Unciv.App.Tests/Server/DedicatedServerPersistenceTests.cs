@@ -372,9 +372,28 @@ public sealed partial class DedicatedServerTests
         await WaitForGameAsync(bob2);
         await Task.WhenAll(EndTurnAsync(alice2), EndTurnAsync(bob2));
         await Task.WhenAll(WaitForTurnAsync(alice2, 2), WaitForTurnAsync(bob2, 2));
-        second.Signal("INT");
+        second.Signal(InterruptSignal());
         Assert.Equal(0, await second.ExitAsync(Bound));
         Assert.Equal(2, HashOfCopy(gameDirectory).Turn);
+    }
+
+    /// <summary>
+    /// T402: SIGINT, unless this test host inherited it as ignored (SigIgn bit 2 in /proc/self/status: any shell background job, nohup or
+    /// harness that starts the gate with SIGINT ignored). An ignored signal stays ignored in every child and cannot be re-enabled, so the
+    /// server could never see Ctrl+C and the test timed out after 60 s; SIGTERM runs the same shutdown path (both are registered in Program.cs).
+    /// </summary>
+    private static string InterruptSignal()
+    {
+        try
+        {
+            var line = File.ReadLines("/proc/self/status").First(l => l.StartsWith("SigIgn:", StringComparison.Ordinal));
+            var mask = ulong.Parse(line["SigIgn:".Length..].Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            return (mask & 0x2) != 0 ? "TERM" : "INT";
+        }
+        catch (Exception e) when (e is IOException or InvalidOperationException or FormatException)
+        {
+            return "INT";
+        }
     }
 
     /// <summary>The built executable as a child process: stdout lines go to a <see cref="Sink"/>.</summary>

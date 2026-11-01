@@ -559,7 +559,7 @@ public sealed class NetLobbyTests : IDisposable
         Assert.Equal(8, setup.GameParameters.NumberOfCityStates);
     }
 
-    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan Bound = TimeSpan.FromSeconds(120); // T402: a failure bound only (success returns at once); generous so a gate under heavy shared load never trips it
 
     private static ClientSession NewClient(ServerLobby lobby, ClientIdentity identity, string name, ITransport clientEnd) =>
         new(_ => Task.FromResult(clientEnd), new ClientSessionOptions

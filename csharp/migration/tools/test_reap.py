@@ -244,5 +244,35 @@ class RunTmp(unittest.TestCase):
                     os.environ[k] = v
 
 
+class Exhaustion(unittest.TestCase):
+    """T402: the gate refuses to start on a full /tmp, and a run that hit the quota says so once."""
+
+    def test_plenty_of_space_is_silent(self):
+        rt = load("runtmp")
+        self.assertIsNone(rt.exhaustion_message(path="/tmp", free_bytes=rt.MIN_FREE_BYTES, free_inodes=rt.MIN_FREE_INODES))
+
+    def test_low_space_or_inodes_gives_one_message_naming_the_cure(self):
+        rt = load("runtmp")
+        for free_bytes, free_inodes in ((1024, 10 ** 6), (rt.MIN_FREE_BYTES * 2, 10)):
+            msg = rt.exhaustion_message(path="/tmp", free_bytes=free_bytes, free_inodes=free_inodes)
+            self.assertIn("TMP EXHAUSTED", msg)
+            self.assertIn("reap.py --scratch", msg)
+
+    def test_quota_text_is_recognised(self):
+        rt = load("runtmp")
+        self.assertTrue(rt.mentions_exhaustion("System.IO.IOException: Disk quota exceeded : '/tmp/x'"))
+        self.assertTrue(rt.mentions_exhaustion("No space left on device"))
+        self.assertFalse(rt.mentions_exhaustion("Assert.Equal() Failure"))
+
+    def test_require_space_fails_on_a_full_disk(self):
+        rt = load("runtmp")
+        real = rt.scratch_stats
+        rt.scratch_stats = lambda path=None: (0, 0, "/tmp")
+        try:
+            self.assertFalse(rt.require_space())
+        finally:
+            rt.scratch_stats = real
+
+
 if __name__ == "__main__":
     unittest.main()

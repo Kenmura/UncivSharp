@@ -8,6 +8,7 @@ and release() removes it on exit, also after a failure. Keep it with UNCIV_KEEP_
 tools/reap.py --scratch lists/removes folders of runs that died without cleaning up (the pid is part of the name).
 """
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -15,6 +16,10 @@ import tempfile
 PREFIX = "unciv-run-"
 ENV_DIR = "UNCIV_RUN_TMP"
 ENV_KEEP = "UNCIV_KEEP_TMP"
+
+MIN_FREE_BYTES = int(float(os.environ.get("UNCIV_MIN_TMP_FREE_GB", "2")) * 1024 ** 3)  # a full gate peaks well under this; below it the run dies with dozens of opaque IO failures (T402). Override: UNCIV_MIN_TMP_FREE_GB
+MIN_FREE_INODES = 5000
+QUOTA_RE = re.compile(r"Disk quota exceeded|No space left on device|ENOSPC|EDQUOT|There is not enough space on the disk")
 
 _owned = None
 _saved = None  # (TMPDIR, tempfile.tempdir) from before acquire()
@@ -77,3 +82,46 @@ def release(keep=False):
         print("tmp: kept %s" % path, file=sys.stderr)
         return
     force_rmtree(path)
+
+
+def scratch_stats(path=None):
+    """-> (free bytes, free inodes or None, mount directory) of the filesystem holding the scratch dir."""
+    path = path or tempfile.gettempdir()
+    st = os.statvfs(path)
+    return st.f_bavail * st.f_frsize, (st.f_favail if st.f_files else None), path
+
+
+def exhaustion_message(path=None, free_bytes=None, free_inodes=None):
+    """-> one clear message when the scratch filesystem is (nearly) full, else None. Numbers are injectable for tests."""
+    if free_bytes is None:
+        try:
+            free_bytes, free_inodes, path = scratch_stats(path)
+        except OSError:
+            return None
+    path = path or tempfile.gettempdir()
+    if os.path.basename(path).startswith(PREFIX):
+        path = os.path.dirname(path)  # name the shared folder, not this run's empty one
+    if free_bytes >= MIN_FREE_BYTES and (free_inodes is None or free_inodes >= MIN_FREE_INODES):
+        return None
+    entries = 0
+    try:
+        entries = sum(1 for _ in os.scandir(path))
+    except OSError:
+        pass
+    return ("TMP EXHAUSTED: %s has %.1f GiB and %s inodes free (the gate needs %.0f GiB). Nothing was run: the tests would fail with "
+            "'Disk quota exceeded' in dozens of unrelated places. %d entries sit directly in it. Free space first: "
+            "`python3 -I tools/reap.py --scratch` lists the stale scratch folders (largest first; add --remove to delete only the STALE ones), "
+            "or point TMPDIR at a bigger disk." % (path, free_bytes / 1024 ** 3, "?" if free_inodes is None else free_inodes, MIN_FREE_BYTES / 1024 ** 3, entries))
+
+
+def mentions_exhaustion(text):
+    return bool(QUOTA_RE.search(text or ""))
+
+
+def require_space():
+    """Call right after acquire(): prints the exhaustion message to stderr and returns False when the run cannot succeed."""
+    msg = exhaustion_message()
+    if msg:
+        print("tmp: " + msg, file=sys.stderr)
+        return False
+    return True

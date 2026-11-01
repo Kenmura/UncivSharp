@@ -66,6 +66,8 @@ def main():
     signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     runtmp.acquire()
     try:
+        if not runtmp.require_space():
+            return 1
         return run_main()
     finally:
         ptest.shutdown_build_servers()
