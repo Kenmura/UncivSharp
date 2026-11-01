@@ -225,4 +225,4 @@ xychart-beta
 | T353 | Available (waiting on ) | none | 0 | Sound and music: effects and a soundtrack from CC0 or original sources (no Civ 5 audio) |
 | T362 | Available (waiting on ) | T334 | 0 | Two real client processes host and join on the real GPU (manual two-profile smoke) |
 | T363 | Available (waiting on ) | none | 0 | QuickStart and harness scenario games still start on Vanilla/Gods & Kings: move them to BNW and regenerate goldens |
-| T389 | Needs-Review [Claude] | none | 0 | Unit legibility pass 5: plain horses from the front, camel neck, rider size, baked boosts |
+| T389 | In-Review [Reviewer] | none | 0 | Unit legibility pass 5: plain horses from the front, camel neck, rider size, baked boosts |
