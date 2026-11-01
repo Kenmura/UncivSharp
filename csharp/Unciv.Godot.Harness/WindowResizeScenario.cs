@@ -88,16 +88,43 @@ public sealed class WindowResizeScenario : Scenario
         Mode(Window.ModeEnum.Maximized);
         Mode(Window.ModeEnum.Windowed);
         Mode(Window.ModeEnum.Maximized);
-        Window.ModeEnum modeBefore = default;
-        steps.Add(new Act("record the window mode, then apply a settings change that is not about the window", () =>
+        // T301 review: the unrelated settings change runs in Fullscreen as well as Maximized: without a window manager (Xvfb in CI) a Maximized request does nothing, so only the
+        // Fullscreen run can fail with the old behaviour (Apply forcing the stored "Windowed" and the minimum size back).
+        void UnrelatedChange(Window.ModeEnum mode)
         {
-            modeBefore = window.Mode;
-            var before = new ClientSettings();
-            ClientSettingsApplier.Apply(before with { ShowYields = !before.ShowYields }, window, before);
-        }));
-        steps.Add(new WaitFrames(10));
-        steps.Add(new AssertQuery("an unrelated settings change leaves the window mode alone (it used to force Windowed)", () => window.Mode == modeBefore));
+            Window.ModeEnum modeBefore = default;
+            steps.Add(new Act($"in {mode}: record the window mode and minimum size, then apply a settings change that is not about the window", () =>
+            {
+                modeBefore = window.Mode;
+                window.MinSize = Vector2I.Zero;
+                var before = new ClientSettings();
+                ClientSettingsApplier.Apply(before with { ShowYields = !before.ShowYields }, window, before);
+            }));
+            steps.Add(new WaitFrames(10));
+            steps.Add(new AssertQuery($"in {mode}: an unrelated settings change leaves the window mode and minimum size alone (it used to force Windowed and 640x480)", () => window.Mode == modeBefore && window.MinSize == Vector2I.Zero));
+        }
+        UnrelatedChange(Window.ModeEnum.Maximized);
         Mode(Window.ModeEnum.Fullscreen);
+        UnrelatedChange(Window.ModeEnum.Fullscreen);
+        // the paths that must still apply: a changed WindowMode and a changed UiScale (the options screen), and the start (no previous settings)
+        steps.Add(new Act("apply a changed window mode (Borderless) and UI scale (1.5)", () =>
+        {
+            var before = new ClientSettings();
+            window.Mode = Window.ModeEnum.Windowed;
+            ClientSettingsApplier.Apply(before with { WindowMode = "Borderless" }, window, before);
+        }));
+        steps.Add(new WaitFrames(20));
+        steps.Add(new AssertQuery("a changed window mode is applied (Borderless is Fullscreen)", () => window.Mode == Window.ModeEnum.Fullscreen));
+        steps.Add(new Act("apply a changed UI scale", () =>
+        {
+            var before = new ClientSettings();
+            ClientSettingsApplier.Apply(before with { UiScale = 1.5f }, window, before);
+        }));
+        steps.Add(new WaitFrames(6));
+        steps.Add(new AssertQuery("a changed UI scale is applied", () => window.ContentScaleFactor == 1.5f && window.ContentScaleMode == Window.ContentScaleModeEnum.CanvasItems && window.MinSize == new Vector2I(Unciv.Assets.UiTokens.MinWindowWidth, Unciv.Assets.UiTokens.MinWindowHeight) && Sane()));
+        steps.Add(new Act("restore the UI scale and window mode at start (no previous settings)", () => { var s = new ClientSettings(); ClientSettingsApplier.Apply(s, window); }));
+        steps.Add(new WaitFrames(20));
+        steps.Add(new AssertQuery("start applies Windowed and scale 1", () => window.Mode == Window.ModeEnum.Windowed && window.ContentScaleFactor == 1f && window.ContentScaleMode == Window.ContentScaleModeEnum.Disabled));
         Mode(Window.ModeEnum.Windowed);
         Mode(Window.ModeEnum.ExclusiveFullscreen);
         Mode(Window.ModeEnum.Windowed);
