@@ -877,11 +877,8 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
             roadOwnerObject = TileMap.GameInfo.GetCivilization(roadOwner);
         if (city != null)
         {
-            if (RoadStatus != RoadStatus.None && roadOwner != "")
-            {
-                // remove previous neutral tile owner
+            if (RoadStatus != RoadStatus.None && roadOwner != "") // remove previous neutral tile owner
                 GetRoadOwner().NotNull().NeutralRoads.Remove(Position);
-            }
             roadOwner = city.Civ.CivId; // only when taking control, otherwise last owner
             roadOwnerObject = city.Civ;
         }
@@ -894,6 +891,7 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
         OwningCity = GameEventHooks.TileOwnerChanged(this, OwningCity, city);
         StateThisTile = new GameContext(tile: this, city: city, gameInfo: TileMap.GameInfo);
         isCityCenterInternal = GetCity()?.Location == Position;
+        RememberOwnerForViewers();
     }
 
     /// <summary>

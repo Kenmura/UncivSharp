@@ -10,9 +10,10 @@ public readonly record struct BorderEdge(int X, int Y, int Dx, int Dy, string Ow
 public readonly record struct RoadLink(int X, int Y, int Dx, int Dy, bool Railroad);
 
 /// <summary>
-/// What a client has last seen of tile ownership. The snapshot carries an owner only for visible tiles (the fog-of-war rule), so the map remembers it per tile as tiles are seen:
-/// a fogged tile keeps the owner it had when last in sight, which is exactly what the civ knows. Lives as long as the client's view of one game; <see cref="TileOwnerMemoryStore"/> (T378)
-/// keeps it across a reconnect or load. Nothing here ever comes from the host except the owners of tiles in sight, so persisting it reveals nothing the civ had not seen.
+/// What a client knows of the owner of a tile it cannot see. The server's per-civ memory (T303, <see cref="TileDto.LastOwner"/>) is the authority and survives reconnect, load and host takeover,
+/// so a fogged tile that carries one is answered from it. This object backs up the tiles whose snapshot carries none (a save from before the field, a revealed map): it remembers the owner of every
+/// tile the client has seen while visible, for the life of the client's view of one game; <see cref="TileOwnerMemoryStore"/> (T378) keeps it across a reconnect or load. Nothing here ever comes from
+/// the host except the owners of tiles in sight, so persisting it reveals nothing the civ had not seen.
 /// </summary>
 public sealed class TileOwnerMemory
 {
@@ -49,10 +50,14 @@ public sealed class TileOwnerMemory
         foreach (var entry in entries) owners[new HexCoord(entry.X, entry.Y)] = string.IsNullOrEmpty(entry.Owner) ? null : entry.Owner;
     }
 
-    /// <summary>The owner of <paramref name="tile"/> as far as the viewer knows; false when it is fogged and has never been seen. A null owner with true means known unowned.</summary>
+    /// <summary>
+    /// The owner of <paramref name="tile"/> as far as the viewer knows: the live one when visible, else the server's last-seen one (an empty <see cref="TileDto.LastOwner"/> is known unowned), else this
+    /// client's own memory. False when it is fogged and nothing knows it. A null owner with true means known unowned.
+    /// </summary>
     public bool TryOwner(TileDto tile, out string? owner)
     {
         if (tile.Visible) { owner = tile.Owner; return true; }
+        if (tile.LastOwner != null) { owner = tile.LastOwner.Length == 0 ? null : tile.LastOwner; return true; }
         return owners.TryGetValue(new HexCoord(tile.X, tile.Y), out owner);
     }
 }
@@ -80,7 +85,7 @@ public static class MapOverlays
 
     /// <summary>
     /// Every side of an owned explored tile whose neighbour has a different owner, so a territory is always fully outlined and two tiles of one owner never draw a line between them.
-    /// A fogged tile's owner is the one <paramref name="memory"/> last saw there (the snapshot carries none, so a civ never learns about changes it cannot see); with no memory of it
+    /// A fogged tile's owner is the one the viewer last saw there (the snapshot's <see cref="TileDto.LastOwner"/>, else <paramref name="memory"/>; a civ never learns about changes it cannot see); with no memory of it
     /// the owner is unknown and no edge is drawn against it, so borders only ever appear where the owner really changes, never where visibility does. A missing neighbour (map edge,
     /// or never explored) and an unowned one count as different, but an unexplored tile never gets a border of its own because only snapshot tiles are walked.
     /// </summary>

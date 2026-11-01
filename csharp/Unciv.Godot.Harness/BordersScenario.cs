@@ -60,6 +60,9 @@ public sealed class BordersScenario : Scenario
         bool reloadedOk = store.Save("borders", "Japan", 1, tiles, memory) && store.Load("borders", "Japan", 1, tiles, reloaded);
         var loadedEdges = MapOverlays.BorderEdges(tiles, reloaded);
         System.IO.Directory.Delete(storeDir, recursive: true);
+        // T303: the same fog as a server with per-civ memory sends it (TileDto.LastOwner), read by a client that remembers nothing itself
+        var withServerMemory = tiles.Select(it => it.Visible ? it : it with { LastOwner = OwnerOf(new HexCoord(it.X, it.Y)) ?? "" }).ToList();
+        var serverEdges = MapOverlays.BorderEdges(withServerMemory, new TileOwnerMemory());
 
         var chains = BorderChains.Build(edges);
         var closed = chains.Where(it => it.Closed).ToList();
@@ -74,6 +77,7 @@ public sealed class BordersScenario : Scenario
             new AssertQuery("without the remembered owners the fogged territory would have no border of its own (what the memory adds)", () =>
                 withoutMemory.Count < edges.Count && !withoutMemory.Any(it => !Visible(tiles, it.X, it.Y))),
             new AssertQuery("after a save and load the fogged territory shows exactly the same borders (the remembered owners are stored)", () => reloadedOk && loadedEdges.SequenceEqual(edges)),
+            new AssertQuery("a client with no memory of its own draws the same borders from the server's last-seen owners (T303)", () => serverEdges.SequenceEqual(edges)),
             new AssertQuery("fogged Japanese tiles keep their remembered border", () => edges.Any(it => it.Owner == "Japan" && !Visible(tiles, it.X, it.Y))),
             new AssertQuery("Japan and Greece each draw their side of the shared edge", () =>
                 edges.Any(it => it.Owner == "Japan" && it.X == 1 && it.Y == 1 && it is { Dx: 1, Dy: 1 }) && edges.Any(it => it.Owner == "Greece" && it.X == 2 && it.Y == 2 && it is { Dx: -1, Dy: -1 })),

@@ -471,7 +471,7 @@ public partial class Civilization : IsPartOfGameInfoSerialization, IConstruction
         toReturn.NeutralRoads = [.. NeutralRoads]; // T219: copies, not the source's own collections
         foreach (var construction in DisabledCityConstructions) toReturn.DisabledCityConstructions.Add(construction);
         toReturn.ExploredRegion = ExploredRegion.Clone();
-        foreach (var (position, improvement) in LastSeenImprovement) toReturn.LastSeenImprovement[position] = improvement;
+        CopyLastSeenInto(toReturn);
         toReturn.LeaderTitle = LeaderTitle;
         toReturn.Notifications.AddRange(Notifications.Select(it => it.Clone()));
         foreach (var log in NotificationsLogs)

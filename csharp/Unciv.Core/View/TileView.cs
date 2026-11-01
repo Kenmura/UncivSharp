@@ -215,6 +215,12 @@ public class TileView : View<Tile>
 
     public string? GetShownImprovement() => tile.GetShownImprovement(Viewer);
 
+    /// <summary>
+    /// T303: the owner the viewer last saw on this tile: a civ id, <see cref="CivilizationClass.UnownedMark"/> for "seen unowned", null when it never saw the tile (or the viewer is civ-agnostic, an AI or a spectator).
+    /// Reads the viewer's own memory only, never the tile's live owner. Read-only (the T296 view rule).
+    /// </summary>
+    public string? GetLastSeenOwner() => Viewer?.GetLastSeenOwner(tile.Position);
+
     public string BaseTerrain => tile.BaseTerrain;
 
     public IReadOnlyList<string> TerrainFeatures => tile.TerrainFeatures;

@@ -177,7 +177,8 @@ public static class SnapshotBuilder
             Owner = visible ? tile.GetOwner()?.CivId : null,
             Road = visible ? tile.RoadStatus.ToString() : null,
             RoadPillaged = visible ? tile.RoadIsPillaged : null,
-            ImprovementPillaged = visible ? tile.ImprovementIsPillaged : null
+            ImprovementPillaged = visible ? tile.ImprovementIsPillaged : null,
+            LastOwner = visible ? null : tile.GetLastSeenOwner()
         };
     }
 

@@ -230,7 +230,10 @@ public class CivInfoTransientCache(Civilization civInfo)
         if (CivInfo.PlayerType == PlayerType.AI) return; // don't bother for AI, they don't really use the info anyway
 
         foreach (var tile in CivInfo.ViewableTiles)
+        {
             CivInfo.SetLastSeenImprovement(tile.Position, tile.Improvement);
+            CivInfo.SetLastSeenOwner(tile.Position, tile.GetOwner()?.CivId); // T303
+        }
     }
 
     /// <summary>Discovers Natural Wonders in all viewable tiles. Used by sight updates.</summary>

@@ -353,6 +353,49 @@ public sealed class NetVisibilityTests
     }
 
     [Fact]
+    public void Tiles_FoggedOwnerIsTheLastSeenOneNeverTheLiveOne()
+    {
+        var fogged = game.GetTile(new HexCoord(0, 3)); // f's city center, out of a's sight
+        Assert.Equal(f.CivId, fogged.GetOwner()?.CivId);
+        Assert.Null(SnapshotFor(a).Tiles.Single(it => it.X == 0 && it.Y == 3).LastOwner); // never saw its owner: not told
+        a.SetLastSeenOwner(fogged.Position, null); // a last saw it unowned
+        var told = SnapshotFor(a).Tiles.Single(it => it.X == 0 && it.Y == 3);
+        Assert.Equal(Civilization.UnownedMark, told.LastOwner);
+        Assert.Null(told.Owner);
+        Assert.DoesNotContain(f.CivId, SnapshotBuilder.ToCanonicalJson(SnapshotFor(a)).Split("\"x\":0,\"y\":3")[1].Split('}')[0]); // the live owner is nowhere in the fogged tile
+        a.SetLastSeenOwner(fogged.Position, h.CivId);
+        Assert.Equal(h.CivId, SnapshotFor(a).Tiles.Single(it => it.X == 0 && it.Y == 3).LastOwner);
+        var visible = SnapshotFor(a).Tiles.Single(it => it.X == 1 && it.Y == 0);
+        Assert.True(visible.Visible);
+        Assert.Null(visible.LastOwner); // a visible tile has its live owner instead
+    }
+
+    [Fact]
+    public void LastSeenOwner_IsPerCivAndNeverCrossesToAnotherRecipient()
+    {
+        a.SetLastSeenOwner(new HexCoord(0, 3), f.CivId);
+        var forB = SnapshotFor(b);
+        Assert.All(forB.Tiles, it => Assert.Null(it.LastOwner)); // b has seen nothing of its own, whatever a remembers
+        Assert.DoesNotContain(forB.Tiles, it => it is { X: 0, Y: 3 });
+    }
+
+    [Fact]
+    public void LastSeenOwner_FollowsAChangeOnlyWhileTheCivCanSeeTheTile()
+    {
+        var seenTile = game.GetTile(new HexCoord(2, 0));
+        var fogTile = game.GetTile(new HexCoord(0, 3));
+        a.SetLastSeenOwner(seenTile.Position, null);
+        a.SetLastSeenOwner(fogTile.Position, f.CivId);
+        ApplyVision();
+        seenTile.SetOwningCity(foreignCity);
+        fogTile.SetOwningCity(null); // changes under a's fog
+        Assert.Equal(f.CivId, a.GetLastSeenOwner(seenTile.Position)); // seen: the civ saw it change
+        Assert.Equal(f.CivId, a.GetLastSeenOwner(fogTile.Position)); // unseen: still what it saw
+        seenTile.SetOwningCity(null);
+        Assert.Equal(Civilization.UnownedMark, a.GetLastSeenOwner(seenTile.Position));
+    }
+
+    [Fact]
     public void OwnDetail_NeverGrantedForForeignCitiesOrUnitsEvenWithVisibleMap()
     {
         game.GameInfo.EngineOptions.VisibleMap = true;
@@ -424,7 +467,7 @@ public sealed class NetVisibilityTests
         [nameof(CivDto)] = "CivId Name IsCityState IsMajor IsBarbarian IsDefeated Own",
         [nameof(OwnCivDto)] = "Gold Happiness CurrentTech Techs Policies Spies",
         [nameof(SpyDto)] = "Name Rank Location Action",
-        [nameof(TileDto)] = "X Y Visible BaseTerrain Features NaturalWonder Resource Improvement RiverBottom RiverBottomLeft RiverBottomRight Owner Road RoadPillaged ImprovementPillaged",
+        [nameof(TileDto)] = "X Y Visible BaseTerrain Features NaturalWonder Resource Improvement RiverBottom RiverBottomLeft RiverBottomRight Owner Road RoadPillaged ImprovementPillaged LastOwner",
         [nameof(CityDto)] = "Name Owner X Y Population IsCapital IsPuppet IsBeingRazed Health MaxHealth VisibleBuildings Own",
         [nameof(OwnCityDto)] = "Id FoodStored CultureStored Buildings ConstructionQueue",
         [nameof(UnitDto)] = "Id Name Owner X Y HealthBucket IsEmbarked IsFortified Own",

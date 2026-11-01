@@ -25,6 +25,8 @@ internal partial class FakeCiv
     public virtual bool IsDefeated() => false;
     public Dictionary<HexCoord, string?> LastSeenImprovements { get; } = [];
     public virtual void SetLastSeenImprovement(HexCoord position, string? improvementName) => LastSeenImprovements[position] = improvementName;
+    public Dictionary<HexCoord, string?> LastSeenOwners { get; } = [];
+    public virtual void SetLastSeenOwner(HexCoord position, string? ownerCivId) => LastSeenOwners[position] = ownerCivId;
     public virtual IEnumerable<TileImprovement> UniqueImprovements => [];
     public virtual IEnumerable<Unciv.Models.Ruleset.Unique.Unique> GetTriggeredUniques(UniqueType trigger, GameContext gameContext, Func<Unciv.Models.Ruleset.Unique.Unique, bool>? triggerFilter = null) => [];
     public virtual float GetGameProgressModifier(Unciv.Models.Ruleset.Unique.Unique unique) => 1f;

@@ -21,6 +21,8 @@ public partial interface IGameContextCivilization
     void ForEachMatchingUnique(UniqueType uniqueType, GameContext gameContext, Action<Unique> action);
     bool IsDefeated();
     void SetLastSeenImprovement(HexCoord position, string? improvementName);
+    /// <summary>T303: remembers the owner (a civ id, null for none) this civ sees on the tile now.</summary>
+    void SetLastSeenOwner(HexCoord position, string? ownerCivId);
     /// <summary><c>civ.cache.uniqueImprovements</c></summary>
     IEnumerable<TileImprovement> UniqueImprovements { get; }
     /// <summary><c>civ.getTriggeredUniques(trigger, gameContext, triggerFilter)</c></summary>

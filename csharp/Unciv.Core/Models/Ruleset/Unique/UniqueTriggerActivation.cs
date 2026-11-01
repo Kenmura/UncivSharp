@@ -950,7 +950,7 @@ public static class UniqueTriggerActivation
                     if (notification != null)
                         civInfo.AddNotification(notification, LocationAction.Of(tile?.Position), NotificationCategory.General, NotificationIcon.Scout);
                     var tiles = civInfo.GameInfo.TileMap.Values;
-                    foreach (var t in tiles) t.SetExplored(civInfo, true);
+                    foreach (var t in tiles) { t.SetExplored(civInfo, true); civInfo.SetLastSeenOwner(t.Position, t.GetOwner()?.CivId); } // T303: a revealed map comes with its borders
                     if (!civInfo.IsBarbarian)
                         civInfo.Cache.DiscoverNaturalWonders(tiles);
                     return true;
@@ -986,7 +986,7 @@ public static class UniqueTriggerActivation
                         foreach (var explorableTile in explorableTiles)
                         {
                             explorableTile.SetExplored(civInfo, true);
-                            civInfo.SetLastSeenImprovement(explorableTile.Position, explorableTile.Improvement);
+                            civInfo.SetLastSeenImprovement(explorableTile.Position, explorableTile.Improvement); civInfo.SetLastSeenOwner(explorableTile.Position, explorableTile.GetOwner()?.CivId); // T303: revealed ground comes with its border
                             positions.Add(explorableTile.Position);
                         }
 

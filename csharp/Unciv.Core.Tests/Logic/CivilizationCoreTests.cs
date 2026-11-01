@@ -675,6 +675,23 @@ public class CivilizationCoreTests
     }
 
     [Fact]
+    public void LastSeenOwner_RemembersForHumansOnly()
+    {
+        var (human, _) = NewCiv("Rome", PlayerType.Human);
+        var position = HexCoord.Of(2, 3);
+        Assert.Null(human.GetLastSeenOwner(position));
+        human.SetLastSeenOwner(position, "Egypt");
+        Assert.Equal("Egypt", human.GetLastSeenOwner(position));
+        human.SetLastSeenOwner(position, null);
+        Assert.Equal(Civilization.UnownedMark, human.GetLastSeenOwner(position));
+
+        var (ai, _) = NewCiv("Egypt", PlayerType.AI);
+        ai.SetLastSeenOwner(position, "Rome");
+        Assert.Null(ai.GetLastSeenOwner(position));
+        Assert.Null(ai.LastSeenOwner); // never even allocated, so an AI-only game serializes as before
+    }
+
+    [Fact]
     public void LastSeenImprovement_IgnoredForAIAndSpectators()
     {
         var (human, _) = NewCiv("Rome", PlayerType.Human);

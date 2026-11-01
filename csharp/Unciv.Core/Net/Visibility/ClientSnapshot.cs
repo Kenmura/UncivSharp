@@ -87,6 +87,14 @@ public sealed record TileDto
     public string? Road { get; init; }
     public bool? RoadPillaged { get; init; }
     public bool? ImprovementPillaged { get; init; }
+
+    // Fogged tiles only (T303)
+
+    /// <summary>
+    /// The owner the recipient last saw on this fogged tile (a civ id; empty when it last saw it unowned), from the recipient's own memory and never the live owner (like <see cref="Improvement"/>);
+    /// null when it never saw the tile's owner (a map reveal, a save from before this field), and on visible tiles, whose <see cref="Owner"/> is live.
+    /// </summary>
+    public string? LastOwner { get; init; }
 }
 
 public sealed record CityDto

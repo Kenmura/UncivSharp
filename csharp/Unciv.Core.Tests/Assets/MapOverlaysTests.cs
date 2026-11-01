@@ -111,6 +111,26 @@ public class MapOverlaysTests
     }
 
     [Fact]
+    public void TheServersLastSeenOwnerOutlinesFoggedTerritoryWithNoClientMemoryAtAll()
+    {
+        // A fresh client (just reconnected or loaded) is handed Japan's fogged tiles with their last-seen owner; "" is last seen unowned
+        TileDto Fogged(int x, int y, string lastOwner) => Tile(x, y, owner: null, visible: false) with { LastOwner = lastOwner };
+        var tiles = new[] { Tile(0, 0, "Japan"), Fogged(1, 0, "Japan"), Fogged(2, 0, "Japan"), Fogged(1, 1, "") };
+        var edges = MapOverlays.BorderEdges(tiles); // no memory object
+        Assert.DoesNotContain(new BorderEdge(0, 0, 1, 0, "Japan"), edges);
+        Assert.Contains(new BorderEdge(1, 0, 0, 1, "Japan"), edges); // fogged tile against the fogged tile seen unowned
+        Assert.Contains(edges, it => it is { X: 2, Y: 0, Owner: "Japan" });
+        Assert.DoesNotContain(edges, it => it is { X: 1, Y: 1 }); // an unowned tile never has a border of its own
+        // The server's word beats a stale client memory
+        var memory = new TileOwnerMemory();
+        memory.Remember([Tile(1, 0, "Greece")]);
+        Assert.True(memory.TryOwner(Fogged(1, 0, "Japan"), out var owner));
+        Assert.Equal("Japan", owner);
+        Assert.True(memory.TryOwner(Fogged(1, 0, ""), out var none));
+        Assert.Null(none);
+    }
+
+    [Fact]
     public void ClearingTheMemoryMakesFoggedTilesUnknownAgain()
     {
         var memory = new TileOwnerMemory();
