@@ -22,7 +22,7 @@ Work is completed phase by phase (`phases.txt`; `ticket.py ready`/`next` list ea
 |---|---|---|---|---|---|
 | Phase 1: CLI (headless engine) | 231/231 | 0 | 0 | 0 | complete |
 | Phase 2: single player (Godot client) | 57/57 | 0 | 0 | 0 | complete |
-| Phase 3: multiplayer | 68/73 | 5 | 3 | 2 | [T355](backlog/T355.md) [T357](backlog/T357.md) [T393](backlog/T393.md) [T394](backlog/T394.md) [T395](backlog/T395.md) |
+| Phase 3: multiplayer | 69/73 | 4 | 3 | 1 | [T355](backlog/T355.md) [T357](backlog/T357.md) [T393](backlog/T393.md) [T394](backlog/T394.md) |
 | Phase 4: queued plans (UI redesign, unit models, BNW) | 75/81 | 6 | 0 | 0 | [T317](backlog/T317.md) [T318](backlog/T318.md) [T321](backlog/T321.md) [T326](backlog/T326.md) [T328](backlog/T328.md) [T329](backlog/T329.md) |
 | Phase 5: owner issue backlog (Android, performance, ultra graphics, dedicated server, resiliency) | 53/86 | 33 | 0 | 4 | [T274](backlog/T274.md) [T275](backlog/T275.md) [T278](backlog/T278.md) [T290](backlog/T290.md) [T300](backlog/T300.md) [T301](backlog/T301.md) [T303](backlog/T303.md) [T305](backlog/T305.md) [T306](backlog/T306.md) [T313](backlog/T313.md) [T314](backlog/T314.md) [T325](backlog/T325.md) [T330](backlog/T330.md) [T331](backlog/T331.md) [T332](backlog/T332.md) [T333](backlog/T333.md) [T335](backlog/T335.md) [T340](backlog/T340.md) [T341](backlog/T341.md) [T342](backlog/T342.md) [T343](backlog/T343.md) [T344](backlog/T344.md) [T345](backlog/T345.md) [T346](backlog/T346.md) [T347](backlog/T347.md) [T348](backlog/T348.md) [T349](backlog/T349.md) [T350](backlog/T350.md) [T351](backlog/T351.md) [T352](backlog/T352.md) [T353](backlog/T353.md) [T362](backlog/T362.md) [T363](backlog/T363.md) |
 
@@ -113,7 +113,7 @@ Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T355 T357 T394
 - in progress: T300 T301 T303
-- in review: T393 T395
+- in review: T393
 - blocked: T290
 - waiting: T313 T314 T317 T318 T321 T326 T328 T329 T330 T331 T332 T333 T335 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363
 
@@ -135,7 +135,7 @@ xychart-beta
     y-axis "Tickets" 0 --> 50
     line [5, 2, 39, 11, 9, 9, 14, 48, 37, 37]
     line [0, 11, 0, 1, 1, 1, 1, 1, 1, 1]
-    line [1, 4, 6, 3, 2, 2, 5, 4, 5, 6]
+    line [1, 4, 6, 3, 2, 2, 5, 4, 5, 5]
 ```
 
 ## Progress and scope over time
@@ -151,7 +151,7 @@ xychart-beta
     title "Done vs total scope"
     x-axis ["Oct 24 00:00", "Oct 25 00:00", "Oct 26 00:00", "Oct 27 00:00", "Oct 28 00:00", "Oct 29 00:00", "Oct 30 00:00", "Oct 31 00:00", "Nov 01 00:00", "Nov 02 00:00"]
     y-axis "Tickets" 0 --> 540
-    line [0, 153, 246, 294, 297, 297, 413, 456, 488, 491]
+    line [0, 153, 246, 294, 297, 297, 413, 456, 488, 492]
     line [6, 170, 291, 309, 309, 309, 433, 509, 531, 535]
 ```
 
@@ -202,4 +202,3 @@ xychart-beta
 | T362 | Available (waiting on ) | T334 | 0 | Two real client processes host and join on the real GPU (manual two-profile smoke) |
 | T363 | Available (waiting on ) | none | 0 | QuickStart and harness scenario games still start on Vanilla/Gods & Kings: move them to BNW and regenerate goldens |
 | T393 | Needs-Review [claude-T393] | none | 0 | Unit legibility pass 6: side view of horses, Horseman against Khan, loud coats |
-| T395 | Needs-Review [claude-T395] | none | 0 | Verify T389's larger unit models on the Low renderer and the phone profile: render check and frame cost |
