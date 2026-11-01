@@ -89,8 +89,7 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T355 T357 T394 T402
-- in progress: T301
-- in review: T303
+- in review: T301 T303
 - blocked: T290
 - waiting: T275 T313 T314 T317 T318 T321 T326 T328 T329 T330 T331 T332 T333 T335 T340 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363 T400 T401
 
@@ -144,7 +143,7 @@ xychart-beta
 | T305 | Available (waiting on ) | T280 | 1 | Verify the Android APK job of the release workflow on a hosted runner (first tag push) |
 | T275 | Available (waiting on ) | T274, C034, C035 | 0 | Host migration 5/5: client UI and docs (backup-host picker, trust notice, standby status, rollback and host-changed notices, superseded-host screen) |
 | T290 | Blocked | T271 | 0 | Real-device frame-time pass: Windows, macOS, Android phone |
-| T301 | In-Progress [Claude] | none | 0 | Maximizing a windowed game freaks out and may crash |
+| T301 | Needs-Review [Claude] | none | 0 | Maximizing a windowed game freaks out and may crash |
 | T303 | Needs-Review [Claude] | T298 | 0 | Persist last-known tile ownership for fogged tiles across reconnect and load (server-side per-civ memory) |
 | T306 | Available (waiting on T278) | C099, T278 | 0 | Android shell on-device checks for C099: back button, safe-area insets, orientation, lifecycle autosave, keyboard scroll, permissions |
 | T313 | Available (waiting on ) | T311 | 0 | Verify OS display scale detection on Windows, macOS and X11 and follow a window moved between monitors (T311 follow-up) |

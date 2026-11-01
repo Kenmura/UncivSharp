@@ -52,7 +52,12 @@ public partial class App : Node
         if (GraphicsRuntime.StartupCheck(settings)) return; // C097: restarting into the renderer the graphics setting wants; nothing else is built in this process
         localization = Loc.Init(settings, GetWindow());
         ClientSettingsApplier.Apply(settings.Current, GetWindow());
-        settings.Changed += changed => ClientSettingsApplier.Apply(changed, GetWindow());
+        var applied = settings.Current;
+        settings.Changed += changed =>
+        {
+            ClientSettingsApplier.Apply(changed, GetWindow(), applied);
+            applied = changed;
+        };
         sounds = new SoundPlayer(AssetRegistry.ForRuleset(vanilla, OptionsModel.RegistryPack(settings.Current.AssetPack)));
         AddChild(sounds);
         GetTree().NodeAdded += node =>

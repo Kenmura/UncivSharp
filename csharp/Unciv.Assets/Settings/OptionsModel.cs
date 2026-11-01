@@ -17,6 +17,13 @@ public static class OptionsModel
     /// <summary>The window modes, as stored. The first is the default.</summary>
     public static readonly IReadOnlyList<string> WindowModes = ["Windowed", "Fullscreen", "Borderless"];
 
+    /// <summary>
+    /// T301: whether the window mode (and UI scale) must be pushed onto the window after a settings change. Only when the user changed one of them (or at start, <paramref name="previous"/> null):
+    /// every other change (a tutorial seen, a toggle, a template) used to force the window back to <c>Windowed</c>, un-maximizing a window the player had just maximized by hand.
+    /// </summary>
+    public static bool WindowNeedsApplying(ClientSettings? previous, ClientSettings now) =>
+        previous == null || previous.WindowMode != now.WindowMode || previous.UiScale != now.UiScale;
+
     /// <summary>The audio bus level for a 0..1 volume: silent at 0, otherwise 20*log10 of the volume (so 1 is 0 dB).</summary>
     public static float VolumeDb(float volume) =>
         !(volume > 0f) ? -80f : (float)Math.Max(-80.0, 20.0 * Math.Log10(Math.Min(1f, volume)));

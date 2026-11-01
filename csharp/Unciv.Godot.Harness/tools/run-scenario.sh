@@ -21,7 +21,8 @@ if [[ $# -lt 1 || "$1" == -* ]]; then echo "usage: $0 <scenario> [--update-golde
 name="$1"; mode="${2:-}"
 project="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 godot="${GODOT:-$("$project/tools/setup-godot.sh" --print-path)}"
-case "$name" in layout-matrix) default_timeout=600 ;; *) default_timeout=120 ;; esac
+case "$name" in layout-matrix) default_timeout=600 ;; window-resize) default_timeout=300 ;; # T301: every size change costs seconds on Xvfb
+     *) default_timeout=120 ;; esac
 timeout_s="${HARNESS_TIMEOUT:-$default_timeout}"
 out="${HARNESS_OUT:-$project/out}"
 golden="$project/golden"

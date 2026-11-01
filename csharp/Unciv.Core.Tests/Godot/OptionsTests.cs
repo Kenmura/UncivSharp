@@ -365,4 +365,15 @@ public sealed class OptionsTests
             Directory.Delete(dir, true);
         }
     }
+
+    /// <summary>T301: a settings change that is not about the window (a tutorial seen, a toggle) must not push Windowed onto a window the player maximized.</summary>
+    [Fact]
+    public void WindowIsOnlyTouchedWhenItsOwnSettingsChange()
+    {
+        var before = new ClientSettings();
+        Assert.True(OptionsModel.WindowNeedsApplying(null, before));
+        Assert.False(OptionsModel.WindowNeedsApplying(before, before with { ShowYields = !before.ShowYields }));
+        Assert.True(OptionsModel.WindowNeedsApplying(before, before with { WindowMode = "Fullscreen" }));
+        Assert.True(OptionsModel.WindowNeedsApplying(before, before with { UiScale = 2f }));
+    }
 }
