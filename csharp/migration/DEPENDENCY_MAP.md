@@ -113,7 +113,8 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T355 T357 T393 T394
-- in progress: T300 T301 T303 T395
+- in progress: T300 T301 T303
+- in review: T395
 - blocked: T290
 - waiting: T313 T314 T317 T318 T321 T326 T328 T329 T330 T331 T332 T333 T335 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363
 
@@ -202,4 +203,4 @@ xychart-beta
 | T353 | Available (waiting on ) | none | 0 | Sound and music: effects and a soundtrack from CC0 or original sources (no Civ 5 audio) |
 | T362 | Available (waiting on ) | T334 | 0 | Two real client processes host and join on the real GPU (manual two-profile smoke) |
 | T363 | Available (waiting on ) | none | 0 | QuickStart and harness scenario games still start on Vanilla/Gods & Kings: move them to BNW and regenerate goldens |
-| T395 | In-Progress [claude-T395] | none | 0 | Verify T389's larger unit models on the Low renderer and the phone profile: render check and frame cost |
+| T395 | Needs-Review [claude-T395] | none | 0 | Verify T389's larger unit models on the Low renderer and the phone profile: render check and frame cost |
