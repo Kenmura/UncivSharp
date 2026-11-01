@@ -1,6 +1,7 @@
 """Tests for the CI pieces of T169: ci_base.py, retry-on-crash.sh and the shape of .github/workflows/csharp.yml.
 Run: python3 -I -m unittest discover -s tools -p 'test_*.py' (from csharp/migration)."""
 import importlib.util
+import json
 import re
 import subprocess
 import tempfile
@@ -314,7 +315,67 @@ class ReleaseLatestNeedsApk(unittest.TestCase):
                 self.assertFalse(self.rel.build_android(stage))
             self.assertEqual(sub.call_count, self.rel.CRASH_RETRIES + 1)
 
-    def release(self, android_ok, flags=(), prior_latest=None):
+    def test_an_ordinary_android_failure_is_not_retried(self):
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as t:
+            stage = Path(t) / "stage"
+            stage.mkdir()
+            for code in (1, 3):
+                fail = mock.Mock(returncode=code, stdout="", stderr="boom")
+                with mock.patch.object(self.rel, "CSHARP", Path(t) / "csharp"), mock.patch.object(self.rel.subprocess, "run", return_value=fail) as sub, \
+                        mock.patch.object(self.rel, "clear_import_cache") as clear, mock.patch("sys.stderr"):
+                    self.assertFalse(self.rel.build_android(stage))
+                self.assertEqual((sub.call_count, clear.call_count), (1, 0))
+
+    @staticmethod
+    def make_release(root, name, built, apk=True, zero=False, when=1):
+        """A release folder as release.py writes it; `apk` puts a valid APK in client-android, `zero` a zero-byte one."""
+        import zipfile
+
+        d = root / name
+        d.mkdir(parents=True)
+        (d / "manifest.json").write_text(json.dumps({"commit": "aaaa", "tree": "old", "built": when, "contents": built}))
+        if apk:
+            (d / "client-android").mkdir()
+            f = d / "client-android" / "Unciv-client-android-arm64.apk"
+            if zero:
+                f.write_bytes(b"")
+            else:
+                with zipfile.ZipFile(f, "w") as z:
+                    z.writestr("lib/arm64-v8a/libgodot_android.so", "x")
+        return d
+
+    def test_has_apk_rejects_missing_zero_byte_and_corrupt_files(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            self.assertTrue(self.rel.has_apk(self.make_release(root, "good", ["client-android"])))
+            self.assertFalse(self.rel.has_apk(self.make_release(root, "zero", ["client-android"], zero=True)))
+            self.assertFalse(self.rel.has_apk(self.make_release(root, "none", ["cli"], apk=False)))
+            self.assertFalse(self.rel.has_apk(self.make_release(root, "listed", ["client-android"], apk=False)))
+            self.assertFalse(self.rel.has_apk(root / "missing"))
+
+    def test_prune_keeps_latest_and_the_newest_release_with_a_good_apk(self):
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t)
+            self.make_release(root, "r1", ["client-android"], when=1)
+            self.make_release(root, "r2", ["client-android"], zero=True, when=2)  # corrupt: does not count
+            for i in range(3, 8):
+                self.make_release(root, f"r{i}", ["cli"], apk=False, when=i)  # --no-android releases
+            (root / "latest").symlink_to("r7")
+            gone = self.rel.prune(root, 3)
+            self.assertEqual(sorted(gone), ["r2", "r3", "r4"])
+            self.assertTrue((root / "r1").exists() and (root / "r7").exists())
+
+    def test_force_without_an_apk_does_not_destroy_a_good_release(self):
+        name = "T1-" + "f" * 9
+        code, latest, log, apk_kept = self.release(False, flags=("--force",), prior_latest=name, existing=True)
+        self.assertEqual(code, 1)
+        self.assertEqual(latest, name)
+        self.assertTrue(apk_kept)
+        self.assertIn("existing release with an APK kept", log)
+
+    def release(self, android_ok, flags=(), prior_latest=None, existing=False):
         """Run main() for a fake commit against a temp releases dir with every build mocked; returns (exit code or None, latest target or None, releases.log)."""
         from unittest import mock
 
@@ -323,7 +384,10 @@ class ReleaseLatestNeedsApk(unittest.TestCase):
             root = t / "csharp-releases"
             root.mkdir()
             (t / "csharp" / "Unciv.Godot" / "build" / "linux").mkdir(parents=True)
-            if prior_latest:
+            if existing:
+                self.make_release(root, prior_latest, ["client-android"])
+                (root / "latest").symlink_to(prior_latest)
+            elif prior_latest:
                 (root / prior_latest).mkdir()
                 (root / prior_latest / "manifest.json").write_text('{"commit": "aaaa", "tree": "old", "contents": ["client-android"]}')
                 (root / "latest").symlink_to(prior_latest)
@@ -346,6 +410,8 @@ class ReleaseLatestNeedsApk(unittest.TestCase):
                 except SystemExit as e:
                     code = e.code
             latest = (root / "latest").readlink().name if (root / "latest").is_symlink() else None
+            if existing:
+                return code, latest, (root / "releases.log").read_text(), (root / prior_latest / "client-android" / "Unciv-client-android-arm64.apk").stat().st_size > 0
             return code, latest, (root / "releases.log").read_text()
 
     def test_a_release_without_android_is_published_but_latest_stays(self):

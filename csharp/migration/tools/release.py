@@ -23,7 +23,7 @@ removed when its agent finishes):
                                                        published but latest stays, and release.py exits 1; --no-android is the explicit opt-out. package.sh android is retried after a Godot crash like the desktop clients.
     csharp-releases/releases.log                         one line per release
 
-The newest --keep (default 5) versions are kept. Builds run in the dotnet-dev container when `dotnet` is not on PATH, like the Green gate.
+The newest --keep (default 5) versions are kept, plus whatever `latest` points at and the newest version with a good APK (T403). A rebuild (--force, or a retry) of an existing release folder never replaces one that has an APK by a build without one. Builds run in the dotnet-dev container when `dotnet` is not on PATH, like the Green gate.
 The folder is git-ignored. A tree that was already released (same git tree id) is not rebuilt unless --force.
 """
 import fcntl
@@ -191,11 +191,24 @@ def versions(root):
     return [d for _, d in sorted(found, key=lambda x: (x[0], x[1].name))]
 
 
+def has_apk(d):
+    """T403: True when release folder `d` lists client-android in its manifest and the APK file there passes release_assets.check_apk (a zero-byte or corrupt file does not count)."""
+    try:
+        if "client-android" not in json.loads((d / "manifest.json").read_text()).get("contents", []):
+            return False
+        assets = _assets()
+        return not assets.check_apk(d / "client-android" / assets.ANDROID_APK)
+    except (OSError, ValueError):
+        return False
+
+
 def prune(root, keep):
-    """Delete all but the newest `keep` versions; whatever `latest` points at always stays. Returns the deleted names."""
+    """Delete all but the newest `keep` versions; whatever `latest` points at and the newest version that has a good APK always stay (T403: the owner needs an APK at all times,
+    even when --no-android releases push the last APK build out of the newest `keep`). Returns the deleted names."""
     latest = (root / "latest").resolve() if (root / "latest").exists() else None
     vs = versions(root)
-    doomed = [d for d in vs[:-keep] if d.resolve() != latest] if keep > 0 and len(vs) > keep else []
+    newest_apk = next((d.resolve() for d in reversed(vs) if has_apk(d)), None)
+    doomed = [d for d in vs[:-keep] if d.resolve() not in (latest, newest_apk)] if keep > 0 and len(vs) > keep else []
     for d in doomed:
         shutil.rmtree(d)
     return [d.name for d in doomed]
@@ -262,6 +275,7 @@ def main(argv):
     shutil.rmtree(stage, ignore_errors=True)
     stage.mkdir()
     built = []
+    kept = False
     try:
         if cli:
             out = stage / "cli"
@@ -319,24 +333,36 @@ def main(argv):
         with open(root / ".lock", "w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)  # one publisher at a time; builds above ran unlocked in this worktree
             dest = root / name
-            shutil.rmtree(dest, ignore_errors=True)
-            os.replace(stage, dest)
-            old = None
-            if (root / "latest").exists():
-                try:
-                    old = json.loads((root / "latest" / "manifest.json").read_text()).get("commit")
-                except ValueError:
-                    old = None
             blocker = latest_blocker(built, "--no-android" in opts)
-            moved = blocker is None and is_newer(sha, old)
+            if blocker and has_apk(dest):  # T403: --force / a retry must never replace a good release (with an APK) by a build without one
+                kept = True
+                moved = False
+            else:
+                aside = root / f".old-{os.getpid()}"
+                shutil.rmtree(aside, ignore_errors=True)
+                if dest.exists():
+                    os.replace(dest, aside)  # move aside first so a crash cannot leave `latest` dangling with no folder
+                os.replace(stage, dest)
+                shutil.rmtree(aside, ignore_errors=True)
+                old = None
+                if (root / "latest").exists():
+                    try:
+                        old = json.loads((root / "latest" / "manifest.json").read_text()).get("commit")
+                    except ValueError:
+                        old = None
+                moved = blocker is None and is_newer(sha, old)
             if moved:
                 point_latest(root, name)
             gone = prune(root, keep)
             with open(root / "releases.log", "a") as log:
-                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {tid} {sha[:9]} {','.join(built)}{'' if moved else ' (latest kept: ' + ('no client-android' if blocker else 'newer commit already released') + ')'}\n")
+                note = "" if moved else " (existing release with an APK kept: this build has no client-android)" if kept else " (latest kept: " + ("no client-android" if blocker else "newer commit already released") + ")"
+                log.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {tid} {sha[:9]} {','.join(built)}{note}\n")
     finally:
         shutil.rmtree(stage, ignore_errors=True)
-    print(f"release: published {dest}" + (" and moved latest" if moved else " (latest not moved: " + (blocker or "a newer commit is already there") + ")"))
+    if kept:
+        print(f"release: {dest} already holds an APK and this build has none: left untouched")
+    else:
+        print(f"release: published {dest}" + (" and moved latest" if moved else " (latest not moved: " + (blocker or "a newer commit is already there") + ")"))
     if gone:
         print(f"release: pruned {', '.join(gone)}")
     if blocker:
