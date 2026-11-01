@@ -1064,4 +1064,46 @@ public sealed class UnitSilhouetteTests
             .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Name}: violet coat saturation {c.Saturation:0.00}, at most {MaxT398VioletSaturation:0.00}"));
         Assert.True(!failures.Any(), string.Join(" | ", failures));
     }
+
+    /// <summary>T399: a mount's coat that is neither dark nor saturated (luminance above 0.20 and saturation (max - min) / max under 0.40 of the linear factor) reads as grey on snow and sand from above: the Cavalry's grey-blue (0.30, 0.38, 0.46: 0.37, 0.35) and the Sipahi's grey (0.32, 0.32, 0.34: 0.32, 0.06) were the two; the dark coats (Mandekalu, African Forest Elephant) keep their contrast by being dark.</summary>
+    private const float MaxT399GreyLuminance = 0.20f;
+    private const float MinT399GreySaturation = 0.40f;
+
+    [Fact]
+    public void NoMountWearsAPaleGreyCoat()
+    {
+        var (_, mounted) = Units();
+        var failures = mounted
+            .Select(u => (u.Name, Lum: 0.3f * u.Horse.X + 0.59f * u.Horse.Y + 0.11f * u.Horse.Z, Sat: (MathF.Max(u.Horse.X, MathF.Max(u.Horse.Y, u.Horse.Z)) - MathF.Min(u.Horse.X, MathF.Min(u.Horse.Y, u.Horse.Z))) / MathF.Max(u.Horse.X, MathF.Max(u.Horse.Y, u.Horse.Z))))
+            .Where(c => c.Lum > MaxT399GreyLuminance && c.Sat < MinT399GreySaturation)
+            .Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Name}: coat luminance {c.Lum:0.00} and saturation {c.Sat:0.00}: grey on snow"));
+        Assert.True(!failures.Any(), string.Join(" | ", failures));
+    }
+
+    /// <summary>T399: Naresuan's Elephant's skin at most this luminance (measured 0.14; it was 0.21, a mid brown that melted into desert sand).</summary>
+    private const float MaxT399NaresuanLuminance = 0.17f;
+
+    [Fact]
+    public void NaresuansElephantIsDarkEnoughForDesertSand()
+    {
+        var (_, mounted) = Units();
+        var c = mounted.First(u => u.Name == "Naresuan's Elephant").Horse;
+        float lum = 0.3f * c.X + 0.59f * c.Y + 0.11f * c.Z;
+        Assert.True(lum <= MaxT399NaresuanLuminance, string.Create(CultureInfo.InvariantCulture, $"Naresuan's Elephant skin luminance {lum:0.000}, at most {MaxT399NaresuanLuminance:0.00}"));
+    }
+
+    /// <summary>T399: the Conquistador from behind: the median width of the rows from its widest row (the shoulders and the cantle) down to the tail is at least this share of that width. Measured 0.65; the tall narrow cantle board made a bottle: 0.43.</summary>
+    private const float MinT399ConquistadorWaist = 0.55f;
+
+    [Fact]
+    public void TheConquistadorFromBehindIsNotABottle()
+    {
+        var mask = Masks("Conquistador", 3)[2];
+        int w = W * 3, h = H * 3;
+        var widths = Enumerable.Range(0, h).Select(y => Enumerable.Range(0, w).Count(x => mask[y * w + x])).ToArray();
+        int top = Array.FindIndex(widths, n => n > 0), bottom = Array.FindLastIndex(widths, n => n > 0), max = widths.Max();
+        var below = widths[Array.IndexOf(widths, max)..(bottom + 1)].Order().ToArray();
+        float share = below[below.Length / 2] / (float)max;
+        Assert.True(share >= MinT399ConquistadorWaist, string.Create(CultureInfo.InvariantCulture, $"median width below the shoulders {share:0.000} of the widest row, at least {MinT399ConquistadorWaist:0.00}"));
+    }
 }

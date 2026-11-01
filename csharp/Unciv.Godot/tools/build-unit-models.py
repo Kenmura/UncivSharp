@@ -439,7 +439,7 @@ HORSE_VARIANTS["drape"] = [("body", (0.0, 0.3, -0.38), (0.32, 0.26, 0.04)), ("bo
 HORSE_VARIANTS["flaps"] = hem_pair(0.25, 0.44, 0.14, 0.25, tabs=(-0.12, 0.0, 0.12), tab_drop=0.12, thick=0.05) + [("body", (0.0, 0.47, 0.0), (0.54, 0.03, 0.46))]
 # T398: the Conquistador's high Spanish cantle (a tall board behind the rider, a tall pommel board and a bedroll) and the Sipahi's tall banner (a long pole and a big swallow-tail flag) replace the width that the
 # riders' big hats gave them: their outlines against Cataphract and Lancer no longer depend on a hat dish wider than the shoulders
-HORSE_VARIANTS["highcantle"] = [("body", (0.0, 0.5, 0.3), (0.34, 0.5, 0.12)), ("body", (0.0, 0.78, -0.24), (0.34, 0.5, 0.2)), ("body", (0.0, 0.5, 0.2), (0.26, 0.04, 0.2)), ("body", (0.0, 0.54, -0.04), (0.56, 0.1, 0.1)), ("head", (0.0, NECK_TOP[1] + 0.12, NECK_TOP[2] + 0.04), (0.12, 0.2, 0.05))]
+HORSE_VARIANTS["highcantle"] = [("body", (0.0, 0.5, 0.3), (0.34, 0.5, 0.12)), ("body", (0.0, 0.66, -0.24), (0.5, 0.26, 0.2)), ("body", (0.0, 0.5, 0.2), (0.26, 0.04, 0.2)), ("body", (0.0, 0.54, -0.04), (0.56, 0.1, 0.1)), ("head", (0.0, NECK_TOP[1] + 0.12, NECK_TOP[2] + 0.04), (0.12, 0.2, 0.05))]
 HORSE_VARIANTS["banner"] = [("body", (0.0, 0.8, -0.2), (0.025, 0.9, 0.025)), ("body", (0.0, 1.12, -0.38), (0.025, 0.3, 0.34)), ("body", (0.0, 0.98, -0.5), (0.025, 0.2, 0.14)), ("body", (0.0, 0.45, -0.3), (0.2, 0.1, 0.08))]
 HORSE_VARIANTS["wings"][4] = ("head", (0.0, NECK_TOP[1] + 0.14, NECK_TOP[2] + 0.02), (0.05, 0.16, 0.05))
 
