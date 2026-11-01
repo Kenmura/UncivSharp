@@ -856,4 +856,31 @@ public sealed class UnitSilhouetteTests
             }
         Assert.True(failures.Count == 0 && min > 0f, string.Join(" | ", failures) + string.Create(CultureInfo.InvariantCulture, $" MIN={min:0.000}"));
     }
+
+    /// <summary>T393: every pair of the plain-horse riders and the camel, seen from the side (sides 1 and 3, where every horse used to be the same long low box), differs in outline by at least this much (measured minimum 0.180, Knight and Cataphract; the pairwise minimum was 0.179 before the pass, the gain of T393 is that every horse now has an arched neck, a hanging head, ears and a falling tail instead of the same box, which this metric cannot see: the sheets in UNIT-STYLE.md show it).</summary>
+    private const float MinT393SideOutline = 0.17f;
+
+    /// <summary>T393: Horseman and Khan (both orange before) seen from the front and back: mount coat distance at least this much (measured 0.324; it was 0.164 with both coats orange, and the front outlines differ by the trappings as before).</summary>
+    private const float MinT393HorsemanKhanCoat = 0.30f;
+
+    [Fact]
+    public void TheHorsesOfT393AreToldApartFromTheSideAndHorsemanFromKhan()
+    {
+        var (_, mounted) = Units();
+        var horses = mounted.Where(u => u.Mount.StartsWith("horse", StringComparison.Ordinal) || u.Mount.Contains("camel", StringComparison.Ordinal)).ToList();
+        var failures = new List<string>();
+        float min = 9f;
+        string worst = "";
+        foreach (var a in horses)
+            foreach (var b in horses.Where(b => string.CompareOrdinal(b.Name, a.Name) > 0))
+            {
+                var (ma, mb) = (Masks(a.Name), Masks(b.Name));
+                float d = new[] { 1, 3 }.Average(side => 1f - (float)ma[side].Zip(mb[side], (x, y) => x && y).Count(on => on) / ma[side].Zip(mb[side], (x, y) => x || y).Count(on => on));
+                if (d < min) (min, worst) = (d, a.Name + "/" + b.Name);
+                if (d < MinT393SideOutline) failures.Add(string.Create(CultureInfo.InvariantCulture, $"{a.Name} and {b.Name}: side outlines differ by {d:0.000}, need {MinT393SideOutline:0.00}"));
+            }
+        float coat = Vector3.Distance(mounted.First(u => u.Name == "Horseman").Horse, mounted.First(u => u.Name == "Khan").Horse);
+        if (coat < MinT393HorsemanKhanCoat) failures.Add(string.Create(CultureInfo.InvariantCulture, $"Horseman and Khan: coats differ by {coat:0.000}, need {MinT393HorsemanKhanCoat:0.00}"));
+        Assert.True(failures.Count == 0, string.Join(" | ", failures) + string.Create(CultureInfo.InvariantCulture, $" MIN={min:0.000} {worst} COAT={coat:0.000}"));
+    }
 }

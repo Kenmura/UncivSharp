@@ -281,7 +281,7 @@ HORSE_VARIANTS = {
     "camel2": [("body", (0.0, 0.58, -0.02), (0.20, 0.30, 0.24)), ("neck", (0.0, 0.78, 0.36), (0.17, 0.46, 0.17)), ("head", (0.0, 1.04, 0.5), (0.15, 0.15, 0.26)), ("head", (0.0, 1.14, 0.44), (0.04, 0.12, 0.04)),
                ("body", (0.0, 0.2, 0.0), (0.30, 0.04, 0.5)), ("body", (0.15, 0.36, -0.02), (0.08, 0.34, 0.30)), ("body", (-0.15, 0.36, -0.02), (0.08, 0.34, 0.30)), ("body", (0.0, 0.84, -0.02), (0.06, 0.14, 0.14))],
     "blanket2": [("body", (0.0, 0.445, 0.0), (0.64, 0.03, 0.5)), ("body", (0.0, 0.6, -0.31), (0.58, 0.14, 0.14)), ("body", (0.0, 0.38, 0.27), (0.30, 0.22, 0.04)), ("body", (0.0, 0.5, 0.26), (0.5, 0.05, 0.06))],
-    "wings": [("body", (0.27, 0.78, -0.26), (0.03, 0.34, 0.34)), ("body", (-0.27, 0.78, -0.26), (0.03, 0.34, 0.34)), ("body", (0.13, 0.6, -0.26), (0.26, 0.05, 0.3)), ("body", (-0.13, 0.6, -0.26), (0.26, 0.05, 0.3)), ("head", (0.0, 0.78, 0.44), (0.05, 0.16, 0.05))],
+    "wings": [("body", (0.3, 0.84, -0.26), (0.03, 0.46, 0.38)), ("body", (-0.3, 0.84, -0.26), (0.03, 0.46, 0.38)), ("body", (0.13, 0.6, -0.26), (0.26, 0.05, 0.3)), ("body", (-0.13, 0.6, -0.26), (0.26, 0.05, 0.3)), ("head", (0.0, 0.78, 0.44), (0.05, 0.16, 0.05))],
     # T389: the six riders on plain or lightly dressed horses (Horseman, Horse Archer, Cossack, Knight, Lancer, Khan) differ from the front and back by what spreads sideways and upwards: saddle packs and
     # a chest strap, a pair of tall quivers and a bow bar, a bedroll across the pommel and drapes, a fan of crest spikes, two tall lances, wide hanging flaps
     "packs": [("body", (0.21, 0.3, -0.08), (0.1, 0.24, 0.28)), ("body", (-0.21, 0.3, -0.08), (0.1, 0.24, 0.28)), ("body", (0.0, 0.42, 0.28), (0.4, 0.05, 0.05))],
@@ -289,7 +289,8 @@ HORSE_VARIANTS = {
                 ("body", (-0.33, 1.06, -0.26), (0.05, 0.16, 0.05)), ("body", (0.0, 0.44, 0.3), (0.36, 0.06, 0.06))],
     "bedroll": [("body", (0.0, 0.54, 0.22), (0.56, 0.11, 0.11)), ("body", (0.17, 0.28, 0.0), (0.04, 0.32, 0.4)), ("body", (-0.17, 0.28, 0.0), (0.04, 0.32, 0.4))],
     "fan": [("head", (0.0, 0.82, 0.42), (0.04, 0.24, 0.04)), ("head", (0.09, 0.78, 0.42), (0.04, 0.2, 0.04)), ("head", (-0.09, 0.78, 0.42), (0.04, 0.2, 0.04)), ("head", (0.0, 0.7, 0.44), (0.24, 0.04, 0.04))],
-    "lances": [("body", (0.24, 0.8, 0.05), (0.03, 0.9, 0.03)), ("body", (-0.24, 0.8, 0.05), (0.03, 0.9, 0.03)), ("body", (0.24, 1.15, 0.05), (0.14, 0.12, 0.02)), ("body", (-0.24, 1.15, 0.05), (0.14, 0.12, 0.02))],
+    "lances": [("body", (0.3, 0.8, 0.05), (0.03, 0.9, 0.03)), ("body", (-0.3, 0.8, 0.05), (0.03, 0.9, 0.03)), ("body", (0.3, 1.15, 0.05), (0.2, 0.14, 0.02)), ("body", (-0.3, 1.15, 0.05), (0.2, 0.14, 0.02)),
+               ("body", (0.0, 0.62, 0.3), (0.62, 0.04, 0.04))],
     "flaps": [("body", (0.25, 0.24, 0.0), (0.05, 0.34, 0.5)), ("body", (-0.25, 0.24, 0.0), (0.05, 0.34, 0.5)), ("body", (0.0, 0.47, 0.0), (0.54, 0.03, 0.46))],
     "tuq": [("body", (0.0, 0.8, -0.30), (0.03, 0.8, 0.03)), ("body", (0.0, 1.2, -0.30), (0.46, 0.03, 0.03)), ("body", (0.2, 1.04, -0.30), (0.04, 0.3, 0.04)), ("body", (-0.2, 1.04, -0.30), (0.04, 0.3, 0.04)),
             ("body", (0.0, 1.0, -0.30), (0.08, 0.1, 0.08)), ("body", (0.17, 0.56, -0.26), (0.10, 0.34, 0.12)), ("body", (-0.17, 0.56, -0.26), (0.10, 0.34, 0.12))],
@@ -366,13 +367,54 @@ def box(centre, size):
 CHARIOT_PARTS += wheel_parts("wheel_l", (WHEEL_X, WHEEL_Y, CART_Z)) + wheel_parts("wheel_r", (-WHEEL_X, WHEEL_Y, CART_Z))
 
 
+# T393: the horse seen from the side. The old horse was a level box with an upright stick for a neck and a box for a head: every horse was the same low brick from the side. The shaped horse has an
+# arched neck that rises forward at 0.55 rad, a head hanging down at 0.75 rad with two ears standing above the poll, a deeper chest, a rounder rump and a tail that falls away behind: a
+# horse-shaped profile at any yaw. The camel keeps the old parts (its own neck, `camel2`). Ready-made parts: (joint, positions, normals, indices).
+NECK_PIVOT, NECK_TILT, NECK_LEN, HEAD_TILT = (0.0, 0.40, 0.28), 0.55, 0.32, 0.75
+NECK_TOP = (0.0, NECK_PIVOT[1] + NECK_LEN * math.cos(NECK_TILT), NECK_PIVOT[2] + NECK_LEN * math.sin(NECK_TILT))
+
+
+def neck_part(size, along=0.16):
+    return ("neck", *rotated_box(NECK_PIVOT, (0.0, along, 0.0), size, NECK_TILT))
+
+
+def head_part(size, forward=0.08):
+    return ("head", *rotated_box(NECK_TOP, (0.0, 0.0, forward), size, HEAD_TILT))
+
+
+SHAPED_HORSE_PARTS = [p for p in HORSE_PARTS if p[0] not in ("neck", "head", "tail")] + [
+    ("body", (0.0, 0.34, 0.17), (0.22, 0.25, 0.20)),  # deep chest
+    ("body", (0.0, 0.33, -0.19), (0.21, 0.23, 0.17)),  # round rump
+    neck_part((0.10, 0.34, 0.13)),
+    head_part((0.10, 0.11, 0.25)),
+    ("head", (0.035, NECK_TOP[1] + 0.06, NECK_TOP[2] + 0.01), (0.025, 0.09, 0.03)),
+    ("head", (-0.035, NECK_TOP[1] + 0.06, NECK_TOP[2] + 0.01), (0.025, 0.09, 0.03)),
+    ("tail", *rotated_box((0.0, 0.40, -0.26), (0.0, -0.13, 0.0), (0.06, 0.30, 0.07), -0.35)),
+]
+# the trappings that were placed on the old upright neck and head are moved onto the arched ones
+HORSE_VARIANTS["barded"] = [("body", (0.115, 0.3, 0.0), (0.03, 0.3, 0.5)), ("body", (-0.115, 0.3, 0.0), (0.03, 0.3, 0.5)), neck_part((0.17, 0.32, 0.17)), head_part((0.13, 0.14, 0.27), 0.09),
+                            ("head", (0.0, NECK_TOP[1] + 0.12, NECK_TOP[2] + 0.1), (0.03, 0.12, 0.03))]
+HORSE_VARIANTS["cataphract"] = [("body", (0.13, 0.19, 0.0), (0.03, 0.36, 0.66)), ("body", (-0.13, 0.19, 0.0), (0.03, 0.36, 0.66)), ("body", (0.0, 0.3, 0.29), (0.28, 0.34, 0.03)), ("body", (0.0, 0.3, -0.29), (0.28, 0.34, 0.03)),
+                                neck_part((0.19, 0.34, 0.19)), head_part((0.15, 0.16, 0.29), 0.09), ("body", (0.0, 0.47, 0.0), (0.30, 0.04, 0.5))]
+HORSE_VARIANTS["plumed"] = [("head", (0.0, NECK_TOP[1] + 0.2, NECK_TOP[2]), (0.06, 0.2, 0.06)), ("head", (0.0, NECK_TOP[1] + 0.3, NECK_TOP[2]), (0.14, 0.06, 0.06)), ("body", (0.11, 0.3, 0.0), (0.02, 0.14, 0.4)), ("body", (-0.11, 0.3, 0.0), (0.02, 0.14, 0.4))]
+# T393: two trappings that show in profile: a tall horsehair crest on the poll (Companion Cavalry) and a long cloth hanging behind and in front of the saddle (Mandekalu Cavalry)
+HORSE_VARIANTS["crest"] = [("head", (0.0, NECK_TOP[1] + 0.26, NECK_TOP[2]), (0.05, 0.34, 0.05)), ("head", (0.0, NECK_TOP[1] + 0.12, NECK_TOP[2] - 0.1), (0.05, 0.26, 0.05)), ("head", (0.0, NECK_TOP[1] + 0.3, NECK_TOP[2] - 0.08), (0.05, 0.1, 0.18))]
+HORSE_VARIANTS["drape"] = [("body", (0.0, 0.22, -0.38), (0.32, 0.4, 0.04)), ("body", (0.0, 0.2, 0.36), (0.3, 0.36, 0.04)), ("body", (0.0, 0.5, -0.36), (0.3, 0.08, 0.18))]
+HORSE_VARIANTS["cantle"][3] = ("head", (0.0, NECK_TOP[1] + 0.12, NECK_TOP[2] + 0.04), (0.12, 0.2, 0.05))
+HORSE_VARIANTS["fan"] = [("head", (0.0, NECK_TOP[1] + 0.16, NECK_TOP[2]), (0.04, 0.24, 0.04)), ("head", (0.09, NECK_TOP[1] + 0.12, NECK_TOP[2]), (0.04, 0.2, 0.04)), ("head", (-0.09, NECK_TOP[1] + 0.12, NECK_TOP[2]), (0.04, 0.2, 0.04)),
+                         ("head", (0.0, NECK_TOP[1] + 0.04, NECK_TOP[2] + 0.02), (0.24, 0.04, 0.04))]
+HORSE_VARIANTS["wings"][4] = ("head", (0.0, NECK_TOP[1] + 0.14, NECK_TOP[2] + 0.02), (0.05, 0.16, 0.05))
+
 def build_horse(scale=1.0, colour=None, kind="horse", variant=None):
     """The generated mount: the horse of the mounted units, or (`kind`) the elephant or the chariot with its horses (C095); `scale` and `colour` still scale and tint any of them."""
     joints_def, parts_def = MOUNTS[kind][0], MOUNTS[kind][1]
     if kind == "elephant":
         parts_def = parts_def + ELEPHANT_VARIANTS[variant or "rails"]
-    elif kind == "horse" and variant:  # T310
-        parts_def = parts_def + [part for name in variant.split("+") for part in HORSE_VARIANTS[name]]  # "a+b": both
+    elif kind == "horse":
+        if not (variant and "camel" in variant):
+            parts_def = SHAPED_HORSE_PARTS  # T393
+        if variant:  # T310
+            parts_def = parts_def + [part for name in variant.split("+") for part in HORSE_VARIANTS[name]]  # "a+b": both
     b = Builder()
     doc = b.doc
     world = {name: tuple(c * scale for c in pos) for name, _, pos in joints_def}

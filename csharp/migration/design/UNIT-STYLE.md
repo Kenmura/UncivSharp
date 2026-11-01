@@ -212,3 +212,13 @@ T389 (legibility pass 5: reproducible sources, baked sizes, plain horses from th
 ![T389 mounted units from the side](images/units/unit-sheet/t389-mounted-side.png)
 
 ![T389 weak units on desert, snow, plains, grass, tundra and forest, zoom 14](images/units/unit-sheet/t389-pale-ground.png)
+
+T393 (legibility pass 6: horses from the side, Horseman against Khan, loud coats): (1) The generated horse now has a profile (`SHAPED_HORSE_PARTS` in `build-unit-models.py`): an arched neck rising forward, a head hanging down, two ears, a deeper chest, a rounder rump and a falling tail, instead of a level box with an upright stick and a box for a head; the trappings that sat on the old neck and head (barded, cataphract, plumed, cantle, fan, wings) were moved onto the new ones. The camel keeps its own parts, chariots keep the old horse. New side trappings: a tall horsehair crest (Companion Cavalry), a hanging cloth in front of and behind the saddle (Mandekalu Cavalry), wider lances with larger blades and a cross bar (Lancer), taller and wider wings (Hakkapeliitta). (2) Coats: Khan is red (0.5, 0.04, 0.04; it was the same orange as the Horseman), Horseman amber, Companion Cavalry navy (was a loud plum), Mandekalu Cavalry charcoal (was white like the Cossack; a sage green was tried and vanished on grass). The sheet's lighting brightens every coat a lot, so factors are chosen darker than they look. (3) Camel Archer on desert: dark brown with a rim against sand reads clearly at zoom 14, no change. (4) Test `TheHorsesOfT393AreToldApartFromTheSideAndHorsemanFromKhan`: side outlines (sides 1 and 3) of all horse and camel riders at least 0.17 apart (measured 0.180; the pairwise minimum was 0.179 before, so the metric does not show the gain, the sheets do) and Horseman against Khan coats at least 0.30 (0.324, was 0.164). No existing threshold lowered. Real GPU (RTX 5060 Ti, zoom 14, real terrain): from the side every horse now reads as a horse, with trappings on top; from the front Horseman (amber) and Khan (red, plume, flaps) are clearly different. Still weak: from the side the dressed horses (Knight, Cataphract, Mandekalu, Cossack) are mostly covered by their cloths, and the figures remain boxy. Unverified: Low renderer and phone profile (T395), frame cost.
+
+![T393 mounted units from the front](images/units/unit-sheet/t393-mounted-front.png)
+
+![T393 mounted units from the side](images/units/unit-sheet/t393-mounted-side.png)
+
+![T393 mounted units from the back](images/units/unit-sheet/t393-mounted-back.png)
+
+![T393 camel, Companion Cavalry, Horseman, Khan, Mandekalu and Knight on desert, snow, plains, grass, tundra and forest](images/units/unit-sheet/t393-pale-ground.png)
