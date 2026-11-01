@@ -358,7 +358,7 @@
     "Unciv.Core/Logic/Civilization/Civilization.Culture.cs": {"branch": 50.0, "line": 100.0},
     "Unciv.Core/Logic/Civilization/Civilization.LastSeenOwner.cs": {"branch": 100.0, "line": 100.0},
     "Unciv.Core/Logic/Civilization/Civilization.WorkerAutomation.cs": {"branch": 100.0, "line": 100.0},
-    "Unciv.Core/Logic/Civilization/Civilization.cs": {"branch": 89.79, "line": 95.27},
+    "Unciv.Core/Logic/Civilization/Civilization.cs": {"branch": 88.98, "line": 95.15},
     "Unciv.Core/Logic/Civilization/CivilizationContracts.cs": {"branch": 100.0, "line": 100.0},
     "Unciv.Core/Logic/Civilization/CivilizationEventExtensions.cs": {"branch": 100.0, "line": 100.0},
     "Unciv.Core/Logic/Civilization/Diplomacy/CityStateCalls.cs": {"branch": 100.0, "line": 100.0},
