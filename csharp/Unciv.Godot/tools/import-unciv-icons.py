@@ -147,6 +147,11 @@ def render_credits(credits_text):
     return "\n".join(lines) + "\n"
 
 
+def strip_toc(text):
+    """tools/toc.py adds a generated table of contents to CREDITS.md; the importer's own output has none."""
+    return re.sub(r"<!-- toc -->.*?<!-- /toc -->\n\n", "", text, flags=re.S)
+
+
 def main(argv):
     check = "--check" in argv
     if any(a not in ("--check",) for a in argv):
@@ -170,7 +175,7 @@ def main(argv):
         bad = []
         if not (PACK / "manifest.json").is_file() or (PACK / "manifest.json").read_text(encoding="utf-8") != manifest:
             bad.append("manifest.json is out of date")
-        if not (PACK / "CREDITS.md").is_file() or (PACK / "CREDITS.md").read_text(encoding="utf-8") != credits:
+        if not (PACK / "CREDITS.md").is_file() or strip_toc((PACK / "CREDITS.md").read_text(encoding="utf-8")) != credits:
             bad.append("CREDITS.md is out of date")
         for _, source, rel in entries:
             target = PACK / rel
