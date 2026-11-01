@@ -68,7 +68,7 @@ flowchart TD
   classDef review fill:#cfe4ff,stroke:#1f6feb,color:#000
   classDef blocked fill:#ffd6d6,stroke:#c62828,color:#000
   classDef done fill:#eeeeee,stroke:#999999,color:#666,stroke-dasharray:4 3
-  class T274 prog
+  class T274 review
   class T275 ondeck
   class T340 ondeck
   class T400 ondeck
@@ -169,7 +169,7 @@ xychart-beta
 | T275 | **On deck** (after T274) | T274, C034, C035 | 0 | Host migration 5/5: client UI and docs (backup-host picker, trust notice, standby status, rollback and host-changed notices, superseded-host screen) |
 | T340 | **On deck** (after T274) | T274 | 0 | Two-human split-brain: playtest scenario and in-game warning when a partition could give each machine a host |
 | T400 | **On deck** (after T274) | T274 | 0 | Host migration: crash election for a relay-only successor (voters reach the successor through its relay room) |
-| T274 | In-Progress [Claude-T274] | T273 | 3 | Host migration 4/5: crash election (loss detection, signed HostLossVote quorum, split-brain refusal, superseded-host mode, forced take-over, kill-the-host scenarios) |
+| T274 | Needs-Review [Claude-T274] | T273 | 3 | Host migration 4/5: crash election (loss detection, signed HostLossVote quorum, split-brain refusal, superseded-host mode, forced take-over, kill-the-host scenarios) |
 | T278 | Available (waiting on ) | T260, T276 | 2 | Android on-device verification: TLS join, lifecycle reconnect, frame time and APK size on a mid-range phone |
 | T305 | Available (waiting on ) | T280 | 1 | Verify the Android APK job of the release workflow on a hosted runner (first tag push) |
 | T290 | Blocked | T271 | 0 | Real-device frame-time pass: Windows, macOS, Android phone |
