@@ -114,4 +114,22 @@ public sealed class LastSeenOwnerSaveTests : IDisposable
         var snapshot = View(loaded, "Babylon");
         Assert.All(snapshot.Tiles.Where(it => !it.Visible), it => Assert.Null(it.LastOwner));
     }
+
+    [Fact]
+    public void TheTileDistanceHelpersWalkTheSameRingsAsTheMap()
+    {
+        var game = NewGame();
+        var tile = game.GetCivilization("Babylon").GetCapital()!.GetCenterTile();
+        var ring = new List<Unciv.Logic.Map.Tiles.Tile>();
+        tile.ForEachTileAtDistance(1, ring.Add);
+        var filtered = new List<Unciv.Logic.Map.Tiles.Tile>();
+        tile.ForEachTileAtDistance(1, it => it.IsLand, filtered.Add);
+        var range = new List<Unciv.Logic.Map.Tiles.Tile>();
+        tile.ForEachTileInDistanceRange(new Unciv.Utils.IntRange(1, 1), range.Add);
+        var rangeFiltered = new List<Unciv.Logic.Map.Tiles.Tile>();
+        tile.ForEachTileInDistanceRange(new Unciv.Utils.IntRange(1, 1), it => it.IsLand, rangeFiltered.Add);
+        Assert.Equal(ring, range);
+        Assert.Equal(filtered, rangeFiltered);
+        Assert.Equal(ring.Where(it => it.IsLand), filtered);
+    }
 }
