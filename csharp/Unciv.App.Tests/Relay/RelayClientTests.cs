@@ -322,7 +322,8 @@ public sealed class RelayClientTests
         Assert.NotNull(root);
         var pattern = new System.Text.RegularExpressions.Regex(@"unciv-relay://([A-Za-z0-9][A-Za-z0-9.-]*)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         static bool Placeholder(string host) => !host.Contains('.', StringComparison.Ordinal) || host.EndsWith(".example.org", StringComparison.OrdinalIgnoreCase) || host.EndsWith(".example.net", StringComparison.OrdinalIgnoreCase)
-            || host.StartsWith("203.0.113.", StringComparison.Ordinal) || host == "127.0.0.1";
+            || host.StartsWith("203.0.113.", StringComparison.Ordinal) || host == "127.0.0.1"
+            || host.Equals("civsharp.nickthorsen.com", StringComparison.OrdinalIgnoreCase); // the owner's own relay, committed with approval (T356/T392)
         var offenders = new List<string>();
         var count = 0;
         foreach (var file in Directory.EnumerateFiles(root!, "*", SearchOption.AllDirectories))
