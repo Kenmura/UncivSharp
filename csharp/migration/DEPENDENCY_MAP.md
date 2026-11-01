@@ -66,7 +66,7 @@ flowchart TD
   classDef review fill:#cfe4ff,stroke:#1f6feb,color:#000
   classDef blocked fill:#ffd6d6,stroke:#c62828,color:#000
   classDef done fill:#eeeeee,stroke:#999999,color:#666,stroke-dasharray:4 3
-  class T356 prog
+  class T356 review
   class T394 ondeck
 ```
 
@@ -190,7 +190,7 @@ xychart-beta
 | T274 | In-Progress [Claude-T274] | T273 | 2 | Host migration 4/5: crash election (loss detection, signed HostLossVote quorum, split-brain refusal, superseded-host mode, forced take-over, kill-the-host scenarios) |
 | T278 | Available (waiting on ) | T260, T276 | 2 | Android on-device verification: TLS join, lifecycle reconnect, frame time and APK size on a mid-range phone |
 | T305 | Available (waiting on ) | T280 | 1 | Verify the Android APK job of the release workflow on a hosted runner (first tag push) |
-| T356 | In-Progress [claude-T356] | T337, T338, T339 | 1 | Deploy the relay on the owner's server: concrete nginx config, manual connectivity matrix, result recorded |
+| T356 | Needs-Review [claude-T356] | T337, T338, T339 | 1 | Deploy the relay on the owner's server: concrete nginx config, manual connectivity matrix, result recorded |
 | T290 | Blocked | T271 | 0 | Real-device frame-time pass: Windows, macOS, Android phone |
 | T300 | In-Progress [Claude] | none | 0 | Replace text-letter placeholder icons (resource chips etc.) with real pictorial icons |
 | T301 | In-Progress [Claude] | none | 0 | Maximizing a windowed game freaks out and may crash |
