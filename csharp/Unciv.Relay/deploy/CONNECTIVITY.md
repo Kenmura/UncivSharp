@@ -4,7 +4,7 @@ The project owner's relay: Docker Compose, TLS and ALPN `unciv-relay/1` from the
 Status words: **VERIFIED** (someone ran it and reported the result), **VERIFIED-LOCAL** (run against a local relay binary with a self-made certificate, not the real server),
 **UNVERIFIED** (nobody has run it, or the run was not independent), **BLOCKED** (needs something that does not exist yet). Nothing here is assumed: a row stays UNVERIFIED until a result is written next to it.
 
-Open rows R2-R4, R7-R9 and R13 are tracked by ticket T393 (T355 for R10-R12). Honest limits of what is recorded: the owner's check below ran from a machine sharing the owner's public IP, so it did not prove that the port is reachable from the Internet
+Open rows R2-R4, R7-R9 and R13 are tracked by ticket T394 (T355 for R10-R12). Honest limits of what is recorded: the owner's check below ran from a machine sharing the owner's public IP, so it did not prove that the port is reachable from the Internet
 (router hairpinning or LAN routing could have made it work) and it did not test any game client.
 
 | # | Check | Command or action | Status | Evidence / who |
