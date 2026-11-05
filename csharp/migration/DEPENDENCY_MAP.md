@@ -89,7 +89,7 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T326 T328 T329 T405
-- in progress: T317
+- in review: T317
 - blocked: T290 T355 T357 T394 T404
 - waiting: T275 T313 T314 T330 T331 T332 T333 T335 T340 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363 T400 T401
 
@@ -146,7 +146,7 @@ xychart-beta
 | T306 | Available (waiting on T278) | C099, T278 | 0 | Android shell on-device checks for C099: back button, safe-area insets, orientation, lifecycle autosave, keyboard scroll, permissions |
 | T313 | Available (waiting on ) | T311 | 0 | Verify OS display scale detection on Windows, macOS and X11 and follow a window moved between monitors (T311 follow-up) |
 | T314 | Available (waiting on ) | none | 0 | Flaky tests: NetLobbyTests.ServerLobby_TwoRapidSameKeyReconnects... and server/CLI bench tests fail once under full-gate load, pass alone |
-| T317 | In-Progress [DeepSeek-T317] | T312 | 0 | Extend the layout matrix: alerts and popups, city Production tab, game over/victory/hotseat/vote screens, 640x360 minimum window, an automatic wasted-space check |
+| T317 | Needs-Review [DeepSeek-T317] | T312 | 0 | Extend the layout matrix: alerts and popups, city Production tab, game over/victory/hotseat/vote screens, 640x360 minimum window, an automatic wasted-space check |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
 | T330 | Available (waiting on ) | none | 0 | GitHub Actions does not run for csharp-migration or csharp-v tags: diagnose (account, billing, rename to Kenmura/UncivSharp, settings), restore CI, then re-run the tag workflow |
 | T331 | Available (waiting on ) | T279, T280 | 0 | Local release fallback: release.py --github-draft builds all four clients plus CLI and server archives from a tag and creates the draft release without GitHub Actions; notes flag --local |
