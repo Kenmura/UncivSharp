@@ -1,4 +1,5 @@
 using Godot;
+using Unciv.Assets;
 using Unciv.GodotClient.Ui;
 
 namespace Unciv.GodotHarness;
@@ -82,6 +83,43 @@ internal static class LayoutChecks
     public static List<string> TargetProblems(Node root, int minPx, int maxPx, Func<BaseButton, bool>? exempt = null) => Buttons(root)
         .Where(it => !(exempt?.Invoke(it) ?? false) && it.IsVisibleInTree() && it.Size.Y > 0 && Visible(it) != null && (it.Size.Y + 0.5f < minPx || it.Size.Y > maxPx))
         .Select(it => $"{it.GetType().Name} '{(it as Button)?.Text}' {it.Name} is {it.Size.X}x{it.Size.Y} (allowed height {minPx}..{maxPx})").ToList();
+
+    /// <summary>
+    /// T329: the shared widgets under <paramref name="root"/> whose fixed sizes no longer match the live theme: a StatChip's separation and badge, a StatBar's thickness,
+    /// an IconLabel's icon and a ListRow's icon. They follow the theme through <see cref="UiTheme.Fit"/>; this checks the result after a live resize or scale change.
+    /// </summary>
+    public static List<string> SharedWidgetProblems(Node root, UiTheme theme)
+    {
+        var problems = new List<string>();
+        void Expect(string what, float actual, float expected)
+        {
+            if (Math.Abs(actual - expected) > 0.5f) problems.Add($"{what} is {actual}, the live scale gives {expected}");
+        }
+        void Walk(Node node)
+        {
+            switch (node)
+            {
+                case StatChip chip:
+                    Expect("StatChip separation", chip.GetThemeConstant("separation"), theme.Px(UiTokens.S1));
+                    if (chip.GetChildren().OfType<IconBadge>().FirstOrDefault() is { } badge) Expect("StatChip badge", badge.CustomMinimumSize.X, theme.Px(20));
+                    break;
+                case StatBar bar:
+                    float height = bar.Bar.CustomMinimumSize.Y;
+                    if (Math.Abs(height - theme.Px(UiTokens.BarLabelled)) > 0.5f && Math.Abs(height - theme.Px(UiTokens.BarThin)) > 0.5f)
+                        problems.Add($"StatBar height is {height}, the live scale gives {theme.Px(UiTokens.BarThin)} or {theme.Px(UiTokens.BarLabelled)}");
+                    break;
+                case IconLabel label:
+                    if (label.GetChildren().OfType<TextureRect>().FirstOrDefault() is { } picture) Expect("IconLabel icon", picture.CustomMinimumSize.X, theme.Px(UiTheme.IconSize));
+                    break;
+                case ListRow row:
+                    if (row.FindChildren("*", "", true, false).OfType<TextureRect>().FirstOrDefault() is { } icon) Expect("ListRow icon", icon.CustomMinimumSize.X, theme.Px(UiTheme.IconSize));
+                    break;
+            }
+            foreach (var child in node.GetChildren()) Walk(child);
+        }
+        Walk(root);
+        return problems;
+    }
 
     /// <summary>T322: the rows wider than <paramref name="maxPx"/> (plus the rounding tolerance): a form row that spans the window leaves its label far from its control.</summary>
     public static List<string> WidthProblems(IEnumerable<Control> rows, int maxPx) => rows

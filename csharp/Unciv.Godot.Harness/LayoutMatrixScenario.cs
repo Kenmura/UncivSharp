@@ -64,8 +64,10 @@ public sealed class LayoutMatrixScenario : Scenario
             steps.AddRange(MenuSteps(at, (a, n, r) => Check(a, n, r)));
         }
 
+        // T329: the game screens (the HUD, the city and the tech screen) are opened once and resized (and rescaled) live, like the menus
+        steps.AddRange(GameResizeSteps(new At(run, 1366, 768, 1f)));
         // T316: the same menu screens, opened once and then resized (and rescaled) live
-        steps.AddRange(MenuSteps(new At(run, 1366, 768, 1f), ResizeCycle));
+        steps.AddRange(MenuSteps(new At(run, 1366, 768, 1f), (a, n, r) => ResizeCycle(a, n, r)));
         // T321: the dialogs over a game screen (a pending alert, a tutorial, a decision picker) through the same live cycle
         steps.AddRange(PopupResizeSteps(new At(run, 1366, 768, 1f)));
         // T321: the in-game save controller gets an unbound theme, so its breakpoint must come from the width (5 -> 3 -> 5 columns)
@@ -164,6 +166,52 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.AddRange(Check(at, "pedia", () => S().Pedia, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close the pedia", () => S().Pedia.Close()));
         steps.Add(new Act($"{at.Size}: free the game screen", () =>
+        {
+            at.Sub.NotNull().QueueFree();
+            at.Screen = null;
+        }));
+        steps.Add(new WaitFrames(2));
+        return steps;
+    }
+
+    /// <summary>
+    /// T329: one game screen is built once and the HUD, the city (with its production tab) and the tech screen are each run through the live resize and scale cycle of
+    /// <see cref="ResizeCycle"/>: 1366x768 -> 3840x2160 -> 1366x768 -> scale 1.5 -> scale 1, with the overflow and target checks after every change.
+    /// </summary>
+    private static List<ScenarioStep> GameResizeSteps(At at)
+    {
+        var run = at.Run;
+        var steps = new List<ScenarioStep>
+        {
+            new Act($"{at.Size}: build the game screen for the live resize", () =>
+            {
+                DisplayProfile.Current = new DisplayProfile(false, 0f, at.Os);
+                var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false, World3D = run.Host.GetViewport().FindWorld3D() };
+                run.Host.AddChild(sub);
+                at.Local = new LocalHost(run.Session, ScenarioGame.HumanA, () => at.Now += 1000);
+                var screen = at.Screen = new GameScreen();
+                sub.AddChild(screen);
+                screen.Start(at.Local, run.Registry);
+                at.Theme = screen.SharedTheme;
+            }),
+            new WaitFrames(6),
+            new Act($"{at.Size}: dismiss the banner and the pending alert", () =>
+            {
+                at.Screen.NotNull().Hud.HideBanner();
+                at.Screen.NotNull().Alerts.Close();
+            }),
+        };
+        GameScreen S() => at.Screen.NotNull();
+        steps.AddRange(ResizeCycle(at, "hud", () => S().Hud));
+        steps.Add(new Act("open the city", () => S().OpenCityScreen(at.Local.NotNull().Snapshot.Cities.First(it => it.Own != null))));
+        steps.AddRange(ResizeCycle(at, "city", () => S().City, contentCap: UiTokens.MaxContentWidth));
+        steps.Add(new Act("show the city's production", () => S().City.NotNull().SetProduction(true)));
+        steps.AddRange(ResizeCycle(at, "city-production", () => S().City, contentCap: UiTokens.MaxContentWidth));
+        steps.Add(new Act("close the city", () => S().OpenCityScreen(null)));
+        steps.Add(new Act("open tech", () => S().OpenTechScreen()));
+        steps.AddRange(ResizeCycle(at, "tech", () => S().Tech, it => it.GetType().Name.Contains("Card", StringComparison.Ordinal), UiTokens.MaxContentWidth));
+        steps.Add(new Act("close tech", () => S().Tech.Close()));
+        steps.Add(new Act($"{at.Size}: free the live-resize game screen", () =>
         {
             at.Sub.NotNull().QueueFree();
             at.Screen = null;
@@ -434,7 +482,7 @@ public sealed class LayoutMatrixScenario : Scenario
     /// T316: a screen already open is checked at its size, then the viewport is resized to 4K and back to 1366x768 and the UI scale is changed and restored, checking after each: the screen has to follow the live
     /// window (a width taken from the theme at construction would stay what it was and overflow or waste the window).
     /// </summary>
-    private static ScenarioStep[] ResizeCycle(At at, string name, Func<Node> root)
+    private static ScenarioStep[] ResizeCycle(At at, string name, Func<Node> root, Func<BaseButton, bool>? exempt = null, int? contentCap = null)
     {
         var steps = new List<ScenarioStep>();
         // T326: the tip is shown once, in the first phase, and stays visible across the viewport resize and the two scale changes (showing it again would measure it anew,
@@ -448,8 +496,17 @@ public sealed class LayoutMatrixScenario : Scenario
                 at.Size = "resize-" + label;
                 change();
             }));
-            steps.AddRange(Check(at, name, root));
+            steps.AddRange(Check(at, name, root, exempt, contentCap));
             steps.Add(new AssertQuery($"{name} {label}: the main menu column follows the live scale", () => name != "main-menu" || MenuColumnWidth(root()) == at.Theme.NotNull().Px(260)));
+            // T329: the shared widgets used by the game screens (the HUD's stat chips, the city's stat chips, bars and production rows, the tech cards' bars) follow the
+            // live scale too, not only the gallery in the menu cycle
+            steps.Add(new AssertQuery($"{name} {label}: the game screen's shared widgets follow the live scale", () =>
+            {
+                if (name is not ("hud" or "city" or "city-production" or "tech")) return true;
+                var wrong = LayoutChecks.SharedWidgetProblems(root(), at.Theme.NotNull());
+                foreach (string it in wrong) GD.PrintErr($"[layout-matrix] {at.Size} {name}: {it}");
+                return wrong.Count == 0;
+            }));
             // T323: the join column and the shared widgets (list row, list panel, icon label, stat chip, stat bar, tooltip) and the modal are at the live scale, not the one they were built at
             steps.Add(new AssertQuery($"{name} {label}: the join column follows the live scale", () => name != "join" || ColumnWidth(root(), "JoinColumn") == at.Theme.NotNull().Px(420)));
             steps.Add(new AssertQuery($"{name} {label}: the shared widgets follow the live scale", () =>
