@@ -29,8 +29,9 @@ public partial class LobbyScreen : Control
     private readonly ClientSession? session;
     private readonly ServerLobby? hostControls;
     private readonly string ownKey;
-    private readonly Label titleLabel = new() { Name = "LobbyTitle" };
+    private ScreenFrame frame = null!; // JUSTIFY: T318 assigned by Build, which every constructor runs
     private readonly VBoxContainer slotsBox = new() { Name = "Slots" };
+    private readonly ScrollContainer bodyScroll = new() { Name = "LobbyScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
     private readonly VBoxContainer nationBox = new() { Name = "NationPicker", SizeFlagsHorizontal = SizeFlags.ExpandFill };
     private readonly ScrollContainer pickerScroll = new() { Name = "PickerScroll", Visible = false, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
     private readonly HBoxContainer bottomRow = new() { Name = "SettingsAndChat", SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -126,8 +127,13 @@ public partial class LobbyScreen : Control
 
     public Button? OpenButton(int slot) => openButtons.GetValueOrDefault(slot);
 
-    /// <summary>Scrolls the nation picker so the control is in view.</summary>
-    public void Reveal(Control control) => pickerScroll.EnsureControlVisible(control);
+    /// <summary>Scrolls the nation picker and the body so the control is in view.</summary>
+    public void Reveal(Control control)
+    {
+        // T318: the control can sit inside the picker's own scroll and the body's, so both follow it (inner first, outer second)
+        for (var node = control.GetParent(); node != null; node = node.GetParent())
+            if (node is ScrollContainer scroll) scroll.EnsureControlVisible(control);
+    }
 
     public override void _Process(double delta)
     {
@@ -165,7 +171,7 @@ public partial class LobbyScreen : Control
     public void Rebuild()
     {
         if (lobby is not { } state) return;
-        titleLabel.Text = $"{"Lobby".TrText()}: {LobbyModel.Title(state)}";
+        frame.TitleLabel.Text = $"{"Lobby".TrText()}: {LobbyModel.Title(state)}";
         settingsLabel.Text = string.Join("\n", LobbyModel.SettingsLines(state));
         FillSlots(state);
         FillPicker(state);
@@ -180,34 +186,23 @@ public partial class LobbyScreen : Control
 
     private void Build(bool host)
     {
+        Theme = theme.Theme; // T318: the frame and the footer take the kit's theme even under a bare parent
         this.Fill();
-        var column = new VBoxContainer();
-        column.Fill();
-        // C101: a touch build keeps the content off the screen edges (rounded corners, the notch); a mouse build is unchanged
-        if (theme.MinTargetPx > 0)
-        {
-            var margin = new MarginContainer { Name = "LobbyMargin" };
-            margin.Fill();
-            foreach (string side in new[] { "left", "top", "right", "bottom" }) margin.FitConstant(theme, "margin_" + side, UiTokens.S3);
-            AddChild(margin);
-            column.SetAnchorsPreset(LayoutPreset.TopLeft);
-            column.SizeFlagsVertical = SizeFlags.ExpandFill;
-            margin.AddChild(column);
-        }
-        else
-        {
-            AddChild(column);
-            // T312: on a window wider than the widest content (ultrawide) the lobby keeps that width, centred
-            void CapWidth()
-            {
-                float extra = Math.Max(0f, (Size.X - theme.Px(UiTokens.MaxContentWidth)) / 2f);
-                column.OffsetLeft = extra;
-                column.OffsetRight = -extra;
-            }
-            Resized += CapWidth;
-            theme.Fit(this, CapWidth); // T316
-        }
-        column.AddChild(titleLabel);
+        var backdrop = new ColorRect { Name = "Backdrop", Color = ProceduralAssets.ToColor(UiTokens.Bg1), MouseFilter = MouseFilterEnum.Ignore };
+        backdrop.Fill();
+        AddChild(backdrop);
+        // T318: the same frame as New game and Options: the lobby title in the header, the seats and picker in a scrolling body, Start/Leave in the footer
+        frame = new ScreenFrame(theme, "Lobby", closeButton: false);
+        frame.Fill();
+        AddChild(frame);
+        var column = new VBoxContainer { Name = "LobbyColumn", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        column.FitConstant(theme, "separation", UiTokens.S2);
+        bodyScroll.AddChild(column);
+        frame.SetContent(bodyScroll);
+        // T318: on a tall window the seats/settings keep the body's height (the chat fills it); on a phone the content is taller and still scrolls
+        void FitBody() => column.CustomMinimumSize = new Vector2(0, bodyScroll.Size.Y);
+        bodyScroll.Resized += FitBody;
+        theme.Fit(this, FitBody);
         slotsBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         column.AddChild(slotsBox);
 
@@ -221,11 +216,13 @@ public partial class LobbyScreen : Control
         column.AddChild(seat);
 
         pickerScroll.AddChild(nationBox);
+        pickerScroll.FitMin(theme, 0, 220); // T318: the picker is a pane of the scrolled body, not a collapsing scroll under it
         column.AddChild(pickerScroll);
 
         // Settings (read-only; the host edits them on the Host screen) on the left, chat on the right; hidden while the nation picker is open.
+        bottomRow.FitMin(theme, 0, 130); // T318: a pane of the scrolled body; its own scrolls keep Settings and Chat usable on a phone
         column.AddChild(bottomRow);
-        // C101: the settings scroll when they do not fit beside the chat, so Start and Leave stay on the screen of a phone
+        // C101: the settings scroll when they do not fit beside the chat; T318 keeps Start and Leave in the footer, so both stay reachable on a phone
         var settingsScroll = new ScrollContainer { Name = "SettingsScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
         var settings = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         settingsScroll.AddChild(settings);
@@ -248,14 +245,11 @@ public partial class LobbyScreen : Control
         send.AddChild(SendButton);
         right.AddChild(send);
 
-        var bottom = new HBoxContainer();
         StartButton = new Button { Text = "Start game".Tr(), Name = "StartGameButton", Visible = false, Disabled = true };
         StartButton.Pressed += () => _ = StartAsync();
         LeaveButton = new Button { Text = "Leave".Tr(), Name = "LeaveButton" };
         LeaveButton.Pressed += () => LeaveRequested?.Invoke();
-        bottom.AddChild(StartButton);
-        bottom.AddChild(LeaveButton);
-        column.AddChild(bottom);
+        frame.SetFooter([(LeaveButton, ChoiceRole.Ghost), (StartButton, ChoiceRole.Primary)]);
         column.AddChild(startHint);
         column.AddChild(messageLabel);
     }
@@ -265,6 +259,8 @@ public partial class LobbyScreen : Control
     {
         pickerScroll.Visible = show;
         bottomRow.Visible = !show;
+        // T318: closing the picker goes back to the seats at the top of the scrolled body (the picker can be far down after scrolling through nations)
+        if (!show) bodyScroll.ScrollVertical = 0;
     }
 
     private void FillSlots(LobbyState state)

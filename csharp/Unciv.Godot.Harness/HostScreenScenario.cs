@@ -89,7 +89,12 @@ public sealed class HostScreenScenario : Scenario
 
         private static Vector2 Centre(Func<Control?> find) => find()?.GetGlobalRect().GetCenter() ?? Vector2.Zero;
 
-        private Click ClickChoice(string field, string option) => new(() => Centre(() => screen.ChoiceButton(field, option)));
+        // T318: the content is shorter than the bare layout was (header and footer), so a choice may start below the fold: scroll it in before clicking
+        private ScenarioStep[] ClickChoice(string field, string option) =>
+        [
+            new Act($"scroll to {field}: {option}", () => screen.Reveal(screen.ChoiceButton(field, option).NotNull())),
+            new Click(() => Centre(() => screen.ChoiceButton(field, option))),
+        ];
 
         private static void Type(LineEdit field, string text)
         {
@@ -126,18 +131,18 @@ public sealed class HostScreenScenario : Scenario
                 new Capture("defaults", "Host screen, Game tab, with the defaults: game name, civ and city-state counts, AI fill, difficulty, speed, era and victory types"),
     
                 new Act("type the game name", () => Type(screen.NameField, "Friday night")),
-                ClickChoice("Difficulty", "King"),
-                ClickChoice("Speed", "Epic"),
+                ..ClickChoice("Difficulty", "King"),
+                ..ClickChoice("Speed", "Epic"),
                 new Press("Fewer civs"),
                 new Press("Rules"),
-                ClickChoice("Base ruleset", "Civ V - Vanilla"),
+                ..ClickChoice("Base ruleset", "Civ V - Vanilla"),
                 new Press("Map"),
-                ClickChoice("Size", "Tiny"),
+                ..ClickChoice("Size", "Tiny"),
                 new Act("type the seed", () => Type(screen.SeedField, "7")),
                 new Press("Network"),
-                ClickChoice("Timer", "5 min"),
+                ..ClickChoice("Timer", "5 min"),
                 new Click(() => Centre(() => screen.DynamicTimerCheck)),
-                ClickChoice("Shortest turn", "1 min"),
+                ..ClickChoice("Shortest turn", "1 min"),
                 new Act("type the password and the port", () =>
                 {
                     Type(screen.PasswordField, "hunter2");

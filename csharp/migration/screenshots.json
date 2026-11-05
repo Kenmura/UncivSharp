@@ -1201,7 +1201,7 @@
       },
       {
         "golden": "lobby/picking.png",
-        "caption": "The host's nation picker: Random and every playable nation in its colours, then eight seat colours; the host chose Babylon and Blue and their row shows both."
+        "caption": "The host's nation picker: the seats keep the chosen Babylon and its blue swatch in the host's row, and the picker lists Random and every playable nation in its colours with Babylon pressed; the eight seat colours follow below."
       },
       {
         "golden": "lobby/ready.png",
@@ -1807,15 +1807,15 @@
       },
       {
         "golden": "phone-menus/host.png",
-        "caption": "Host game on a phone: the Game tab's buttons and fields are touch targets and the page scrolls; the two check boxes are still small and the screen is not yet framed like the others (known gaps, see C101 notes)."
+        "caption": "Host game on a phone: the Game tab's buttons and fields are touch targets and the page scrolls under the titled header; Back and Start hosting sit in the footer. The two check boxes are still small (known gap, see C101 notes)."
       },
       {
         "golden": "phone-menus/lobby.png",
-        "caption": "The host's lobby on a phone: seats, Ready and Pick nation, and Start/Leave stay on screen (the settings list scrolls beside the chat); the content keeps a margin from the screen edge."
+        "caption": "The host's lobby on a phone: seats, Ready and Pick nation scroll under the titled header; Leave and Start game sit in the footer, and the settings list and chat have their own scrolls."
       },
       {
         "golden": "phone-menus/join.png",
-        "caption": "Multiplayer join on a phone: the address and password fields and Join/Back are touch targets."
+        "caption": "Multiplayer join on a phone: the address and password fields scroll under the titled header and are touch targets, with Back and Join in the footer."
       },
       {
         "golden": "phone-menus/options.png",

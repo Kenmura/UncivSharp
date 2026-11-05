@@ -140,9 +140,12 @@ public sealed class LobbyScenario : Scenario
             new Click(() => Centre(() => Host().ColourButton("Blue"))),
             new WaitUntil("the host's nation and colour reached the lobby", () => Host().State is { } s && s.Slots[0] is { Nation: "Babylon", Color: "Blue" }),
             new AssertQuery("Babylon is taken for everybody else", () => Host().NationButton("Babylon") is { Disabled: false } && lobby.Lobby.Slots[0].Nation == "Babylon"),
-            new Act("scroll back up", () => Host().Reveal(Host().NationButton("Random").NotNull())),
+            new Act("scroll back to the top", () =>
+            {
+                if (Host().FindChild("LobbyScroll", true, false) is ScrollContainer scroll) scroll.ScrollVertical = 0;
+            }),
             new WaitFrames(2),
-            new Capture("picking", "Host picks a nation and a colour: the picker lists Random and every playable nation in its colours, with the chosen one pressed."),
+            new Capture("picking", "Host picks a nation and a colour: the seats keep the chosen Babylon (and its blue swatch) in the host's row, and the picker lists Random and every playable nation in its colours with Babylon pressed; the seat colours follow below."),
             new Press("Pick nation"),
             new Press("Ready"),
             new Act("the friends pick, get ready and talk", () =>
@@ -153,6 +156,8 @@ public sealed class LobbyScenario : Scenario
             }),
             new WaitUntil("the chat arrived", () => Host().ChatLines.Contains("Friend A: Ready when you are")),
             new Act("the host answers in the chat", () => Host().ChatField.Text = "Starting soon"),
+            new Act("scroll to the chat", () => Host().Reveal(Host().SendButton)),
+            new WaitFrames(2),
             new Press("Send"),
             new WaitUntil("everybody is ready and the answer is in the chat", () =>
                 Host().State is { } s && s.Slots.Take(3).All(it => it.Ready) && Host().ChatLines.Contains("Host: Starting soon") && !Host().StartButton.Disabled),

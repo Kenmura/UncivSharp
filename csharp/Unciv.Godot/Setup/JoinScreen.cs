@@ -1,6 +1,8 @@
 using Godot;
+using Unciv.Assets;
 using Unciv.Client.Net.Mods;
 using Unciv.Client.Net.Session;
+using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Translations;
 using Unciv.Net;
@@ -61,6 +63,7 @@ public partial class JoinScreen : Control
 {
     private readonly JoinScreenEnvironment env;
     private readonly SynchronizationContext? context = SynchronizationContext.Current;
+    private readonly ScreenFrame frame;
     private readonly VBoxContainer hostsBox = new() { Name = "KnownHosts" };
     private readonly Label hostsTitle = new() { Name = "KnownHostsTitle" };
     private readonly Label messageLabel = new() { Name = "JoinMessage", AutowrapMode = TextServer.AutowrapMode.WordSmart };
@@ -85,15 +88,25 @@ public partial class JoinScreen : Control
     {
         this.env = env;
         Name = "JoinScreen";
+        Theme = theme.Theme; // T318: the frame and the footer take the kit's theme even under a bare parent
         this.Fill();
-        var centre = new CenterContainer();
-        centre.Fill();
-        AddChild(centre);
+        var backdrop = new ColorRect { Name = "Backdrop", Color = ProceduralAssets.ToColor(UiTokens.Bg1), MouseFilter = MouseFilterEnum.Ignore };
+        backdrop.Fill();
+        AddChild(backdrop);
+        // T318: the same frame as New game and Options: the form scrolls under the titled header and Join/Back sit in the footer
+        frame = new ScreenFrame(theme, "Join game", closeButton: false);
+        frame.Fill();
+        AddChild(frame);
+        var scroll = new ScrollContainer { Name = "JoinScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
+        var centre = new CenterContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        scroll.AddChild(centre);
+        frame.SetContent(scroll);
         var column = new VBoxContainer { Name = "JoinColumn" }.FitMin(theme, 420);
+        column.FitConstant(theme, "separation", UiTokens.S2);
         centre.AddChild(column);
-        column.AddChild(new Label { Text = "Join a game".Tr(), HorizontalAlignment = HorizontalAlignment.Center });
 
         column.AddChild(formPanel);
+        formPanel.FitConstant(theme, "separation", UiTokens.S2);
         formPanel.AddChild(new Label { Text = "Address or invite".Tr() });
         AddressField = new LineEdit { Name = "AddressField", PlaceholderText = "192.168.1.20:47821 or unciv://...".Tr(), Text = env.LastAddress };
         AddressField.TextSubmitted += _ => Join();
@@ -102,7 +115,6 @@ public partial class JoinScreen : Control
         PasswordField = new LineEdit { Name = "PasswordField", Secret = true };
         PasswordField.TextSubmitted += _ => Join();
         formPanel.AddChild(PasswordField);
-        var buttons = new HBoxContainer();
         JoinButton = new Button { Text = "Join".Tr(), Name = "JoinButton" };
         JoinButton.Pressed += Join;
         CancelButton = new Button { Text = "Cancel".Tr(), Name = "CancelButton", Visible = false };
@@ -113,10 +125,7 @@ public partial class JoinScreen : Control
             CancelAttempt();
             BackRequested?.Invoke();
         };
-        buttons.AddChild(JoinButton);
-        buttons.AddChild(CancelButton);
-        buttons.AddChild(BackButton);
-        formPanel.AddChild(buttons);
+        frame.SetFooter([(BackButton, ChoiceRole.Ghost), (CancelButton, ChoiceRole.Secondary), (JoinButton, ChoiceRole.Primary)]);
         BrowseButton = new Button { Text = "Browse public games".Tr(), Name = "BrowseButton" };
         BrowseButton.Pressed += () => BrowseRequested?.Invoke();
         formPanel.AddChild(BrowseButton);
@@ -553,5 +562,9 @@ public partial class JoinScreen : Control
         relayPanel.Visible = panel == relayPanel;
         modPanel.Visible = panel == modPanel;
         stopPanel.Visible = panel == stopPanel;
+        // T318: the footer actions belong to the form; a prompt or the hard stop replaces them (the prompt's own answers stay on screen)
+        JoinButton.Visible = panel == formPanel;
+        CancelButton.Visible = busy && panel == formPanel;
+        frame.Footer.Visible = panel == formPanel;
     }
 }

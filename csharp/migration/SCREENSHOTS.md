@@ -797,9 +797,9 @@ Scenario `lobby`.
 
 *Host's lobby: Host, Friend A and Friend B seated, one open slot (AI or Close), nobody ready; Start is off and says who it waits for. Settings are read-only on the left, chat on the right.* (`lobby/waiting.png`)
 
-![The host's nation picker: Random and every playable nation in its colours, then eight seat colours; the host chose Babylon and Blue and their row shows both.](../Unciv.Godot.Harness/golden/lobby/picking.png)
+![The host's nation picker: the seats keep the chosen Babylon and its blue swatch in the host's row, and the picker lists Random and every playable nation in its colours with Babylon pressed; the eight seat colours follow below.](../Unciv.Godot.Harness/golden/lobby/picking.png)
 
-*The host's nation picker: Random and every playable nation in its colours, then eight seat colours; the host chose Babylon and Blue and their row shows both.* (`lobby/picking.png`)
+*The host's nation picker: the seats keep the chosen Babylon and its blue swatch in the host's row, and the picker lists Random and every playable nation in its colours with Babylon pressed; the eight seat colours follow below.* (`lobby/picking.png`)
 
 ![Everybody is ready: all three show Ready with their nation and colour, the chat holds both lines, Start game is on.](../Unciv.Godot.Harness/golden/lobby/ready.png)
 
@@ -1734,17 +1734,17 @@ Scenario `phone-menus`.
 
 *New game on a phone: tabs, steppers (icon buttons) and the player rows are touch targets; the page scrolls under the header and Back/Start sit in the footer.* (`phone-menus/new-game.png`)
 
-![Host game on a phone: the Game tab's buttons and fields are touch targets and the page scrolls; the two check boxes are still small and the screen is not yet framed like the others (known gaps, see C101 notes).](../Unciv.Godot.Harness/golden/phone-menus/host.png)
+![Host game on a phone: the Game tab's buttons and fields are touch targets and the page scrolls under the titled header; Back and Start hosting sit in the footer. The two check boxes are still small (known gap, see C101 notes).](../Unciv.Godot.Harness/golden/phone-menus/host.png)
 
-*Host game on a phone: the Game tab's buttons and fields are touch targets and the page scrolls; the two check boxes are still small and the screen is not yet framed like the others (known gaps, see C101 notes).* (`phone-menus/host.png`)
+*Host game on a phone: the Game tab's buttons and fields are touch targets and the page scrolls under the titled header; Back and Start hosting sit in the footer. The two check boxes are still small (known gap, see C101 notes).* (`phone-menus/host.png`)
 
-![The host's lobby on a phone: seats, Ready and Pick nation, and Start/Leave stay on screen (the settings list scrolls beside the chat); the content keeps a margin from the screen edge.](../Unciv.Godot.Harness/golden/phone-menus/lobby.png)
+![The host's lobby on a phone: seats, Ready and Pick nation scroll under the titled header; Leave and Start game sit in the footer, and the settings list and chat have their own scrolls.](../Unciv.Godot.Harness/golden/phone-menus/lobby.png)
 
-*The host's lobby on a phone: seats, Ready and Pick nation, and Start/Leave stay on screen (the settings list scrolls beside the chat); the content keeps a margin from the screen edge.* (`phone-menus/lobby.png`)
+*The host's lobby on a phone: seats, Ready and Pick nation scroll under the titled header; Leave and Start game sit in the footer, and the settings list and chat have their own scrolls.* (`phone-menus/lobby.png`)
 
-![Multiplayer join on a phone: the address and password fields and Join/Back are touch targets.](../Unciv.Godot.Harness/golden/phone-menus/join.png)
+![Multiplayer join on a phone: the address and password fields scroll under the titled header and are touch targets, with Back and Join in the footer.](../Unciv.Godot.Harness/golden/phone-menus/join.png)
 
-*Multiplayer join on a phone: the address and password fields and Join/Back are touch targets.* (`phone-menus/join.png`)
+*Multiplayer join on a phone: the address and password fields scroll under the titled header and are touch targets, with Back and Join in the footer.* (`phone-menus/join.png`)
 
 ![Options on a phone: the section list and the setting rows are touch targets.](../Unciv.Godot.Harness/golden/phone-menus/options.png)
 

@@ -60,6 +60,7 @@ public partial class HostScreen : Control
     private readonly Label messageLabel = new() { Name = "HostMessage", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Dictionary<string, ChoiceRow> rows = [];
     private readonly List<Button> resumeButtons = [];
+    private readonly ScreenFrame frame;
     private readonly VBoxContainer settingsColumn = new() { Name = "SettingsColumn" };
     private readonly VBoxContainer hostingPanel = new() { Name = "HostingPanel", SizeFlagsHorizontal = SizeFlags.ExpandFill };
     private readonly ScrollContainer hostingScroll = new() { Name = "HostingScroll", Visible = false, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -83,18 +84,17 @@ public partial class HostScreen : Control
         this.env = env;
         Form = form;
         Name = "HostScreen";
-        var column = new VBoxContainer();
-        column.Fill();
-        AddChild(column);
-        // T312: on a window wider than the widest content (ultrawide) the settings keep that width, centred
-        void CapWidth()
-        {
-            float extra = Math.Max(0f, (Size.X - theme.Px(UiTokens.MaxContentWidth)) / 2f);
-            column.OffsetLeft = extra;
-            column.OffsetRight = -extra;
-        }
-        Resized += CapWidth;
-        theme.Fit(this, CapWidth); // T316: the cap is in theme pixels, so a scale change moves it without a resize
+        Theme = theme.Theme; // T318: the frame and the footer take the kit's theme even under a bare parent (the scenarios build some screens without a ScreenManager)
+        this.Fill();
+        var backdrop = new ColorRect { Name = "Backdrop", Color = ProceduralAssets.ToColor(UiTokens.Bg1), MouseFilter = MouseFilterEnum.Ignore };
+        backdrop.Fill();
+        AddChild(backdrop);
+        // T318: the same frame as New game and Options: a titled header, the content capped to the reading width and the actions in the footer
+        frame = new ScreenFrame(theme, "Host game", closeButton: false);
+        frame.Fill();
+        AddChild(frame);
+        var column = new VBoxContainer { Name = "HostColumn" };
+        column.FitConstant(theme, "separation", UiTokens.S2);
 
         settingsColumn.SizeFlagsVertical = SizeFlags.ExpandFill;
         column.AddChild(settingsColumn);
@@ -107,17 +107,17 @@ public partial class HostScreen : Control
             Tabs.AddTab(title, scroll);
         }
         settingsColumn.AddChild(Tabs);
-        var bottom = new HBoxContainer();
+
         StartButton = new Button { Text = "Start hosting".Tr(), Name = "StartHostingButton" };
         StartButton.Pressed += () => _ = StartAsync();
         BackButton = new Button { Text = "Back".Tr(), Name = "BackButton" };
         BackButton.Pressed += () => BackRequested?.Invoke();
-        bottom.AddChild(StartButton);
-        bottom.AddChild(BackButton);
-        settingsColumn.AddChild(bottom);
 
         BuildHostingPanel(column);
         column.AddChild(messageLabel);
+        frame.SetContent(column);
+        // both hosting actions live in the footer for the frame's lifetime (SetFooter frees what it removes, so they are toggled, not rebuilt)
+        frame.SetFooter([(BackButton, ChoiceRole.Ghost), (StartButton, ChoiceRole.Primary), (StopButton, ChoiceRole.Primary)]);
         Refresh();
     }
 
@@ -310,6 +310,8 @@ public partial class HostScreen : Control
         StopButton.Disabled = true;
         await running.DisposeAsync();
         StopButton.Disabled = false;
+        StopButton.Visible = false;
+        StartButton.Visible = true;
         hostingScroll.Visible = false;
         settingsColumn.Visible = true;
         resumedInfo = null;
@@ -336,6 +338,8 @@ public partial class HostScreen : Control
         slotSignature = "";
         settingsColumn.Visible = false;
         hostingScroll.Visible = true;
+        StartButton.Visible = false;
+        StopButton.Visible = true;
         hostingTitle.Text = resumed != null ? "Hosting a saved game".TrText() : $"{"Hosting".TrText()} {Form.GameName.Trim()}";
         hostingStatus.Text = $"{"Friends connect to port".TrText()} {started.Port.ToString(CultureInfo.InvariantCulture)}. {"Host key".TrText()}: {started.Fingerprint}";
         RefreshInvite();
@@ -350,18 +354,27 @@ public partial class HostScreen : Control
     private void BuildHostingPanel(Container parent)
     {
         hostingScroll.AddChild(hostingPanel);
+        hostingPanel.FitConstant(theme, "separation", UiTokens.S1); // T318: a compact stack keeps the invite and the slot table in the framed content
         parent.AddChild(hostingScroll);
         hostingPanel.AddChild(hostingTitle);
         hostingPanel.AddChild(hostingStatus);
-        hostingPanel.AddChild(new Label { Text = "Address friends use:".Tr() });
-        hostingPanel.AddChild(hostingAddresses);
+        var addressRow = new HBoxContainer();
+        addressRow.FitConstant(theme, "separation", UiTokens.S2);
+        addressRow.AddChild(new Label { Text = "Address friends use:".Tr(), VerticalAlignment = VerticalAlignment.Center });
+        hostingAddresses.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        addressRow.AddChild(hostingAddresses);
+        hostingPanel.AddChild(addressRow);
         hostingPanel.AddChild(addressNote);
         hostingPanel.AddChild(new Label { Text = "Invite:".Tr() });
+        // T318: the invite and its copy button share a row, so the slot table stays above the fold in the framed layout
+        var inviteRow = new HBoxContainer();
+        inviteRow.FitConstant(theme, "separation", UiTokens.S2);
         InviteField = new LineEdit { Name = "InviteField", Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        hostingPanel.AddChild(InviteField);
+        inviteRow.AddChild(InviteField);
         CopyInviteButton = new Button { Text = "Copy invite".Tr(), Name = "CopyInviteButton" };
         CopyInviteButton.Pressed += CopyInvite;
-        hostingPanel.AddChild(CopyInviteButton);
+        inviteRow.AddChild(CopyInviteButton);
+        hostingPanel.AddChild(inviteRow);
         RelayInviteBox = new VBoxContainer { Name = "RelayInviteBox", Visible = false };
         RelayInviteBox.AddChild(new Label { Text = "Invite through the relay (works behind any router):".Tr() });
         RelayInUseLabel = new Label { Name = "RelayInUseLabel", Text = "" };
@@ -381,11 +394,9 @@ public partial class HostScreen : Control
         };
         hostingPanel.AddChild(ListedCheck);
         hostingPanel.AddChild(listingStatus);
-        hostingPanel.AddChild(new Label { Text = "Players:".Tr() });
         hostingPanel.AddChild(slotsBox);
-        StopButton = new Button { Text = "Stop hosting".Tr(), Name = "StopHostingButton" };
+        StopButton = new Button { Text = "Stop hosting".Tr(), Name = "StopHostingButton", Visible = false };
         StopButton.Pressed += () => _ = StopAsync();
-        hostingPanel.AddChild(StopButton);
     }
 
     /// <summary>T339: the "List this game publicly" box of the hosting panel (live: ticking it publishes, unticking removes the listing).</summary>
