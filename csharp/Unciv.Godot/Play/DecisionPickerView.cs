@@ -27,6 +27,8 @@ public partial class DecisionPickerView : Modal
     private readonly Dictionary<(int Slot, string Id), Button> optionButtons = [];
     private string?[] selected = [];
     private bool nameEdited;
+    private ScrollContainer? scroll; // T317: only on a window shorter than 480, so the footer stays on screen
+    private VBoxContainer? content;
     private UiTheme theme = null!; // JUSTIFY: C038 assigned by Init before the picker is opened
 
     public DecisionPickerView()
@@ -113,8 +115,46 @@ public partial class DecisionPickerView : Modal
             child.QueueFree();
         }
         for (int s = 0; s < spec.Slots.Count; s++) columns.AddChild(BuildColumn(s, spec.Slots[s]));
-        Visible = true;
         Update();
+        Visible = true;
+        // T317: at the 640x360 minimum window the picker is taller than the screen, so only its content scrolls and Confirm / Decide later stay reachable
+        FitBody(GetViewportRect().Size.Y < 400f);
+    }
+
+    /// <summary>T317: move the body between the modal body and a scroll area, preserving the direct layout (and every existing capture) on a normal window.</summary>
+    private void FitBody(bool shortWindow)
+    {
+        Control[] items = [prompt, columns, detail, nameField, flagBox, problem];
+        if (shortWindow)
+        {
+            if (scroll == null)
+            {
+                scroll = new ScrollContainer { Name = "PickerScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
+                content = new VBoxContainer { Name = "PickerContent" };
+                scroll.AddChild(content);
+                Body.AddChild(scroll);
+            }
+            foreach (var item in items)
+                if (item.GetParent() == Body)
+                {
+                    Body.RemoveChild(item);
+                    content.NotNull().AddChild(item);
+                }
+            FitScroll(scroll.NotNull(), content.NotNull(), 0.6f);
+        }
+        else if (scroll is { } current)
+        {
+            scroll = null;
+            foreach (var item in items)
+                if (item.GetParent() == content)
+                {
+                    content.NotNull().RemoveChild(item);
+                    Body.AddChild(item);
+                }
+            Body.RemoveChild(current);
+            current.QueueFree();
+            content = null;
+        }
     }
 
     public void Close()

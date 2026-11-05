@@ -42,6 +42,8 @@ public partial class BrowseScreen : Control
     private readonly Label detailLabel = new() { Name = "GameDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
     private readonly PanelContainer detailPanel = new() { Name = "DetailPanel", ThemeTypeVariation = UiVariants.PanelCard };
     private readonly BoxContainer body = new() { Name = "BrowseBody", SizeFlagsVertical = SizeFlags.ExpandFill };
+    private readonly VBoxContainer column;
+    private ScrollContainer? pageScroll;
     private readonly VBoxContainer stateHost = new() { Name = "StateHost", SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill, Alignment = BoxContainer.AlignmentMode.Center };
     private readonly List<string?> rulesetChoices = [];
     private readonly ButtonGroup group = new();
@@ -65,7 +67,7 @@ public partial class BrowseScreen : Control
         frame.Fill();
         AddChild(frame);
 
-        var column = new VBoxContainer { Name = "BrowseColumn" };
+        column = new VBoxContainer { Name = "BrowseColumn", SizeFlagsVertical = SizeFlags.ExpandFill };
         column.FitConstant(theme, "separation", UiTokens.S2);
         column.AddChild(relayLine);
 
@@ -187,7 +189,18 @@ public partial class BrowseScreen : Control
     /// <summary>Raised by the "Open Options" action of the no-relay state.</summary>
     public event Action? OptionsRequested;
 
-    public override void _Ready() => Refresh();
+    public override void _Ready()
+    {
+        // T317: at the 640x360 minimum window the toolbar, filters and details are taller than the frame; the page scrolls so the Back and Join footer stays on screen
+        if (pageScroll == null && GetViewportRect().Size.Y < 400f)
+        {
+            pageScroll = new ScrollContainer { Name = "BrowsePageScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
+            column.GetParent()?.RemoveChild(column);
+            pageScroll.AddChild(column);
+            frame.SetContent(pageScroll);
+        }
+        Refresh();
+    }
 
     public override void _ExitTree()
     {
@@ -393,7 +406,8 @@ public partial class BrowseScreen : Control
             var scroll = new ScrollContainer { Name = "JoinPromptScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(width, 0) };
             scroll.AddChild(prompt);
             Body.AddChild(scroll);
-            FitScroll(scroll, prompt, 0.5f);
+            // T317: at 640x360 the subtitle, prompt and fields were taller than the window; a smaller prompt share keeps the buttons on screen
+            FitScroll(scroll, prompt, GetViewportRect().Size.Y < 400f ? 0.3f : 0.5f);
             Body.AddChild(PasswordField);
             error.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.Warning));
             Body.AddChild(error);

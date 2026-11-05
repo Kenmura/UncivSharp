@@ -136,7 +136,8 @@ public partial class PediaScreen : PanelContainer
             {
                 button = new Button { Name = "PediaCategory_" + chosen, ToggleMode = true, ButtonGroup = group, ThemeTypeVariation = UiVariants.ButtonIcon, Icon = theme.Icon(icon), TooltipText = category.Label.Tr() };
                 button.AddThemeConstantOverride("icon_max_width", theme.Px(UiTheme.IconSize));
-                button.CustomMinimumSize = new Vector2(0, theme.MinTargetPx); // T285: a touch target tall (the floor is 0 with a mouse)
+                // T285/T317: a touch target tall, and never under the compact control height: an icon-only row was only 25-27 px tall at 640x480.
+                button.CustomMinimumSize = new Vector2(0, Math.Max(theme.MinTargetPx, theme.Px(UiTokens.CompactControlMinHeight)));
                 button.SetMeta(IconButton.LabelMeta, category.Label);
             }
             else

@@ -1,4 +1,5 @@
 using Godot;
+using Unciv.GodotClient.Ui;
 
 namespace Unciv.GodotHarness;
 
@@ -87,6 +88,32 @@ internal static class LayoutChecks
         .Where(it => it.Size.X > maxPx + Tolerance)
         .Select(it => $"{it.GetType().Name} '{it.Name}' is {it.Size.X} wide, more than the {maxPx} px form width cap")
         .ToList();
+
+    /// <summary>T317: the share of the usable width (the window, or the content cap on a wider window) a full-screen frame must fill before its empty side margins count as wasted space.</summary>
+    public const float MinContentShare = 0.85f;
+
+    /// <summary>
+    /// T317: the automatic wasted-space check. A full-screen screen (a <see cref="ScreenFrame"/>) whose content column is narrower than <paramref name="minShare"/> of the usable width
+    /// leaves an empty band down the side, so the layout wasted the window. The usable width is the window, capped at <paramref name="contentCapPx"/>: above the cap the side margins
+    /// are deliberate, and the content only has to fill the cap.
+    /// </summary>
+    public static List<string> WastedSpaceProblems(Node root, Rect2 window, float contentCapPx, float minShare = MinContentShare)
+    {
+        var frame = Find<ScreenFrame>(root);
+        if (frame == null) return [];
+        float usable = MathF.Min(window.Size.X, contentCapPx);
+        float content = frame.ContentRect.Size.X;
+        if (usable <= 0f || content + Tolerance >= usable * minShare) return [];
+        return [$"the content column is {content:0} px wide, less than {minShare:P0} of the {usable:0} px usable width (window {window.Size.X:0} px, cap {contentCapPx:0} px): wasted side space"];
+    }
+
+    private static T? Find<T>(Node root) where T : Node
+    {
+        if (root is T found) return found;
+        foreach (var child in root.GetChildren())
+            if (Find<T>(child) is { } nested) return nested;
+        return null;
+    }
 
     private static IEnumerable<BaseButton> Buttons(Node root)
     {

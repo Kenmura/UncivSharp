@@ -2076,6 +2076,9 @@
       }
     ]
   },
+  "T317": {
+    "none": "The layout matrix is a verification run, not a screen: tools/layout-matrix.sh renders every screen, popup and end screen at the minimum 640x360 window and the five desktop sizes on demand, asserts from the real controls (including the wasted-space check) and never compares goldens."
+  },
   "T301": {
     "none": "Window resize/maximize robustness scenario (window-resize): asserts viewport, camera and HUD layout after window mode and size changes; a window manager decides the sizes, so nothing is captured."
   }

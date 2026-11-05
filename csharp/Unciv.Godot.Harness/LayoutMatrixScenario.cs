@@ -24,16 +24,18 @@ using Unciv.Utils;
 namespace Unciv.GodotHarness;
 
 /// <summary>
-/// T312: the multi-resolution layout matrix. Every main screen (HUD, game menu, city, tech, policies, diplomacy, trade, overview, civilopedia, espionage, and the menu screens: main menu, new game, host, join, options, a
-/// modal) is opened in an off-screen viewport of each desktop size (1366x768, 1920x1080, 2560x1440, 3440x1440 ultrawide, 3840x2160) and checked from the real controls, not from pixels: no visible text leaves the window, none
-/// is cut off or overlaps another (<see cref="LayoutChecks.Problems"/>), no visible button is under the minimum target height or over the maximum (<see cref="LayoutChecks.TargetProblems"/>). All problems of the run
-/// are printed and the run fails at the end when there is any. When <c>UNCIV_MATRIX_OUT</c> names a folder each screen is also written there as <c>layout-WxH-screen.png</c> (a real GPU draws it; never compared to goldens).
-/// <c>UNCIV_MATRIX_RES</c> (comma separated WxH or WxH@S) replaces the size list. <c>tools/layout-matrix.sh</c> runs it on the host GPU.
+/// T312: the multi-resolution layout matrix. Every main screen (HUD, game menu, city incl. its Production tab, tech, policies, diplomacy, trade, overview, civilopedia, espionage, the popups:
+/// a pending alert, a tutorial and a decision picker, the end screens: victory, defeat, the World Congress result and the hotseat cover, and the menu screens: main menu, new game, host, join,
+/// options, a modal) is opened in an off-screen viewport of each desktop size (640x360, the minimum window, then 1366x768, 1920x1080, 2560x1440, 3440x1440 ultrawide, 3840x2160) and checked
+/// from the real controls, not from pixels: no visible text leaves the window, none is cut off or overlaps another (<see cref="LayoutChecks.Problems"/>), no visible button is under the minimum
+/// target height or over the maximum (<see cref="LayoutChecks.TargetProblems"/>), and no full-screen screen wastes the window by leaving empty side bands (<see cref="LayoutChecks.WastedSpaceProblems"/>).
+/// All problems of the run are printed and the run fails at the end when there is any. When <c>UNCIV_MATRIX_OUT</c> names a folder each screen is also written there as <c>layout-WxH-screen.png</c>
+/// (a real GPU draws it; never compared to goldens). <c>UNCIV_MATRIX_RES</c> (comma separated WxH or WxH@S) replaces the size list. <c>tools/layout-matrix.sh</c> runs it on the host GPU.
 /// </summary>
 public sealed class LayoutMatrixScenario : Scenario
 {
     private static readonly string Fingerprint = HostKey.Fingerprint([1, 2, 3, 4]);
-    private const string DefaultSizes = "1366x768,1920x1080,2560x1440,3440x1440,3840x2160";
+    private const string DefaultSizes = "640x360,1366x768,1920x1080,2560x1440,3440x1440,3840x2160";
 
     public override string Name => "layout-matrix";
 
@@ -57,6 +59,8 @@ public sealed class LayoutMatrixScenario : Scenario
         {
             var at = new At(run, width, height, os);
             steps.AddRange(GameSteps(at));
+            steps.AddRange(PopupSteps(at));
+            steps.AddRange(EndScreenSteps(at));
             steps.AddRange(MenuSteps(at, (a, n, r) => Check(a, n, r)));
         }
 
@@ -78,7 +82,12 @@ public sealed class LayoutMatrixScenario : Scenario
     }
 
     /// <summary>One size: wait for the layout, run the checks, write the picture. The checks only collect: the run reports every size and screen at the end.</summary>
-    private static ScenarioStep[] Check(At at, string name, Func<Node> root, Func<BaseButton, bool>? exempt = null) =>
+    /// <param name="at">The window size and the screens built in it.</param>
+    /// <param name="name">The screen's name in the report and output file.</param>
+    /// <param name="root">The screen under test.</param>
+    /// <param name="exempt">Buttons that are not target controls (in addition to the city tiles and check boxes).</param>
+    /// <param name="contentCap">T317: the logical content width cap of a full-screen screen, so the wasted-space check can run; null for dialogs and the HUD, whose content is not a full-width column.</param>
+    private static ScenarioStep[] Check(At at, string name, Func<Node> root, Func<BaseButton, bool>? exempt = null, int? contentCap = null) =>
     [
         new WaitFrames(8),
         // T321: the alert is the screen under test in its own resize phase, so it is not dismissed there
@@ -89,8 +98,11 @@ public sealed class LayoutMatrixScenario : Scenario
             var t = at.Theme.NotNull();
             var view = at.Sub.NotNull();
             var node = root();
-            foreach (string it in LayoutChecks.Problems(node, new Rect2(Vector2.Zero, view.Size))) at.Run.Problems.Add($"{at.Size} {name}: {it.Replace("\n", "\\n")}");
+            var window = new Rect2(Vector2.Zero, view.Size);
+            foreach (string it in LayoutChecks.Problems(node, window)) at.Run.Problems.Add($"{at.Size} {name}: {it.Replace("\n", "\\n")}");
             foreach (string it in LayoutChecks.TargetProblems(node, t.Px(UiTokens.CompactControlMinHeight), t.Px(UiTokens.ControlMinHeight) * 4, exempt == null ? Exempt : it => Exempt(it) || exempt(it))) at.Run.Problems.Add($"{at.Size} {name}: {it}");
+            if (contentCap is { } cap)
+                foreach (string it in LayoutChecks.WastedSpaceProblems(node, window, t.Px(cap))) at.Run.Problems.Add($"{at.Size} {name}: {it}");
             if (at.Run.OutDir != null) Save(view, Path.Combine(at.Run.OutDir, $"layout-{at.Size}-{name}.png"));
         }),
     ];
@@ -123,36 +135,160 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.AddRange(Check(at, "menu", () => S().GameMenu));
         steps.Add(new Act("close the menu", () => S().GameMenu.Close()));
         steps.Add(new Act("open the city", () => S().OpenCityScreen(at.Local.NotNull().Snapshot.Cities.First(it => it.Own != null))));
-        steps.AddRange(Check(at, "city", () => S().City));
+        steps.AddRange(Check(at, "city", () => S().City, contentCap: UiTokens.MaxContentWidth));
+        steps.Add(new Act("show the city's production", () => S().City.NotNull().SetProduction(true)));
+        steps.AddRange(Check(at, "city-production", () => S().City, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close the city", () => S().OpenCityScreen(null)));
         steps.Add(new Act("open tech", () => S().OpenTechScreen()));
-        steps.AddRange(Check(at, "tech", () => S().Tech, it => it.GetType().Name.Contains("Card", StringComparison.Ordinal)));
+        steps.AddRange(Check(at, "tech", () => S().Tech, it => it.GetType().Name.Contains("Card", StringComparison.Ordinal), UiTokens.MaxContentWidth));
         steps.Add(new Act("close tech", () => S().Tech.Close()));
         steps.Add(new Act("open policies", () => S().OpenPolicyScreen()));
-        steps.AddRange(Check(at, "policies", () => S().Policies));
+        steps.AddRange(Check(at, "policies", () => S().Policies, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close policies", () => S().Policies.Close()));
         steps.Add(new Act("open diplomacy", () => S().OpenDiplomacyScreen()));
-        steps.AddRange(Check(at, "diplomacy", () => S().Diplomacy));
+        steps.AddRange(Check(at, "diplomacy", () => S().Diplomacy, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close diplomacy", () => S().Diplomacy.Close()));
         steps.Add(new Act("open trade", () => S().OpenTradeScreen()));
-        steps.AddRange(Check(at, "trade", () => S().Trade));
+        steps.AddRange(Check(at, "trade", () => S().Trade, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close trade", () => S().Trade.Close()));
         foreach (string tab in new[] { OverviewModel.Stats, OverviewModel.Cities, OverviewModel.Units })
         {
             steps.Add(new Act("open overview " + tab, () => S().OpenOverviewScreen(tab)));
-            steps.AddRange(Check(at, "overview-" + tab.ToLowerInvariant(), () => S().Overview));
+            steps.AddRange(Check(at, "overview-" + tab.ToLowerInvariant(), () => S().Overview, contentCap: UiTokens.MaxContentWidth));
         }
         steps.Add(new Act("close overview", () => S().Overview.Close()));
         steps.Add(new Act("open espionage", () => S().OpenEspionageScreen()));
-        steps.AddRange(Check(at, "espionage", () => S().Espionage));
+        steps.AddRange(Check(at, "espionage", () => S().Espionage, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close espionage", () => S().Espionage.Close()));
         steps.Add(new Act("open the pedia", () => S().OpenPediaScreen("Unit/Warrior")));
-        steps.AddRange(Check(at, "pedia", () => S().Pedia));
+        steps.AddRange(Check(at, "pedia", () => S().Pedia, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close the pedia", () => S().Pedia.Close()));
         steps.Add(new Act($"{at.Size}: free the game screen", () =>
         {
             at.Sub.NotNull().QueueFree();
             at.Screen = null;
+        }));
+        steps.Add(new WaitFrames(2));
+        return steps;
+    }
+
+    /// <summary>
+    /// T317: the alert, tutorial and decision-picker popups over the game screen, at this size. The alert is a real pending alert from the alerts game; the tutorial and the picker are
+    /// opened by the scenario, so every size sees the same three shapes of popup without submitting a command.
+    /// </summary>
+    private static List<ScenarioStep> PopupSteps(At at)
+    {
+        var run = at.Run;
+        var steps = new List<ScenarioStep>
+        {
+            new Act($"{at.Size}: build the game screen for the popups", () =>
+            {
+                DisplayProfile.Current = new DisplayProfile(false, 0f, at.Os);
+                var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false, World3D = run.Host.GetViewport().FindWorld3D() };
+                run.Host.AddChild(sub);
+                at.Local = new LocalHost(run.ExtraSession("alerts"), ScenarioGame.HumanA, () => at.Now += 1000);
+                var screen = at.Screen = new GameScreen();
+                sub.AddChild(screen);
+                screen.Start(at.Local, run.Registry);
+                at.Theme = screen.SharedTheme;
+            }),
+            new WaitFrames(6),
+            new WaitUntil("the pending alert is open", () => at.Screen.NotNull().Alerts.Visible, 600),
+        };
+        GameScreen S() => at.Screen.NotNull();
+        steps.AddRange(Check(at, "alert", () => S().Alerts));
+        steps.Add(new Act("close the alert", () => S().Alerts.Close()));
+        steps.Add(new Act("show a tutorial", () => S().Tutorials.Open(new TutorialPage(TutorialTrigger.Introduction, "Introduction", "Found your first city to begin your story.", 0, 1))));
+        steps.AddRange(Check(at, "tutorial", () => S().Tutorials));
+        steps.Add(new Act("close the tutorial", () => S().Tutorials.Close()));
+        steps.Add(new Act("show a decision picker", () => S().Picker.Open(ResizePicker())));
+        steps.AddRange(Check(at, "picker", () => S().Picker));
+        steps.Add(new Act("close the decision picker", () => S().Picker.Close()));
+        steps.Add(new Act($"{at.Size}: free the popup game screen", () =>
+        {
+            at.Sub.NotNull().QueueFree();
+            at.Screen = null;
+        }));
+        steps.Add(new WaitFrames(2));
+        return steps;
+    }
+
+    /// <summary>
+    /// T317: the end screens at this size: the victory screen (a real one-turn domination through the victory game), the defeat screen, the World Congress result and the hotseat cover.
+    /// Victory, defeat and the vote result run over a real game screen; the cover is the real <see cref="HandOverView"/>, which is full-screen by design.
+    /// </summary>
+    private static List<ScenarioStep> EndScreenSteps(At at)
+    {
+        var steps = new List<ScenarioStep>();
+        steps.AddRange(EndGameSteps(at, "victory", "victory", () => at.Screen.NotNull().GameOver));
+        steps.AddRange(EndGameSteps(at, "defeat", "defeat", () => at.Screen.NotNull().GameOver));
+        steps.AddRange(EndGameSteps(at, "vote-result", "vote-result", () => at.Screen.NotNull().VoteResult));
+        steps.AddRange(HotseatSteps(at));
+        return steps;
+    }
+
+    /// <summary>A modal end screen over a real game screen of its own mode, checked at this size.</summary>
+    private static List<ScenarioStep> EndGameSteps(At at, string mode, string name, Func<Node> root)
+    {
+        var run = at.Run;
+        var steps = new List<ScenarioStep>
+        {
+            new Act($"{at.Size}: build the {name} game", () =>
+            {
+                DisplayProfile.Current = new DisplayProfile(false, 0f, at.Os);
+                var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false, World3D = run.Host.GetViewport().FindWorld3D() };
+                run.Host.AddChild(sub);
+                var session = run.ExtraSession(mode);
+                at.Local = new LocalHost(session, ScenarioGame.HumanA, () => at.Now += 1000);
+                var screen = at.Screen = new GameScreen();
+                sub.AddChild(screen);
+                screen.Start(at.Local, run.Registry);
+                at.Theme = screen.SharedTheme;
+                // T317: the end turn runs on the main thread's loop; blocking it here would deadlock the awaited turn
+                if (mode == "victory" && session.Game.VictoryData == null) at.Turn = at.Local.EndTurnAsync();
+            }),
+            new WaitFrames(6),
+        };
+        if (mode == "victory")
+        {
+            steps.Add(new WaitUntil("the victory turn finished", () => at.Turn == null || at.Turn.IsCompleted, 1200));
+            steps.Add(new AssertQuery("the engine recorded the victory", () => at.Run.ExtraSession("victory").Game.VictoryData != null));
+        }
+        steps.Add(new WaitUntil($"the {name} screen is open", () => root() is Control control && control.IsVisibleInTree(), 600));
+        steps.AddRange(Check(at, name, root));
+        steps.Add(new Act("forget the end turn", () => at.Turn = null));
+        steps.Add(new Act($"{at.Size}: free the {name} game", () =>
+        {
+            at.Sub.NotNull().QueueFree();
+            at.Screen = null;
+        }));
+        steps.Add(new WaitFrames(2));
+        return steps;
+    }
+
+    /// <summary>T317: the hotseat pass-the-device cover at this size; it names the next player and offers Ready over an opaque screen.</summary>
+    private static List<ScenarioStep> HotseatSteps(At at)
+    {
+        var run = at.Run;
+        var steps = new List<ScenarioStep>
+        {
+            new Act($"{at.Size}: show the hotseat cover", () =>
+            {
+                DisplayProfile.Current = new DisplayProfile(false, 0f, at.Os);
+                var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false };
+                run.Host.AddChild(sub);
+                at.Theme = new UiTheme(run.Registry);
+                var cover = at.Cover = new HandOverView();
+                sub.AddChild(cover);
+                cover.Init(at.Theme);
+                cover.Show(HotseatModel.HandOver(ScenarioGame.HumanB, id => id));
+            }),
+        };
+        steps.AddRange(Check(at, "hotseat", () => at.Cover.NotNull()));
+        steps.Add(new Act($"{at.Size}: free the hotseat cover", () =>
+        {
+            at.Sub.NotNull().QueueFree();
+            at.Cover = null;
         }));
         steps.Add(new WaitFrames(2));
         return steps;
@@ -475,6 +611,17 @@ public sealed class LayoutMatrixScenario : Scenario
         public ClientIdentity Identity { get; } = ClientIdentity.Generate();
 
         private ClientSettingsService? settings;
+
+        private readonly Dictionary<string, GameSession> extraSessions = [];
+
+        /// <summary>T317: one extra game per end screen, built once and reused at every size (a victory game has to be played to the end only once).</summary>
+        public GameSession ExtraSession(string mode)
+        {
+            if (extraSessions.TryGetValue(mode, out var cached)) return cached;
+            var session = ScenarioGame.Create(alerts: mode == "alerts", victory: mode == "victory", defeat: mode == "defeat", voteResult: mode == "vote-result");
+            extraSessions[mode] = session;
+            return session;
+        }
     }
 
     /// <summary>The state of one window size: its viewport and the screens built in it.</summary>
@@ -511,6 +658,11 @@ public sealed class LayoutMatrixScenario : Scenario
         public WidgetGallery? Gallery { get; set; }
 
         public SaveController? Saves { get; set; }
+
+        public HandOverView? Cover { get; set; }
+
+        /// <summary>T317: the one end turn a victory screen needs; a step must not block the main thread waiting for it (its continuation runs on the main thread).</summary>
+        public Task? Turn { get; set; }
     }
 
     /// <summary>Not judged by the target-height check: the city grid's tile buttons (map cells, not controls to hit) and check boxes (a label row whose height is its text line).</summary>

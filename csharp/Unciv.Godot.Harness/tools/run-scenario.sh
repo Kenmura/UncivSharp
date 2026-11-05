@@ -8,8 +8,8 @@
 #   tools/run-scenario.sh <name> --expect-golden-failure self-test: against deliberately wrong goldens the run must FAIL
 #
 # HARNESS_GOLDEN_TOLERANCE=renderer compares with the cross-renderer tolerance of GoldenTolerance.Renderer (CI, T246); default strict.
-# HARNESS_TIMEOUT (seconds) bounds the whole run; default 120, 600 for layout-matrix (T388: it renders every screen at five sizes plus a resize cycle, ~135 s of
-# pure CPU on llvmpipe with no waiting, so a 120 s limit passed or timed out depending on machine load). UNCIV_STEP_TIMES=1 prints "[steptime] index ms step" per step.
+# HARNESS_TIMEOUT (seconds) bounds the whole run; default 120, 1800 for layout-matrix (T388/T317: it renders every screen, popup and end screen at six sizes plus a
+# resize cycle, so on a loaded machine the old 120 s / 600 s limits passed or timed out depending on load). UNCIV_STEP_TIMES=1 prints "[steptime] index ms step" per step.
 # T390: temp files (dotnet build, the scenario's settings/save folders, Xvfb display file) go to /tmp/unciv-run-<pid>-XXXXXX, removed on exit; HARNESS_KEEP_TMP=1 keeps it (path printed).
 # Output: out/<name>/<step>.png and out/<name>/result.json (git-ignored). Run inside dotnet-dev (see csharp/migration/GODOT.md).
 set -euo pipefail
@@ -21,7 +21,7 @@ if [[ $# -lt 1 || "$1" == -* ]]; then echo "usage: $0 <scenario> [--update-golde
 name="$1"; mode="${2:-}"
 project="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 godot="${GODOT:-$("$project/tools/setup-godot.sh" --print-path)}"
-case "$name" in layout-matrix) default_timeout=600 ;; window-resize) default_timeout=300 ;; # T301: every size change costs seconds on Xvfb
+case "$name" in layout-matrix) default_timeout=1800 ;; window-resize) default_timeout=300 ;; # T301: every size change costs seconds on Xvfb
      *) default_timeout=120 ;; esac
 timeout_s="${HARNESS_TIMEOUT:-$default_timeout}"
 out="${HARNESS_OUT:-$project/out}"
