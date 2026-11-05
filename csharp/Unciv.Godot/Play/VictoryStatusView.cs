@@ -47,7 +47,7 @@ public partial class VictoryStatusView : Modal
     public void Open(IReadOnlyList<VictorySection> sections)
     {
         SetHeader(VictoryStatusModel.Title);
-        float width = Fit(MaxWidth);
+        float width = Fit(MaxWidth, scroll); // T328: the body wrap width follows a live resize/scale change
         foreach (var child in lines.GetChildren())
         {
             lines.RemoveChild(child);

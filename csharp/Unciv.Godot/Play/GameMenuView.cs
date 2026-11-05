@@ -116,8 +116,10 @@ public partial class GameMenuView : Modal
         Clear();
         PanelTitle = confirm.Title;
         SetHeader(confirm.Title);
-        float width = Fit(Modal.MinWidth);
-        Body.AddChild(new Label { Name = "ConfirmText", Text = confirm.Body.TrText(), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(width, 0f) });
+        var text = new Label { Name = "ConfirmText", Text = confirm.Body.TrText(), AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        float width = Fit(Modal.MinWidth, text); // T328: the confirm text's wrap width follows a live resize/scale change
+        text.CustomMinimumSize = new Vector2(width, 0f);
+        Body.AddChild(text);
         var yes = new Button { Name = "ConfirmYes", Text = confirm.ConfirmLabel.TrText() };
         yes.Pressed += () => Chosen?.Invoke(entry.Kind);
         var no = new Button { Name = "ConfirmNo", Text = GameMenuModel.CancelLabel.TrText() };

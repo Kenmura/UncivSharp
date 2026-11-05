@@ -49,7 +49,7 @@ public partial class VoteResultScreen : Modal
     {
         Current = view;
         SetHeader(view.Title);
-        float width = Fit(MaxWidth);
+        float width = Fit(MaxWidth, verdict, scroll); // T328: the body wrap widths follow a live resize/scale change
         verdict.Text = view.Verdict.Tr();
         verdict.CustomMinimumSize = new Vector2(width, 0f);
         continueButton = new Button { Name = "VoteContinue", Text = view.ContinueLabel.TrText() }; // the footer frees its buttons whenever it is refilled

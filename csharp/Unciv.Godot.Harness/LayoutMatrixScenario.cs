@@ -488,6 +488,18 @@ public sealed class LayoutMatrixScenario : Scenario
                 var modal = root().FindChildren("*", "", true, false).OfType<Modal>().FirstOrDefault();
                 return modal != null && Math.Abs(modal.Frame.CustomMinimumSize.X - Math.Min(ui.Px(Modal.MinWidth), at.Sub.NotNull().Size.X * Modal.ViewportShare)) < 0.5f;
             }));
+            // T328: the game menu's confirm text is the wrap control Fit() sized, so it has to be re-applied at the live scale (the panel width alone would hide a stale wrap width)
+            steps.Add(new AssertQuery($"{name} {label}: the game menu's confirm text follows the live scale", () =>
+            {
+                if (name != "game-menu") return true;
+                var ui = at.Theme.NotNull();
+                float panel = Math.Min(ui.Px(Modal.MinWidth), at.Sub.NotNull().Size.X * Modal.ViewportShare);
+                float body = Math.Max(ui.Px(120), panel - 2 * ui.Px(UiTokens.S4) - 2 * ui.Px(UiTokens.BorderWidth));
+                if (root().FindChild("ConfirmText", true, false) is not Label text) return false;
+                bool ok = Math.Abs(text.CustomMinimumSize.X - body) <= 0.5f;
+                if (!ok) GD.PrintErr($"[layout-matrix] {at.Size} game-menu: the confirm text wraps at {text.CustomMinimumSize.X}, the live scale gives {body}");
+                return ok;
+            }));
             // T321: crossing the Compact breakpoint swaps the save list between five and three columns without rebuilding the dialog (same width rule as SaveController.IsCompact)
             steps.Add(new AssertQuery($"{name} {label}: the saves table follows the live breakpoint", () =>
             {
@@ -549,6 +561,11 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.Add(new Act("show a decision picker", () => S().Picker.Open(ResizePicker())));
         steps.AddRange(ResizeCycle(at, "picker", () => S().Picker));
         steps.Add(new Act("close the decision picker", () => S().Picker.Close()));
+        // T328: the game menu (its Resign entry asks first) is opened once and resized live, so its confirm text's wrap width must follow the window and the scale
+        steps.Add(new Act("open the game menu", () => S().GameMenu.Open(GameMenuModel.Build(Unciv.Queries.Victory.GameOverQuery.Playing, false))));
+        steps.Add(new Act("ask the game menu's confirm", () => S().GameMenu.ButtonById("Resign")?.EmitSignal(BaseButton.SignalName.Pressed)));
+        steps.AddRange(ResizeCycle(at, "game-menu", () => S().GameMenu));
+        steps.Add(new Act("close the game menu", () => S().GameMenu.Close()));
         steps.Add(new Act($"{at.Size}: free the popup game screen", () =>
         {
             at.Sub.NotNull().QueueFree();

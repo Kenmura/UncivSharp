@@ -94,7 +94,7 @@ public partial class DecisionPickerView : Modal
         Spec = spec;
         selected = new string?[spec.Slots.Count];
         nameEdited = false;
-        float width = Fit(560);
+        float width = Fit(560, prompt, detail); // T328: the wrap width follows a live resize/scale change
         SetHeader(spec.Title);
         prompt.CustomMinimumSize = new Vector2(width, 0);
         prompt.Text = spec.Prompt.TrText();

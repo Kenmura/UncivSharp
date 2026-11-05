@@ -81,7 +81,7 @@ public partial class GameOverScreen : Modal
             GameOverQuery.Lost or GameOverQuery.Defeated => UiTokens.DangerText,
             _ => UiTokens.TextPrimary,
         }));
-        float width = Fit(MaxWidth);
+        float width = Fit(MaxWidth, body, scroll); // T328: the body wrap widths follow a live resize/scale change
         body.Text = view.Text.Tr();
         body.CustomMinimumSize = new Vector2(width, 0f);
         var viewerTone = ProceduralAssets.ToColor(UiTokens.Accent);
