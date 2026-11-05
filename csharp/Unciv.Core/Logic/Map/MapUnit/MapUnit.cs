@@ -231,6 +231,15 @@ public partial class MapUnit : IsPartOfGameInfoSerialization, IMapUnitState
     [JsonIgnore]
     public HashSet<Tile> ViewableTiles { get; set; } = [];
 
+    /// <summary>T349: the inputs that determine a unit's last normal <see cref="TileMap.GetViewableTiles"/> result. The result depends on the visible
+    /// tiles' terrain heights, which can change without the unit moving, hence the <see cref="TileMap.TerrainRevision"/>. World wrap and the map size
+    /// determine which coordinates exist at all, so they are part of the key as well. Every other input (position, range) is obvious.</summary>
+    [JsonIgnore]
+    private (TileMap Map, HexCoord Position, int Range, int TerrainRevision, bool WorldWrap, string Shape, int Radius, int Width) viewableTilesCacheKey;
+
+    [JsonIgnore]
+    private List<Tile>? viewableTilesCache;
+
     #endregion
 
     public MapUnit()
@@ -916,7 +925,23 @@ public partial class MapUnit : IsPartOfGameInfoSerialization, IMapUnitState
         else if (HasUnique(UniqueType.CanSeeOverObstacles))
             ViewableTiles = GetTile().GetTilesInDistance(GetVisibilityRange()).ToHashSet(); // it's that simple
         else
-            ViewableTiles = GetTile().GetViewableTilesList(GetVisibilityRange()).ToHashSet();
+        {
+            var tile = GetTile();
+            var range = GetVisibilityRange();
+            var map = tile.TileMap;
+            var key = (map, tile.Position, range, map.TerrainRevision,
+                map.MapParameters.WorldWrap, map.MapParameters.Shape, map.MapParameters.MapSize.Radius, map.MapParameters.MapSize.Width);
+
+            if (viewableTilesCache == null || viewableTilesCacheKey != key)
+            {
+                viewableTilesCache = tile.GetViewableTilesList(range);
+                viewableTilesCacheKey = key;
+            }
+
+            // A hit can only repeat the set already published, so it must not write (T296's read-only rule).
+            if (oldViewableTiles.SetEquals(viewableTilesCache)) return;
+            ViewableTiles = viewableTilesCache.ToHashSet();
+        }
 
         // Set equality automatically determines if anything changed
         var shouldUpdateTiles = updateCivViewableTiles && !oldViewableTiles.SetEquals(ViewableTiles)

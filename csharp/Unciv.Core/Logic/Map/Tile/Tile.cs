@@ -969,6 +969,8 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
             .Sum(it => ParseInt(it.Params[0]));
         TileHeight = TerrainHasUnique(UniqueType.BlocksLineOfSightAtSameElevation) ? UnitHeight + 1
             : UnitHeight;
+        // T349: the vision caches' only terrain input; clones and display tiles share the map but cannot change any map tile's visibility.
+        if (IsTilemapInitialized() && ReferenceEquals(TileMap.GetOrNull(Position.x, Position.y), this)) TileMap.BumpTerrainRevision();
     }
 
     private void UpdateUniqueMap()

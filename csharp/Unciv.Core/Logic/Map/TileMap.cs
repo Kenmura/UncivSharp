@@ -113,6 +113,13 @@ public class TileMap : IsPartOfGameInfoSerialization
 
     public ConcurrentDictionary<IReadOnlyList<string>, TerrainListData> TileUniqueMapCache { get; set; } = new(TerrainNameListComparer.Instance);
 
+    /// <summary>T349: bumped by <see cref="Tiles.Tile.SetTerrainFeatures"/> whenever a tile's terrain (and therefore its visibility heights) changes.
+    /// Transient: a loaded map starts at 0 and every user of it is built after the load; it is not part of the state hash.</summary>
+    [JsonIgnore]
+    internal int TerrainRevision { get; private set; }
+
+    internal void BumpTerrainRevision() => TerrainRevision = unchecked(TerrainRevision + 1);
+
     // this works several times faster than a hashmap, the performance difference is really astounding
     private List<List<Tile?>> tileMatrix = [];
     public IReadOnlyList<IReadOnlyList<Tile?>> TileMatrix => tileMatrix;
