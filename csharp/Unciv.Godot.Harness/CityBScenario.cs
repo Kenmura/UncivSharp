@@ -58,7 +58,6 @@ public sealed class CityBScenario : Scenario
 
         int goldBefore = 0;
         int quoted = 0;
-        int sellPrice = 0;
         return
         [
             new WaitFrames(3),
@@ -112,14 +111,8 @@ public sealed class CityBScenario : Scenario
                 && screen.City.Production.BuildingTexts.Any(it => it.StartsWith("Monument (sells for", StringComparison.Ordinal)) && Enabled("Sell_Monument")),
             new Capture("bought", "The Monument bought with gold and listed with its sell price; the Warrior's Buy is disabled"),
 
-            new Act("remember the gold and the sell price", () =>
-            {
-                goldBefore = human.Gold;
-                sellPrice = Panel().Buildings.First(it => it.Name == "Monument").SellPrice;
-            }),
-            new Click(() => At("Sell_Monument")),
-            new AssertQuery("selling the Monument paid the engine's sell price and removed the building", () =>
-                sellPrice > 0 && human.Gold == goldBefore + sellPrice && !city.CityConstructions.IsBuilt("Monument") && screen.City.Production.ButtonNamed("Sell_Monument") == null),
+            .. SellConfirmSteps(screen, () => At("Sell_Monument"), () => Centre(screen.City.ConfirmPopup.ConfirmButton), () => human.Gold,
+                () => Panel().Buildings.First(it => it.Name == "Monument").SellPrice, () => city.CityConstructions.IsBuilt("Monument")),
 
             .. RazeConfirmSteps(screen, city, () => At("State_Raze city")),
             new Click(() => At("State_Raze city")),
@@ -172,6 +165,28 @@ public sealed class CityBScenario : Scenario
             new WaitFrames(3),
             new AssertQuery("the order is Monument, Warrior again", () => queue().SequenceEqual(new[] { "Monument", "Warrior" })),
     ];
+
+    /// <summary>T343: selling a building asks first; Cancel keeps it, and confirming pays the engine's price and removes it.</summary>
+    private static IEnumerable<ScenarioStep> SellConfirmSteps(GameScreen screen, Func<Vector2> sellButton, Func<Vector2> confirmButton, Func<int> gold, Func<int> sellPrice, Func<bool> stillBuilt)
+    {
+        int goldBefore = 0;
+        int price = 0;
+        return
+        [
+            new Act("remember the gold and the sell price", () =>
+            {
+                goldBefore = gold();
+                price = sellPrice();
+            }),
+            new Click(sellButton),
+            new AssertQuery("selling asks first: the popup names the building and nothing was sold yet", () =>
+                screen.City.ConfirmPopup.Visible && screen.City.ConfirmPopup.QuestionText.Contains("Monument", StringComparison.Ordinal) && stillBuilt() && gold() == goldBefore),
+            new Capture("sell-confirm", "Selling a building asks first: the question names it and its price, the Danger button confirms and Cancel is the safe choice"),
+            new Click(confirmButton),
+            new AssertQuery("selling the Monument paid the engine's sell price and removed the building", () =>
+                price > 0 && gold() == goldBefore + price && !stillBuilt() && screen.City.Production.ButtonNamed("Sell_Monument") == null),
+        ];
+    }
 
     /// <summary>C069: Raze is a Danger button that asks first; Escape cancels the question.</summary>
     private static IEnumerable<ScenarioStep> RazeConfirmSteps(GameScreen screen, CityObject city, Func<Vector2> razeButton) =>

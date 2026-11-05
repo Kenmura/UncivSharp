@@ -184,6 +184,17 @@ public partial class DiplomacyScreen : PanelContainer
     /// <summary>The button that is armed for confirmation (its next press sends), or null.</summary>
     public string? ArmedButton => armed;
 
+    /// <summary>T343: whether a destructive diplomacy action asks first (the client setting); when off the first press sends.</summary>
+    public bool ConfirmDestructive { get; set; } = true;
+
+    /// <summary>T343: disarms a pending confirmation (the client setting was turned off).</summary>
+    public void CancelConfirmation()
+    {
+        if (armed != null && actionButtons.TryGetValue(armed, out var previous) && buttons.FirstOrDefault(it => it.Id == armed) is { } entry)
+            previous.Text = entry.Label.TrText();
+        armed = null;
+    }
+
     /// <summary>Raised after the engine accepted a command made here, so the owner refreshes the world.</summary>
     public event Action? CommandAccepted;
 
@@ -353,7 +364,7 @@ public partial class DiplomacyScreen : PanelContainer
 
     private void OnPressed(DiplomacyButton entry)
     {
-        if (entry.NeedsConfirm && armed != entry.Id)
+        if (entry.NeedsConfirm && ConfirmDestructive && armed != entry.Id)
         {
             if (armed != null && actionButtons.TryGetValue(armed, out var previous)) previous.Text = buttons.First(it => it.Id == armed).Label.TrText();
             armed = entry.Id;

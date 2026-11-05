@@ -82,7 +82,7 @@ public partial class CityScreen : PanelContainer
         column.AddChild(top);
         column.AddChild(meters);
         column.AddChild(middle);
-        productionView = new CityProductionView(Send, SetMessage, action => confirmView!.Open(action), uiTheme);
+        productionView = new CityProductionView(Send, SetMessage, AskCityConfirm, uiTheme);
         column.AddChild(productionView);
         message.ClipText = true;
         column.AddChild(message);
@@ -113,6 +113,24 @@ public partial class CityScreen : PanelContainer
 
     /// <summary>The "Confirm" popup of a destructive city command (Raze).</summary>
     public CityConfirmView ConfirmPopup => confirmView;
+
+    /// <summary>T343: whether a destructive city command asks first (the client setting); when off the command is sent on the first press.</summary>
+    public bool ConfirmDestructive { get; set; } = true;
+
+    /// <summary>T343: opens the confirmation for a destructive city action, or sends it at once when confirmations are off.</summary>
+    private void AskCityConfirm(CityStateAction action)
+    {
+        if (!ConfirmDestructive)
+        {
+            confirmView.Cancel();
+            Fire(Send(action.Command));
+            return;
+        }
+        confirmView.Open(action);
+    }
+
+    /// <summary>T343: closes a confirmation left open when the setting was turned off.</summary>
+    public void CancelConfirmation() => confirmView.Cancel();
 
     /// <summary>The "Rename city" popup (C048).</summary>
     public CityRenameView RenamePopup => renameView;

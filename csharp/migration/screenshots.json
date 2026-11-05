@@ -2040,6 +2040,24 @@
       }
     ]
   },
+  "T343": {
+    "scenario": "confirm-dialogs",
+    "about": "Confirmations before destructive actions: disband a unit, declare war (and the other diplomacy danger buttons), raze a city and sell a building; each asks with the safe choice first, and the Gameplay option turns the questions off.",
+    "shots": [
+      {
+        "golden": "confirm-dialogs/disband-confirm.png",
+        "caption": "Disband asks first: a short question in the unit panel, a red Danger button and Cancel; the unit is still alive and the rest of the menu waits."
+      },
+      {
+        "golden": "confirm-dialogs/raze-confirm.png",
+        "caption": "Raze asks first: the modal names the city and what razing does every turn to it; Cancel has the focus and the city is not razed."
+      },
+      {
+        "golden": "confirm-dialogs/war-armed.png",
+        "caption": "Declare war asks first: the danger button becomes Confirm: Declare war and the hint says to press again; Rome is still at peace."
+      }
+    ]
+  },
   "T371": {
     "scenario": "relay",
     "about": "Relay settings (Options, Multiplayer tab: address, fingerprint, Reach me through the relay, relays agreed to with Forget) and the relay trust prompt for an invite that names a relay that is not the configured one.",

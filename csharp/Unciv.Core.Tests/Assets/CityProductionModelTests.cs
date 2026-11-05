@@ -251,6 +251,19 @@ public class CityProductionModelTests
     }
 
     [Fact]
+    public void SellAction_AsksFirstAndNamesTheBuildingAndPrice()
+    {
+        var row = new BuildingRow("Monument", "Building", 80, true, "Monument (sells for 80 gold)");
+        var action = CityProductionModel.SellAction("id1", row);
+        Assert.True(action.Dangerous);
+        Assert.Equal("Sell", action.Label);
+        Assert.Contains("Monument", action.Confirm, StringComparison.Ordinal);
+        Assert.Contains("80", action.Confirm, StringComparison.Ordinal);
+        var command = Assert.IsType<SellBuilding>(action.Command);
+        Assert.Equal(("id1", "Monument"), (command.CityId, command.Building));
+    }
+
+    [Fact]
     public void Queue_RowsCarryStructuredNumbersAndIcons()
     {
         var list = List(Entry("Warrior", "Unit"), Entry("Monument", "Building"));

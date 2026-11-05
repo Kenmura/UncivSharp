@@ -99,6 +99,7 @@
 - [T312 (ticket not Done or unknown)](#t312-ticket-not-done-or-unknown)
 - [T334 (ticket not Done or unknown)](#t334-ticket-not-done-or-unknown)
 - [T339 (ticket not Done or unknown)](#t339-ticket-not-done-or-unknown)
+- [T343 (ticket not Done or unknown)](#t343-ticket-not-done-or-unknown)
 - [T371 (ticket not Done or unknown)](#t371-ticket-not-done-or-unknown)
 - [T372 (ticket not Done or unknown)](#t372-ticket-not-done-or-unknown)
 - [T376 (ticket not Done or unknown)](#t376-ticket-not-done-or-unknown)
@@ -2067,6 +2068,24 @@ Scenario `browse`.
 ![Join dialog for a password game from a known host: asks for the password and refuses an empty one.](../Unciv.Godot.Harness/golden/browse/join-password.png)
 
 *Join dialog for a password game from a known host: asks for the password and refuses an empty one.* (`browse/join-password.png`)
+
+## T343 (ticket not Done or unknown)
+
+Confirmations before destructive actions: disband a unit, declare war (and the other diplomacy danger buttons), raze a city and sell a building; each asks with the safe choice first, and the Gameplay option turns the questions off.
+
+Scenario `confirm-dialogs`.
+
+![Disband asks first: a short question in the unit panel, a red Danger button and Cancel; the unit is still alive and the rest of the menu waits.](../Unciv.Godot.Harness/golden/confirm-dialogs/disband-confirm.png)
+
+*Disband asks first: a short question in the unit panel, a red Danger button and Cancel; the unit is still alive and the rest of the menu waits.* (`confirm-dialogs/disband-confirm.png`)
+
+![Raze asks first: the modal names the city and what razing does every turn to it; Cancel has the focus and the city is not razed.](../Unciv.Godot.Harness/golden/confirm-dialogs/raze-confirm.png)
+
+*Raze asks first: the modal names the city and what razing does every turn to it; Cancel has the focus and the city is not razed.* (`confirm-dialogs/raze-confirm.png`)
+
+![Declare war asks first: the danger button becomes Confirm: Declare war and the hint says to press again; Rome is still at peace.](../Unciv.Godot.Harness/golden/confirm-dialogs/war-armed.png)
+
+*Declare war asks first: the danger button becomes Confirm: Declare war and the hint says to press again; Rome is still at peace.* (`confirm-dialogs/war-armed.png`)
 
 ## T371 (ticket not Done or unknown)
 

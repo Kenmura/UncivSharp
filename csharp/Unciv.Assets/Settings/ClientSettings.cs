@@ -77,6 +77,10 @@ public sealed record ClientSettings
     [JsonPropertyName("showTutorials")]
     public bool ShowTutorials { get; init; } = true;
 
+    /// <summary>T343: ask before a destructive, irreversible action (disband a unit, declare war, denounce, revoke protection, raze a city, sell a building). On by default; turning it off sends the action on the first press.</summary>
+    [JsonPropertyName("confirmDestructiveActions")]
+    public bool ConfirmDestructiveActions { get; init; } = true;
+
     [JsonPropertyName("tutorialsSeen")]
     public List<string> TutorialsSeen { get; init; } = [];
 

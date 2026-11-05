@@ -72,5 +72,6 @@ phone-city
 phone-pedia
 phone-tech
 layout-matrix
+confirm-dialogs
 two-instances
 relay-session

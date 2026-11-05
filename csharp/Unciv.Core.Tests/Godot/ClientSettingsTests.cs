@@ -61,6 +61,7 @@ public sealed class ClientSettingsTests : IDisposable
             PlayerName = "Ann",
             KeyBindings = new SortedDictionary<string, string> { ["EndTurn"] = "Q" },
             TutorialsSeen = ["a", "b"],
+            ConfirmDestructiveActions = false,
             Player = PlayerSettings.Default with { AutoAssignCityProduction = true },
         };
         Assert.True(store.Save(settings));
@@ -71,7 +72,20 @@ public sealed class ClientSettingsTests : IDisposable
         Assert.Equal("Ann", loaded.PlayerName);
         Assert.Equal("Q", loaded.KeyBindings["EndTurn"]);
         Assert.Equal(["a", "b"], loaded.TutorialsSeen);
+        Assert.False(loaded.ConfirmDestructiveActions);
         Assert.True(loaded.Player.AutoAssignCityProduction);
+    }
+
+    [Fact]
+    public void DestructiveActionConfirmationsDefaultOnAndCanBeTurnedOff()
+    {
+        Assert.True(ClientSettings.Default.ConfirmDestructiveActions);
+        Assert.True(LoadText("{\"version\":2}").ConfirmDestructiveActions); // an older file means the default (on)
+        var off = ClientSettings.Default with { ConfirmDestructiveActions = false };
+        var store = new ClientSettingsStore(FilePath);
+        Assert.True(store.Save(off));
+        Assert.False(new ClientSettingsStore(FilePath).Load().ConfirmDestructiveActions);
+        Assert.False(off.Sanitized().ConfirmDestructiveActions); // a bool cannot be repaired
     }
 
     [Theory]

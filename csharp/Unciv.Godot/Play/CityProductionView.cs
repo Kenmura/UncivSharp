@@ -162,7 +162,11 @@ public partial class CityProductionView : HBoxContainer
             top.AddChild(Wrapped(row.Label, theme.MinTargetPx > 0 ? 115 : 70));
             line.AddChild(top);
             if (row.Kind == "Building")
-                line.AddChild(MakeButton("Sell_" + row.Name, "Sell", row.CanSell, row.CanSell ? $"Sell for {row.SellPrice} gold (one per turn)" : CityProductionModel.PuppetWhy, CityProductionModel.Sell(panel.CityId, row), UiVariants.ButtonGhost));
+            {
+                var sell = CityProductionModel.SellAction(panel.CityId, row);
+                var sellTooltip = row.CanSell ? $"Sell for {row.SellPrice} gold (one per turn)" : CityProductionModel.PuppetWhy;
+                line.AddChild(MakeButton("Sell_" + row.Name, "Sell", row.CanSell, sellTooltip, sell.Command, UiVariants.ButtonGhost, () => confirm(sell)));
+            }
             buildingColumn.AddChild(line);
         }
 

@@ -328,6 +328,7 @@ public partial class SettingsPanel : HBoxContainer
         AddToggle(page, "Automated units move on turn start", s => s.Player.AutomatedUnitsMoveOnTurnStart, (s, v) => s with { Player = s.Player with { AutomatedUnitsMoveOnTurnStart = v } });
         AddToggle(page, "Cities auto bombard at end of turn", s => s.Player.CitiesAutoBombardAtEndOfTurn, (s, v) => s with { Player = s.Player with { CitiesAutoBombardAtEndOfTurn = v } });
         AddToggle(page, "Show tutorials", s => s.ShowTutorials, (s, v) => s with { ShowTutorials = v });
+        AddToggle(page, "Confirm destructive actions", s => s.ConfirmDestructiveActions, (s, v) => s with { ConfirmDestructiveActions = v });
         page.AddChild(Heading("AutoPlay"));
         AddToggle(page, "Show AutoPlay button", s => s.AutoPlay.ShowButton, (s, v) => s with { AutoPlay = s.AutoPlay with { ShowButton = v } });
         AddToggle(page, "AutoPlay until victory", s => s.AutoPlay.UntilEnd, (s, v) => s with { AutoPlay = s.AutoPlay with { UntilEnd = v } });

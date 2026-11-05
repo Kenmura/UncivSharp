@@ -212,6 +212,9 @@ public partial class UnitPanelView : PanelContainer
         LayoutIn(GetViewportRect().Size);
     }
 
+    /// <summary>T343: closes a pending confirmation and shows the menu again (the client setting was turned off).</summary>
+    public void CancelConfirmation() => EndConfirmation();
+
     public override void _Input(InputEvent @event)
     {
         // a press anywhere outside the popover and the buttons that open it closes it; the press itself still goes on to its target

@@ -589,6 +589,14 @@ public partial class GameScreen : Control
     private void ApplySettings(ClientSettings settings)
     {
         if (!settings.ShowTutorials) StopTutorials();
+        if (!settings.ConfirmDestructiveActions)
+        {
+            Panel.CancelConfirmation();
+            if (City != null) City.CancelConfirmation();
+            if (Diplomacy != null) Diplomacy.CancelConfirmation();
+        }
+        if (City != null) City.ConfirmDestructive = settings.ConfirmDestructiveActions;
+        if (Diplomacy != null) Diplomacy.ConfirmDestructive = settings.ConfirmDestructiveActions;
         if (session != null && snapshot != null) Run(RefreshTaskCard()); // C054: Show tutorials may have changed
         if (session != null && snapshot != null) RefreshMarkers();
         hotkeys = settings.KeyBindings;
@@ -1053,6 +1061,7 @@ public partial class GameScreen : Control
     public override void _ExitTree()
     {
         GetViewport().SizeChanged -= Layout;
+        if (boundSettings != null) boundSettings.Changed -= ApplySettings; // T343: a freed screen must not keep answering settings changes
         ui?.Unbind(); // C079: a freed screen must not keep receiving the window's resizes through its theme
         turnCancellation?.Cancel(); // a turn still being processed stops after the civ it is playing; nothing waits for it
         if (session != null)
@@ -1140,6 +1149,7 @@ public partial class GameScreen : Control
         offerTracker.Reset();
         reviewingAlerts = false;
         City = new CityScreen(session, theme);
+        City.ConfirmDestructive = ConfirmDestructive; // T343
         AddChild(City);
         City.CommandAccepted += Refresh;
         City.CommandSent += command =>
@@ -1153,6 +1163,7 @@ public partial class GameScreen : Control
             Diplomacy.QueueFree();
         }
         Diplomacy = new DiplomacyScreen(session, theme);
+        Diplomacy.ConfirmDestructive = ConfirmDestructive; // T343
         AddChild(Diplomacy);
         Diplomacy.CommandAccepted += Refresh;
         if (Tech != null)
@@ -1795,11 +1806,21 @@ public partial class GameScreen : Control
     private void OnMenuEntry(MenuEntry entry)
     {
         if (entry.Kind == MenuEntryKind.Engine && entry.Action?.Confirmation is { } confirmation)
-            Panel.AskConfirmation(entry, confirmation.Question, confirmation.ConfirmText);
+            AskUnitConfirmation(entry, confirmation.Question, confirmation.ConfirmText);
         else if (entry.Kind == MenuEntryKind.Disband)
-            Panel.AskConfirmation(entry, "Disband this unit?", "Disband");
+            AskUnitConfirmation(entry, "Disband this unit?", "Disband");
         else Run(ExecuteEntry(entry, confirmed: false));
     }
+
+    /// <summary>T343: asks before a destructive unit action, or runs it on the first press when the player turned confirmations off.</summary>
+    private void AskUnitConfirmation(MenuEntry entry, string question, string confirmText)
+    {
+        if (ConfirmDestructive) Panel.AskConfirmation(entry, question, confirmText);
+        else Run(ExecuteEntry(entry, confirmed: true));
+    }
+
+    /// <summary>T343: whether destructive actions ask first (the client setting; on without a settings binding).</summary>
+    private bool ConfirmDestructive => boundSettings?.Current.ConfirmDestructiveActions ?? true;
 
     private async Task ExecuteEntry(MenuEntry entry, bool confirmed)
     {

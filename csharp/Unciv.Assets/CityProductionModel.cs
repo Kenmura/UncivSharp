@@ -225,6 +225,13 @@ public static class CityProductionModel
 
     public static GameCommand Sell(string cityId, BuildingRow row) => new SellBuilding { CityId = cityId, Building = row.Name };
 
+    /// <summary>T343: the Sell button of a built building, with the question a confirmation shows (selling cannot be undone). The engine still refuses a sale it does not allow.</summary>
+    public static CityStateAction SellAction(string cityId, BuildingRow row) =>
+        new("Sell", Sell(cityId, row), $"Sell {row.Name} for {I(row.SellPrice)} gold (one per turn); this cannot be undone.")
+        {
+            Confirm = $"Sell {row.Name} for {I(row.SellPrice)} gold? This cannot be undone.",
+        };
+
     /// <summary>The state line of the city: puppet, razing and resistance (empty for an ordinary city).</summary>
     public static string StateLine(CityPanelResult city)
     {
