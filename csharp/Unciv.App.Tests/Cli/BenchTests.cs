@@ -67,6 +67,43 @@ public sealed class BenchTests : IDisposable
     }
 
     [Fact]
+    public void RepeatedRunsMustAgreeOnTheStateHashes()
+    {
+        static BenchRunner.ScenarioResult Run(params string[] hashes)
+        {
+            var result = new BenchRunner.ScenarioResult
+            {
+                Scenario = BenchRunner.Small,
+                Ruleset = "test",
+                Engine = new BenchRunner.Recorder(),
+            };
+            for (var i = 0; i < hashes.Length; i++)
+                result.Turns.Add(new BenchRunner.TurnRecord { Turn = i + 1, Hash = hashes[i], WallMs = 10 + i });
+            return result;
+        }
+
+        static BenchRunner.ScenarioRuns Repeat(params BenchRunner.ScenarioResult[] runs)
+        {
+            var repeated = new BenchRunner.ScenarioRuns { Scenario = BenchRunner.Small };
+            repeated.Runs.AddRange(runs);
+            return repeated;
+        }
+
+        var equal = Repeat(Run("a", "b"), Run("a", "b"));
+        Assert.True(equal.HashesAgree(out _, out _));
+
+        var different = Repeat(Run("a", "b"), Run("a", "c"));
+        Assert.False(different.HashesAgree(out var run, out var turn));
+        Assert.Equal(1, run);
+        Assert.Equal(1, turn);
+
+        var shorter = Repeat(Run("a", "b"), Run("a"));
+        Assert.False(shorter.HashesAgree(out run, out turn));
+        Assert.Equal(1, run);
+        Assert.Equal(1, turn);
+    }
+
+    [Fact]
     public void GoldenFileMatchesMismatchesAndSkipsUnlistedScenarios()
     {
         var hashes = Hashes(Bench("--turns", "4", "--no-probe"));
@@ -104,6 +141,66 @@ public sealed class BenchTests : IDisposable
         Assert.Equal(2, CliRunner.Run(["bench", "--scenario", "small", "--turns", "2", "--no-probe", "--golden", golden], new StringWriter(), new StringWriter()));
     }
 
+    [Fact]
+    public void MedianAndSpreadSummary()
+    {
+        Assert.Equal(0, BenchRunner.Median([]));
+        Assert.Equal(2, BenchRunner.Median([3, 1, 2]));
+        Assert.Equal(2.5, BenchRunner.Median([4, 1, 3, 2]));
+
+        var spread = BenchRunner.Spread([30, 10, 20]);
+        Assert.Equal(20, spread.Median);
+        Assert.Equal(10, spread.Min);
+        Assert.Equal(30, spread.Max);
+        Assert.Equal(100, spread.SpreadPercent, 6);
+
+        var points = BenchRunner.Spread([4, 4]);
+        Assert.Equal(4, points.Median);
+        Assert.Equal(0, points.SpreadPercent, 6);
+        Assert.Equal(new BenchRunner.SpreadSummary(0, 0, 0, 0), BenchRunner.Spread([]));
+    }
+
+    [Fact]
+    public void RepeatReportsTheMedianRunAndTheSpreadBetweenRuns()
+    {
+        var output = new StringWriter();
+        var path = Path.Combine(dir, "repeat.json");
+        var code = CliRunner.Run(["bench", "--scenario", "small", "--turns", "3", "--repeat", "2", "--json", path], output, new StringWriter());
+        Assert.Equal(0, code);
+        var text = output.ToString();
+        Assert.Contains("2 runs", text);
+        Assert.Contains("run 1/2", text);
+        Assert.Contains("run 2/2", text);
+        Assert.Contains("across 2 runs: late median", text);
+
+        var report = JsonNode.Parse(File.ReadAllText(path))!;
+        Assert.Equal(2, (int)report["repeat"]!);
+        var scenario = report["scenarios"]![0]!;
+        Assert.Equal(2, (int)scenario["repeat"]!);
+        var runs = scenario["runs"]!.AsArray();
+        Assert.Equal(2, runs.Count);
+        Assert.Equal(1, (int)runs[0]!["run"]!);
+        Assert.Equal(2, (int)runs[1]!["run"]!);
+        Assert.Equal(3, (int)runs[0]!["turnsPlayed"]!);
+        Assert.Equal(3, (int)runs[1]!["turnsPlayed"]!);
+        var late = (double)scenario["lateMedianWallMs"]!;
+        Assert.InRange(late, (double)scenario["lateMedianWallMsMin"]!, (double)scenario["lateMedianWallMsMax"]!);
+        Assert.InRange((double)scenario["totalSeconds"]!, (double)scenario["totalSecondsMin"]!, (double)scenario["totalSecondsMax"]!);
+        Assert.True((double)scenario["lateMedianWallMsSpreadPercent"]! >= 0);
+    }
+
+    [Fact]
+    public void RepeatedGoldenComparisonUsesTheMedianRun()
+    {
+        var hashes = Hashes(Bench("--turns", "3", "--no-probe"));
+        var golden = Path.Combine(dir, "golden-repeat.json");
+        File.WriteAllText(golden, new JsonObject { ["small"] = new JsonArray(hashes.Select(it => (JsonNode?)it).ToArray()) }.ToJsonString());
+        var output = new StringWriter();
+        var code = CliRunner.Run(["bench", "--scenario", "small", "--turns", "3", "--repeat", "2", "--no-probe", "--golden", golden], output, new StringWriter());
+        Assert.Equal(0, code);
+        Assert.Contains("3 turn hashes identical (median of 2 runs)", output.ToString());
+    }
+
     // The golden list is frozen at the pre-T262 engine: after a deliberate engine change regenerate it (bench --json, see design/PERFORMANCE.md).
     [Fact]
     public void TheCommittedGoldenListStillMatchesTheEngine()
@@ -119,11 +216,28 @@ public sealed class BenchTests : IDisposable
     }
 
     [Fact]
+    public void MediumScenarioIsAvailable()
+    {
+        var path = Path.Combine(dir, "medium.json");
+        var code = CliRunner.Run(["bench", "--scenario", "medium", "--turns", "1", "--no-probe", "--json", path], new StringWriter(), new StringWriter());
+        Assert.Equal(0, code);
+        var scenario = JsonNode.Parse(File.ReadAllText(path))!["scenarios"]![0]!;
+        Assert.Equal("medium", (string)scenario["name"]!);
+        Assert.Equal(1, (int)scenario["repeat"]!);
+        Assert.Single(scenario["turns"]!.AsArray());
+    }
+
+    [Fact]
     public void HelpAndBadOptionsAreHandled()
     {
         var output = new StringWriter();
         Assert.Equal(0, CliRunner.Run(["bench", "--help"], output, new StringWriter()));
         Assert.Contains("--scenario", output.ToString());
+        Assert.Contains("--repeat", output.ToString());
         Assert.Equal(2, CliRunner.Run(["bench", "--scenario", "huge"], new StringWriter(), new StringWriter()));
+        Assert.Equal(2, CliRunner.Run(["bench", "--repeat", "0"], new StringWriter(), new StringWriter()));
+        Assert.Equal(2, CliRunner.Run(["bench", "--repeat", "21"], new StringWriter(), new StringWriter()));
+        Assert.Equal(2, CliRunner.Run(["bench", "--repeat", "many"], new StringWriter(), new StringWriter()));
+        Assert.Equal(2, CliRunner.Run(["bench", "--repeat"], new StringWriter(), new StringWriter()));
     }
 }

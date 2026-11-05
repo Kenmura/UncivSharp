@@ -24,11 +24,13 @@ namespace Unciv.Cli;
 public static class BenchRunner
 {
     public const string Usage = """
-        bench [--scenario small|medium|all] [--turns N] [--json FILE|-] [--ruleset NAME] [--host-turns K] [--recipients R] [--host-parallel N] [--no-probe] [--golden FILE]
+        bench [--scenario small|medium|all] [--turns N] [--repeat N] [--json FILE|-] [--ruleset NAME] [--host-turns K] [--recipients R] [--host-parallel N] [--no-probe] [--golden FILE]
               Profile end-turn time. small: 4 civs + 2 city states, Small map, 50 turns. medium: 8 civs + 8 city states, Medium map, 200 turns.
               Per turn: wall time of the whole turn (the human's turn, every AI civ, the checkpoint hash), split by phase; at the end the top 20 phases by
               inclusive time, the time per civ and per command type, and (medium, the last K turns, default 3) the host-side ViewDelta cost per recipient
               (R recipients, default 3) measured around every command. --json writes the report ('-' = standard output). --turns replaces the turn count.
+              --repeat N (T350, 1-20) plays every scenario N times and reports the median of the runs (the median run's detail, plus the min/max/spread
+              of the late median and the total time); the state hashes must be equal across runs. --golden compares the median run.
               --host-parallel N (T297, 2-64) builds the recipients' views on up to N tasks the way GameHost does with HostLimits.ParallelViewBuilding: capture and
               build+encode become one timed step each (per-recipient phases are not attributed), so compare the host section with a run without the flag.
               --no-probe runs without the phase probe (wall time and hashes only; the per-turn state hashes must be equal to a probed run).
@@ -64,6 +66,7 @@ public static class BenchRunner
     {
         var scenarioName = cli.Get("scenario") ?? "all";
         var turns = cli.Get("turns") == null ? (int?)null : cli.GetInt("turns", 0, 1, 10_000);
+        var repeat = cli.GetInt("repeat", 1, 1, 20);
         var hostTurns = cli.Get("host-turns") == null ? (int?)null : cli.GetInt("host-turns", 0, 0, 1000);
         var recipients = cli.GetInt("recipients", 3, 1, 8);
         var hostParallel = cli.GetInt("host-parallel", 0, 2, 64);
@@ -81,11 +84,12 @@ public static class BenchRunner
             _ => throw new UsageException($"--scenario '{scenarioName}' is not one of: small, medium, all"),
         };
         var options = new Options(!noProbe, turns, hostTurns, recipients, ruleset, hostParallel);
-        var results = scenarios.Select(it => RunAndPrint(it, options, output)).ToList();
+        var results = scenarios.Select(it => RunRepeated(it, options, repeat, output)).ToList();
         var report = new JsonObject
         {
             ["machine"] = Machine(),
             ["probe"] = options.Probe,
+            ["repeat"] = repeat,
             ["ruleset"] = options.Ruleset ?? BaseRuleset.Civ_V_BNW.FullName(),
             ["scenarios"] = new JsonArray(results.Select(ToJson).ToArray()),
         };
@@ -98,27 +102,37 @@ public static class BenchRunner
     /// <summary>
     /// T262: compares the per-turn state hashes of every scenario with a golden file ({"scenario": ["hash", ...]}, one hash per turn from turn 1);
     /// a scenario the file does not list is skipped (a run that compares nothing fails), a shorter run (--turns) is compared as far as it goes.
+    /// T350: the comparison uses the median run of <c>--repeat</c>; the other runs must carry the same hashes (a repeat that differs is nondeterminism, not noise).
     /// </summary>
-    private static int CheckGolden(string path, IReadOnlyList<ScenarioResult> results, TextWriter output)
+    private static int CheckGolden(string path, IReadOnlyList<ScenarioRuns> runs, TextWriter output)
     {
         var golden = JsonNode.Parse(File.ReadAllText(path)) as JsonObject ?? throw new UsageException($"--golden {path}: not a JSON object");
         var failed = false;
         var compared = 0;
-        foreach (var result in results)
+        foreach (var repeated in runs)
         {
-            if (golden[result.Scenario.Name] as JsonArray is not { } expected) continue;
+            if (golden[repeated.Scenario.Name] as JsonArray is not { } expected) continue;
             compared++;
+            var result = repeated.Representative;
             var actual = result.Hashes;
             var mismatches = Enumerable.Range(0, Math.Min(actual.Count, expected.Count))
                 .Where(i => actual[i] != expected[i]?.ToString()).ToList();
             if (actual.Count > expected.Count) mismatches.Add(expected.Count);
+            var suffix = repeated.Runs.Count == 1 ? "" : $" (median of {repeated.Runs.Count} runs)";
             if (mismatches.Count == 0)
             {
-                output.WriteLine($"golden {result.Scenario.Name}: {actual.Count} turn hashes identical");
-                continue;
+                output.WriteLine($"golden {result.Scenario.Name}: {actual.Count} turn hashes identical{suffix}");
             }
-            failed = true;
-            output.WriteLine($"golden {result.Scenario.Name}: {mismatches.Count} turn hashes differ, first at turn {mismatches[0] + 1}");
+            else
+            {
+                failed = true;
+                output.WriteLine($"golden {result.Scenario.Name}: {mismatches.Count} turn hashes differ, first at turn {mismatches[0] + 1}{suffix}");
+            }
+            if (!repeated.HashesAgree(out var run, out var turn))
+            {
+                failed = true;
+                output.WriteLine($"golden {result.Scenario.Name}: run {run + 1} hashes differ from run 1, first at turn {turn + 1}");
+            }
         }
         if (compared == 0)
         {
@@ -176,6 +190,58 @@ public static class BenchRunner
 
         public IReadOnlyList<string> Hashes => Turns.Select(it => it.Hash).ToList();
     }
+
+    /// <summary>T350: the runs of one scenario under <c>--repeat</c>, the median run and the spread between the runs.</summary>
+    public sealed class ScenarioRuns
+    {
+        public required Scenario Scenario { get; init; }
+
+        public List<ScenarioResult> Runs { get; } = [];
+
+        /// <summary>The run whose late median is the median of the runs (the lower middle one for an even count); its detail is the report.</summary>
+        public ScenarioResult Representative
+        {
+            get
+            {
+                var ordered = Runs.OrderBy(it => LateMedianMs(it)).ToList();
+                return ordered[(ordered.Count - 1) / 2];
+            }
+        }
+
+        public SpreadSummary LateMedianWallMs => Spread(Runs.Select(it => LateMedianMs(it)).ToList());
+
+        public SpreadSummary TotalSeconds => Spread(Runs.Select(it => it.TotalSeconds).ToList());
+
+        /// <summary>False when a later run's per-turn state hashes differ from the first run's (same seeds must give the same game).</summary>
+        public bool HashesAgree(out int run, out int turn)
+        {
+            var first = Runs[0].Hashes;
+            for (var i = 1; i < Runs.Count; i++)
+            {
+                var other = Runs[i].Hashes;
+                var limit = Math.Min(first.Count, other.Count);
+                for (var t = 0; t < limit; t++)
+                    if (first[t] != other[t])
+                    {
+                        run = i;
+                        turn = t;
+                        return false;
+                    }
+                if (first.Count != other.Count)
+                {
+                    run = i;
+                    turn = limit;
+                    return false;
+                }
+            }
+            run = 0;
+            turn = 0;
+            return true;
+        }
+    }
+
+    /// <summary>The median of several runs and the spread around it (T350); the spread is (max - min) as a percentage of the median.</summary>
+    public sealed record SpreadSummary(double Median, double Min, double Max, double SpreadPercent);
 
     // ---- the clock (the only place of the solution outside the server layer that reads one for the engine's sake)
 
@@ -550,11 +616,21 @@ public static class BenchRunner
 
     private static double Ms(long ticks) => R(TicksToMs(ticks), 3);
 
-    private static double Median(List<double> values)
+    public static double Median(IReadOnlyList<double> values)
     {
         if (values.Count == 0) return 0;
         var sorted = values.Order().ToList();
         return sorted.Count % 2 == 1 ? sorted[sorted.Count / 2] : (sorted[sorted.Count / 2 - 1] + sorted[sorted.Count / 2]) / 2;
+    }
+
+    /// <summary>T350: the median of the values and their min/max, with the spread as a percentage of the median.</summary>
+    public static SpreadSummary Spread(IReadOnlyList<double> values)
+    {
+        if (values.Count == 0) return new SpreadSummary(0, 0, 0, 0);
+        var median = Median(values);
+        var min = values.Min();
+        var max = values.Max();
+        return new SpreadSummary(median, min, max, median == 0 ? 0 : (max - min) / median * 100);
     }
 
     /// <summary>The median wall time of the last fifth of the turns (the number T262's target is measured against).</summary>
@@ -631,11 +707,14 @@ public static class BenchRunner
         return new JsonArray(rows.OrderByDescending(it => (double)it["totalMsPerTurn"]!).ThenBy(it => (string)it["civ"]!, StringComparer.Ordinal).Select(it => (JsonNode)it).ToArray());
     }
 
-    private static JsonObject ToJson(ScenarioResult result)
+    private static JsonObject ToJson(ScenarioRuns repeated)
     {
+        var result = repeated.Representative;
         var scenario = result.Scenario;
         var count = result.Turns.Count;
         var quarter = Math.Max(1, count / 4);
+        var late = repeated.LateMedianWallMs;
+        var total = repeated.TotalSeconds;
         var json = new JsonObject
         {
             ["name"] = scenario.Name,
@@ -646,13 +725,27 @@ public static class BenchRunner
             ["gameSeed"] = scenario.GameSeed,
             ["mapSeed"] = scenario.MapSeed,
             ["ruleset"] = result.Ruleset,
+            ["repeat"] = repeated.Runs.Count,
             ["turnsPlayed"] = count,
             ["finalState"] = result.Summary,
-            ["totalSeconds"] = R(result.TotalSeconds, 2),
+            ["totalSeconds"] = R(total.Median, 2),
+            ["totalSecondsMin"] = R(total.Min, 2),
+            ["totalSecondsMax"] = R(total.Max, 2),
+            ["totalSecondsSpreadPercent"] = R(total.SpreadPercent, 1),
             ["humanAliveUntilTurn"] = result.HumanAliveUntilTurn,
             ["finalHashSerializeMs"] = R(result.FinalSerializeMs, 2),
             ["finalHashDigestMs"] = R(result.FinalDigestMs, 2),
-            ["lateMedianWallMs"] = R(LateMedianMs(result), 2),
+            ["lateMedianWallMs"] = R(late.Median, 2),
+            ["lateMedianWallMsMin"] = R(late.Min, 2),
+            ["lateMedianWallMsMax"] = R(late.Max, 2),
+            ["lateMedianWallMsSpreadPercent"] = R(late.SpreadPercent, 1),
+            ["runs"] = new JsonArray(repeated.Runs.Select((it, i) => (JsonNode)new JsonObject
+            {
+                ["run"] = i + 1,
+                ["turnsPlayed"] = it.Turns.Count,
+                ["lateMedianWallMs"] = R(LateMedianMs(it), 2),
+                ["totalSeconds"] = R(it.TotalSeconds, 2),
+            }).ToArray()),
             ["turns"] = new JsonArray(result.Turns.Select(it => (JsonNode)new JsonObject
             {
                 ["turn"] = it.Turn,
@@ -711,11 +804,28 @@ public static class BenchRunner
             output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"    {name,-36} {TicksToMs(agg.Inclusive) / turns,9:F2} (self {TicksToMs(agg.Exclusive) / turns:F2}, alloc {agg.AllocBytes / (1024.0 * 1024.0) / turns:F1} MB)"));
     }
 
-    private static ScenarioResult RunAndPrint(Scenario scenario, Options options, TextWriter output)
+    private static ScenarioRuns RunRepeated(Scenario scenario, Options options, int repeat, TextWriter output)
     {
-        output.WriteLine($"running scenario {scenario.Name} ({scenario.Majors} civs, {scenario.CityStates} city states, {scenario.MapSizeName} {scenario.MapTypeName}, {options.Turns ?? scenario.Turns} turns)");
-        var result = RunScenario(scenario, options, output);
-        WriteSummary(result, output);
-        return result;
+        var runs = new ScenarioRuns { Scenario = scenario };
+        output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+            $"running scenario {scenario.Name} ({scenario.Majors} civs, {scenario.CityStates} city states, {scenario.MapSizeName} {scenario.MapTypeName}, {options.Turns ?? scenario.Turns} turns){(repeat == 1 ? "" : $", {repeat} runs")}"));
+        for (var i = 0; i < repeat; i++)
+        {
+            // The per-turn progress lines would be repeated N times; for a repeated run print one line per run instead.
+            var result = RunScenario(scenario, options, repeat == 1 ? output : null);
+            runs.Runs.Add(result);
+            if (repeat > 1)
+                output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                    $"  run {i + 1}/{repeat}: late median {LateMedianMs(result):F1} ms/turn, {result.TotalSeconds:F1} s total"));
+        }
+        WriteSummary(runs.Representative, output);
+        if (repeat > 1)
+        {
+            var late = runs.LateMedianWallMs;
+            var total = runs.TotalSeconds;
+            output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"  across {repeat} runs: late median {late.Median:F1} ms/turn (min {late.Min:F1}, max {late.Max:F1}, spread {late.SpreadPercent:F1}%); total {total.Median:F1} s (min {total.Min:F1}, max {total.Max:F1}, spread {total.SpreadPercent:F1}%)"));
+        }
+        return runs;
     }
 }

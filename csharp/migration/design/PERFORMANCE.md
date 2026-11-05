@@ -27,7 +27,7 @@ Nothing here is an optimisation; the only engine change is the `TurnProbe` measu
 
 ## The harness
 
-`dotnet run -c Release --project Unciv.Cli -- bench [--scenario small|medium|all] [--turns N] [--json FILE|-] [--host-turns K] [--recipients R] [--no-probe]`
+`dotnet run -c Release --project Unciv.Cli -- bench [--scenario small|medium|all] [--turns N] [--repeat N] [--json FILE|-] [--host-turns K] [--recipients R] [--no-probe]`
 (`bench --help` prints the options). It is a CLI command, not a test: plain `dotnet test` never runs it. It generates two fixed-seed games itself (no save
 files) on the generated Brave New World ruleset, plays them through the command layer the way the BNW soak does (scripted human, AI civs through `RunAiTurn`,
 a state-hash checkpoint after every human turn start, nothing else scripted) and reports wall time per turn split by phase.
@@ -42,6 +42,11 @@ a state-hash checkpoint after every human turn start, nothing else scripted) and
   (one narrowly justified suppression). Phases are in `TurnManager` (start, automate, end of a civ, with the civ id as subject), `GameInfo.RefreshTransientCaches`
   and `UpdateCivilizationState`, the AI (`AI.*`), the command layer (`Command.Apply`, subject = command type), the checkpoint hash (`Hash.*`) and the host view
   builders (`View.*`). Add a `Measure` line where a drill-down is needed; the bench lists every phase it sees.
+- **Repeat and spread.** `--repeat N` (1-20) plays every scenario N times and reports the **median** of the runs: the report detail is the median run (the run whose
+  late median is the median), while the scenario's `lateMedianWallMs` and `totalSeconds` are the medians across runs and carry `...Min`, `...Max` and
+  `...SpreadPercent` ((max - min) as a percentage of the median). The JSON `runs` array lists each run's late median and total. The spread is the main limit of the
+  numbers on a shared machine (the T262 comparison is a median of runs for this reason). `--golden` compares the median run; every repeat must carry the same
+  per-turn state hashes, and a difference fails instead of being averaged away.
 - **Report.** Per turn: wall ms, state hash, city and unit counts, GC pause and gen-2 count, inclusive ms of the main phases. Per scenario: the top 20 phases by inclusive
   time (with exclusive time, calls, mean per call) for the whole run, the first quarter and the last quarter, the time per civ (start, automate, end), per command type, and
   the `lateMedianWallMs` (median of the last fifth of the turns) that T262's target uses. Inclusive time of a parent contains its children; exclusive does not.
@@ -285,6 +290,5 @@ Honest reading: the machine was shared and loaded (load average 7 to 54 on 20 lo
 
 - Call-level profiling inside `AI.AutomateUnitMoves` and the spike turns (install `dotnet-trace`; or add `Measure` points in pathfinding), and a GC-count column per phase.
 - Incremental host view diff (T178 note), once the host cost per recipient is chosen as a target.
-- A `--repeat N` option for the bench that reports the median of several runs (the machine noise is the main limit of the numbers above).
 - Per-unit `GetViewableTiles` cache keyed on position, range and a terrain revision counter (still the top allocator after T262), and a struct `ViewableTile`.
 - Remaining refresh cost: civ-level dirty tracking needs a proof that every input to `UpdateCivilizationState` is covered by a revision counter.
