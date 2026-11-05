@@ -294,6 +294,7 @@ public partial class App : Node
         HotseatController hotseat = null!; // JUSTIFY: C029 assigned before any callback can run
         var saves = new SaveController(store, settings, new UiTheme(registry),
             text => LocalHost.FromSave(text, WallClockMillis), loaded => hotseat.Present(loaded));
+        screen.SharedThemeChanged += saves.UseTheme; // T405: the dialog takes the game UI's bound theme (scale and breakpoint), also after a load or hotseat hand-over
         root.AddChild(saves);
         root.AddChild(cover);
         // C006: a networked game gets the reconnect cover above everything; Leave there ends the network session and returns to the menu.

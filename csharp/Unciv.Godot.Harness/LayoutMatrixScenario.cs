@@ -70,7 +70,9 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.AddRange(MenuSteps(new At(run, 1366, 768, 1f), (a, n, r) => ResizeCycle(a, n, r)));
         // T321: the dialogs over a game screen (a pending alert, a tutorial, a decision picker) through the same live cycle
         steps.AddRange(PopupResizeSteps(new At(run, 1366, 768, 1f)));
-        // T321: the in-game save controller gets an unbound theme, so its breakpoint must come from the width (5 -> 3 -> 5 columns)
+        // T405: the in-game save controller shares the game UI's bound theme, so at a large window with a user scale its breakpoint and pixel sizes are the game UI's
+        steps.AddRange(InGameSaveSteps(new At(run, 1600, 900, 1f)));
+        // T321: a controller given a theme nothing binds still takes the Compact breakpoint from the width (the defensive fallback)
         steps.AddRange(UnboundSaveSteps(new At(run, 1366, 768, 1f)));
 
         steps.Add(new Act("report", () =>
@@ -633,19 +635,75 @@ public sealed class LayoutMatrixScenario : Scenario
     }
 
     /// <summary>
-    /// T321: the in-game SaveController is built with its own UiTheme that nothing binds (App.ShowGame), so a live 1366 -> 960 -> 1366 resize must still take the Compact breakpoint from the width.
+    /// T405: the in-game SaveController follows the game screen's bound theme (as App.ShowGame wires it), so at 1600x900 with the user scale at 1.5 it must take the game UI's
+    /// breakpoint (1600 / (1.5 * 1.25) = 853, Compact -> three columns and the 0.94 dialog share). The unbound theme T321 had to work around would stay Regular (five columns, 0.8).
+    /// </summary>
+    private static List<ScenarioStep> InGameSaveSteps(At at)
+    {
+        var run = at.Run;
+        return
+        [
+            new Act($"{at.Size}: build the game screen and the in-game save dialog", () =>
+            {
+                var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false };
+                run.Host.AddChild(sub);
+                var local = at.Local = new LocalHost(run.Session, ScenarioGame.HumanA, () => at.Now += 1000);
+                var screen = at.Screen = new GameScreen();
+                sub.AddChild(screen);
+                screen.Start(local, run.Registry);
+                at.Theme = screen.SharedTheme.NotNull();
+                at.Theme.SetScale(1.5f); // the user's UI scale
+                at.Theme.Bind(sub); // a real user-scale change also refits the breakpoint through the viewport's resize, which SetScale alone does not
+                var store = new SaveStore(Path.Combine(run.Temp, "saves-in-game"));
+                if (store.List().Count == 0) store.Write("In-game save", UncivFiles.GameInfoToString(new GameInfoPreview(run.Session.Game)));
+                // App.ShowGame's wiring: the controller starts with a theme of its own and follows every theme the screen builds (start, load, hand-over)
+                var saves = at.Saves = new SaveController(store, run.Settings, new UiTheme(run.Registry), _ => throw new InvalidOperationException("not loading"), _ => { });
+                screen.SharedThemeChanged += saves.UseTheme;
+                saves.UseTheme(at.Theme);
+                sub.AddChild(saves);
+                saves.OpenDialog();
+            }),
+            new WaitFrames(8),
+            .. Check(at, "saves-in-game", () => at.Saves.NotNull()),
+            new AssertQuery("at 1600x900 with user scale 1.5 the game UI is Compact at scale 1.875", () =>
+            {
+                var t = at.Theme.NotNull();
+                bool ok = t.Breakpoint == UiBreakpoint.Compact && Math.Abs(t.Scale - 1.875f) < 0.001f;
+                if (!ok) GD.PrintErr($"[layout-matrix] in-game saves: breakpoint {t.Breakpoint}, scale {t.Scale}, size {at.Sub.NotNull().Size}");
+                return ok;
+            }),
+            new AssertQuery("the in-game saves table takes the game UI's breakpoint (three columns, not the unbound five)", () => Columns(at) == 3),
+            new AssertQuery("the in-game saves panel takes the game UI's Compact share", () =>
+            {
+                if (at.Saves.NotNull().FindChild("SaveFrame", true, false) is not PanelContainer panel) return false;
+                var size = at.Sub.NotNull().Size;
+                return panel.Size == (new Vector2(size.X, size.Y) * 0.94f).Floor();
+            }),
+            new Act($"{at.Size}: free the in-game save dialog", () =>
+            {
+                at.Sub.NotNull().QueueFree();
+                at.Screen = null;
+                at.Saves = null;
+            }),
+            new WaitFrames(2),
+        ];
+    }
+
+    /// <summary>
+    /// T321: a controller given a theme nothing binds (the defensive fallback; App.ShowGame now shares the game theme, see <see cref="InGameSaveSteps"/>) takes the Compact
+    /// breakpoint from the width, so a live 1366 -> 960 -> 1366 resize still swaps five and three columns.
     /// </summary>
     private static List<ScenarioStep> UnboundSaveSteps(At at)
     {
         var run = at.Run;
         var steps = new List<ScenarioStep>
         {
-            new Act($"{at.Size}: build the in-game save dialog with an unbound theme", () =>
+            new Act($"{at.Size}: build an unbound save dialog", () =>
             {
                 var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false };
                 run.Host.AddChild(sub);
                 at.Theme = new UiTheme(run.Registry);
-                var store = new SaveStore(Path.Combine(run.Temp, "saves-in-game"));
+                var store = new SaveStore(Path.Combine(run.Temp, "saves-unbound"));
                 if (store.List().Count == 0) store.Write("Unbound save", UncivFiles.GameInfoToString(new GameInfoPreview(run.Session.Game)));
                 at.Saves = new SaveController(store, run.Settings, at.Theme, _ => throw new InvalidOperationException("not loading"), _ => { });
                 sub.AddChild(at.Saves);
@@ -653,23 +711,23 @@ public sealed class LayoutMatrixScenario : Scenario
             }),
             new WaitFrames(8),
         };
-        steps.AddRange(Check(at, "saves-in-game", () => at.Saves.NotNull()));
-        steps.Add(new AssertQuery("at 1366x768 the unbound in-game saves table has five columns", () => Columns(at) == 5));
-        steps.Add(new Act("resize the unbound in-game save dialog to 960x640", () =>
+        steps.AddRange(Check(at, "saves-unbound", () => at.Saves.NotNull()));
+        steps.Add(new AssertQuery("at 1366x768 the unbound saves table has five columns", () => Columns(at) == 5));
+        steps.Add(new Act("resize the unbound save dialog to 960x640", () =>
         {
-            at.Size = "in-game-960x640";
+            at.Size = "unbound-960x640";
             at.Sub.NotNull().Size = new Vector2I(960, 640);
         }));
-        steps.AddRange(Check(at, "saves-in-game", () => at.Saves.NotNull()));
-        steps.Add(new AssertQuery("at 960x640 the unbound in-game saves table is compact (three columns)", () => Columns(at) == 3));
-        steps.Add(new Act("resize the unbound in-game save dialog back to 1366x768", () =>
+        steps.AddRange(Check(at, "saves-unbound", () => at.Saves.NotNull()));
+        steps.Add(new AssertQuery("at 960x640 the unbound saves table is compact (three columns)", () => Columns(at) == 3));
+        steps.Add(new Act("resize the unbound save dialog back to 1366x768", () =>
         {
-            at.Size = "in-game-1366x768";
+            at.Size = "unbound-1366x768";
             at.Sub.NotNull().Size = new Vector2I(1366, 768);
         }));
-        steps.AddRange(Check(at, "saves-in-game", () => at.Saves.NotNull()));
-        steps.Add(new AssertQuery("back at 1366x768 the unbound in-game saves table has five columns again", () => Columns(at) == 5));
-        steps.Add(new Act($"{at.Size}: free the in-game save dialog", () =>
+        steps.AddRange(Check(at, "saves-unbound", () => at.Saves.NotNull()));
+        steps.Add(new AssertQuery("back at 1366x768 the unbound saves table has five columns again", () => Columns(at) == 5));
+        steps.Add(new Act($"{at.Size}: free the unbound save dialog", () =>
         {
             at.Sub.NotNull().QueueFree();
             at.Saves = null;

@@ -26,7 +26,7 @@ public partial class SaveController : Control
 
     private readonly SaveStore store;
     private readonly ClientSettingsService settings;
-    private readonly UiTheme theme;
+    private UiTheme theme;
     private readonly Func<string, IGameSession> loader;
     private readonly Action<IGameSession> onLoaded;
     private IGameSession? session;
@@ -89,6 +89,20 @@ public partial class SaveController : Control
         GetViewport().SizeChanged -= Layout;
         theme.LayoutChanged -= Layout;
         Detach();
+    }
+
+    /// <summary>
+    /// T405: follows the theme of the game screen the dialog floats over, so its breakpoint and pixel sizes are the game UI's (the screen builds a fresh, bound theme for every game,
+    /// load and hotseat hand-over). The main menu's controller never calls this: its theme is bound by the <see cref="ScreenManager"/> for the whole menu.
+    /// </summary>
+    public void UseTheme(UiTheme value)
+    {
+        if (ReferenceEquals(theme, value)) return;
+        if (IsInsideTree()) theme.LayoutChanged -= Layout;
+        theme = value;
+        if (IsInsideTree()) theme.LayoutChanged += Layout;
+        if (dialog != null) dialog.Theme = theme.Theme;
+        Layout();
     }
 
     /// <summary>T321: the table columns and the dialog share depend on the breakpoint, which changes live; the viewport subscription covers a theme that is not bound.</summary>

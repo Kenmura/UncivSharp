@@ -1098,6 +1098,7 @@ public partial class GameScreen : Control
         theme.LayoutChanged += RelayoutAfterRebuild;
         theme.ScaleChanged += () => Overlays.UiScale = theme.Scale;
         theme.Bind(GetViewport());
+        SharedThemeChanged?.Invoke(theme); // T405: after the bind, so a follower reads the fitted scale and breakpoint
         TurnBar.Init(theme);
         Social.Init(theme);
         Alerts.Init(theme);
@@ -2143,6 +2144,11 @@ public partial class GameScreen : Control
     private bool answeringProposal;
     /// <summary>C076: the theme the screens share (the harness changes its scale to check that a screen rebuilds).</summary>
     public UiTheme? SharedTheme => ui;
+
+    /// <summary>
+    /// T405: raised with the freshly built and bound theme of every <see cref="Start"/> (a new game, a load, a hotseat hand-over), so a view floating over the game keeps the same scale and breakpoint.
+    /// </summary>
+    public event Action<UiTheme>? SharedThemeChanged;
 
     private UiTheme? ui;
 

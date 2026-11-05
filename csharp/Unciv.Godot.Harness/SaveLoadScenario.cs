@@ -4,7 +4,6 @@ using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Saves;
 using Unciv.GodotClient.Settings;
-using Unciv.GodotClient.Ui;
 using Unciv.Harness;
 using Unciv.Utils;
 
@@ -44,8 +43,9 @@ public sealed class SaveLoadScenario : Scenario
         var registry = AssetRegistry.ForRuleset(session.Game.Ruleset);
         screen.Start(localHost, registry);
         LocalHost? loaded = null;
-        var controller = new SaveController(store, settings, new UiTheme(registry),
+        var controller = new SaveController(store, settings, screen.SharedTheme.NotNull(),
             text => loaded = LocalHost.FromSave(text, () => now += 1000), session2 => screen.Start(session2, registry));
+        screen.SharedThemeChanged += controller.UseTheme; // T405: the dialog follows the game screen's bound theme, also after a load
         host.AddChild(controller);
         controller.Attach(localHost);
         screen.HasUnsavedProgress = () => controller.HasUnsavedProgress;

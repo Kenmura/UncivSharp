@@ -4,7 +4,6 @@ using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Saves;
 using Unciv.GodotClient.Settings;
-using Unciv.GodotClient.Ui;
 using Unciv.Harness;
 using Unciv.Utils;
 using Unciv.Logic.Civilization;
@@ -44,7 +43,8 @@ public sealed class MenuScenario : Scenario
         host.AddChild(screen);
         var registry = AssetRegistry.ForRuleset(session.Game.Ruleset);
         screen.Start(localHost, registry);
-        var controller = new SaveController(store, settings, new UiTheme(registry), text => LocalHost.FromSave(text, () => now += 1000), loaded => screen.Start(loaded, registry));
+        var controller = new SaveController(store, settings, screen.SharedTheme.NotNull(), text => LocalHost.FromSave(text, () => now += 1000), loaded => screen.Start(loaded, registry));
+        screen.SharedThemeChanged += controller.UseTheme; // T405: the dialog follows the game screen's bound theme, also after a load
         host.AddChild(controller);
         controller.Attach(localHost);
         screen.HasUnsavedProgress = () => controller.HasUnsavedProgress;
