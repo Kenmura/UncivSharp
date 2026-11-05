@@ -204,13 +204,24 @@ public sealed class LayoutMatrixScenario : Scenario
             }),
         };
         GameScreen S() => at.Screen.NotNull();
-        steps.AddRange(ResizeCycle(at, "hud", () => S().Hud));
+        // T329: WorldHud is the real HUD root; HudView is emptied by WorldHud.Mount, which re-parents its Bar, Toast and Dock, so checking HudView would check nothing.
+        steps.AddRange(ResizeCycle(at, "hud", () => S().World));
         steps.Add(new Act("open the city", () => S().OpenCityScreen(at.Local.NotNull().Snapshot.Cities.First(it => it.Own != null))));
         steps.AddRange(ResizeCycle(at, "city", () => S().City, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("show the city's production", () => S().City.NotNull().SetProduction(true)));
         steps.AddRange(ResizeCycle(at, "city-production", () => S().City, contentCap: UiTokens.MaxContentWidth));
         steps.Add(new Act("close the city", () => S().OpenCityScreen(null)));
         steps.Add(new Act("open tech", () => S().OpenTechScreen()));
+        steps.Add(new WaitUntil("the tech tree loaded", () => S().Tech.Tree != null && S().Tech.Layout.Nodes.Count > 0, 600));
+        // T329: the default selection can be a researched tech, for which Fill builds no StatBar; pick an unresearched tech with a real cost so the
+        // detail panel's bar and the tree's node cards exist in every resize phase (the shared-widget check is otherwise vacuous).
+        steps.Add(new Act("select an unresearched tech with a cost", () =>
+        {
+            var tech = S().Tech;
+            var node = tech.Layout.Nodes.FirstOrDefault(it => it.State == TechScreenModel.Researchable && it.Cost > 0)
+                ?? tech.Layout.Nodes.First(it => it.State != TechScreenModel.Researched && it.Cost > 0);
+            tech.Select(node.Name);
+        }));
         steps.AddRange(ResizeCycle(at, "tech", () => S().Tech, it => it.GetType().Name.Contains("Card", StringComparison.Ordinal), UiTokens.MaxContentWidth));
         steps.Add(new Act("close tech", () => S().Tech.Close()));
         steps.Add(new Act($"{at.Size}: free the live-resize game screen", () =>
@@ -509,6 +520,7 @@ public sealed class LayoutMatrixScenario : Scenario
                 foreach (string it in wrong) GD.PrintErr($"[layout-matrix] {at.Size} {name}: {it}");
                 return wrong.Count == 0;
             }));
+            steps.Add(WidgetsPresent(at, name, label, root));
             // T323: the join column and the shared widgets (list row, list panel, icon label, stat chip, stat bar, tooltip) and the modal are at the live scale, not the one they were built at
             steps.Add(new AssertQuery($"{name} {label}: the join column follows the live scale", () => name != "join" || ColumnWidth(root(), "JoinColumn") == at.Theme.NotNull().Px(420)));
             steps.Add(new AssertQuery($"{name} {label}: the shared widgets follow the live scale", () =>
@@ -588,6 +600,26 @@ public sealed class LayoutMatrixScenario : Scenario
         }
         return [.. steps];
     }
+
+    /// <summary>
+    /// T329: asserts the root checked in a live-resize phase really contains the visible widgets <see cref="LayoutChecks.SharedWidgetProblems"/> looks at. Without it the HUD
+    /// (an emptied <c>HudView</c>: its Bar/Toast/Dock are re-parented into WorldHud) and a tech screen opened on a researched tech pass the shared-widget check with zero widgets.
+    /// </summary>
+    private static ScenarioStep WidgetsPresent(At at, string name, string label, Func<Node> root) => new AssertQuery($"{name} {label}: the checked screen contains its widgets", () =>
+    {
+        if (name is not ("hud" or "city" or "city-production" or "tech")) return true;
+        var (chips, bars, icons, rows, cards) = LayoutChecks.VisibleWidgets(root());
+        bool ok = name switch
+        {
+            "hud" => chips >= 3,
+            "city" => chips >= 1 && bars >= 1,
+            "city-production" => rows >= 1,
+            "tech" => cards >= 30 && bars >= 1,
+            _ => true,
+        };
+        if (!ok) GD.PrintErr($"[layout-matrix] {at.Size} {name}: expected widgets, found chips={chips} bars={bars} icons={icons} rows={rows} cards={cards}");
+        return ok;
+    });
 
     /// <summary>
     /// T321: the dialogs over a game screen (the pending alert, a tutorial, the decision picker) are opened once and run through the same live resize and scale cycle as the menu screens.

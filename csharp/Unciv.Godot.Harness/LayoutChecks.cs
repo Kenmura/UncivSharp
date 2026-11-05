@@ -1,5 +1,6 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Ui;
 
 namespace Unciv.GodotHarness;
@@ -119,6 +120,31 @@ internal static class LayoutChecks
         }
         Walk(root);
         return problems;
+    }
+
+    /// <summary>
+    /// T329: the shared widgets that are actually visible under <paramref name="root"/>. The live-resize phases assert these counts before trusting
+    /// <see cref="SharedWidgetProblems"/>: a root that does not contain the widgets (an emptied <c>HudView</c>, a tech screen built without a selection)
+    /// would make that check pass without testing anything.
+    /// </summary>
+    public static (int Chips, int Bars, int Icons, int Rows, int Cards) VisibleWidgets(Node root)
+    {
+        int chips = 0, bars = 0, icons = 0, rows = 0, cards = 0;
+        void Walk(Node node)
+        {
+            if (node is CanvasItem item && !item.IsVisibleInTree()) return;
+            switch (node)
+            {
+                case StatChip: chips++; break;
+                case StatBar: bars++; break;
+                case IconLabel: icons++; break;
+                case ListRow: rows++; break;
+                case TechNodeCard: cards++; break;
+            }
+            foreach (var child in node.GetChildren()) Walk(child);
+        }
+        Walk(root);
+        return (chips, bars, icons, rows, cards);
     }
 
     /// <summary>T322: the rows wider than <paramref name="maxPx"/> (plus the rounding tolerance): a form row that spans the window leaves its label far from its control.</summary>
