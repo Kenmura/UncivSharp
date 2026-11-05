@@ -267,8 +267,10 @@ public partial class TooltipHost : Control
     /// <summary>The width the tip's text is laid out at: that of its longest line, up to <see cref="MaxWidth"/> less the panel's padding, so a short tip is narrow and a long one wraps.</summary>
     private float TextWidth()
     {
-        var font = text.GetThemeFont("normal_font");
-        int fontSize = text.GetThemeFontSize("normal_font_size");
+        // T326: read the font and size from the UiTheme's own theme, not through the control: inside the LayoutChanged callback that re-measures a visible tip the
+        // RichTextLabel still resolves theme items against its pre-resize cache (it refreshes in a later frame), so a control lookup measured the old scale.
+        var font = theme.Theme.GetFont("normal_font", "RichTextLabel");
+        int fontSize = theme.Theme.GetFontSize("normal_font_size", "RichTextLabel");
         float widest = 0f;
         foreach (string line in text.GetParsedText().Split('\n')) widest = Math.Max(widest, font.GetStringSize(line, HorizontalAlignment.Left, -1, fontSize).X);
         float padding = 2 * theme.Px(UiTokens.S3) + 2 * theme.Px(UiTokens.BorderWidth);

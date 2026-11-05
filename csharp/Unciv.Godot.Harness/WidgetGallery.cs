@@ -15,6 +15,9 @@ internal sealed partial class WidgetGallery : VBoxContainer
     private readonly StatBar bar;
     private readonly TooltipHost tip;
 
+    /// <summary>T326: wide enough to be measured (not clamped to the minimum) and short enough to stay under the maximum at every scale of the resize cycle.</summary>
+    public const string TipText = "Cities need food to grow.";
+
     public WidgetGallery(UiTheme theme)
     {
         Name = "WidgetGallery";
@@ -43,9 +46,30 @@ internal sealed partial class WidgetGallery : VBoxContainer
         Expect("IconLabel icon", FirstIcon(label), t.Px(UiTheme.IconSize));
         Expect("StatChip separation", chip.GetThemeConstant("separation"), t.Px(UiTokens.S1));
         Expect("StatBar height", bar.Bar.CustomMinimumSize.Y, t.Px(UiTokens.BarLabelled));
-        Expect("TooltipHost text width", tip.TextMinWidth, t.Px(120));
+        // T326: the minimum-width reset only applies while the tip is hidden; a shown tip is measured in the resize phase instead
+        if (!tip.IsShowing) Expect("TooltipHost text width", tip.TextMinWidth, t.Px(120));
         return wrong;
     }
 
     private static float FirstIcon(Node owner) => owner.FindChildren("*", "", true, false).OfType<TextureRect>().FirstOrDefault()?.CustomMinimumSize.X ?? -1f;
+
+    /// <summary>T326: shows a tip through the real <see cref="TooltipHost"/> hover path, so the resize phase can check a VISIBLE tip's text width.</summary>
+    public void ShowTip()
+    {
+        tip.Visible = true;
+        tip.Point(() => TipText);
+        tip.Advance(tip.Delay);
+    }
+
+    public void HideTip()
+    {
+        tip.Restart();
+        tip.Visible = false;
+    }
+
+    public bool TipShowing => tip.IsShowing;
+
+    public string ShownTipText => tip.ShownText;
+
+    public float ShownTipWidth => tip.TextMinWidth;
 }

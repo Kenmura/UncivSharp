@@ -437,6 +437,10 @@ public sealed class LayoutMatrixScenario : Scenario
     private static ScenarioStep[] ResizeCycle(At at, string name, Func<Node> root)
     {
         var steps = new List<ScenarioStep>();
+        // T326: the tip is shown once, in the first phase, and stays visible across the viewport resize and the two scale changes (showing it again would measure it anew,
+        // which is exactly what the check must not let pass); the width at scale 1 is the reference the later phases are measured against
+        float? tipWidthAtScale1 = null;
+        bool tipShown = false;
         void Phase(string label, Action change)
         {
             steps.Add(new Act($"{name}: {label}", () =>
@@ -455,6 +459,28 @@ public sealed class LayoutMatrixScenario : Scenario
                 foreach (string it in wrong) GD.PrintErr($"[layout-matrix] {at.Size} widgets: {it}");
                 return wrong.Count == 0;
             }));
+            if (name == "widgets" && !tipShown)
+            {
+                tipShown = true;
+                steps.Add(new Act($"{name} {label}: show a tooltip", () => at.Gallery.NotNull().ShowTip()));
+                steps.Add(new WaitFrames(2));
+            }
+            // T326: a tip SHOWN across a live resize/scale change is re-measured too, not only a hidden one (the hidden check above resets it to the minimum)
+            if (name == "widgets")
+            {
+                steps.Add(new AssertQuery($"{name} {label}: the visible tooltip text follows the live scale", () =>
+                {
+                    var gallery = at.Gallery.NotNull();
+                    var ui = at.Theme.NotNull();
+                    if (!gallery.TipShowing || gallery.ShownTipText != WidgetGallery.TipText) return false;
+                    if (Math.Abs(ui.Scale - 1f) < 0.001f) tipWidthAtScale1 ??= gallery.ShownTipWidth;
+                    float expected = (tipWidthAtScale1 ?? gallery.ShownTipWidth) * ui.Scale;
+                    float tolerance = Math.Max(4f, expected * 0.05f); // the font rounds its size to whole pixels, so the width is only proportional
+                    bool ok = Math.Abs(gallery.ShownTipWidth - expected) <= tolerance;
+                    if (!ok) GD.PrintErr($"[layout-matrix] {at.Size} widgets: the visible tooltip text is {gallery.ShownTipWidth} wide, the live scale {ui.Scale} gives {expected}");
+                    return ok;
+                }));
+            }
             steps.Add(new AssertQuery($"{name} {label}: the modal panel is at the live width", () =>
             {
                 if (name != "modal") return true;
@@ -483,6 +509,11 @@ public sealed class LayoutMatrixScenario : Scenario
             // T321: 960x640 is below the 1000 px Compact breakpoint, then back to Regular
             Phase("960x640", () => at.Sub.NotNull().Size = new Vector2I(960, 640));
             Phase("1366x768-after-compact", () => at.Sub.NotNull().Size = new Vector2I(1366, 768));
+        }
+        if (tipShown)
+        {
+            steps.Add(new Act($"{name}: hide the tooltip", () => at.Gallery.NotNull().HideTip()));
+            steps.Add(new WaitFrames(2));
         }
         return [.. steps];
     }
