@@ -74,7 +74,8 @@ public static class BenchRunner
         var noProbe = cli.Flag("no-probe");
         var goldenPath = cli.Get("golden");
         var ruleset = cli.Get("ruleset");
-        loadRulesets(cli);
+        // T314: a bad option or scenario is a usage error before any ruleset file is read, so `bench --scenario huge` is
+        // exit 2 even when the assets are momentarily unavailable (the argument tests must not depend on the data files).
         cli.RejectUnknown();
         var scenarios = scenarioName switch
         {
@@ -83,6 +84,7 @@ public static class BenchRunner
             "all" => new[] { Small, Medium },
             _ => throw new UsageException($"--scenario '{scenarioName}' is not one of: small, medium, all"),
         };
+        loadRulesets(cli);
         var options = new Options(!noProbe, turns, hostTurns, recipients, ruleset, hostParallel);
         var results = scenarios.Select(it => RunRepeated(it, options, repeat, output)).ToList();
         var report = new JsonObject

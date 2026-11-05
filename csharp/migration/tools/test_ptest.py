@@ -86,6 +86,32 @@ class Affected(unittest.TestCase):
         self.assertEqual(ptest.affected_classes(["migration/backlog/T001.md", "README.md"])[0], set())
 
 
+class ConcurrentRuns(unittest.TestCase):
+    """T314: two ptest/gate runs in one worktree must not share the folders each one rmtree's at startup."""
+
+    def test_each_invocation_gets_its_own_workspace(self):
+        self.addCleanup(lambda: setattr(ptest, "RUN_DIR", None))
+        ptest.RUN_DIR = None
+        first = ptest.run_workspace()
+        ptest.RUN_DIR = None
+        second = ptest.run_workspace()
+        self.assertNotEqual(first, second)
+        self.assertTrue(first.startswith(str(HERE.parent / ".coverage")))
+
+    def test_private_copy_stays_inside_the_run_workspace(self):
+        with tempfile.TemporaryDirectory() as d:
+            old = ptest.RUN_DIR, ptest.output_dir, ptest.subprocess.run
+            ptest.RUN_DIR = os.path.join(d, "run")
+            ptest.output_dir = lambda project: os.path.join(d, "out")
+            ptest.subprocess.run = lambda *a, **k: None
+            os.makedirs(os.path.join(d, "out"))
+            try:
+                dest = ptest.private_copy(3, "Unciv.Core.Tests")
+            finally:
+                ptest.RUN_DIR, ptest.output_dir, ptest.subprocess.run = old
+            self.assertEqual(dest, os.path.join(d, "run", "bin", "shard3"))
+
+
 class CacheKey(unittest.TestCase):
     def test_key_ignores_migration_and_mtime_but_not_source_content(self):
         with tempfile.TemporaryDirectory() as d:

@@ -487,7 +487,7 @@ public sealed class StandbyListenerTests
 
     private static async Task<Message?> ReadAsync(ITransport transport)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30)); // T314: a failure bound only; generous so a gate under heavy shared load never trips it
         var frame = await transport.ReceiveAsync(timeout.Token);
         return frame == null ? null : ProtocolCodec.Decode(frame);
     }
@@ -546,18 +546,24 @@ public sealed class StandbyListenerTests
     public async Task ASecondHello_IsRefused_AndAnIdleConnectionIsClosedAfterItsLifetime()
     {
         using var cert = HostCertificate.Generate();
-        await using var listener = new StandbyListener(cert, 0) { ConnectionLifetime = TimeSpan.FromMilliseconds(300) };
-        listener.Start();
-        var (transport, _) = await ConnectAsync(listener, cert);
-        await using (transport)
+        // T314: the frame exchange gets a generous lifetime; a 300 ms one also closed a connection whose TLS handshake and first
+        // Hello a loaded gate had not scheduled yet (Welcome came back null). The idle closure is asserted on a short-lived listener.
+        await using (var listener = new StandbyListener(cert, 0) { ConnectionLifetime = TimeSpan.FromSeconds(60) })
         {
-            await transport.SendAsync(ProtocolCodec.Encode(Hello()));
-            Assert.IsType<Welcome>(await ReadAsync(transport));
-            await transport.SendAsync(ProtocolCodec.Encode(Hello()));
-            Assert.IsType<Error>(await ReadAsync(transport));
+            listener.Start();
+            var (transport, _) = await ConnectAsync(listener, cert);
+            await using (transport)
+            {
+                await transport.SendAsync(ProtocolCodec.Encode(Hello()));
+                Assert.IsType<Welcome>(await ReadAsync(transport));
+                await transport.SendAsync(ProtocolCodec.Encode(Hello()));
+                Assert.IsType<Error>(await ReadAsync(transport));
+            }
         }
 
-        var (idle, _) = await ConnectAsync(listener, cert);
+        await using var idleListener = new StandbyListener(cert, 0) { ConnectionLifetime = TimeSpan.FromMilliseconds(300) };
+        idleListener.Start();
+        var (idle, _) = await ConnectAsync(idleListener, cert);
         await using (idle) Assert.Null(await ReadAsync(idle));
     }
 

@@ -10,7 +10,8 @@ runs every class that has no timing yet, so a new test class can never be skippe
   (no args)            build both test projects, run every test: Core in N shards, App as one more process
   --no-build           skip the build (the gate has just built)
   --shards N           number of shards (default: min(6, cpu/3); env UNCIV_TEST_SHARDS)
-  --coverage           collect cobertura per shard under --results (default migration/.coverage/raw); a FULL run also stores
+  --coverage           collect cobertura per shard under --results (default migration/.coverage/run-<pid>-<ns>/raw, one
+                       private workspace per invocation); a FULL run also stores
                        the merged report in the coverage cache so a following `coverage.py --check` is free
   --affected [--since REV]
                        dev loop: only test classes that mention a type declared in a changed .cs file (changed vs REV, default
@@ -43,7 +44,8 @@ APP = "Unciv.App.Tests"  # tests of Cli, Server and Client.Net; small, so it run
 PROJECTS = [CORE, APP]
 SEED = os.path.join(MIGRATION, "test-timings.json")
 CONTAINER = "dotnet-dev"
-DEFAULT_RAW = os.path.join(MIGRATION, ".coverage", "raw")
+RUN_DIR = None  # T314: this invocation's private workspace under .coverage; two ptest runs must never share one
+KEEP_RUN_WORKSPACE = False
 TRX_NS = "{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}"
 UNKNOWN_WEIGHT = 1.0
 MIN_WEIGHT = 0.05
@@ -51,6 +53,28 @@ MIN_WEIGHT = 0.05
 
 def git(*args):
     return subprocess.run(["git", "-C", CSHARP] + list(args), capture_output=True, text=True).stdout
+
+
+def new_run_workspace():
+    """A fresh private workspace name. T314: coverlet rewrites assemblies in place, so an instrumented run copies its output
+    folder; two ptest/gate runs in one worktree used to share `.coverage/bin/shardN` and the results folder, and each run's
+    startup rmtree deleted the other's live assemblies/TRX (FileNotFoundException, 'Invalid assembly public key', shard exit 1
+    with 0 failed). The pid and nanosecond clock make them disjoint."""
+    return os.path.join(MIGRATION, ".coverage", "run-%d-%d" % (os.getpid(), time.time_ns()))
+
+
+def run_workspace():
+    global RUN_DIR
+    if RUN_DIR is None:
+        RUN_DIR = new_run_workspace()
+    return RUN_DIR
+
+
+def cleanup_run_workspace():
+    global RUN_DIR
+    if RUN_DIR is not None:
+        shutil.rmtree(RUN_DIR, ignore_errors=True)
+        RUN_DIR = None
 
 
 def local_timings_path():
@@ -281,8 +305,8 @@ def output_dir(project):
 def private_copy(index, project):
     """Coverlet rewrites the assemblies it instruments IN PLACE (and restores them afterwards), so concurrent coverage shards
     must not share the output folder. The copy stays under csharp/ because tests find android/assets/jsons by walking up
-    from AppContext.BaseDirectory."""
-    dest = os.path.join(MIGRATION, ".coverage", "bin", "shard%d" % index)
+    from AppContext.BaseDirectory. T314: the folder also carries this run's workspace, never a fixed `.coverage/bin/shardN`."""
+    dest = os.path.join(run_workspace(), "bin", "shard%d" % index)
     shutil.rmtree(dest, ignore_errors=True)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     subprocess.run(["cp", "-r", "--reflink=auto", output_dir(project), dest], check=True)
@@ -320,20 +344,28 @@ def main():
         stop_children()
         shutdown_build_servers()
         runtmp.release()
+        # T314: the workspace is this run's own; --keep-tmp keeps it (and prints the path) so its logs can be read.
+        if not KEEP_RUN_WORKSPACE:
+            cleanup_run_workspace()
+        elif RUN_DIR is not None:
+            print("ptest: kept workspace %s" % RUN_DIR, flush=True)
 
 
 def run_main():
+    global KEEP_RUN_WORKSPACE
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--shards", type=int)
     ap.add_argument("--no-build", action="store_true")
     ap.add_argument("--coverage", action="store_true")
-    ap.add_argument("--results", default=DEFAULT_RAW)
+    ap.add_argument("--results", default=None,
+                    help="where the shard cobertura/trx files go (default: a fresh workspace under migration/.coverage)")
     ap.add_argument("--affected", action="store_true")
     ap.add_argument("--since")
     ap.add_argument("--class", dest="classes", nargs="+")
     ap.add_argument("--list-affected", action="store_true")
-    ap.add_argument("--keep-tmp", action="store_true", help="keep the per-run temp folder (T390) instead of removing it on exit")
+    ap.add_argument("--keep-tmp", action="store_true", help="keep the per-run temp folder (T390) and workspace instead of removing them on exit")
     a = ap.parse_args()
+    KEEP_RUN_WORKSPACE = a.keep_tmp
 
     timings = load_timings()
     known = sorted(timings)
@@ -391,7 +423,7 @@ def run_main():
         for t in raw_terms:
             jobs += [("term:" + t, proj, "FullyQualifiedName~" + t, True) for proj in PROJECTS]
 
-    results = os.path.abspath(a.results)
+    results = os.path.abspath(a.results or os.path.join(run_workspace(), "raw"))
     shutil.rmtree(results, ignore_errors=True)
     os.makedirs(results)
     t1 = time.time()

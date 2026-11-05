@@ -40,12 +40,14 @@ public sealed class NetLobbyTests : IDisposable
             await Task.Delay(5, cts.Token);
     }
 
-    private static async Task<T> ReceiveMessageAsync<T>(ITransport transport, int timeoutMs = 2000) where T : Message
+    private static async Task<T> ReceiveMessageAsync<T>(ITransport transport, int timeoutMs = 30000) where T : Message
     {
         using var cts = new CancellationTokenSource(timeoutMs);
         while (!cts.IsCancellationRequested)
         {
-            var frame = await transport.ReceiveAsync(cts.Token);
+            string? frame;
+            try { frame = await transport.ReceiveAsync(cts.Token); }
+            catch (OperationCanceledException) { break; } // T314: report the timeout below, not an opaque cancellation
             if (frame == null) continue;
             var msg = ProtocolCodec.Decode(frame);
             if (msg is T typed) return typed;
@@ -585,6 +587,8 @@ public sealed class NetLobbyTests : IDisposable
         await session.SetLobbySlotAsync(0, "Rome", null, true);
         await WaitForNationAsync(lobby, 0, "Rome");
         await lobby.StartGameAsync(force: true, seed: 42L, clockMillis: 5000L);
+        using var inGame = new CancellationTokenSource(Bound);
+        await WaitForSeatedSessionAsync(inGame.Token, session); // T314: the start returns before the client has applied its first snapshot
 
         // Several commands in a row: any frame taken by a competing lobby reader would leave one without a CommandResult.
         for (var i = 0; i < 5; i++)
@@ -660,6 +664,8 @@ public sealed class NetLobbyTests : IDisposable
         await WaitForNationAsync(lobby, 0, "Rome");
         await lobby.StartGameAsync(force: true, seed: 42L, clockMillis: 5000L);
 
+        using var inGame = new CancellationTokenSource(Bound);
+        await WaitForSeatedSessionAsync(inGame.Token, second); // T314: the start returns before the client has applied its first snapshot
         Assert.False(string.IsNullOrEmpty((await second.SubmitAsync(new EndTurn()).WaitAsync(Bound)).ClientCmdId));
 
         // The superseded connection is closed by the host (its frames would otherwise pile up in a channel nobody reads).
@@ -694,53 +700,27 @@ public sealed class NetLobbyTests : IDisposable
 
             // Exactly one of the two is the current connection of the key: it must be seated and playable (never JoinOk without a snapshot).
             using var cts = new CancellationTokenSource(Bound);
-            var seatedSecond = WaitForSnapshotAsync(second, cts.Token);
-            var seatedThird = WaitForSnapshotAsync(third, cts.Token);
-            Assert.True(await AnyTrueAsync(seatedSecond, seatedThird));
-            var outcomes = await Task.WhenAll(TrySubmitAsync(second), TrySubmitAsync(third));
-            Assert.Contains(true, outcomes);
+            var seated = await WaitForSeatedSessionAsync(cts.Token, second, third);
+            Assert.False(string.IsNullOrEmpty((await seated.SubmitAsync(new EndTurn()).WaitAsync(Bound)).ClientCmdId));
             var romeSessions = 0;
             await lobby.ActiveGameHost!.EnqueueAsync(() => { romeSessions = lobby.ActiveGameHost.Sessions.Values.Count(x => x.BoundCivId == "Rome"); return Task.CompletedTask; });
             Assert.Equal(1, romeSessions);
         }
     }
 
-    /// <summary>True as soon as one task yields true; false once all finished without. A superseded connection's stream ends (false) and must not decide for the seated one (T364).</summary>
-    private static async Task<bool> AnyTrueAsync(params Task<bool>[] tasks)
+    /// <summary>
+    /// T314: waits until exactly one of the connections is in game. StartGameAsync returns before the clients applied their first
+    /// snapshot (a command submitted then is refused as not-in-game), and in a rapid reconnect the superseded connection may be
+    /// the one that briefly seated first, so the test must wait for the connection the host kept, not for a fixed delay.
+    /// </summary>
+    private static async Task<ClientSession> WaitForSeatedSessionAsync(CancellationToken ct, params ClientSession[] sessions)
     {
-        var pending = tasks.ToList();
-        while (pending.Count > 0)
+        while (true)
         {
-            var done = await Task.WhenAny(pending);
-            if (await done) return true;
-            pending.Remove(done);
+            var inGame = sessions.Where(s => s.State == ClientSessionState.InGame).ToList();
+            if (inGame.Count == 1) return inGame[0];
+            await Task.Delay(10, ct);
         }
-        return false;
-    }
-
-    /// <summary>True when the host answered the command (accepted or not): the connection is seated and its reader works.</summary>
-    private static async Task<bool> TrySubmitAsync(ClientSession session)
-    {
-        for (var i = 0; i < 20 && session.State != ClientSessionState.InGame; i++) await Task.Delay(50);
-        try
-        {
-            return !string.IsNullOrEmpty((await session.SubmitAsync(new EndTurn()).WaitAsync(TimeSpan.FromSeconds(2))).ClientCmdId);
-        }
-        catch (TimeoutException)
-        {
-            return false; // the superseded connection is closed by the host
-        }
-    }
-
-    private static async Task<bool> WaitForSnapshotAsync(ClientSession session, CancellationToken ct)
-    {
-        try
-        {
-            await foreach (var ev in session.Events.ReadAllAsync(ct))
-                if (ev is SnapshotReplaced) return true;
-        }
-        catch (OperationCanceledException) { }
-        return false;
     }
 
     private static async Task RawJoinAsync(ServerLobby lobby, ITransport clientEnd, ClientIdentity id)
@@ -789,7 +769,7 @@ public sealed class NetLobbyTests : IDisposable
         var (c3, s3) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s3);
         await RawJoinAsync(lobby, c3, id);
-        await ReceiveMessageAsync<Snapshot>(c3, 10000); // the newer connection is seated while the older one is still waiting
+        await ReceiveMessageAsync<Snapshot>(c3, 30000); // the newer connection is seated while the older one is still waiting
 
         release.SetResult();
         Assert.Equal(2, seats.Count);
@@ -899,7 +879,7 @@ public sealed class NetLobbyTests : IDisposable
         await WaitForNationAsync(lobby, 0, "Rome");
         await ReceiveMessageAsync<LobbyState>(c1);
         await lobby.StartGameAsync(force: true, seed: 42L, clockMillis: 5000L);
-        await ReceiveMessageAsync<Snapshot>(c1, 10000);
+        await ReceiveMessageAsync<Snapshot>(c1, 30000);
         return (lobby, id, c1);
     }
 
@@ -923,7 +903,7 @@ public sealed class NetLobbyTests : IDisposable
         _ = lobby.AttachConnectionAsync(s2);
         await RawJoinAsync(lobby, c2, id); // JoinOk, not game-started
         await start.WaitAsync(Bound);
-        var snapshot = await ReceiveMessageAsync<Snapshot>(c2, 10000);
+        var snapshot = await ReceiveMessageAsync<Snapshot>(c2, 30000);
         Assert.Equal("Rome", snapshot.You);
     }
 
@@ -958,7 +938,7 @@ public sealed class NetLobbyTests : IDisposable
         var (c3, s3) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s3);
         await RawJoinAsync(lobby, c3, newId);
-        Assert.Equal("Rome", (await ReceiveMessageAsync<Snapshot>(c3, 10000)).You);
+        Assert.Equal("Rome", (await ReceiveMessageAsync<Snapshot>(c3, 30000)).You);
     }
 
     // T253: lobby administration after the start never writes lobby frames into a seat that belongs to the game.
@@ -1008,7 +988,7 @@ public sealed class NetLobbyTests : IDisposable
         Assert.False(busy.IsCompleted);
         release.SetResult();
         await busy.WaitAsync(Bound);
-        Assert.Equal("Rome", (await ReceiveMessageAsync<Snapshot>(c2, 10000)).You);
+        Assert.Equal("Rome", (await ReceiveMessageAsync<Snapshot>(c2, 30000)).You);
         _ = c1;
     }
 
