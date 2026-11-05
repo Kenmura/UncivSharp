@@ -83,7 +83,8 @@ flowchart TD
 
 Unlinked tickets (no open dependency in either direction), by state:
 
-- in review: T329 T405
+- in progress: T329
+- in review: T405
 - blocked: T290 T355 T357 T394 T404
 - waiting: T275 T313 T314 T330 T331 T332 T333 T335 T340 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363 T400 T401
 
@@ -137,7 +138,7 @@ xychart-beta
 | T313 | Available (waiting on ) | T311 | 0 | Verify OS display scale detection on Windows, macOS and X11 and follow a window moved between monitors (T311 follow-up) |
 | T314 | Available (waiting on ) | none | 0 | Flaky tests: NetLobbyTests.ServerLobby_TwoRapidSameKeyReconnects... and server/CLI bench tests fail once under full-gate load, pass alone |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
-| T329 | Needs-Review [DeepSeek-T329] | T323 | 0 | Layout-matrix resize phase covers only menu screens: HUD, city and tech (and their shared widgets) are not resized live |
+| T329 | In-Progress [DeepSeek-T329b] | T323 | 0 | Layout-matrix resize phase covers only menu screens: HUD, city and tech (and their shared widgets) are not resized live |
 | T330 | Available (waiting on ) | none | 0 | GitHub Actions does not run for csharp-migration or csharp-v tags: diagnose (account, billing, rename to Kenmura/UncivSharp, settings), restore CI, then re-run the tag workflow |
 | T331 | Available (waiting on ) | T279, T280 | 0 | Local release fallback: release.py --github-draft builds all four clients plus CLI and server archives from a tag and creates the draft release without GitHub Actions; notes flag --local |
 | T332 | Available (waiting on ) | none | 0 | Verify Windows and macOS CLI and the Windows dedicated server on real systems, then drop the UNVERIFIED marks from the release notes |
