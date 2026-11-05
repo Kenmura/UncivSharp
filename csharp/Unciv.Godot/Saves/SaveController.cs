@@ -106,7 +106,11 @@ public partial class SaveController : Control
         }
     }
 
-    private bool IsCompact() => theme.Breakpoint == UiBreakpoint.Compact || GetViewportRect().Size.X < CompactWidth;
+    /// <summary>
+    /// T321: the breakpoint at the current window and scale. An in-game controller gets its own theme that no <see cref="ScreenManager"/> binds, so it is derived from the width here rather than
+    /// from <see cref="UiTheme.Breakpoint"/> (which stays Regular without a bound viewport); the 800 px fallback also covers a very narrow dialog on a regular window.
+    /// </summary>
+    private bool IsCompact() => UiTokens.BreakpointFor(Size.X / theme.Scale) == UiBreakpoint.Compact || Size.X < CompactWidth;
 
     /// <summary>Starts watching this session for new turns (autosave) and saves/loads it. Call again with the loaded session.</summary>
     public void Attach(IGameSession gameSession)

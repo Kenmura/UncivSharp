@@ -64,6 +64,8 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.AddRange(MenuSteps(new At(run, 1366, 768, 1f), ResizeCycle));
         // T321: the dialogs over a game screen (a pending alert, a tutorial, a decision picker) through the same live cycle
         steps.AddRange(PopupResizeSteps(new At(run, 1366, 768, 1f)));
+        // T321: the in-game save controller gets an unbound theme, so its breakpoint must come from the width (5 -> 3 -> 5 columns)
+        steps.AddRange(UnboundSaveSteps(new At(run, 1366, 768, 1f)));
 
         steps.Add(new Act("report", () =>
         {
@@ -324,13 +326,16 @@ public sealed class LayoutMatrixScenario : Scenario
                 var modal = root().FindChildren("*", "", true, false).OfType<Modal>().FirstOrDefault();
                 return modal != null && Math.Abs(modal.Frame.CustomMinimumSize.X - Math.Min(ui.Px(Modal.MinWidth), at.Sub.NotNull().Size.X * Modal.ViewportShare)) < 0.5f;
             }));
-            // T321: crossing the Compact breakpoint swaps the save list between five and three columns without rebuilding the dialog
+            // T321: crossing the Compact breakpoint swaps the save list between five and three columns without rebuilding the dialog (same width rule as SaveController.IsCompact)
             steps.Add(new AssertQuery($"{name} {label}: the saves table follows the live breakpoint", () =>
             {
                 if (name != "saves") return true;
                 if (root().FindChild("SaveTable", true, false) is not DataTable table) return false;
-                return table.ColumnCount == (at.Theme.NotNull().Breakpoint == UiBreakpoint.Compact ? 3 : 5);
+                bool compact = UiTokens.BreakpointFor(at.Sub.NotNull().Size.X / at.Theme.NotNull().Scale) == UiBreakpoint.Compact;
+                return table.ColumnCount == (compact ? 3 : 5);
             }));
+            steps.Add(new AssertQuery($"{name} {label}: the popup stays open through the resize", () =>
+                name is not ("alert" or "tutorial" or "picker") || root() is Modal { Visible: true }));
         }
         Phase("1366x768", () => { });
         Phase("3840x2160", () => at.Sub.NotNull().Size = new Vector2I(3840, 2160));
@@ -385,6 +390,54 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.Add(new WaitFrames(2));
         return steps;
     }
+
+    /// <summary>
+    /// T321: the in-game SaveController is built with its own UiTheme that nothing binds (App.ShowGame), so a live 1366 -> 960 -> 1366 resize must still take the Compact breakpoint from the width.
+    /// </summary>
+    private static List<ScenarioStep> UnboundSaveSteps(At at)
+    {
+        var run = at.Run;
+        var steps = new List<ScenarioStep>
+        {
+            new Act($"{at.Size}: build the in-game save dialog with an unbound theme", () =>
+            {
+                var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false };
+                run.Host.AddChild(sub);
+                at.Theme = new UiTheme(run.Registry);
+                var store = new SaveStore(Path.Combine(run.Temp, "saves-in-game"));
+                if (store.List().Count == 0) store.Write("Unbound save", UncivFiles.GameInfoToString(new GameInfoPreview(run.Session.Game)));
+                at.Saves = new SaveController(store, run.Settings, at.Theme, _ => throw new InvalidOperationException("not loading"), _ => { });
+                sub.AddChild(at.Saves);
+                at.Saves.OpenDialog();
+            }),
+            new WaitFrames(8),
+        };
+        steps.AddRange(Check(at, "saves-in-game", () => at.Saves.NotNull()));
+        steps.Add(new AssertQuery("at 1366x768 the unbound in-game saves table has five columns", () => Columns(at) == 5));
+        steps.Add(new Act("resize the unbound in-game save dialog to 960x640", () =>
+        {
+            at.Size = "in-game-960x640";
+            at.Sub.NotNull().Size = new Vector2I(960, 640);
+        }));
+        steps.AddRange(Check(at, "saves-in-game", () => at.Saves.NotNull()));
+        steps.Add(new AssertQuery("at 960x640 the unbound in-game saves table is compact (three columns)", () => Columns(at) == 3));
+        steps.Add(new Act("resize the unbound in-game save dialog back to 1366x768", () =>
+        {
+            at.Size = "in-game-1366x768";
+            at.Sub.NotNull().Size = new Vector2I(1366, 768);
+        }));
+        steps.AddRange(Check(at, "saves-in-game", () => at.Saves.NotNull()));
+        steps.Add(new AssertQuery("back at 1366x768 the unbound in-game saves table has five columns again", () => Columns(at) == 5));
+        steps.Add(new Act($"{at.Size}: free the in-game save dialog", () =>
+        {
+            at.Sub.NotNull().QueueFree();
+            at.Saves = null;
+        }));
+        steps.Add(new WaitFrames(2));
+        return steps;
+    }
+
+    private static int Columns(At at) => at.Saves.NotNull().FindChild("SaveTable", true, false) is DataTable table ? table.ColumnCount : -1;
 
     private static PickerSpec ResizePicker() => new(
         PickerKind.FreeGreatPerson,
