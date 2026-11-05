@@ -108,8 +108,8 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T275 T313 T330 T331 T332 T333 T335 T340 T341 T342 T344 T345 T346 T348 T351 T352 T353 T362 T363 T400 T401
-- in progress: T343 T349
-- in review: T314 T350
+- in progress: T314 T343
+- in review: T349 T350
 - blocked: T290 T355 T357 T394 T404
 
 ## Remaining tickets over time
@@ -179,11 +179,11 @@ xychart-beta
 | T401 | **Ready to start** | T274 | 0 | Host migration: crash election for a relay-only successor (voters reach the successor through its relay room) |
 | T290 | Blocked | T271 | 0 | Real-device frame-time pass: Windows, macOS, Android phone |
 | T306 | Available (waiting on T278) | C099, T278 | 0 | Android shell on-device checks for C099: back button, safe-area insets, orientation, lifecycle autosave, keyboard scroll, permissions |
-| T314 | Needs-Review [DeepSeek-T314] | none | 0 | Flaky tests: NetLobbyTests.ServerLobby_TwoRapidSameKeyReconnects... and server/CLI bench tests fail once under full-gate load, pass alone |
+| T314 | In-Progress [DeepSeek-T314] | none | 0 | Flaky tests: NetLobbyTests.ServerLobby_TwoRapidSameKeyReconnects... and server/CLI bench tests fail once under full-gate load, pass alone |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
 | T343 | In-Progress [DeepSeek-T343] | none | 0 | Confirm dialog for destructive actions: disband unit, declare war, raze city (no undo) |
 | T347 | Available (waiting on T278) | T278 | 0 | Share the invite code from Android with the system share sheet |
-| T349 | In-Progress [DeepSeek-T349] | none | 0 | Per-unit GetViewableTiles cache keyed on position, range and a terrain revision counter |
+| T349 | Needs-Review [DeepSeek-T349] | none | 0 | Per-unit GetViewableTiles cache keyed on position, range and a terrain revision counter |
 | T350 | Needs-Review [DeepSeek-T350] | none | 0 | Bench --repeat N reporting the median of several runs |
 | T355 | Blocked | T338 | 0 | Verify nested TLS and the relay path on Windows, macOS and Android (manual, UNVERIFIED until run) |
 | T357 | Blocked | T337, T338 | 0 | WebSocket gateway so the web export can join and host through the relay (optional) |
