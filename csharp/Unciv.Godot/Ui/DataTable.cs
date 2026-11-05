@@ -66,6 +66,9 @@ public partial class DataTable : PanelContainer
 
     public int RowCount => rows.Count;
 
+    /// <summary>The number of data columns (not counting the action column).</summary>
+    public int ColumnCount => columns.Count;
+
     /// <summary>The input row indices in display order.</summary>
     public IReadOnlyList<int> Order => order;
 

@@ -86,7 +86,8 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T329
-- in progress: T317 T318 T321 T326 T328
+- in progress: T317 T318 T326 T328
+- in review: T321
 - blocked: T290 T355 T357 T394 T404
 - waiting: T275 T313 T314 T330 T331 T332 T333 T335 T340 T341 T342 T343 T344 T345 T346 T348 T349 T350 T351 T352 T353 T362 T363 T400 T401
 
@@ -142,7 +143,7 @@ xychart-beta
 | T314 | Available (waiting on ) | none | 0 | Flaky tests: NetLobbyTests.ServerLobby_TwoRapidSameKeyReconnects... and server/CLI bench tests fail once under full-gate load, pass alone |
 | T317 | In-Progress [Claude] | T312 | 0 | Extend the layout matrix: alerts and popups, city Production tab, game over/victory/hotseat/vote screens, 640x360 minimum window, an automatic wasted-space check |
 | T318 | In-Progress [Claude] | T312 | 0 | Host, Join and Lobby screens on the ScreenFrame look: titled header, scaled controls, content width, consistent with New game and Options |
-| T321 | In-Progress [DeepSeek] | T316 | 0 | Menu screens not covered by the T316 live-resize scenario: Saves dialog, popups other than the leave modal, in-game menus rebuilt on breakpoint change (SaveController compact flag is read once) |
+| T321 | Needs-Review [DeepSeek] | T316 | 0 | Menu screens not covered by the T316 live-resize scenario: Saves dialog, popups other than the leave modal, in-game menus rebuilt on breakpoint change (SaveController compact flag is read once) |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
 | T326 | In-Progress [Claude] | T323 | 0 | TooltipHost text width is re-measured on a live resize only while a tip is visible |
 | T328 | In-Progress [Claude] | T323 | 0 | Modal owners that use the width Fit() returns keep a stale body wrap width after a live resize (DecisionPickerView, VictoryStatusView, GameOverScreen, GameMenuView, VoteResultScreen) |

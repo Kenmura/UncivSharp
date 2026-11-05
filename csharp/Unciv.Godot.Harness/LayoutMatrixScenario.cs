@@ -4,13 +4,17 @@ using Unciv.Assets;
 using Unciv.Commands;
 using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
+using Unciv.GodotClient.Saves;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Setup;
 using Unciv.GodotClient.Ui;
 using Unciv.Harness;
 using Unciv.Client.Net.Hosting;
 using Unciv.Client.Net.Session;
+using Unciv.Logic;
+using Unciv.Logic.Files;
 using Unciv.Logic.Map;
+using Unciv.Models;
 using Unciv.Net;
 using Unciv.Net.Identity;
 using Unciv.Net.Lobby;
@@ -58,6 +62,8 @@ public sealed class LayoutMatrixScenario : Scenario
 
         // T316: the same menu screens, opened once and then resized (and rescaled) live
         steps.AddRange(MenuSteps(new At(run, 1366, 768, 1f), ResizeCycle));
+        // T321: the dialogs over a game screen (a pending alert, a tutorial, a decision picker) through the same live cycle
+        steps.AddRange(PopupResizeSteps(new At(run, 1366, 768, 1f)));
 
         steps.Add(new Act("report", () =>
         {
@@ -73,7 +79,8 @@ public sealed class LayoutMatrixScenario : Scenario
     private static ScenarioStep[] Check(At at, string name, Func<Node> root, Func<BaseButton, bool>? exempt = null) =>
     [
         new WaitFrames(8),
-        new Act($"{at.Size} {name}: the scenario's pending alert is not part of the screen", () => at.Screen?.Alerts.Close()),
+        // T321: the alert is the screen under test in its own resize phase, so it is not dismissed there
+        new Act($"{at.Size} {name}: the scenario's pending alert is not part of the screen", () => { if (name != "alert") at.Screen?.Alerts.Close(); }),
         new WaitFrames(2),
         new Act($"{at.Size} {name}", () =>
         {
@@ -258,11 +265,31 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.Add(new Act("show the shared widgets", () => M().Push(at.Gallery = new WidgetGallery(T()))));
         steps.AddRange(check(at, "widgets", () => M().Top.NotNull()));
         steps.Add(new Act("back", () => M().Pop()));
+        steps.AddRange(SavesSteps(at, check));
         steps.Add(new Act("show a modal", () => M().Popups.Show(new PopupSpec("Leave the game?", "Progress since the last save is lost.", [new PopupChoice("Cancel"), new PopupChoice("Leave", null, ChoiceRole.Primary)]))));
         steps.AddRange(check(at, "modal", () => M().Popups));
         steps.Add(new Act($"{at.Size}: free the menus", () => at.Sub.NotNull().QueueFree()));
         steps.Add(new WaitFrames(2));
         return steps;
+    }
+
+    /// <summary>T321: the saves dialog, with a readable save in its list (the compact breakpoint drops the ruleset and date columns).</summary>
+    private static ScenarioStep[] SavesSteps(At at, Func<At, string, Func<Node>, ScenarioStep[]> check)
+    {
+        var run = at.Run;
+        return
+        [
+            new Act($"{at.Size}: show the saves dialog", () =>
+            {
+                var store = new SaveStore(Path.Combine(run.Temp, "saves"));
+                if (store.List().Count == 0) store.Write("Resize save", UncivFiles.GameInfoToString(new GameInfoPreview(run.Session.Game)));
+                at.Saves = new SaveController(store, run.Settings, at.Theme.NotNull(), _ => throw new InvalidOperationException("not loading"), _ => { });
+                at.Sub.NotNull().AddChild(at.Saves);
+                at.Saves.OpenDialog();
+            }),
+            .. check(at, "saves", () => at.Saves.NotNull()),
+            new Act("close the saves dialog", () => at.Saves.NotNull().CloseDialog()),
+        ];
     }
 
     /// <summary>
@@ -297,14 +324,79 @@ public sealed class LayoutMatrixScenario : Scenario
                 var modal = root().FindChildren("*", "", true, false).OfType<Modal>().FirstOrDefault();
                 return modal != null && Math.Abs(modal.Frame.CustomMinimumSize.X - Math.Min(ui.Px(Modal.MinWidth), at.Sub.NotNull().Size.X * Modal.ViewportShare)) < 0.5f;
             }));
+            // T321: crossing the Compact breakpoint swaps the save list between five and three columns without rebuilding the dialog
+            steps.Add(new AssertQuery($"{name} {label}: the saves table follows the live breakpoint", () =>
+            {
+                if (name != "saves") return true;
+                if (root().FindChild("SaveTable", true, false) is not DataTable table) return false;
+                return table.ColumnCount == (at.Theme.NotNull().Breakpoint == UiBreakpoint.Compact ? 3 : 5);
+            }));
         }
         Phase("1366x768", () => { });
         Phase("3840x2160", () => at.Sub.NotNull().Size = new Vector2I(3840, 2160));
         Phase("1366x768-again", () => at.Sub.NotNull().Size = new Vector2I(1366, 768));
         Phase("scale-1.5", () => at.Theme.NotNull().SetScale(1.5f));
         Phase("scale-1", () => at.Theme.NotNull().SetScale(1f));
+        if (name == "saves")
+        {
+            // T321: 960x640 is below the 1000 px Compact breakpoint, then back to Regular
+            Phase("960x640", () => at.Sub.NotNull().Size = new Vector2I(960, 640));
+            Phase("1366x768-after-compact", () => at.Sub.NotNull().Size = new Vector2I(1366, 768));
+        }
         return [.. steps];
     }
+
+    /// <summary>
+    /// T321: the dialogs over a game screen (the pending alert, a tutorial, the decision picker) are opened once and run through the same live resize and scale cycle as the menu screens.
+    /// </summary>
+    private static List<ScenarioStep> PopupResizeSteps(At at)
+    {
+        var run = at.Run;
+        var steps = new List<ScenarioStep>
+        {
+            new Act($"{at.Size}: build the game screen for the popups", () =>
+            {
+                DisplayProfile.Current = new DisplayProfile(false, 0f, at.Os);
+                var sub = at.Sub = new SubViewport { Size = new Vector2I(at.Width, at.Height), RenderTargetUpdateMode = SubViewport.UpdateMode.Always, TransparentBg = false, World3D = run.Host.GetViewport().FindWorld3D() };
+                run.Host.AddChild(sub);
+                at.Local = new LocalHost(run.Session, ScenarioGame.HumanA, () => at.Now += 1000);
+                var screen = at.Screen = new GameScreen();
+                sub.AddChild(screen);
+                screen.Start(at.Local, run.Registry);
+                at.Theme = screen.SharedTheme;
+            }),
+            new WaitFrames(6),
+            new Act("dismiss the banner, keep the pending alert", () => at.Screen.NotNull().Hud.HideBanner()),
+        };
+        GameScreen S() => at.Screen.NotNull();
+        steps.AddRange(ResizeCycle(at, "alert", () => S().Alerts));
+        steps.Add(new Act("close the alert", () => S().Alerts.Close()));
+        steps.Add(new Act("show a tutorial", () => S().Tutorials.Open(new TutorialPage(TutorialTrigger.Introduction, "Introduction", "Found your first city to begin your story.", 0, 1))));
+        steps.AddRange(ResizeCycle(at, "tutorial", () => S().Tutorials));
+        steps.Add(new Act("close the tutorial", () => S().Tutorials.Close()));
+        steps.Add(new Act("show a decision picker", () => S().Picker.Open(ResizePicker())));
+        steps.AddRange(ResizeCycle(at, "picker", () => S().Picker));
+        steps.Add(new Act("close the decision picker", () => S().Picker.Close()));
+        steps.Add(new Act($"{at.Size}: free the popup game screen", () =>
+        {
+            at.Sub.NotNull().QueueFree();
+            at.Screen = null;
+        }));
+        steps.Add(new WaitFrames(2));
+        return steps;
+    }
+
+    private static PickerSpec ResizePicker() => new(
+        PickerKind.FreeGreatPerson,
+        "Choose a free great person",
+        "Choose a great person to join your civilization. This prompt is long enough to wrap inside the dialog at every window size.",
+        [new PickerSlot("greatPerson", "Great person",
+        [
+            new PickerOption("Scientist", "Great Scientist", "A Great Scientist can build an academy or discover a technology."),
+            new PickerOption("Engineer", "Great Engineer", "A Great Engineer can hurry production in a city."),
+        ])],
+        "Choose",
+        _ => []);
 
     private static float ColumnWidth(Node screen, string name) => screen.FindChild(name, true, false) is Control column ? column.CustomMinimumSize.X : -1f;
 
@@ -364,6 +456,8 @@ public sealed class LayoutMatrixScenario : Scenario
         public ServerLobby? Lobby { get; set; }
 
         public WidgetGallery? Gallery { get; set; }
+
+        public SaveController? Saves { get; set; }
     }
 
     /// <summary>Not judged by the target-height check: the city grid's tile buttons (map cells, not controls to hit) and check boxes (a label row whose height is its text line).</summary>

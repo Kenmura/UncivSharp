@@ -80,18 +80,24 @@ public partial class SaveController : Control
     public override void _Ready()
     {
         GetViewport().SizeChanged += Layout;
+        theme.LayoutChanged += Layout;
         Layout();
     }
 
     public override void _ExitTree()
     {
         GetViewport().SizeChanged -= Layout;
+        theme.LayoutChanged -= Layout;
         Detach();
     }
 
+    /// <summary>T321: the table columns and the dialog share depend on the breakpoint, which changes live; the viewport subscription covers a theme that is not bound.</summary>
     private void Layout()
     {
         Size = GetViewportRect().Size;
+        bool wasCompact = compact;
+        compact = IsCompact();
+        if (table != null && compact != wasCompact) RebuildTable();
         if (dialogPanel != null)
         {
             var panelSize = (Size * (compact ? CompactDialogShare : DialogShare)).Floor();
@@ -99,6 +105,8 @@ public partial class SaveController : Control
             dialogPanel.Position = ((Size - panelSize) / 2f).Floor();
         }
     }
+
+    private bool IsCompact() => theme.Breakpoint == UiBreakpoint.Compact || GetViewportRect().Size.X < CompactWidth;
 
     /// <summary>Starts watching this session for new turns (autosave) and saves/loads it. Call again with the loaded session.</summary>
     public void Attach(IGameSession gameSession)
@@ -241,6 +249,8 @@ public partial class SaveController : Control
         scrim.SetAnchorsPreset(LayoutPreset.FullRect);
         dialog.AddChild(scrim);
         dialogPanel = new PanelContainer { Name = "SaveFrame", ThemeTypeVariation = UiVariants.PanelInset };
+        // T321: a frame whose side margins grow while the scale changes can clamp the panel above the wanted size; re-apply it when the minimum shrinks again
+        dialogPanel.MinimumSizeChanged += Layout;
         dialog.AddChild(dialogPanel);
         frame = new ScreenFrame(theme, "Saves");
         frame.CloseRequested += CloseDialog;
@@ -253,14 +263,9 @@ public partial class SaveController : Control
         search = new LineEdit { Name = "SaveSearch", PlaceholderText = "Search saves".Tr(), ClearButtonEnabled = true };
         search.TextChanged += _ => ApplyFilter();
         left.AddChild(search);
-        compact = theme.Breakpoint == UiBreakpoint.Compact || GetViewportRect().Size.X < CompactWidth;
-        table = new DataTable(compact
-            ? [new DataColumn("Name"), new DataColumn("Turn", true), new DataColumn("Civilization")]
-            : [new DataColumn("Name"), new DataColumn("Turn", true), new DataColumn("Civilization"), new DataColumn("Ruleset"), new DataColumn("Date")], selectable: true) { Name = "SaveTable" };
-        table.RowTone = row => row < shown.Count && shown[row].Info == null ? ProceduralAssets.ToColor(UiTokens.Warning) : null;
-        table.RowSelected += OnRowSelected;
+        compact = IsCompact();
+        table = BuildTable();
         scroller = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
-        table.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         scroller.AddChild(table);
         left.AddChild(scroller);
         empty = new EmptyState(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Load"), "No saves yet.") { Name = "SaveEmpty", SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -284,6 +289,30 @@ public partial class SaveController : Control
         AddChild(dialog);
         RefreshList();
         Layout();
+    }
+
+    /// <summary>T321: the columns of the save list at the current breakpoint (three on a compact window, five otherwise).</summary>
+    private DataTable BuildTable()
+    {
+        var built = new DataTable(compact
+            ? [new DataColumn("Name"), new DataColumn("Turn", true), new DataColumn("Civilization")]
+            : [new DataColumn("Name"), new DataColumn("Turn", true), new DataColumn("Civilization"), new DataColumn("Ruleset"), new DataColumn("Date")], selectable: true) { Name = "SaveTable" };
+        built.RowTone = row => row < shown.Count && shown[row].Info == null ? ProceduralAssets.ToColor(UiTokens.Warning) : null;
+        built.RowSelected += OnRowSelected;
+        built.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        return built;
+    }
+
+    /// <summary>T321: replaces the open table when a live resize crosses the Compact breakpoint; the search, selection and details stay.</summary>
+    private void RebuildTable()
+    {
+        if (table == null || scroller == null) return;
+        var previous = table;
+        table = BuildTable();
+        scroller.RemoveChild(previous);
+        previous.QueueFree();
+        scroller.AddChild(table);
+        ApplyFilter();
     }
 
     private Control BuildDetails()
