@@ -89,8 +89,8 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T406 T407 T408 T409
-- in progress: T340 T341 T351
-- in review: T331
+- in progress: T340 T341
+- in review: T331 T351
 - blocked: T290 T355 T357 T394 T404
 - waiting: T275 T313 T330 T332 T333 T335 T342 T344 T345 T346 T348 T352 T353 T362 T363 T400 T401
 
@@ -160,7 +160,7 @@ xychart-beta
 | T346 | Available (waiting on ) | none | 0 | Reconnect experience: connection status, rejoin button, visible 'waiting for player X' during simultaneous turns |
 | T347 | Available (waiting on T278) | T278 | 0 | Share the invite code from Android with the system share sheet |
 | T348 | Available (waiting on ) | none | 0 | Lobby comforts: chat, kick and ban, rejoin by name |
-| T351 | In-Progress [DeepSeek-T351] | T261 | 0 | Call-level profiling inside AI unit moves (AutomateUnitMoves) and the spike turns |
+| T351 | Needs-Review [DeepSeek-T351] | T261 | 0 | Call-level profiling inside AI unit moves (AutomateUnitMoves) and the spike turns |
 | T352 | Available (waiting on ) | none | 0 | Accessibility: colourblind-safe team colours and unit/tile cues, font size scaling, keyboard-only play |
 | T353 | Available (waiting on ) | none | 0 | Sound and music: effects and a soundtrack from CC0 or original sources (no Civ 5 audio) |
 | T355 | Blocked | T338 | 0 | Verify nested TLS and the relay path on Windows, macOS and Android (manual, UNVERIFIED until run) |
