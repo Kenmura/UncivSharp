@@ -105,8 +105,7 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T275 T313 T330 T332 T335 T344 T345 T348 T352 T353 T362 T363 T400 T401 T406 T407 T408 T409
-- in progress: T342
-- in review: T333
+- in review: T333 T342
 - blocked: T290 T355 T357 T394 T404
 
 ## Remaining tickets over time
@@ -175,7 +174,7 @@ xychart-beta
 | T306 | Available (waiting on T278) | C099, T278 | 0 | Android shell on-device checks for C099: back button, safe-area insets, orientation, lifecycle autosave, keyboard scroll, permissions |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
 | T333 | Needs-Review [DeepSeek-T333b] | T322 | 0 | Full-width pages keep rows readable on 3840x2160: ScreenFrame MaxContentWidth is ~the whole 4K window, New game player rows put Human/AI 1500 px from the nation name; Host, Join, Lobby, Saves, Civilopedia at 4K not inspected for label/control gaps |
-| T342 | In-Progress [DeepSeek-T342b] | T297 | 0 | Incremental host view diff: build per-recipient views from changes instead of full rebuilds (late-game turns with several humans) |
+| T342 | Needs-Review [DeepSeek-T342] | T297 | 0 | Incremental host view diff: build per-recipient views from changes instead of full rebuilds (late-game turns with several humans) |
 | T347 | Available (waiting on T278) | T278 | 0 | Share the invite code from Android with the system share sheet |
 | T355 | Blocked | T338 | 0 | Verify nested TLS and the relay path on Windows, macOS and Android (manual, UNVERIFIED until run) |
 | T357 | Blocked | T337, T338 | 0 | WebSocket gateway so the web export can join and host through the relay (optional) |
