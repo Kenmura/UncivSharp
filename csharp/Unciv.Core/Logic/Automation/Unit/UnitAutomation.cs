@@ -26,21 +26,99 @@ public static partial class UnitAutomation
         if (unit.Civ.IsBarbarian)
             throw new InvalidOperationException("Barbarians is not allowed here.");
 
+        // T351: call-level probe points for the profiling bench. Each step is a phase; the exclusive time of AI.AutomateUnitMoves
+        // is what is left after them. Without an observer a scope costs one thread-static read and allocates nothing.
+        if (TryAutomateSpecialUnit(unitView, cache)) return;
+
+        // Accompany settlers
+        using (TurnProbe.Measure("Unit.AccompanySettler"))
+            if (TryAccompanySettlerOrGreatPerson(unitView)) return;
+
+        using (TurnProbe.Measure("Unit.Ruin"))
+            if (TryGoToRuin(unitView) && !unitView.HasMovement()) return;
+
+        using (TurnProbe.Measure("Unit.RetreatOrHeal"))
+            if (unitView.UnitHealth < 50 && (TryRetreat(unitView, cache) || TryHealUnit(unitView, cache))) return; // do nothing but heal
+
+        // If there are no enemies nearby and we can heal here, wait until we are at full health
+        using (TurnProbe.Measure("Unit.HealInPlace"))
+            if (unitView.UnitHealth < 100 && CanUnitHealInTurnsOnCurrentTile(unitView, cache, 2, 3)) return;
+
+        using (TurnProbe.Measure("Unit.SiegedCity"))
+            if (TryHeadTowardsOurSiegedCity(unitView)) return;
+
+        // if a embarked melee unit can land and attack next turn, do not attack from water.
+        using (TurnProbe.Measure("Unit.Disembark"))
+            if (BattleHelper.TryDisembarkUnitToAttackPosition(unit)) return;
+
+        // if there is an attackable unit in the vicinity, attack!
+        using (TurnProbe.Measure("Unit.Attack"))
+            if (TryAttacking(unitView, cache)) return;
+
+        using (TurnProbe.Measure("Unit.TakeBackCity"))
+            if (TryTakeBackCapturedCity(unitView)) return;
+
+        // Focus all units without a specific target on the enemy city closest to one of our cities
+        using (TurnProbe.Measure("Unit.EnemyCity"))
+            if (HeadTowardsEnemyCityAutomation.TryHeadTowardsEnemyCity(unitView)) return;
+
+        using (TurnProbe.Measure("Unit.Encampment"))
+            if (TryHeadTowardsEncampment(unitView)) return;
+
+        using (TurnProbe.Measure("Unit.Garrison"))
+            if (TryGarrisoningLandUnit(unitView)) return;
+
+        using (TurnProbe.Measure("Unit.Heal80"))
+            if (unitView.UnitHealth < 80 && TryHealUnit(unitView, cache)) return;
+
+        // move towards the closest reasonably attackable enemy unit within 3 turns of movement (and 5 tiles range)
+        using (TurnProbe.Measure("Unit.CloseEnemy"))
+            if (TryAdvanceTowardsCloseEnemy(unitView)) return;
+
+        using (TurnProbe.Measure("Unit.Heal100"))
+            if (unitView.UnitHealth < 100 && TryHealUnit(unitView, cache)) return;
+
+        using (TurnProbe.Measure("Unit.Prepare"))
+            if (TryPrepare(unitView)) return;
+
+        // else, try to go to unreached tiles
+        using (TurnProbe.Measure("Unit.Explore"))
+            if (TryExplore(unitView, cache)) return;
+
+        using (TurnProbe.Measure("Unit.FogBust"))
+            if (TryFogBust(unitView)) return;
+
+        // Idle CS units should wander so they don't obstruct players so much
+        if (unitView.Civ().IsCityState)
+            using (TurnProbe.Measure("Unit.Wander")) Wander(unitView, stayInTerritory: true);
+    }
+
+    /// <summary>
+    /// T351: the non-combat and special branches of <see cref="AutomateUnitMoves"/> (terrain damage, civilians, human promotions and upgrades,
+    /// civilian abilities, nukes and air units), split out only so the main decision list stays within the method-size ratchet.
+    /// </summary>
+    private static bool TryAutomateSpecialUnit(MapUnitView unitView, AutomationCache cache)
+    {
+        var unit = unitView.Unwrap();
         // Might die next turn - move!
-        if (unit.GetDamageFromTerrain() > 0 && TryHealUnit(unitView, cache)) return;
+        using (TurnProbe.Measure("Unit.TerrainDamage"))
+            if (unit.GetDamageFromTerrain() > 0 && TryHealUnit(unitView, cache)) return true;
 
         if (unitView.IsCivilian())
         {
-            CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView), cache);
-            return;
+            using (TurnProbe.Measure("Unit.Civilian"))
+                CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView), cache);
+            return true;
         }
 
         var isHumanAndNotAutoplaying =
             unit.Civ.IsHuman() && unit.Civ.GameInfo.ClientState.AutoPlay?.IsAutoPlaying() != true;
         // AI promotes units via NextTurnAutomation.automateUnits
-        if (isHumanAndNotAutoplaying) NextTurnAutomation.ApplyPromotions(unitView);
+        using (TurnProbe.Measure("Unit.HumanPromotions"))
+            if (isHumanAndNotAutoplaying) NextTurnAutomation.ApplyPromotions(unitView);
         // AI upgrades units via UseGoldAutomation in NextTurnAutomation
-        if (isHumanAndNotAutoplaying && TryUpgradeUnit(unitView)) return;
+        using (TurnProbe.Measure("Unit.Upgrade"))
+            if (isHumanAndNotAutoplaying && TryUpgradeUnit(unitView)) return true;
 
         // This allows for military units with certain civilian abilities to behave as civilians in peace and soldiers in war
         if ((unitView.HasUnique(UniqueType.BuildImprovements) || unitView.HasUnique(UniqueType.FoundCity) ||
@@ -48,79 +126,37 @@ public static partial class UnitAutomation
                     unitView.HasUnique(UniqueType.ReligiousUnit) || unitView.HasUnique(UniqueType.CreateWaterImprovements))
             && !unit.Civ.IsAtWar())
         {
-            CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView), cache);
-            return;
+            using (TurnProbe.Measure("Unit.CivilianAbilities"))
+                CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView), cache);
+            return true;
         }
 
         // Note that not all nukes have to be air units
         if (unitView.IsNuclearWeapon())
         {
-            AirUnitAutomation.AutomateNukes(unitView);
-            return;
+            using (TurnProbe.Measure("Unit.Nuclear"))
+                AirUnitAutomation.AutomateNukes(unitView);
+            return true;
         }
 
-        if (unitView.IsAirUnit())
+        if (!unitView.IsAirUnit()) return false;
+        using (TurnProbe.Measure("Unit.Air"))
         {
             if (unit.CanIntercept())
             {
                 AirUnitAutomation.AutomateFighter(unitView, cache);
-                return;
+                return true;
             }
 
             if (unitView.HasUnique(UniqueType.SelfDestructs))
             {
                 AirUnitAutomation.AutomateMissile(unitView);
-                return;
+                return true;
             }
 
             AirUnitAutomation.AutomateBomber(unitView);
-            return;
         }
-
-        // Accompany settlers
-        if (TryAccompanySettlerOrGreatPerson(unitView)) return;
-
-        if (TryGoToRuin(unitView) && !unitView.HasMovement()) return;
-
-        if (unitView.UnitHealth < 50 && (TryRetreat(unitView, cache) || TryHealUnit(unitView, cache))) return; // do nothing but heal
-
-        // If there are no enemies nearby and we can heal here, wait until we are at full health
-        if (unitView.UnitHealth < 100 && CanUnitHealInTurnsOnCurrentTile(unitView, cache, 2, 3)) return;
-
-        if (TryHeadTowardsOurSiegedCity(unitView)) return;
-
-        // if a embarked melee unit can land and attack next turn, do not attack from water.
-        if (BattleHelper.TryDisembarkUnitToAttackPosition(unit)) return;
-
-        // if there is an attackable unit in the vicinity, attack!
-        if (TryAttacking(unitView, cache)) return;
-
-        if (TryTakeBackCapturedCity(unitView)) return;
-
-        // Focus all units without a specific target on the enemy city closest to one of our cities
-        if (HeadTowardsEnemyCityAutomation.TryHeadTowardsEnemyCity(unitView)) return;
-
-        if (TryHeadTowardsEncampment(unitView)) return;
-
-        if (TryGarrisoningLandUnit(unitView)) return;
-
-        if (unitView.UnitHealth < 80 && TryHealUnit(unitView, cache)) return;
-
-        // move towards the closest reasonably attackable enemy unit within 3 turns of movement (and 5 tiles range)
-        if (TryAdvanceTowardsCloseEnemy(unitView)) return;
-
-        if (unitView.UnitHealth < 100 && TryHealUnit(unitView, cache)) return;
-
-        if (TryPrepare(unitView)) return;
-
-        // else, try to go to unreached tiles
-        if (TryExplore(unitView, cache)) return;
-
-        if (TryFogBust(unitView)) return;
-
-        // Idle CS units should wander so they don't obstruct players so much
-        if (unitView.Civ().IsCityState)
-            Wander(unitView, stayInTerritory: true);
+        return true;
     }
 
     internal static bool TryUpgradeUnit(MapUnitView unitView)

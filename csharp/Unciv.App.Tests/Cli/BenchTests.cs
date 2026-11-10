@@ -51,6 +51,24 @@ public sealed class BenchTests : IDisposable
         Assert.NotEmpty(scenario["all"]!["civs"]!.AsArray());
         Assert.True((int)scenario["host"]!["commands"]! > 0);
         Assert.NotNull(scenario["host"]!["phases"]!["Host.BuildDelta"]);
+
+        // T351: every phase row carries the GC collections, and the drill-down and spike sections are present.
+        var topPhase = scenario["all"]!["phases"]!.AsArray()[0]!;
+        Assert.NotNull(topPhase["gc0"]);
+        Assert.NotNull(topPhase["gc0PerTurn"]);
+        var callProfile = scenario["callProfile"]!["lastQuarter"]!.AsArray().Select(it => (string)it!["phase"]!).ToList();
+        Assert.Contains("Path.MovementToTiles", callProfile);
+        Assert.Contains("Unit.TerrainDamage", callProfile);
+        Assert.NotNull(scenario["callProfile"]!["all"]!.AsArray()[0]!["gc2PerTurn"]);
+        Assert.Equal(5, scenario["spikeTurns"]!.AsArray().Count);
+        var spike = scenario["spikeTurns"]!.AsArray()[0]!;
+        Assert.NotNull(spike["wallMs"]);
+        Assert.NotNull(spike["gen0"]);
+        Assert.NotEmpty(spike["phases"]!.AsArray());
+        var turns = scenario["turns"]!.AsArray();
+        Assert.NotNull(turns[0]!["gen0"]);
+        Assert.NotNull(turns[0]!["gen1"]);
+        Assert.NotNull(turns[0]!["gen2"]);
     }
 
     [Fact]

@@ -95,6 +95,20 @@ public class UnitMovement
         Dictionary<int, float>? movementCostCache = null,
         bool includeOtherEscortUnit = true)
     {
+        using (TurnProbe.Measure("Path.MovementToTiles"))
+            return GetMovementToTilesAtPositionCore(position, unitMovement, considerZoneOfControl, tilesToIgnoreBitset,
+                canPassThroughCache, movementCostCache, includeOtherEscortUnit);
+    }
+
+    private PathsToTilesWithinTurn GetMovementToTilesAtPositionCore(
+        HexCoord position,
+        float unitMovement,
+        bool considerZoneOfControl,
+        BitArray? tilesToIgnoreBitset,
+        List<bool?>? canPassThroughCache,
+        Dictionary<int, float>? movementCostCache,
+        bool includeOtherEscortUnit)
+    {
         canPassThroughCache ??= [];
         movementCostCache ??= [];
         if (PathingMaps != null)
@@ -179,6 +193,12 @@ public class UnitMovement
     /// Returns an empty list if there's no way to get to the destination.
     /// </summary>
     public List<Tile> GetShortestPath(Tile destination, bool avoidDamagingTerrain = false)
+    {
+        using (TurnProbe.Measure("Path.ShortestPath"))
+            return GetShortestPathCore(destination, avoidDamagingTerrain);
+    }
+
+    private List<Tile> GetShortestPathCore(Tile destination, bool avoidDamagingTerrain)
     {
         if (Unit.Cache.CannotMove) return [];
         if (PathingMaps != null)
@@ -359,9 +379,12 @@ public class UnitMovement
     /// <returns>The tile that we reached this turn</returns>
     public virtual Tile HeadTowards(Tile destination)
     {
-        var destinationTileThisTurn = GetTileToMoveToThisTurn(destination);
-        MoveToTile(destinationTileThisTurn);
-        return Unit.CurrentTile;
+        using (TurnProbe.Measure("Path.HeadTowards"))
+        {
+            var destinationTileThisTurn = GetTileToMoveToThisTurn(destination);
+            MoveToTile(destinationTileThisTurn);
+            return Unit.CurrentTile;
+        }
     }
 
     /// <summary>
@@ -369,7 +392,11 @@ public class UnitMovement
     /// Also note that REACHABLE tiles are not necessarily tiles that the unit CAN ENTER
     /// </summary>
     /// <seealso cref="CanReachInCurrentTurn"/>
-    public virtual bool CanReach(Tile destination) => CanReachCommon(destination, it => GetShortestPath(it).Count != 0);
+    public virtual bool CanReach(Tile destination)
+    {
+        using (TurnProbe.Measure("Path.CanReach"))
+            return CanReachCommon(destination, it => GetShortestPath(it).Count != 0);
+    }
 
     /// <summary>Cached and thus not as performance-heavy as <see cref="CanReach"/></summary>
     public bool CanReachInCurrentTurn(Tile destination) => CanReachCommon(destination, it => GetDistanceToTiles().ContainsKey(it));
@@ -539,6 +566,12 @@ public class UnitMovement
     }
 
     public virtual void MoveToTile(Tile destination, bool considerZoneOfControl = true)
+    {
+        using (TurnProbe.Measure("Path.MoveToTile"))
+            MoveToTileCore(destination, considerZoneOfControl);
+    }
+
+    private void MoveToTileCore(Tile destination, bool considerZoneOfControl)
     {
         if (destination == Unit.GetTile() || Unit.IsDestroyed) return; // already here (or dead)!
         // Reset closestEnemy chache
@@ -971,6 +1004,16 @@ public class UnitMovement
         List<bool?>? passThroughCacheNew = null,
         Dictionary<int, float>? movementCostCache = null,
         bool includeOtherEscortUnit = true)
+    {
+        using (TurnProbe.Measure("Path.DistanceToTiles"))
+            return GetDistanceToTilesCore(considerZoneOfControl, passThroughCacheNew, movementCostCache, includeOtherEscortUnit);
+    }
+
+    private PathsToTilesWithinTurn GetDistanceToTilesCore(
+        bool considerZoneOfControl,
+        List<bool?>? passThroughCacheNew,
+        Dictionary<int, float>? movementCostCache,
+        bool includeOtherEscortUnit)
     {
         if (PathingMaps != null)
             return SelectPathingMap(considerZoneOfControl, includeOtherEscortUnit).GetMovementToTilesAtPosition();

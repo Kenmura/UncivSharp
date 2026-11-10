@@ -20,6 +20,12 @@ public static class ThreatManager
     /// </summary>
     public static int GetDistanceToClosestEnemyUnit(CivView civ, AutomationCache cache, TileView tile, int maxDist, bool takeLargerValues = true)
     {
+        using (TurnProbe.Measure("Threat.DistanceToClosestEnemy"))
+            return GetDistanceToClosestEnemyUnitCore(civ, cache, tile, maxDist, takeLargerValues);
+    }
+
+    private static int GetDistanceToClosestEnemyUnitCore(CivView civ, AutomationCache cache, TileView tile, int maxDist, bool takeLargerValues)
+    {
         cache.DistanceToClosestEnemyTiles.TryGetValue(tile, out var tileData);
         // Needs to be a high value, but not the max value so we can still add to it. Example: nextTurnAutomation sorting
         var notFoundDistance = takeLargerValues ? 500000 : maxDist;
@@ -138,6 +144,12 @@ public static class ThreatManager
             .ToList();
 
     public static LinkedHashSet<TileView> GetDangerousTiles(AutomationCache cache, MapUnitView unitView, int distance = 3)
+    {
+        using (TurnProbe.Measure("Threat.DangerousTiles"))
+            return GetDangerousTilesCore(cache, unitView, distance);
+    }
+
+    private static LinkedHashSet<TileView> GetDangerousTilesCore(AutomationCache cache, MapUnitView unitView, int distance)
     {
         var civ = unitView.Civ();
         var tilesWithEnemyUnits = GetTilesWithEnemyUnitsInDistance(civ, cache, unitView.GetTile(), distance);

@@ -11,6 +11,8 @@
   - [Checkpoint hash, small and medium](#checkpoint-hash-small-and-medium)
   - [Host-side view building (medium, turns 198-200, 3 recipients, 54 commands)](#host-side-view-building-medium-turns-198-200-3-recipients-54-commands)
 - [Ranked hotspots](#ranked-hotspots)
+- [T351: call-level breakdown of AI unit moves](#t351-call-level-breakdown-of-ai-unit-moves)
+  - [Follow-ups filed from this profile](#follow-ups-filed-from-this-profile)
 - [Result of T262](#result-of-t262)
 - [Targets recorded for T262 and T263](#targets-recorded-for-t262-and-t263)
 - [Parallelism](#parallelism)
@@ -55,8 +57,9 @@ a state-hash checkpoint after every human turn start, nothing else scripted) and
   is taken out of the engine numbers (it is booked on a separate recorder and subtracted from the clock), so the engine columns are those of a game without recipients.
 - **Proof of unchanged state.** `--no-probe` plays without the probe and without host measurement. `BenchTests` (Unciv.App.Tests, every build) compares the per-turn
   state hashes of a probed run with host measurement to a run without the probe: they must be equal. The JSON lists the hash of every turn (the golden list T262 freezes).
-- **Tools not used.** `dotnet-trace`, `dotnet-counters` and a sampling profiler are not installed in the `dotnet-dev` container; only the Stopwatch instrumentation points
-  above were used. They would add call-level detail below the listed phases (see follow-ups).
+- **Tools.** `dotnet-trace` is installed in `dotnet-dev` as a global tool at `~/.dotnet/tools/dotnet-trace` (not on `PATH`): the CPU-sampling profile is
+  `--profile dotnet-sampled-thread-time --format Speedscope` (~100 Hz stacks; `cpu-sampling` belongs to `collect-linux`). It supplied the call-level detail
+  below the Stopwatch probes for T351 (see [T351](#t351-call-level-breakdown-of-ai-unit-moves)); `dotnet-counters` is still unused.
 
 ## Baseline
 
@@ -153,6 +156,107 @@ Ranked by their share of a late medium turn (last quarter, engine time about 650
    host game; an incremental diff builder (T178's follow-up) is the fix.
 
 Small: the same order (refresh 52%, AI 20%, start 18%), turn 103 ms at turn 50.
+
+## T351: call-level breakdown of AI unit moves
+
+The follow-up "call-level profiling inside `AI.AutomateUnitMoves` and the spike turns" was done with both tools: the bench's phase probe grew call-level points
+and a GC column per phase, and `dotnet-trace` supplied a sampling profile (it *is* installed in `dotnet-dev` as a global tool; the 2026-10 note said otherwise
+because it is not on `PATH`). Commands (Release, from `csharp/`):
+
+```
+dotnet Unciv.Cli/bin/Release/net10.0/Unciv.Cli.dll bench --scenario medium --turns 200 --json /tmp/out.json
+~/.dotnet/tools/dotnet-trace collect --profile dotnet-sampled-thread-time --format Speedscope -o /tmp/medium-trace -- \
+    dotnet Unciv.Cli/bin/Release/net10.0/Unciv.Cli.dll bench --scenario medium --turns 200 --no-probe
+```
+
+(`--profile cpu-sampling` is only valid for `dotnet-trace collect-linux`; `dotnet-sampled-thread-time` is the ~100 Hz .NET stack sampler for `collect`.)
+The probe points are `Unit.*` (one per branch of `AutomateUnitMoves`, now split into `TryAutomateSpecialUnit`), `Path.MovementToTiles`, `Path.DistanceToTiles`,
+`Path.ShortestPath`, `Path.CanReach`, `Path.HeadTowards`, `Path.MoveToTile`, `Threat.DangerousTiles`, `Threat.DistanceToClosestEnemy` and
+`AI.UnitPriorityOrder`. The writer of the probes is the bench, so **the engine is still clock-free**; without an observer a scope costs one thread-static read.
+Every report row gained `gc0`/`gc1`/`gc2` (process-wide collections that started inside the phase; nested phases count the same collection, so read it next to
+the parent's numbers) and the per-turn list gained `gen0`/`gen1`/`gen2`. Two new report sections: `callProfile` (every `Unit.*`/`Path.*`/`Threat.*` point, whole
+run and last quarter) and `spikeTurns` (the five slowest turns with their top phases and GC counts).
+
+Run: medium, 200 turns, Release on the shared 20-core machine. Three runs of the same tree gave 65.2 s / 477.8 ms, 60.6 s / 449.2 ms and 44.5 s / 314.1 ms late median (load varied and was not recorded), so compare **shares**, not absolute times: in all three `AI.AutomateUnitMoves` took 25-26% of `Command.Apply`, `Unit.Civilian` 40% of it and `Path.*` 38%. The tables below use the middle run (449.2 ms late median; human dead at turn 167 as before, 30 cities, 204 units at turn 200).
+
+| Phase (last quarter, per turn) | inclusive ms | self ms | calls | alloc MB | gen0/gen1/gen2 |
+|---|---|---|---|---|---|
+| Command.Apply | 418.9 | 0.7 | 20 | 322.0 | 21.8 / 8.4 / 0.20 |
+| RefreshTransientCaches | 211.4 | 33.7 | 19 | 153.1 | 10.3 / 4.2 / 0.10 |
+| Refresh.UpdateCivilizationState | 177.7 | 0.4 | 19 | 135.8 | 9.2 / 3.8 / 0.10 |
+| TurnManager.AutomateTurn | 142.8 | 15.6 | 16 | 125.8 | 8.5 / 3.2 / 0.10 |
+| AI.AutomateUnits | 119.9 | 2.3 | 15 | 112.4 | 7.2 / 2.7 / 0.10 |
+| **AI.AutomateUnitMoves** | **107.1** | 0.4 | **223** | **104.3** | **6.6 / 2.6 / 0.10** |
+| AI.Homeland (queue that calls the moves) | 48.7 | 0.6 | 15 | 46.1 | 3.0 / 1.0 / 0.00 |
+| Path.MovementToTiles | 41.2 | 41.2 | 6641 | 49.6 | 3.5 / 1.4 / 0.08 |
+| Path.ShortestPath | 31.3 | 9.0 | 369 | 35.5 | 2.3 / 1.0 / 0.02 |
+| Unit.Civilian | 42.8 | 30.8 | 73 | 42.2 | 2.7 / 0.9 / 0.02 |
+| Path.CanReach | 21.6 | 0.1 | 316 | 24.7 | 1.5 / 0.6 / 0.02 |
+| Path.DistanceToTiles | 18.5 | 0.3 | 1150 | 23.8 | 1.7 / 0.5 / 0.04 |
+| Unit.EnemyCity | 18.1 | 1.7 | 117 | 18.0 | 1.1 / 0.6 / 0.00 |
+| Path.HeadTowards | 14.1 | 0.1 | 112 | 12.9 | 1.1 / 0.3 / 0.02 |
+| Path.MoveToTile | 12.4 | 10.4 | 181 | 9.3 | 0.7 / 0.2 / 0.00 |
+| Unit.Explore | 9.9 | 2.6 | 62 | 11.6 | 0.7 / 0.3 / 0.00 |
+| Unit.CloseEnemy | 8.4 | 2.0 | 70 | 8.5 | 0.5 / 0.2 / 0.02 |
+| Unit.Attack | 7.7 | 5.4 | 122 | 6.5 | 0.4 / 0.1 / 0.02 |
+| Unit.Garrison | 5.5 | 0.3 | 98 | 5.6 | 0.5 / 0.1 / 0.00 |
+| Unit.AccompanySettler | 4.1 | 0.6 | 151 | 4.5 | 0.2 / 0.1 / 0.00 |
+| Unit.Prepare | 3.2 | 1.0 | 70 | 2.9 | 0.2 / 0.1 / 0.02 |
+| Threat.DistanceToClosestEnemy | 3.0 | 3.0 | 628 | 2.9 | 0.1 / 0.0 / 0.00 |
+| all other Unit.* / Threat.* / AI.UnitPriorityOrder | < 7 | | | | |
+
+`Unit.Civilian` self time is `UnitAutomation.GetDangerousTiles` (three explored-distance-3 scans plus a `ToHashSet`, computed per civilian unit) before
+`CivilianUnitAutomation` runs; `Unit.Attack` self time is the per-tile attack/damage evaluation. The full rows, including the sub-millisecond tail, are in the
+JSON's `callProfile`.
+
+The sampler tells the same story by call path (52,764 CPU samples, 85.1 s CPU in a 87.5 s run; shares of the `AutomateUnitMoves` subtree, 16.1 s = 18.4% of the
+run):
+
+| Frame (inclusive, sample share) | share of AutomateUnitMoves |
+|---|---|
+| `CivilianUnitAutomation.AutomateCivilianUnit` | **50.2%** (8.08 s) |
+| - `WorkerAutomation.AutomateWorkerAction` | 31.8% (5.13 s) |
+| - - `WorkerAutomation.FindTileToWork` → `GetImprovementPriority` → `ChooseImprovement` | 25% |
+| `UnitMovement` subtree (pathfinding) | **48.8%** (7.86 s) |
+| - `GetMovementToTilesAtPositionCore` | 27.4% (4.42 s) |
+| - `GetShortestPathCore` (inside `CanReach`/`HeadTowards`) | 22.3% (3.59 s) |
+| - `CanReach` / `HeadTowards` / `MoveToTile` | 16.5% / 13.1% / 7.7% |
+
+Self time inside the same subtree (deepest engine frame): `GetMovementToTilesAtPositionCore` 17.9%, `ImprovementFunctions.GetImprovementBuildingProblems`
+11.4% (worker `ChooseImprovement`), `GetShortestPathCore` 5.6%, `TileMap.GetViewableTiles`'s neighbour lambda 3.8% (`TargetHelper.GetAttackableEnemies`),
+`TryAdvanceTowardsCloseEnemy` 3.7%, `TileStatFunctions.GetTileStatsBreakdown` 3.7% (worker `GetImprovementRanking`), `KotlinLazy<bool>.get_Value` 2.6%,
+`Tile.Neighbors` 2.5%, `ThreatManager.GetDistanceToClosestEnemyUnitCore` 2.3%, `TryGarrisoningLandUnit` 2.2%.
+
+**Ranked costs inside `AI.AutomateUnitMoves` (107 ms per late turn):**
+
+1. **BFS pathfinding, about 41 ms per turn (38%) and half its allocation.** `Path.MovementToTiles` is 6641 calls per turn (5.8 per `Path.DistanceToTiles`,
+   because `GetShortestPath` re-expands `GetMovementToTilesAtPosition` once per frontier tile) and allocates 49.6 MB per turn in `PathsToTilesWithinTurn`
+   dictionaries and `ParentTileAndTotalMovement` objects. `GetMovementToTilesAtPositionCore` is the top self frame in the sampler (17.9% of the unit-move
+   subtree). `GetShortestPath` (31 ms) and its `CanReach` callers (22 ms) are the same BFS under a different name.
+2. **Civilian automation, mostly worker improvement choice: 42.8 ms per turn (40%), 50% in the sampler.** For each worker and each candidate tile,
+   `ChooseImprovement`/`GetImprovementRanking` evaluates every improvement's yield (`TileStatFunctions.GetTileStatsBreakdown`, 1.41 s of the subtree) and
+   `ImprovementFunctions.GetImprovementBuildingProblems` (1.84 s, the single largest non-pathfinding self frame) walks the city's buildings and tech
+   prerequisites again. None of it is memoised per turn.
+3. **Target and garrison evaluation: about 40 ms per turn combined** (`Unit.EnemyCity` 18.1, `Unit.CloseEnemy` 8.4, `Unit.Attack` 7.7, `Unit.Garrison` 5.5).
+   The sampler shows 0.61 s in `TileMap.GetViewableTiles`'s neighbour lambda reached from `TargetHelper.GetAttackableEnemies`, 0.60 s self in
+   `TryAdvanceTowardsCloseEnemy` (its 3-turn movement BFS) and 0.36 s in `TryGarrisoningLandUnit` (every city tested with `CanMoveTo`/`CanReach`).
+4. **Allocation and GC: 104.8 MB per turn, 6.6 gen-0, 2.6 gen-1 and 0.1 gen-2 collections per turn** (against Command.Apply's 322 MB, 21.8/8.4/0.2).
+   Pathfinding contributes half the allocation; `CannotPassThroughReason` also allocates a fresh `KotlinLazy<bool>` on every call (0.42 s of
+   `KotlinLazy.get_Value` in the sampler).
+5. **The spike turns are not unit-move spikes.** Slowest medium turns: 197 (704 ms), 198 (697), 1 (668, warm-up), 196 (587), 200 (558). In all of them
+   `RefreshTransientCaches` (286-361 ms) and `UpdateCivilizationState` (235-310 ms) dominate; `AI.AutomateUnitMoves` only rises with the unit count
+   (112-208 ms). What makes a spike a spike is GC: 23-36 gen-0 and 11-16 gen-1 collections (3-5 gen-2 at turns 198-200) and 78-145 ms of pause
+   in those turns, so the follow-up's "spike coincides with a gen-2 GC" holds for the very last turns but not for turn 197. Run totals: 2479/590/36
+   collections and 6.5 s of GC pause in 59.0 s of turn time (11%). The lighter third run had no late spike above 400 ms (slowest 434 ms, turn 1), so which
+   turns are called spikes is load-dependent; the composition of a slow turn (refresh first, unit moves scaling with the unit count, GC pause as the
+   amplifier) was the same in every run.
+
+### Follow-ups filed from this profile
+
+- **T406** worker improvement evaluation: cache `GetImprovementBuildingProblems` and `GetImprovementRanking` per turn (top non-pathfinding cost).
+- **T407** `CannotPassThroughReason` allocates a `KotlinLazy<bool>` per call: hoist or cache it per unit/tech state.
+- **T408** reduce BFS allocation in `GetShortestPath`: reuse the distance-to-tiles buffer across frontier expansions.
+- **T409** cache `UnitAutomation.GetDangerousTiles` in the `AutomationCache` (30.8 ms per turn of `Unit.Civilian` self time).
 
 ## Result of T262
 
@@ -288,7 +392,8 @@ Honest reading: the machine was shared and loaded (load average 7 to 54 on 20 lo
 
 ## Follow-ups
 
-- Call-level profiling inside `AI.AutomateUnitMoves` and the spike turns (install `dotnet-trace`; or add `Measure` points in pathfinding), and a GC-count column per phase.
+- ~~Call-level profiling inside `AI.AutomateUnitMoves` and the spike turns (install `dotnet-trace`; or add `Measure` points in pathfinding), and a GC-count column per phase.~~
+  Done in T351: see [T351](#t351-call-level-breakdown-of-ai-unit-moves); the worthwhile fixes are T406-T409.
 - Incremental host view diff (T178 note), once the host cost per recipient is chosen as a target.
 - Per-unit `GetViewableTiles` cache keyed on position, range and a terrain revision counter (still the top allocator after T262), and a struct `ViewableTile`.
 - Remaining refresh cost: civ-level dirty tracking needs a proof that every input to `UpdateCivilizationState` is covered by a revision counter.

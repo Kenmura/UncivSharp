@@ -24,7 +24,11 @@ public static partial class NextTurnAutomation
         // capturedBy changes owner on the same object, and an earlier action can do that to a
         // later one, so ownership and destruction are checked at each dispatch, not before the loop.
         var unitsAtStart = civView.GetUnits();
-        List<MapUnitView> UnitsInPriorityOrder() => unitsAtStart.OrderBy(unit => GetUnitPriority(unit, isAtWar, cache)).ToList();
+        List<MapUnitView> UnitsInPriorityOrder()
+        {
+            using (TurnProbe.Measure("AI.UnitPriorityOrder"))
+                return unitsAtStart.OrderBy(unit => GetUnitPriority(unit, isAtWar, cache)).ToList();
+        }
 
         var citiesRequiringManualPlacement = civInfo.GetKnownCivs().Where(it => it.IsAtWarWith(civInfo))
             .SelectMany(it => it.Cities)

@@ -20,6 +20,7 @@ namespace Unciv.Cli;
 /// BNW soak (scripted human, AI civs through <see cref="RunAiTurn"/>, a state-hash checkpoint after every human turn start) and reports where the wall time of
 /// each turn goes. The engine only announces named phases through <see cref="TurnProbe"/>; every clock reading is made here, so the engine stays clock-free
 /// and the state hashes are identical with and without the instrumentation (<c>--no-probe</c> proves it per run, BenchTests per build).
+/// T351 adds the unit-automation/pathfinding drill-down (its own <c>callProfile</c> report section), a GC-collection column per phase and the slowest turns.
 /// </summary>
 public static class BenchRunner
 {
@@ -27,8 +28,10 @@ public static class BenchRunner
         bench [--scenario small|medium|all] [--turns N] [--repeat N] [--json FILE|-] [--ruleset NAME] [--host-turns K] [--recipients R] [--host-parallel N] [--no-probe] [--golden FILE]
               Profile end-turn time. small: 4 civs + 2 city states, Small map, 50 turns. medium: 8 civs + 8 city states, Medium map, 200 turns.
               Per turn: wall time of the whole turn (the human's turn, every AI civ, the checkpoint hash), split by phase; at the end the top 20 phases by
-              inclusive time, the time per civ and per command type, and (medium, the last K turns, default 3) the host-side ViewDelta cost per recipient
-              (R recipients, default 3) measured around every command. --json writes the report ('-' = standard output). --turns replaces the turn count.
+              inclusive time, the time per civ and per command type, the five slowest turns with their phases, the unit-automation/pathfinding call profile
+              (T351), and (medium, the last K turns, default 3) the host-side ViewDelta cost per recipient
+              (R recipients, default 3) measured around every command. Every phase row carries the gen0/gen1/gen2 collections that started inside it.
+              --json writes the report ('-' = standard output). --turns replaces the turn count.
               --repeat N (T350, 1-20) plays every scenario N times and reports the median of the runs (the median run's detail, plus the min/max/spread
               of the late median and the total time); the state hashes must be equal across runs. --golden compares the median run.
               --host-parallel N (T297, 2-64) builds the recipients' views on up to N tasks the way GameHost does with HostLimits.ParallelViewBuilding: capture and
@@ -168,6 +171,8 @@ public static class BenchRunner
         public int Cities { get; init; }
         public int Units { get; init; }
         public double GcPauseMs { get; init; }
+        public int Gen0Collections { get; init; }
+        public int Gen1Collections { get; init; }
         public int Gen2Collections { get; init; }
         public double AllocMb { get; init; }
         public Dictionary<string, double> InclusiveMs { get; init; } = [];
@@ -253,7 +258,7 @@ public static class BenchRunner
     private static double TicksToMs(long ticks) => ticks * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
 #pragma warning restore RS0030
 
-    /// <summary>Totals of one phase name: how often it ran, the time it took with its children and without.</summary>
+    /// <summary>T351: totals of one phase name: how often it ran, the time it took with its children and without, and the GCs that ran inside it.</summary>
     public sealed class Agg
     {
         public long Count;
@@ -261,19 +266,27 @@ public static class BenchRunner
         public long Exclusive;
         public long AllocBytes;
 
-        public void Add(long inclusive, long exclusive, long allocBytes = 0)
+        /// <summary>Process-wide collections that started inside the phase (nested phases all count the same collection).</summary>
+        public long Gc0;
+        public long Gc1;
+        public long Gc2;
+
+        public void Add(long inclusive, long exclusive, long allocBytes = 0, long gc0 = 0, long gc1 = 0, long gc2 = 0)
         {
             Count++;
             Inclusive += inclusive;
             Exclusive += exclusive;
             AllocBytes += allocBytes;
+            Gc0 += gc0;
+            Gc1 += gc1;
+            Gc2 += gc2;
         }
     }
 
     /// <summary>Nested phase timing: one stack, totals per phase and per (phase, subject), and the same for the turn being played.</summary>
     public sealed class Recorder
     {
-        private readonly record struct Frame(string Name, string? Subject, long Start, long Alloc);
+        private readonly record struct Frame(string Name, string? Subject, long Start, long Alloc, int Gc0, int Gc1, int Gc2);
 
         private readonly List<Frame> stack = [];
         private readonly List<long> children = [];
@@ -296,7 +309,8 @@ public static class BenchRunner
 
         public void Enter(string name, string? subject)
         {
-            stack.Add(new Frame(name, subject, Now(), GC.GetAllocatedBytesForCurrentThread()));
+            stack.Add(new Frame(name, subject, Now(), GC.GetAllocatedBytesForCurrentThread(),
+                GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2)));
             children.Add(0);
         }
 
@@ -307,21 +321,24 @@ public static class BenchRunner
             var inclusive = Now() - top.Start;
             var exclusive = inclusive - children[^1];
             var alloc = GC.GetAllocatedBytesForCurrentThread() - top.Alloc;
+            var gc0 = GC.CollectionCount(0) - top.Gc0;
+            var gc1 = GC.CollectionCount(1) - top.Gc1;
+            var gc2 = GC.CollectionCount(2) - top.Gc2;
             stack.RemoveAt(stack.Count - 1);
             children.RemoveAt(children.Count - 1);
             if (children.Count > 0) children[^1] += inclusive;
-            Bump(Total, name, inclusive, exclusive, alloc);
-            Bump(Turn, name, inclusive, exclusive, alloc);
+            Bump(Total, name, inclusive, exclusive, alloc, gc0, gc1, gc2);
+            Bump(Turn, name, inclusive, exclusive, alloc, gc0, gc1, gc2);
             if (subject == null) return;
             var key = name + "|" + subject;
-            Bump(BySubject, key, inclusive, exclusive, alloc);
-            Bump(TurnSubject, key, inclusive, exclusive, alloc);
+            Bump(BySubject, key, inclusive, exclusive, alloc, gc0, gc1, gc2);
+            Bump(TurnSubject, key, inclusive, exclusive, alloc, gc0, gc1, gc2);
         }
 
-        private static void Bump(Dictionary<string, Agg> map, string key, long inclusive, long exclusive, long alloc)
+        private static void Bump(Dictionary<string, Agg> map, string key, long inclusive, long exclusive, long alloc, long gc0, long gc1, long gc2)
         {
             if (!map.TryGetValue(key, out var agg)) map[key] = agg = new Agg();
-            agg.Add(inclusive, exclusive, alloc);
+            agg.Add(inclusive, exclusive, alloc, gc0, gc1, gc2);
         }
 
         /// <summary>Closes the books of one turn: its per-phase totals go to the history.</summary>
@@ -435,6 +452,8 @@ public static class BenchRunner
                 if (host != null && played == hostFrom) host.Start();
                 var gcPause = GC.GetTotalPauseDuration();
                 var allocated = GC.GetTotalAllocatedBytes(false);
+                var gen0 = GC.CollectionCount(0);
+                var gen1 = GC.CollectionCount(1);
                 var gen2 = GC.CollectionCount(2);
                 var start = engine.Now();
                 var done = PlayRound(session, human, writer);
@@ -451,6 +470,8 @@ public static class BenchRunner
                     WallMs = TicksToMs(wall),
                     Hash = hash,
                     GcPauseMs = (GC.GetTotalPauseDuration() - gcPause).TotalMilliseconds,
+                    Gen0Collections = GC.CollectionCount(0) - gen0,
+                    Gen1Collections = GC.CollectionCount(1) - gen1,
                     Gen2Collections = GC.CollectionCount(2) - gen2,
                     AllocMb = (GC.GetTotalAllocatedBytes(false) - allocated) / (1024.0 * 1024.0),
                     Cities = game.Civilizations.Sum(it => it.Cities.Count),
@@ -653,6 +674,9 @@ public static class BenchRunner
                 total.Inclusive += agg.Inclusive;
                 total.Exclusive += agg.Exclusive;
                 total.AllocBytes += agg.AllocBytes;
+                total.Gc0 += agg.Gc0;
+                total.Gc1 += agg.Gc1;
+                total.Gc2 += agg.Gc2;
             }
         return sum;
     }
@@ -667,11 +691,51 @@ public static class BenchRunner
         ["exclusiveMsPerTurn"] = turns == 0 ? 0 : R(TicksToMs(agg.Exclusive) / turns, 3),
         ["meanMsPerCall"] = agg.Count == 0 ? 0 : R(TicksToMs(agg.Inclusive) / agg.Count, 4),
         ["allocMbPerTurn"] = turns == 0 ? 0 : R(agg.AllocBytes / (1024.0 * 1024.0) / turns, 2),
+        ["gc0"] = agg.Gc0,
+        ["gc1"] = agg.Gc1,
+        ["gc2"] = agg.Gc2,
+        ["gc0PerTurn"] = turns == 0 ? 0 : R((double)agg.Gc0 / turns, 2),
+        ["gc1PerTurn"] = turns == 0 ? 0 : R((double)agg.Gc1 / turns, 2),
+        ["gc2PerTurn"] = turns == 0 ? 0 : R((double)agg.Gc2 / turns, 2),
     };
 
     private static JsonArray TopPhases(Dictionary<string, Agg> sum, int turns, int top) =>
         new(sum.OrderByDescending(it => it.Value.Inclusive).ThenBy(it => it.Key, StringComparer.Ordinal).Take(top)
             .Select(it => (JsonNode)AggJson(it.Key, it.Value, turns)).ToArray());
+
+    /// <summary>T351: every call-level phase of the unit-automation drill-down, so the tail below the window's top 20 stays visible.</summary>
+    private static bool IsCallProfilePhase(string name) =>
+        name.StartsWith("Unit.", StringComparison.Ordinal)
+        || name.StartsWith("Path.", StringComparison.Ordinal)
+        || name.StartsWith("Threat.", StringComparison.Ordinal)
+        || name == "AI.UnitPriorityOrder";
+
+    private static JsonArray CallProfile(Dictionary<string, Agg> sum, int turns) =>
+        new(sum.Where(it => IsCallProfilePhase(it.Key))
+            .OrderByDescending(it => it.Value.Inclusive).ThenBy(it => it.Key, StringComparer.Ordinal)
+            .Select(it => (JsonNode)AggJson(it.Key, it.Value, turns)).ToArray());
+
+    /// <summary>T351: the slowest turns of the run with their per-phase breakdown, so a spike can be read without the raw per-turn lists.</summary>
+    private static JsonArray SpikeTurns(ScenarioResult result, int top)
+    {
+        if (result.Engine.TurnHistory.Count != result.Turns.Count || result.Turns.Count == 0) return [];
+        return new JsonArray(result.Turns.Select((turn, index) => (Turn: turn, Index: index))
+            .OrderByDescending(it => it.Turn.WallMs)
+            .Take(top)
+            .Select(it => (JsonNode)new JsonObject
+            {
+                ["turn"] = it.Turn.Turn,
+                ["wallMs"] = R(it.Turn.WallMs, 2),
+                ["gcPauseMs"] = R(it.Turn.GcPauseMs, 2),
+                ["gen0"] = it.Turn.Gen0Collections,
+                ["gen1"] = it.Turn.Gen1Collections,
+                ["gen2"] = it.Turn.Gen2Collections,
+                ["allocMb"] = R(it.Turn.AllocMb, 1),
+                ["phases"] = new JsonArray(result.Engine.TurnHistory[it.Index]
+                    .OrderByDescending(p => p.Value.Inclusive).ThenBy(p => p.Key, StringComparer.Ordinal).Take(6)
+                    .Select(p => (JsonNode)AggJson(p.Key, p.Value, 1)).ToArray()),
+            }).ToArray());
+    }
 
     private static JsonNode Window(ScenarioResult result, int from, int count)
     {
@@ -756,16 +820,25 @@ public static class BenchRunner
                 ["cities"] = it.Cities,
                 ["units"] = it.Units,
                 ["gcPauseMs"] = R(it.GcPauseMs, 2),
+                ["gen0"] = it.Gen0Collections,
+                ["gen1"] = it.Gen1Collections,
                 ["gen2"] = it.Gen2Collections,
                 ["allocMb"] = R(it.AllocMb, 1),
                 ["inclusiveMs"] = new JsonObject(it.InclusiveMs.Select(p => KeyValuePair.Create(p.Key, (JsonNode?)R(p.Value, 2)))),
             }).ToArray()),
+            ["spikeTurns"] = SpikeTurns(result, 5),
         };
         if (result.Engine.TurnHistory.Count == count && count > 0)
         {
             json["all"] = Window(result, 0, count);
             json["firstQuarter"] = Window(result, 0, quarter);
             json["lastQuarter"] = Window(result, count - quarter, quarter);
+            json["callProfile"] = new JsonObject
+            {
+                ["note"] = "T351: the unit-automation and pathfinding probe points, inclusive and exclusive ms per turn, with the GC collections that started inside each phase",
+                ["all"] = CallProfile(Sum(result.Engine.TurnHistory), count),
+                ["lastQuarter"] = CallProfile(Sum(result.Engine.TurnHistory.Skip(count - quarter)), quarter),
+            };
             json["commands"] = new JsonArray(result.Engine.BySubject.Where(it => it.Key.StartsWith("Command.Apply|", StringComparison.Ordinal))
                 .OrderByDescending(it => it.Value.Inclusive)
                 .Select(it => (JsonNode)AggJson(it.Key["Command.Apply|".Length..], it.Value, count)).ToArray());
@@ -801,9 +874,33 @@ public static class BenchRunner
         if (result.Engine.TurnHistory.Count != count || count == 0) return;
         var last = Sum(result.Engine.TurnHistory.Skip(count - Math.Max(1, count / 4)));
         var turns = Math.Max(1, count / 4);
-        output.WriteLine("  last quarter, inclusive ms per turn (top 12):");
+        output.WriteLine("  last quarter, inclusive ms per turn (top 12; gc = gen0/gen1/gen2 collections started inside):");
         foreach (var (name, agg) in last.OrderByDescending(it => it.Value.Inclusive).ThenBy(it => it.Key, StringComparer.Ordinal).Take(12))
-            output.WriteLine(string.Create(CultureInfo.InvariantCulture, $"    {name,-36} {TicksToMs(agg.Inclusive) / turns,9:F2} (self {TicksToMs(agg.Exclusive) / turns:F2}, alloc {agg.AllocBytes / (1024.0 * 1024.0) / turns:F1} MB)"));
+            output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"    {name,-36} {TicksToMs(agg.Inclusive) / turns,9:F2} (self {TicksToMs(agg.Exclusive) / turns:F2}, alloc {agg.AllocBytes / (1024.0 * 1024.0) / turns:F1} MB, gc {agg.Gc0 / (double)turns:F1}/{agg.Gc1 / (double)turns:F1}/{agg.Gc2 / (double)turns:F1})"));
+        WriteSpikeTurns(result, output);
+        output.WriteLine("  unit-automation call profile, inclusive ms per turn, last quarter (top 10 of the drill-down):");
+        foreach (var (name, agg) in last.Where(it => IsCallProfilePhase(it.Key))
+                     .OrderByDescending(it => it.Value.Inclusive).ThenBy(it => it.Key, StringComparer.Ordinal).Take(10))
+            output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"    {name,-36} {TicksToMs(agg.Inclusive) / turns,9:F2} (self {TicksToMs(agg.Exclusive) / turns:F2}, calls {agg.Count / turns:F1}/turn, gc {agg.Gc0 / (double)turns:F1}/{agg.Gc1 / (double)turns:F1}/{agg.Gc2 / (double)turns:F1})"));
+    }
+
+    /// <summary>T351: the five slowest turns and what they spent their time on (the spike turns the follow-up names).</summary>
+    public static void WriteSpikeTurns(ScenarioResult result, TextWriter output)
+    {
+        var count = result.Turns.Count;
+        if (result.Engine.TurnHistory.Count != count || count == 0) return;
+        output.WriteLine("  spike turns (slowest 5), wall and top phases in ms:");
+        foreach (var (turn, index) in result.Turns.Select((turn, index) => (turn, index)).OrderByDescending(it => it.turn.WallMs).Take(5))
+        {
+            output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                $"    turn {turn.Turn,3}: {turn.WallMs,8:F1} ms, cities {turn.Cities}, units {turn.Units}, gc pause {turn.GcPauseMs:F1} ms, gc {turn.Gen0Collections}/{turn.Gen1Collections}/{turn.Gen2Collections}, alloc {turn.AllocMb:F1} MB"));
+            foreach (var (name, agg) in result.Engine.TurnHistory[index]
+                         .OrderByDescending(it => it.Value.Inclusive).ThenBy(it => it.Key, StringComparer.Ordinal).Take(6))
+                output.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                    $"      {name,-34} {TicksToMs(agg.Inclusive),9:F2} (self {TicksToMs(agg.Exclusive):F2}, gc {agg.Gc0}/{agg.Gc1}/{agg.Gc2})"));
+        }
     }
 
     private static ScenarioRuns RunRepeated(Scenario scenario, Options options, int repeat, TextWriter output)
