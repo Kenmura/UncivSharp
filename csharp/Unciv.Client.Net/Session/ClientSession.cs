@@ -762,6 +762,7 @@ public sealed class ClientSession : IAsyncDisposable
             string? connectCode = null; // T338: why a relay refused, so the player is told "host gone" and not just "could not connect"
             connectionSettled = false;
             handshakeTimedOut = false;
+            Volatile.Write(ref nextRetryAt, long.MinValue); // T346: while a dial runs there is no "next try" to count down
             using var timer = CancellationTokenSource.CreateLinkedTokenSource(token);
             handshakeTimer = timer;
             if (redirect != null && !redirectPrepared && !await PrepareRedirectAsync(token).ConfigureAwait(false)) redirect = null; // promotion failed: the normal reconnect runs (and gives up)
@@ -782,6 +783,13 @@ public sealed class ClientSession : IAsyncDisposable
                 Interlocked.Exchange(ref rejoinRequested, 0); // a Rejoin pressed while dialling does not carry into the next outage
             }
             if (stopped) break;
+            if (InterruptedByRejoin())
+            {
+                // T346: a Rejoin pressed while a dial was in flight restarts the budget and dials again now instead of waiting out a backoff.
+                attempt = 0;
+                reconnectAttempt = 0;
+                continue;
+            }
 
             if (!everJoined)
             {
@@ -816,7 +824,11 @@ public sealed class ClientSession : IAsyncDisposable
                 if (redirect != null && redirectIsElection && !redirectAnnounced) continue; // the successor is the host now: connect to it at once
                 Volatile.Write(ref nextRetryAt, clock.NowMillis + (long)options.ElectionPoll.TotalMilliseconds);
                 try { await WaitRetryAsync(ct => Task.Delay(options.ElectionPoll, ct), token).ConfigureAwait(false); }
-                catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
+                catch (OperationCanceledException)
+                {
+                    if (token.IsCancellationRequested) break;
+                    InterruptedByRejoin(); // T346: a Rejoin during the poll is not an end: run the election step/dial again now
+                }
                 continue;
             }
             if (++attempt > options.MaxReconnectAttempts)
@@ -930,7 +942,7 @@ public sealed class ClientSession : IAsyncDisposable
     /// <summary>T346: how many automatic attempts one outage gets before the session ends with <c>reconnect-failed</c>.</summary>
     public int MaxReconnectAttempts => options.MaxReconnectAttempts;
 
-    /// <summary>T346: seconds until the next automatic attempt, read on this session's own clock (the overlay must not mix it with the host's game clock).</summary>
+    /// <summary>T346: seconds until the next automatic attempt, read on this session's own clock (the overlay must not mix it with the host's game clock); null while a dial or handshake is in flight.</summary>
     public int? SecondsToNextAttempt
     {
         get
@@ -954,14 +966,19 @@ public sealed class ClientSession : IAsyncDisposable
     public static int BackoffSeconds(int attempt) => Math.Min(30, 1 << Math.Min(Math.Max(attempt, 1) - 1, 5));
 
     /// <summary>
-    /// T346: the player pressed Rejoin. While the session is reconnecting this dials the host now instead of waiting out the current backoff, and gives the attempt
-    /// budget a fresh start; while it is up or over it does nothing (the overlay then offers Leave or a fresh join instead).
+    /// T346: the player pressed Rejoin. While the session is reconnecting this dials the host now instead of waiting out the current backoff (or cuts a dial in flight short and redials),
+    /// and gives the attempt budget a fresh start; while it is up or over it does nothing (the overlay then offers Leave or a fresh join instead).
     /// </summary>
     public void RejoinNow()
     {
         if (state != ClientSessionState.Reconnecting) return;
         Interlocked.Exchange(ref rejoinRequested, 1);
-        lock (retryGate) retryWait?.Cancel(); // the same gate holds off disposal, so a Cancel can never hit a disposed source
+        lock (retryGate)
+        {
+            retryWait?.Cancel(); // the same gate holds off disposal, so a Cancel can never hit a disposed source
+            // T346: also cut a dial in flight short, so a Rejoin pressed while the handshake runs redials now instead of waiting it out.
+            try { handshakeTimer?.Cancel(); } catch (ObjectDisposedException) { /* that dial already ended */ }
+        }
     }
 
     /// <summary>T346: awaits one backoff (or election poll) and reports a Rejoin request as "skip it".</summary>

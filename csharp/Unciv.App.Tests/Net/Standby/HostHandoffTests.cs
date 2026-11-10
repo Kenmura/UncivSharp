@@ -609,6 +609,33 @@ public sealed class HostHandoffTests : IDisposable
         Assert.StartsWith("standby-epoch", again.Message, StringComparison.Ordinal);
     }
 
+    // T346 review: a standby copy that no longer opens is refused with a HostingException from PromoteCore's ResumeFromDirectory catch, not a crash.
+    [Fact]
+    public async Task Promotion_ACorruptStandbyCopy_IsRefusedWithAHostingException()
+    {
+        var certificate = NewCertificate();
+        var fingerprint = HostCertificate.GetFingerprint(certificate);
+        var dataRoot = Path.Combine(root, "corrupt-handoff");
+        const string gameId = "game-corrupt";
+        var directory = StandbyStore.DirectoryFor(dataRoot, gameId)!;
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(Path.Combine(directory, "game.json"), "{");
+        var promotion = new StandbyPromotion(dataRoot, greece, certificate, new InProcessHostOptions { TickInterval = null });
+        var handoff = new HostHandoff
+        {
+            GameId = gameId,
+            Epoch = 1,
+            Successor = new SuccessorInfo { KeyId = greece.PlayerKey, Endpoints = ["127.0.0.1:47900"], Fingerprint = fingerprint },
+            FinalSeq = 0,
+            FinalHash = "",
+        };
+
+        var error = await Assert.ThrowsAsync<HostingException>(() => promotion.Handler(handoff, CancellationToken.None));
+
+        Assert.StartsWith("The standby copy cannot be promoted:", error.Message, StringComparison.Ordinal);
+        Assert.Null(promotion.Host);
+    }
+
     [Fact]
     public async Task Promotion_AHalfResolvedRound_ContinuesThroughNextResolveStep()
     {

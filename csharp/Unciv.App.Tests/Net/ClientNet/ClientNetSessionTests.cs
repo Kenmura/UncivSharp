@@ -1205,6 +1205,36 @@ public sealed class ClientNetSessionTests
         Assert.True(delays >= 2, $"delays {delays}"); // the backoff was abandoned, not awaited
     }
 
+    // T346 review: a Rejoin pressed while a dial/handshake is in flight cuts it short and redials at once.
+    [Fact]
+    public async Task Reconnect_RejoinNowDuringADial_RedialsImmediately()
+    {
+        await using var rig = new ClientNetRig(id => new ClientSessionOptions
+        {
+            Identity = id,
+            DisplayName = "A",
+            RulesetHash = "h",
+            ExpectedFingerprint = ClientNetRig.Fingerprint,
+            MaxReconnectAttempts = 1,
+            HandshakeTimeout = TimeSpan.FromMinutes(5),
+            ReconnectDelay = (_, _) => Task.CompletedTask,
+        });
+        var host = await rig.StartInGameAsync(ClientNetRig.Snap(5, 1));
+        var dial = rig.NewConnection(); // the first retry: held after Hello, so the handshake hangs
+        var redial = rig.NewConnection(); // what the Rejoin's dial takes
+        await host.CloseAsync();
+        await rig.NextAsync(it => it is StateChanged { State: ClientSessionState.Reconnecting });
+        await dial.ReceiveAsync<Hello>();
+        Assert.Equal(2, rig.ConnectAttempts);
+
+        rig.Session.RejoinNow();
+
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (rig.ConnectAttempts < 3) await Task.Delay(10, limit.Token);
+        await redial.ReceiveAsync<Hello>();
+        Assert.Equal(ClientSessionState.Reconnecting, rig.Session.State);
+    }
+
     [Fact]
     public async Task Reconnect_RejoinNowWithoutAnOutageDoesNothing()
     {
@@ -1214,6 +1244,46 @@ public sealed class ClientNetSessionTests
         rig.Session.RejoinNow();
         Assert.Equal(1, rig.ConnectAttempts);
         await host.CloseAsync();
+    }
+
+    // T346 review: a Rejoin during an election-mode outage used to be an unmatched cancellation that ended the session as "disposed".
+    [Fact]
+    public async Task Reconnect_RejoinNowDuringAnElectionPoll_RerunsTheStepInsteadOfEndingTheSession()
+    {
+        await using var rig = new ClientNetRig(id => new ClientSessionOptions
+        {
+            Identity = id,
+            DisplayName = "A",
+            RulesetHash = "h",
+            ExpectedFingerprint = ClientNetRig.Fingerprint,
+            GameId = "game-election",
+            ReconnectDelay = (_, _) => Task.CompletedTask,
+            ElectionPoll = TimeSpan.FromSeconds(30),
+            ConnectEndpoint = (_, _) => Task.FromException<ITransport>(new IOException("successor unreachable")),
+        });
+        var host = await rig.StartInGameAsync(ClientNetRig.Snap(5, 1));
+        await host.SendAsync(new HostSuccessor
+        {
+            Epoch = 0,
+            Status = "ready",
+            Roster = [],
+            Successor = new SuccessorInfo { KeyId = "succ", Endpoints = ["127.0.0.1:47900"], Fingerprint = ClientNetRig.Fingerprint },
+        });
+        await rig.NextAsync<SuccessorChanged>();
+        await host.CloseAsync();
+        await rig.NextAsync(it => it is StateChanged { State: ClientSessionState.Reconnecting });
+        using (var limit = new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+            while (rig.Session.SecondsToNextAttempt is null) await Task.Delay(10, limit.Token);
+        await Task.Delay(100); // the poll has been entered (nextRetryAt is set immediately before the wait)
+        Assert.NotNull(rig.Session.SecondsToGiveUp);
+        Assert.Equal(ClientSessionState.Reconnecting, rig.Session.State);
+        var attempts = rig.ConnectAttempts;
+
+        rig.Session.RejoinNow();
+
+        using var redial = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (rig.ConnectAttempts == attempts) await Task.Delay(10, redial.Token);
+        Assert.Equal(ClientSessionState.Reconnecting, rig.Session.State); // the election keeps running; the session was not ended as "disposed"
     }
 
     [Fact]

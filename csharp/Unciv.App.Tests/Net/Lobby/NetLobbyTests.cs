@@ -968,8 +968,12 @@ public sealed class NetLobbyTests : IDisposable
         while (await c1.ReceiveAsync(cts.Token) is { } frame)
         {
             var message = ProtocolCodec.Decode(frame);
-            // T346: the game host announces its own roster (who is connected); lobby administration must still never reach a seated player.
-            if (message is LobbyState roster) Assert.DoesNotContain(roster.Slots, it => it.Kind == "Closed");
+            // T346: the started game's host announces its own roster (empty host name, only seated Human/AI civs); lobby administration must still never reach a seated player.
+            if (message is LobbyState roster)
+            {
+                Assert.Equal("", roster.HostName);
+                Assert.All(roster.Slots, it => Assert.True(it.Kind is "Human" or "AI", $"unexpected roster slot kind {it.Kind}"));
+            }
             Assert.IsNotType<JoinRefused>(message);
             if (message is Pong) return;
         }
