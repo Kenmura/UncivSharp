@@ -11,10 +11,12 @@
     (T280: the Android APK is Unciv-client-android-arm64.apk; `verify` also checks that it is a zip holding the arm64 Godot library)
     release_assets.py sums DIR                              write DIR/SHA256SUMS (sha256sum format) for every file in DIR
     release_assets.py verify DIR                            exit 1 unless DIR holds exactly the expected archives (+ SHA256SUMS) and each client archive passes check_package.py
-    release_assets.py notes TAG COMMIT DATE OUT_FILE        write the release notes (what is verified, what is UNVERIFIED)
+    release_assets.py notes TAG COMMIT DATE OUT_FILE [--local]   write the release notes (what is verified, what is UNVERIFIED;
+                                                        --local says release.py built it, not the GitHub Actions workflow, T331)
 
 Archive names are stable across releases (the tag identifies the version): the client names come from check_package.PLATFORMS (T258), the CLI ones are below.
 The workflow never builds a release from a tag that is not a version tag; it creates a DRAFT only and the owner publishes it by hand (migration/GODOT.md).
+`release.py --github-draft` (T331) reuses all of this locally and writes the notes with --local.
 """
 import hashlib
 import importlib.util
@@ -281,34 +283,47 @@ def verify(directory):
     return problems
 
 
-def notes(tag, commit, date):
+def notes(tag, commit, date, local=False):
+    """The release notes. `local=True` (T331: release.py --github-draft) says the archives were built locally, not by the GitHub Actions workflow."""
     version = check_tag(tag)
     if version is None:
         raise SystemExit(f"{tag} is not a csharp-vX.Y.Z tag")
     clients = client_archive_names()
+    where = "locally" if local else "in this workflow"
+    built_by = (
+        "built locally by `python3 -I migration/tools/release.py --github-draft` (GitHub Actions did not build this release); every platform is cross-exported from Linux"
+        if local
+        else "by the `csharp-release` workflow (GitHub Actions, Ubuntu runner; every platform is cross-exported from Linux)"
+    )
+    draft = (
+        "This is a draft created locally by `release.py --github-draft`. The owner reviews it and publishes it by hand; nothing was published automatically."
+        if local
+        else "This is a draft created by CI. The owner reviews it and publishes it by hand; nothing was published automatically."
+    )
+    apk_checked = "" if local else ", `apksigner verify` passes"
     return f"""Unciv Godot client and CLI, version {version} (tag `{tag}`).
 
 - Commit: `{commit}`
-- Built: {date} UTC by the `csharp-release` workflow (GitHub Actions, Ubuntu runner; every platform is cross-exported from Linux)
+- Built: {date} UTC {built_by}
 - Checksums: `{SUMS}` (`sha256sum -c {SUMS}` after downloading the files you want)
 
 ## What was tested, and what was not
 
 | Archive | Status |
 | --- | --- |
-| `{clients['linux']}` | Smoke-tested in this workflow: started under Xvfb from a folder outside the checkout, reached the main menu. |
-| `{cli_archive_name('linux-x64')}` | Smoke-tested in this workflow: started a tiny game with no .NET installed. |
+| `{clients['linux']}` | Smoke-tested {where}: started under Xvfb from a folder outside the checkout, reached the main menu. |
+| `{cli_archive_name('linux-x64')}` | Smoke-tested {where}: started a tiny game with no .NET installed. |
 | `{clients['windows']}` | **UNVERIFIED.** Exported and archive-checked (files present, sizes plausible) only. Never started on Windows. SmartScreen may warn. |
 | `{clients['macos']}` | **UNVERIFIED.** Exported and archive-checked only. Never started on a Mac. Unsigned and not notarised: Gatekeeper blocks the first launch, see `FIRST_RUN_MACOS.txt` inside. |
 | `{cli_archive_name('win-x64')}` | **UNVERIFIED.** Published self-contained, never run on Windows. |
 | `{cli_archive_name('osx-arm64')}` | **UNVERIFIED.** Published self-contained, never run on a Mac. Unsigned and not notarised. |
-| `{server_archive_name('linux-x64')}` | Smoke-tested in this workflow: `--help`, then started (printed `LISTENING <port>`) and stopped with SIGTERM (exit 0) without DOTNET_ROOT, from a folder outside the checkout. Run guide: `Unciv.Server/README.md` in the repository. |
+| `{server_archive_name('linux-x64')}` | Smoke-tested {where}: `--help`, then started (printed `LISTENING <port>`) and stopped with SIGTERM (exit 0) without DOTNET_ROOT, from a folder outside the checkout. Run guide: `Unciv.Server/README.md` in the repository. |
 | `{server_archive_name('win-x64')}` | **UNVERIFIED.** Dedicated server published self-contained, never run on Windows (Ctrl+C is the only stop signal there). |
-| `{relay_archive_name('linux-x64')}` | Smoke-tested in this workflow: `--help`, then started with `--tls none --public-name relay.example.org` (printed `LISTENING tunnel <port>`) and stopped with SIGTERM (exit 0) without DOTNET_ROOT, from a folder outside the checkout. Carries `README.md`, `SETUP.md` and `deploy/`. |
+| `{relay_archive_name('linux-x64')}` | Smoke-tested {where}: `--help`, then started with `--tls none --public-name relay.example.org` (printed `LISTENING tunnel <port>`) and stopped with SIGTERM (exit 0) without DOTNET_ROOT, from a folder outside the checkout. Carries `README.md`, `SETUP.md` and `deploy/`. |
 | `{relay_archive_name('win-x64')}` | **UNVERIFIED.** Relay published self-contained, never run on Windows. |
-| `{ANDROID_APK}` | **NOT device-tested** (T278 has not run on a phone). Exported and checked in this workflow only (arm64-v8a library present, `apksigner verify` passes). **Debug-signed with a throw-away keystore generated for this build**: sideload only, not a store build, and an update from another build needs `adb uninstall org.unciv.godot` first (different signature). |
+| `{ANDROID_APK}` | **NOT device-tested** (T278 has not run on a phone). Exported and checked {where} only (arm64-v8a library present{apk_checked}). **Debug-signed with a throw-away keystore generated for this build**: sideload only, not a store build, and an update from another build needs `adb uninstall org.unciv.godot` first (different signature). |
 
-This is a draft created by CI. The owner reviews it and publishes it by hand; nothing was published automatically.
+{draft}
 """
 
 
@@ -342,8 +357,8 @@ def main(argv):
         return 0
     elif cmd == "verify" and len(args) == 1:
         problems = verify(args[0])
-    elif cmd == "notes" and len(args) == 4:
-        Path(args[3]).write_text(notes(args[0], args[1], args[2]), encoding="utf-8")
+    elif cmd == "notes" and (len(args) == 4 or (len(args) == 5 and args[4] == "--local")):
+        Path(args[3]).write_text(notes(args[0], args[1], args[2], local=len(args) == 5), encoding="utf-8")
         return 0
     else:
         print(__doc__, file=sys.stderr)

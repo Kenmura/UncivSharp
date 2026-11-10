@@ -1,6 +1,7 @@
 """Tests for the CI pieces of T169: ci_base.py, retry-on-crash.sh and the shape of .github/workflows/csharp.yml.
 Run: python3 -I -m unittest discover -s tools -p 'test_*.py' (from csharp/migration)."""
 import importlib.util
+import io
 import json
 import re
 import subprocess
@@ -804,6 +805,40 @@ class ReleaseAssets(unittest.TestCase):
         text = self.mod.notes("csharp-v1.2.3", "a" * 40, "2026-01-02T03:04:05")
         self.assertIn(self.mod.ANDROID_APK, text)
         self.assertIn("NOT device-tested", text)
+        self.assertIn("apksigner verify", text)
+
+    def test_local_notes_say_release_py_built_them_not_actions(self):  # T331
+        text = self.mod.notes("csharp-v1.2.3", "a" * 40, "2026-01-02T03:04:05", local=True)
+        self.assertIn("release.py --github-draft", text)
+        self.assertIn("built locally", text)
+        self.assertNotIn("csharp-release` workflow", text)
+        self.assertNotIn("created by CI", text)
+        self.assertIn("created locally by `release.py --github-draft`", text)
+        self.assertIn("Smoke-tested locally:", text)
+        self.assertNotIn("in this workflow", text)
+        self.assertIn("NOT device-tested", text)
+        self.assertNotIn("apksigner verify", text)  # the local path does not run it
+        # the same tables and commit as the CI notes
+        self.assertIn("a" * 40, text)
+        for name in self.mod.expected_assets():
+            self.assertIn(name, text)
+
+    def test_ci_notes_are_unchanged_and_never_say_local(self):  # T331
+        text = self.mod.notes("csharp-v1.2.3", "a" * 40, "2026-01-02T03:04:05")
+        self.assertIn("by the `csharp-release` workflow", text)
+        self.assertIn("This is a draft created by CI.", text)
+        self.assertIn("Smoke-tested in this workflow:", text)
+        self.assertNotIn("release.py --github-draft", text)
+        self.assertNotIn("built locally", text)
+
+    def test_notes_cli_takes_a_local_flag(self):  # T331
+        with tempfile.TemporaryDirectory() as t:
+            ci, local = Path(t) / "ci.md", Path(t) / "local.md"
+            self.assertEqual(self.mod.main(["notes", "csharp-v1.2.3", "a" * 40, "2026-01-02T03:04:05", str(ci)]), 0)
+            self.assertEqual(self.mod.main(["notes", "csharp-v1.2.3", "a" * 40, "2026-01-02T03:04:05", str(local), "--local"]), 0)
+            self.assertIn("by the `csharp-release` workflow", ci.read_text())
+            self.assertIn("release.py --github-draft", local.read_text())
+            self.assertEqual(self.mod.main(["notes", "csharp-v1.2.3", "a", "d", str(ci), "--bogus"]), 2)
 
     def test_notes_mark_windows_and_macos_unverified_and_name_the_commit(self):
         text = self.mod.notes("csharp-v1.2.3", "a" * 40, "2026-01-02T03:04:05")
@@ -822,6 +857,128 @@ class ReleaseAssets(unittest.TestCase):
         self.assertEqual(self.mod.main(["check-tag", "csharp-v1.0.0"]), 0)
         self.assertEqual(self.mod.main(["check-tag", "main"]), 1)
         self.assertEqual(self.mod.main(["bogus"]), 2)
+
+
+class ReleaseGithubDraft(unittest.TestCase):
+    """T331: release.py --github-draft reproduces the release workflow locally and creates a DRAFT only, with locally-built notes."""
+
+    def setUp(self):
+        self.rel = ClientPlatforms().load("release")
+
+    def test_the_draft_command_is_always_a_draft(self):
+        args = self.rel.draft_release_args("csharp-v1.2.3-rc.1", "1.2.3-rc.1", Path("/tmp/notes.md"), [Path("/tmp/a.tgz")], "o/r")
+        self.assertEqual(args[:4], ["gh", "release", "create", "csharp-v1.2.3-rc.1"])
+        self.assertIn("--draft", args)
+        self.assertNotIn("--draft=false", args)
+        self.assertIn("--verify-tag", args)
+        self.assertIn("--prerelease", args)
+        self.assertIn("Unciv Godot client 1.2.3-rc.1", args)
+        self.assertIn("/tmp/a.tgz", args)
+        self.assertNotIn("--prerelease", self.rel.draft_release_args("csharp-v1.2.3", "1.2.3", Path("/tmp/n"), [], "o/r"))
+
+    def test_release_py_has_no_way_to_publish_or_overwrite(self):
+        text = (HERE / "release.py").read_text(encoding="utf-8")
+        self.assertIn('"--draft"', text)
+        self.assertIn('"--verify-tag"', text)
+        self.assertNotRegex(text, r"--draft=false|--clobber|gh api|gh release (edit|upload|delete)|git push")
+
+    def test_dry_run_prints_the_exact_archives_and_never_builds_or_calls_gh(self):
+        from unittest import mock
+
+        out = io.StringIO()
+        with mock.patch.object(self.rel.subprocess, "run") as run, mock.patch.object(self.rel, "build_github_assets") as build, \
+                mock.patch.object(self.rel, "releases_root", return_value=Path("/tmp/releases")), mock.patch("sys.stdout", out):
+            self.rel.main(["--github-draft", "csharp-v1.2.3", "--dry-run", "--repo", "o/r"])
+        run.assert_not_called()
+        build.assert_not_called()
+        text = out.getvalue()
+        for name in self.rel._assets().expected_assets() + ["SHA256SUMS"]:
+            self.assertIn(name, text)
+        self.assertIn("--draft", text)
+        self.assertIn("dry run", text)
+
+    def test_a_non_version_tag_is_refused(self):
+        with self.assertRaises(SystemExit) as e:
+            self.rel.github_draft("v1.2.3", [])
+        self.assertEqual(e.exception.code, 2)
+
+    def test_an_existing_release_or_draft_is_never_overwritten(self):
+        from unittest import mock
+
+        with tempfile.TemporaryDirectory() as t, mock.patch.object(self.rel, "releases_root", return_value=Path(t)), \
+                mock.patch.object(self.rel, "git", return_value=mock.Mock(returncode=0, stdout="")), \
+                mock.patch.object(self.rel, "tag_commit", return_value="a" * 40), mock.patch.object(self.rel, "draft_exists", return_value=True), \
+                mock.patch.object(self.rel, "build_github_assets") as build, mock.patch.object(self.rel.subprocess, "run") as run, mock.patch("sys.stderr"):
+            with self.assertRaises(SystemExit):
+                self.rel.github_draft("csharp-v1.2.3", ["--repo", "o/r"])
+        build.assert_not_called()
+        run.assert_not_called()
+
+    def test_a_run_creates_only_a_draft_and_local_notes(self):
+        from unittest import mock
+
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            return mock.Mock(returncode=0)
+
+        with tempfile.TemporaryDirectory() as t:
+            root = Path(t) / "github-tag"
+            with mock.patch.object(self.rel, "releases_root", return_value=Path(t)), \
+                    mock.patch.object(self.rel, "git", return_value=mock.Mock(returncode=0, stdout="")), \
+                    mock.patch.object(self.rel, "tag_commit", return_value="a" * 40), mock.patch.object(self.rel, "draft_exists", return_value=False), \
+                    mock.patch.object(self.rel, "build_github_assets") as build, mock.patch.object(self.rel.subprocess, "run", side_effect=fake_run), \
+                    mock.patch("sys.stdout"):
+                self.rel.github_draft("csharp-v1.2.3", ["--repo", "o/r", "--assets-dir", str(root)])
+            build.assert_called_once()
+            self.assertEqual(len(calls), 1)
+            args = calls[0]
+            self.assertIn("--draft", args)
+            self.assertNotIn("--draft=false", args)
+            notes = (root / "notes.md").read_text(encoding="utf-8")
+            self.assertIn("release.py --github-draft", notes)
+            self.assertIn("built locally", notes)
+            self.assertNotIn("csharp-release` workflow", notes)
+            for name in self.rel._assets().expected_assets() + ["SHA256SUMS"]:
+                self.assertIn(str(root / "assets" / name), args)
+            self.assertIn("a" * 40, notes)
+
+    def test_the_tag_must_exist_and_be_checked_out(self):
+        from unittest import mock
+
+        def git_for(verify, head):
+            def fake(*args, check=True):
+                if args[0] == "rev-parse" and "--verify" in args:
+                    return mock.Mock(returncode=0 if verify else 1, stdout=("b" * 40) + "\n" if verify else "", stderr="")
+                return mock.Mock(returncode=0, stdout=head + "\n", stderr="")
+            return fake
+
+        with mock.patch.object(self.rel, "git", git_for(False, "a" * 40)), mock.patch("sys.stderr"):
+            with self.assertRaises(SystemExit):
+                self.rel.tag_commit("csharp-v1.2.3")  # does not exist
+        with mock.patch.object(self.rel, "git", git_for(True, "a" * 40)), mock.patch("sys.stderr"):
+            with self.assertRaises(SystemExit):
+                self.rel.tag_commit("csharp-v1.2.3")  # HEAD is not the tagged commit
+        with mock.patch.object(self.rel, "git", git_for(True, "b" * 40)):
+            self.assertEqual(self.rel.tag_commit("csharp-v1.2.3"), "b" * 40)
+
+    def test_default_repo_comes_from_origin(self):
+        from unittest import mock
+
+        for url, want in (("https://github.com/Kenmura/Unciv.git", "Kenmura/Unciv"), ("git@github.com:o/r.git", "o/r"), ("/local/path", None)):
+            with mock.patch.object(self.rel, "git", return_value=mock.Mock(stdout=url + "\n")):
+                self.assertEqual(self.rel.default_repo(), want, url)
+
+    def test_the_harmless_godot_shutdown_adb_error_is_filtered(self):
+        text = "line 1\nERROR: Cannot call method 'shutdown_adb_on_exit'.\n   at: shutdown_adb_on_exit (editor_export_platform_android.cpp:1)\nreal failure"
+        self.assertEqual(self.rel._godot_tail(text), "line 1\nreal failure")
+        self.assertEqual(self.rel._godot_tail("a\nb"), "a\nb")
+
+    def test_the_build_uses_the_memory_limits(self):
+        text = (HERE / "release.py").read_text(encoding="utf-8")
+        self.assertIn("-m:1", text)
+        self.assertIn("-nodeReuse:false", text)
 
 
 class ProjectSettings(unittest.TestCase):

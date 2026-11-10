@@ -14,6 +14,7 @@
 - [How a release is produced (T169)](#how-a-release-is-produced-t169)
   - [Known Godot headless export crashes and the retry](#known-godot-headless-export-crashes-and-the-retry)
 - [Cutting a release (T279)](#cutting-a-release-t279)
+  - [When GitHub Actions cannot run (T331)](#when-github-actions-cannot-run-t331)
 - [CI (T169)](#ci-t169)
 <!-- /toc -->
 
@@ -175,6 +176,9 @@ The headless export crashes intermittently (about 1 in 15 fresh imports, more un
   Any other exit code is a real failure and is returned immediately.
 - Other symptoms: "export produced no .NET assemblies folder (data_*)" means the export failed without a crash code, read the Godot output above it;
   a missing solution file error is handled by `package.sh` (it generates the git-ignored `Unciv.Godot.sln`).
+- **Harmless at exit (T331):** Godot prints an `ERROR: ... shutdown_adb_on_exit ...` line (from its own `EditorSettings` teardown, even for a
+  non-Android export) when a headless export exits. It is not a project failure: the export has already written its output. Ignore it in a log;
+  `release.py` filters that block out of the output it prints for a failed command so a real error is not pushed off screen.
 
 ## Cutting a release (T279)
 
@@ -192,6 +196,29 @@ GitHub release; it never publishes. It uses only `github.token` (`contents: writ
 The archive names are the ones in the table above plus the CLI ones (`release_assets.py` owns the list; `test_ci.py` checks the workflow against it). The CLI archives are `dotnet publish -r <rid> --self-contained`
 with `data/jsons` and `LICENSE` bundled; only the Linux client (main menu under Xvfb) and the Linux CLI (tiny game, empty `PATH`) are run by the workflow. The server archives (T266) are `dotnet publish Unciv.Server -r <rid> --self-contained` for linux-x64 and win-x64 with `data/jsons`, `LICENSE` and `README.md` bundled; the Linux one is smoke-run (`release_assets.py smoke-server`: `--help`, start, `LISTENING` line, SIGTERM, exit 0), and `csharp.yml` job `server-publish` builds and smokes the same (nothing uploaded). `Unciv.Server.csproj` keeps `IsRidAgnostic` (the client export would otherwise fail with NETSDK1152); a direct `dotnet publish -r` of the server is unaffected (checked). T280 added the `android` job: `package.sh android` (arm64-v8a), ABI and `apksigner verify` checks, shipped as `Unciv-client-android-arm64.apk` with its line in `SHA256SUMS`; the notes mark it **NOT device-tested** (T278 has not run on a phone) and debug-signed.
 Unverified until the first real tag run: the whole workflow (it cannot be run without pushing a tag); locally only `release_assets.py` (real CLI publishes for all three runtimes, packing, the Linux CLI smoke), the YAML syntax and the shape tests were checked.
+
+### When GitHub Actions cannot run (T331)
+
+If a tag push does not start `.github/workflows/csharp-release.yml` (an Actions outage, no runner minutes), build the same draft locally:
+
+1. Check the tag out in the main checkout (or another clean worktree): `git checkout --detach csharp-v0.1.0-rc.2`. The script refuses a dirty tree
+   and requires HEAD to be exactly the tag's commit. The tag must be pushed (`git push origin csharp-v0.1.0-rc.2`: `gh` checks it exists on the
+   remote) and should be on `csharp-migration`, as the workflow's `verify` job demands.
+2. Run `python3 -I csharp/migration/tools/release.py --github-draft csharp-v0.1.0-rc.2` (add `--repo OWNER/NAME` when `origin` is not the release
+   repository). It reproduces the workflow's jobs locally, one build at a time with MSBuild `-m:1`: the self-contained CLI (`linux-x64`, `win-x64`,
+   `osx-arm64`), server and relay (`linux-x64`, `win-x64`) archives, the Linux/Windows/macOS clients and the Android APK, with the same archive
+   names. It unpacks and smoke-runs the Linux CLI, server, relay and client like CI, writes `SHA256SUMS`, checks the folder with
+   `release_assets.py verify`, and writes notes that say the archives were built locally (`notes ... --local`).
+3. It then creates the release with `gh release create ... --draft --verify-tag`: **a DRAFT only**, never public, and it refuses a tag that already
+   has a release or draft (it never overwrites one). It keeps the built archives and `notes.md` in
+   `<main checkout>/csharp-releases/github-<tag>/` (git-ignored), so a failed `gh` call loses nothing but the upload.
+4. Open the draft, check the same files as above, edit the notes if you have since tested a platform, and publish by hand.
+5. Return the checkout: `git checkout csharp-migration`.
+
+`--dry-run` prints the archive list and the exact `gh` command without building or calling GitHub. All four clients are required, so the pinned
+Godot with its export templates and a JDK plus the Android SDK (`ANDROID_HOME`/`ANDROID_SDK_ROOT` with `cmdline-tools/latest`, `platform-tools`,
+`build-tools;36.1.0`, `platforms;android-36`) must be installed; unlike the optional APK of the local `release.py T###` releases (T403), a missing
+APK fails this mode. Re-running rebuilds the archives.
 
 ## CI (T169)
 

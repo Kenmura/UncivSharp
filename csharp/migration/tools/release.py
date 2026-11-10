@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Build the CLI and the Godot client from the current (clean) tree and publish them to <repo>/csharp-releases/.
+With --github-draft TAG, build the release archives from the tag locally and create the draft GitHub release (T331).
 
 Usage: release.py T### [--cli-only | --client-only] [--linux-only] [--no-android] [--keep N] [--force] [--dry-run] [--keep-tmp]
+       release.py --github-draft TAG [--repo OWNER/NAME] [--assets-dir DIR] [--dry-run] [--keep-tmp]
 
-ticket.py runs this after every `state T### Done`. The folder sits next to `csharp/` in the main checkout (never inside a worktree, which is
+ticket.py runs the first form after every `state T### Done`. The folder sits next to `csharp/` in the main checkout (never inside a worktree, which is
 removed when its agent finishes):
 
     csharp-releases/<ticket>-<shortsha>/cli/        dotnet publish of Unciv.Cli, self-contained linux-x64 (runtime and data/jsons bundled: ./Unciv.Cli works with no dotnet installed)
@@ -25,16 +27,26 @@ removed when its agent finishes):
 
 The newest --keep (default 5) versions are kept, plus whatever `latest` points at and the newest version with a good APK (T403). A rebuild (--force, or a retry) of an existing release folder never replaces one that has an APK by a build without one. Builds run in the dotnet-dev container when `dotnet` is not on PATH, like the Green gate.
 The folder is git-ignored. A tree that was already released (same git tree id) is not rebuilt unless --force.
+
+T331: `--github-draft TAG` is the fallback for .github/workflows/csharp-release.yml when GitHub Actions does not run. It reproduces the
+workflow's commands locally (one build at a time, MSBuild `-m:1`), assembles the same archive names plus SHA256SUMS under
+`<main checkout>/csharp-releases/github-<tag>/assets` (run the whole flow from the tag's checked-out commit), checks the folder with
+release_assets.py verify, writes notes that say it was built locally, and creates the GitHub release as a DRAFT with `gh`; it never publishes
+and never overwrites an existing release or draft. All four clients are required, so the pinned Godot with its export templates, plus the
+Android SDK/JDK, must be installed. --dry-run only prints the plan (no build, no gh call).
 """
 import fcntl
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
+import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent  # csharp/migration
@@ -47,6 +59,8 @@ RELAY_RIDS = ["linux-x64", "win-x64"]  # T366: release_assets.RELAY_RIDS (a unit
 CLIENT_PLATFORMS = ["linux", "windows", "macos"]  # T258: default client platforms; T279 builds the same list, in the same order, as release archives
 ANDROID_PLATFORM = "android"  # T391: optional extra client (package.sh android -> build/android/Unciv.apk); not a desktop archive, so not in CLIENT_PLATFORMS
 ANDROID_MISSING_EXIT = 3  # package.sh android exits 3 when the SDK / JDK / export templates are missing
+GITHUB_DRAFT = "--github-draft"  # T331: the local fallback for .github/workflows/csharp-release.yml
+HARMLESS_GODOT_ERRORS = ("shutdown_adb_on_exit",)  # T331: printed by every headless Godot export on exit; not a failure (GODOT.md)
 
 
 def git(*args, check=True):
@@ -59,6 +73,19 @@ def git(*args, check=True):
 def die(msg, code=1):
     print(f"release: {msg}", file=sys.stderr)
     sys.exit(code)
+
+
+def _godot_tail(text, lines=30):
+    """The last `lines` lines of a failed command's output, without Godot's harmless `EditorSettings ... shutdown_adb_on_exit` error block
+    (T331: every headless export prints it on exit; it says nothing about the build)."""
+    kept = []
+    for line in text.splitlines():
+        if any(h in line for h in HARMLESS_GODOT_ERRORS):
+            while kept and kept[-1].startswith("ERROR:"):  # the ERROR: line above the "at: shutdown_adb_on_exit" line
+                kept.pop()
+            continue
+        kept.append(line)
+    return "\n".join(kept[-lines:])
 
 
 def releases_root():
@@ -97,7 +124,7 @@ def run(name, cmd, crash_retries=0):
             continue
         break
     if r.returncode:
-        print("\n".join((r.stdout + r.stderr).splitlines()[-30:]), file=sys.stderr)
+        print(_godot_tail(r.stdout + r.stderr), file=sys.stderr)
         die(f"{name} failed (exit {r.returncode})" + (f" after {crash_retries + 1} attempts" if r.returncode in CRASH_CODES and crash_retries else ""))
 
 
@@ -115,7 +142,7 @@ def build_android(stage):
             continue
         break
     if r.returncode:
-        print("\n".join((r.stdout + r.stderr).splitlines()[-30:]), file=sys.stderr)
+        print(_godot_tail(r.stdout + r.stderr), file=sys.stderr)
         why = "the Android SDK / JDK / export templates are missing" if r.returncode == ANDROID_MISSING_EXIT else f"the build failed (exit {r.returncode})"
         print(f"release: WARNING android client left out of this release: {why} (see Unciv.Godot/tools/install-export-templates.sh; the other clients are unaffected)", file=sys.stderr)
         return False
@@ -241,9 +268,190 @@ def point_latest(root, name):
     os.replace(tmp, root / "latest")
 
 
+# ---- T331: the GitHub draft release built locally (the fallback when GitHub Actions does not run) ----
+
+def _option(opts, name):
+    """The value after `name` in opts, or None."""
+    if name not in opts:
+        return None
+    i = opts.index(name)
+    if i + 1 >= len(opts) or opts[i + 1].startswith("-"):
+        die(f"{name} needs a value", 2)
+    return opts[i + 1]
+
+
+def default_repo():
+    """owner/name from the origin remote, for --github-draft when --repo is not given."""
+    url = git("remote", "get-url", "origin", check=False).stdout.strip()
+    m = re.search(r"github\.com[:/]+([^/\s]+/[^/\s]+?)(?:\.git)?/*$", url)
+    return m.group(1) if m else None
+
+
+def release_version(tag):
+    """The version in a release tag, or die (T331 builds only csharp-vX.Y.Z[-prerelease] tags, like the workflow's verify job)."""
+    version = _assets().check_tag(tag)
+    if version is None:
+        die(f"'{tag}' is not a release tag (csharp-vMAJOR.MINOR.PATCH or csharp-vMAJOR.MINOR.PATCH-prerelease)", 2)
+    return version
+
+
+def tag_commit(tag):
+    """The commit the tag points at. A release is built from the tag, so HEAD must be that commit; the tree must also be clean (checked by github_draft)."""
+    r = git("rev-parse", "--verify", f"{tag}^{{commit}}", check=False)
+    if r.returncode:
+        die(f"tag {tag} does not exist; create it on the release commit first")
+    sha = r.stdout.strip()
+    head = git("rev-parse", "HEAD").stdout.strip()
+    if sha != head:
+        die(f"{tag} is at {sha[:9]} but HEAD is {head[:9]}; check the tag out first (git checkout --detach {tag})")
+    return sha
+
+
+def draft_release_args(tag, version, notes_file, assets, repo):
+    """The one gh command release.py runs (T331): always --draft and --verify-tag, so it can create a draft but never publish or overwrite one."""
+    args = ["gh", "release", "create", tag, "--repo", repo, "--draft", "--verify-tag",
+            "--title", f"Unciv Godot client {version}", "--notes-file", str(notes_file)]
+    if "-" in version:
+        args.append("--prerelease")
+    return args + [str(p) for p in assets]
+
+
+def draft_exists(tag, repo):
+    """True when a release OR draft for the tag already exists (`gh release list` sees drafts, `gh release view` cannot)."""
+    r = subprocess.run(["gh", "release", "list", "--repo", repo, "--limit", "200", "--json", "tagName"], capture_output=True, text=True)
+    if r.returncode:
+        die(f"gh release list failed (is gh installed and signed in? try `gh auth status`): {(r.stdout + r.stderr).strip()[-800:]}")
+    try:
+        tags = [e.get("tagName") for e in json.loads(r.stdout or "[]")]
+    except ValueError:
+        die("gh release list printed no readable JSON")
+    return tag in tags
+
+
+def unpack(archive, dest):
+    """Unpack a release archive into dest (the smoke tests run the unpacked folder, like the workflow)."""
+    dest.mkdir(parents=True, exist_ok=True)
+    if archive.suffix == ".zip":
+        with zipfile.ZipFile(archive) as z:
+            z.extractall(dest)
+    else:
+        with tarfile.open(archive) as t:
+            try:
+                t.extractall(dest, filter="data")
+            except TypeError:  # Python < 3.12 has no filter parameter
+                t.extractall(dest)
+
+
+def check_android_apk(path):
+    """The workflow's APK checks (T331): a zip holding the arm64 Godot library and no x86_64 one."""
+    assets = _assets()
+    problems = assets.check_apk(path)
+    if problems:
+        return problems
+    with zipfile.ZipFile(path) as apk:
+        if any(n.startswith("lib/x86_64/") for n in apk.namelist()):
+            return [f"{assets.ANDROID_APK}: holds x86_64 libraries (the release APK is arm64-only)"]
+    return []
+
+
+def build_github_assets(assets_dir):
+    """T331: the csharp-release workflow's build jobs, run locally one at a time with MSBuild -m:1, producing the same archive names.
+    Then SHA256SUMS and release_assets.py verify (exact file set, checksums, client and APK checks)."""
+    assets = _assets()
+    csharp = shlex.quote(str(CSHARP))
+    with tempfile.TemporaryDirectory() as work:  # the dotnet publish folders only; the archives stay in assets_dir
+        work = Path(work)
+        for rid in assets.CLI_RIDS:
+            out = work / f"cli-{rid}"
+            run(f"publish Unciv.Cli ({rid})", in_container(
+                f"cd {csharp} && {DOTNET} publish Unciv.Cli -c Release -r {rid} --self-contained true -m:1 -nodeReuse:false -o {shlex.quote(str(out))}"))
+            assets.pack_cli(rid, out, assets_dir)
+        unpack(assets_dir / assets.cli_archive_name("linux-x64"), work / "smoke-cli")
+        problems = assets.smoke_cli(work / "smoke-cli" / "Unciv-cli-linux-x64")
+        if problems:
+            die(problems[0])
+        for rid in assets.SERVER_RIDS:
+            out = work / f"server-{rid}"
+            run(f"publish Unciv.Server ({rid})", in_container(
+                f"cd {csharp} && {DOTNET} publish Unciv.Server -c Release -r {rid} --self-contained true -m:1 -nodeReuse:false -o {shlex.quote(str(out))}"))
+            assets.pack_server(rid, out, assets_dir)
+        unpack(assets_dir / assets.server_archive_name("linux-x64"), work / "smoke-server")
+        problems = assets.smoke_server(work / "smoke-server" / "Unciv-server-linux-x64")
+        if problems:
+            die(problems[0])
+        for rid in assets.RELAY_RIDS:
+            out = work / f"relay-{rid}"
+            run(f"publish Unciv.Relay ({rid})", in_container(
+                f"cd {csharp} && {DOTNET} publish Unciv.Relay -c Release -r {rid} --self-contained true -m:1 -nodeReuse:false -o {shlex.quote(str(out))}"))
+            assets.pack_relay(rid, out, assets_dir)
+        unpack(assets_dir / assets.relay_archive_name("linux-x64"), work / "smoke-relay")
+        problems = assets.smoke_relay(work / "smoke-relay" / "Unciv-relay-linux-x64")
+        if problems:
+            die(problems[0])
+        for platform in CLIENT_PLATFORMS:
+            run(f"package client ({platform})", in_container(f"cd {csharp} && Unciv.Godot/tools/package.sh {platform}"), crash_retries=CRASH_RETRIES)
+            run(f"check {platform} archive", f"python3 -I {shlex.quote(str(HERE / 'tools' / 'check_package.py'))} {platform}")
+        run("smoke the packaged Linux client", in_container(f"cd {csharp} && Unciv.Godot/tools/smoke-export.sh"))
+        for name in assets.client_archive_names().values():
+            shutil.copy2(CSHARP / "Unciv.Godot" / "build" / name, assets_dir / name)
+        run(f"package client ({ANDROID_PLATFORM})", in_container(f"cd {csharp} && Unciv.Godot/tools/package.sh {ANDROID_PLATFORM}"), crash_retries=CRASH_RETRIES)
+        apk = CSHARP / "Unciv.Godot" / "build" / "android" / "Unciv.apk"
+        if not apk.is_file():
+            die("package.sh android exited 0 but left no APK")
+        shutil.copy2(apk, assets_dir / assets.ANDROID_APK)
+        problems = check_android_apk(assets_dir / assets.ANDROID_APK)
+        if problems:
+            die("; ".join(problems))
+    assets.write_sums(assets_dir)
+    problems = assets.verify(assets_dir)
+    if problems:
+        die("the assembled release is incomplete or has a bad checksum: " + "; ".join(problems))
+    return [assets_dir / n for n in assets.expected_assets() + [assets.SUMS]]
+
+
+def github_draft(tag, opts):
+    """T331: build TAG's archives locally and create the DRAFT GitHub release. Never publishes, never overwrites an existing release or draft."""
+    version = release_version(tag)
+    repo = _option(opts, "--repo") or default_repo()
+    if not repo or not re.fullmatch(r"[\w.-]+/[\w.-]+", repo):
+        die("cannot tell the GitHub repository; pass --repo OWNER/NAME", 2)
+    root = Path(_option(opts, "--assets-dir") or releases_root() / f"github-{tag}")
+    assets_dir = root / "assets"
+    notes_file = root / "notes.md"
+    names = _assets().expected_assets() + [_assets().SUMS]
+    paths = [assets_dir / n for n in names]
+    if "--dry-run" in opts:
+        print(f"release: github draft {tag} ({version}) from HEAD, repo {repo}; dry run: nothing is built and no release is created")
+        print(f"release: would write {len(names)} files ({', '.join(names)}) into {assets_dir} and verify SHA256SUMS")
+        print("release: would run: " + " ".join(shlex.quote(a) for a in draft_release_args(tag, version, notes_file, paths, repo)))
+        return
+    if git("status", "--porcelain").stdout.strip():
+        die("the worktree has uncommitted changes; a release must be built from a committed tree")
+    sha = tag_commit(tag)
+    if draft_exists(tag, repo):
+        die(f"a release or draft for {tag} already exists; delete it first (this never overwrites one)")
+    shutil.rmtree(assets_dir, ignore_errors=True)  # only the assets folder is rebuilt; anything else in --assets-dir is left alone
+    assets_dir.mkdir(parents=True)
+    print(f"release: building {tag} from {sha[:9]} -> {assets_dir}")
+    build_github_assets(assets_dir)
+    when = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime())
+    notes_file.write_text(_assets().notes(tag, sha, when, local=True), encoding="utf-8")
+    print(f"release: creating the DRAFT release {tag} (never public; review and publish it by hand)")
+    r = subprocess.run(draft_release_args(tag, version, notes_file, paths, repo))
+    if r.returncode:
+        die(f"gh release create failed (exit {r.returncode}); the archives are kept in {assets_dir}")
+    print(f"release: draft {tag} created with {len(names)} files and notes saying it was built locally")
+
+
 def main(argv):
+    if GITHUB_DRAFT in argv:
+        i = argv.index(GITHUB_DRAFT)
+        tag = argv[i + 1] if i + 1 < len(argv) and not argv[i + 1].startswith("-") else ""
+        if not tag:
+            die(f"usage: release.py {GITHUB_DRAFT} TAG [--repo OWNER/NAME] [--assets-dir DIR] [--dry-run] [--keep-tmp]", 2)
+        return github_draft(tag, argv[:i] + argv[i + 2:])
     if not argv or argv[0].startswith("-"):
-        die("usage: release.py T### [--cli-only | --client-only] [--linux-only] [--no-android] [--keep N] [--force] [--dry-run] [--keep-tmp]", 2)
+        die("usage: release.py T### [...]  |  release.py --github-draft TAG [--repo OWNER/NAME] [--dry-run]", 2)
     tid, opts = argv[0], argv[1:]
     cli = "--client-only" not in opts
     client = "--cli-only" not in opts
