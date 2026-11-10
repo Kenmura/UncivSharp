@@ -43,7 +43,9 @@ public sealed record SnapshotDiff
     public List<PopupAlertDto>? PopupAlerts { get; init; }
     public List<PendingDecisionDto>? PendingDecisions { get; init; }
 
-    private static string TileKey(TileDto it) => $"{it.X.ToString(CultureInfo.InvariantCulture)},{it.Y.ToString(CultureInfo.InvariantCulture)}";
+    // T342: the one tile key used by both the full diff and the incremental builder's rebuilt set, so the two can never disagree on the ambient culture.
+    internal static string TileKey(int x, int y) => $"{x.ToString(CultureInfo.InvariantCulture)},{y.ToString(CultureInfo.InvariantCulture)}";
+    private static string TileKey(TileDto it) => TileKey(it.X, it.Y);
     private static string CityKey(CityDto it) => $"{it.X.ToString(CultureInfo.InvariantCulture)},{it.Y.ToString(CultureInfo.InvariantCulture)}";
     private static string UnitKey(UnitDto it) => it.Id.ToString(CultureInfo.InvariantCulture);
     private static string CivKey(CivDto it) => it.CivId;

@@ -17,6 +17,9 @@ namespace Unciv.Net.Visibility;
 // rebuilt from the visible tiles in map order, which is exactly the set and order the full build emits; the rest of the snapshot (cities, civs, diplomacy,
 // notifications, ...) is small and is built the same way. The resulting frames are byte-identical (IncrementalViewBuilderTests compares them on scripted
 // games); anything the builder cannot prove safe (a non-human viewer, a map-content or reveal change, a stale state) falls back to the full build.
+// Invariant for the remembered fog values: the base game writes LastSeenImprovement/LastSeenOwner only while a tile is visible (or when it becomes visible),
+// and every such command rebuilds that tile, so a reused fogged entry cannot go stale; a mod or future unique that writes them for an explored, fogged tile
+// without a map-content or reveal revision must bump the map-content revision (or the builder will reuse the old snapshot).
 
 /// <summary>Builds per-recipient view deltas from the previous snapshot plus the changes since it, with a full-build fallback.</summary>
 public static class IncrementalViewBuilder
@@ -248,7 +251,8 @@ public static class IncrementalViewBuilder
             && a.Own.Automated == b.Own.Automated && a.Own.CanBePromoted == b.Own.CanBePromoted;
     }
 
-    private static string Key(TileDto tile) => $"{tile.X},{tile.Y}";
+    // Shared with SnapshotDiff.TileKey so the rebuilt set and the diff always agree, whatever the ambient culture's negative sign is.
+    private static string Key(TileDto tile) => SnapshotDiff.TileKey(tile.X, tile.Y);
 
-    private static string Key(HexCoord position) => $"{position.x},{position.y}";
+    private static string Key(HexCoord position) => SnapshotDiff.TileKey(position.x, position.y);
 }

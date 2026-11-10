@@ -1,9 +1,11 @@
+using System.Globalization;
 using Unciv.Commands;
 using Unciv.Commands.Log;
 using Unciv.Commands.Turn;
 using Unciv.Harness;
 using Unciv.Logic;
 using Unciv.Logic.Civilization;
+using Unciv.Logic.Map.Tiles;
 using Unciv.Net.Visibility;
 
 namespace Unciv.Core.Tests.Net.Visibility;
@@ -113,6 +115,52 @@ public sealed class IncrementalViewBuilderTests
             }
         }
         Assert.True(accepted > 10, $"only {accepted} commands were applied (last refusal: {lastRefusal ?? "none"}; phase: {game.TurnPhase}; {fallbacks} fallbacks)");
+        // The equivalence above is only evidence if most commands actually took the incremental path: a regression that always falls back must fail here.
+        Assert.True(accepted - fallbacks > accepted / 2,
+            $"only {accepted - fallbacks} of {accepted} accepted commands built incrementally ({fallbacks} fell back), so the equivalence path was barely exercised");
+    }
+
+    // The test host runs in globalization-invariant mode (no ICU, no named cultures): derive a hostile culture by hand, as EndToEndDeterminismTests does.
+    private static CultureInfo OddCulture()
+    {
+        var culture = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+        culture.NumberFormat.NegativeSign = "~";
+        culture.NumberFormat.NumberDecimalSeparator = ",";
+        culture.NumberFormat.NumberGroupSeparator = ".";
+        culture.NumberFormat.PositiveSign = "#";
+        return culture;
+    }
+
+    [Fact]
+    public void AChangedVisibleTileAtANegativeCoordinate_StaysInTheDiffUnderAHostileCulture()
+    {
+        var s = Fresh();
+        var (_, visible) = ViewDeltaBuilder.TileSets(s.Game, s.Viewer);
+        var target = visible.First(it => it.x < 0 || it.y < 0);
+        // A road change on a visible tile bumps no map-content or reveal revision, so the builder must rebuild it and the diff must find its key.
+        var gameTile = s.Game.TileMap[target];
+        gameTile.SetRoadStatus(gameTile.RoadStatus == RoadStatus.None ? RoadStatus.Road : RoadStatus.None, null);
+
+        var saved = CultureInfo.CurrentCulture;
+        try
+        {
+            // The incremental tile key and SnapshotDiff.TileKey must agree regardless of the ambient culture's negative sign.
+            CultureInfo.CurrentCulture = OddCulture();
+            var mark = ViewDeltaBuilder.Capture(s.Game, s.Viewer);
+            var (fullDelta, fullAfter) = ViewDeltaBuilder.BuildWithDiff(s.Game, s.Viewer, s.Before, mark, [], 1, Status);
+            var built = IncrementalViewBuilder.TryBuildWithDiff(s.Game, s.Viewer, s.Before, mark, [], 1, Status, s.State);
+            Assert.NotNull(built);
+            Assert.Equal(SnapshotBuilder.ToCanonicalJson(fullAfter), SnapshotBuilder.ToCanonicalJson(built!.After));
+            Assert.Equal(fullDelta.ViewHash, built.Delta.ViewHash);
+            Assert.Equal(SnapshotBuilder.ToJson(fullDelta.Diff), SnapshotBuilder.ToJson(built.Delta.Diff));
+
+            var mirror = SnapshotBuilder.FromElement<SnapshotDiff>(built.Delta.Diff!.Value).Apply(s.Before);
+            Assert.Equal(built.After.ViewHash, mirror.ViewHash);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = saved;
+        }
     }
 
     // ---- fallbacks: anything the builder cannot prove safe goes back to the full build ------------------------------------------------

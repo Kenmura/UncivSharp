@@ -398,7 +398,7 @@ Honest reading: the machine was shared and loaded (load average 7 to 54 on 20 lo
 (`ViewDeltaBuilder.ViewMark` now carries the latter two). After a command the builder:
 
 - reuses every explored fogged tile by reference (a human's fog snapshot carries only remembered improvement/owner plus static terrain/resource, and those
-  inputs are covered by the revisions);
+  inputs are covered by the revisions; the base game writes a remembered value only while its tile is visible, and every such command rebuilds that tile);
 - rebuilds the currently visible tiles, tiles that changed visibility, newly explored tiles (including one that a unit explored and left in the same
   command) and the positions named by the command's events, and compares the new `TileDto` to the old one field by field so an unchanged visible tile is
   reused too;
@@ -410,7 +410,13 @@ Honest reading: the machine was shared and loaded (load average 7 to 54 on 20 lo
 Anything it cannot prove safe falls back to the full build and re-seeds the state: a non-human or spectator viewer (whose fog view shows live improvement),
 a stale/foreign previous snapshot, a map-content revision change (terrain, features, resource/site placement), or a technology/policy count change that can
 reveal a resource on a fogged tile. The fallback is covered by `IncrementalViewBuilderTests` (each condition) and by the host test that drops the state
-between commands; the client's existing resync path still catches a diff applied to the wrong base (`SnapshotDiffTests`).
+between commands; the client's existing resync path still catches a diff applied to the wrong base (`SnapshotDiffTests`). The one documented invariant is
+that no caller writes a human viewer's remembered improvement/owner for an explored, fogged tile without also bumping a revision the builder watches; the
+base game only writes them while the tile is visible (whose command rebuilds it), so only a mod/future unique needs to honour that.
+
+The rebuilt-tile set and the diff key tiles through the same `SnapshotDiff.TileKey(int,int)` helper (invariant culture); the regression test changes a
+visible tile at a negative coordinate under a hostile ambient culture (a different `NegativeSign`) and compares the full and incremental diff and the
+client mirror hash, the bug class `EndToEndDeterminismTests.HexCoordTextIsCultureIndependent` pins for `HexCoord` text.
 
 Proof of equal output: `IncrementalViewBuilderTests.ScriptedLateGameCommands_ProduceByteIdenticalSnapshotsAndDiffs` drives a scripted two-human game and
 compares every command's full and incremental snapshot (canonical JSON), diff, events and view hash, applying the incremental diff to a client mirror;
@@ -430,6 +436,12 @@ carry 90 commands x 3 recipients = 270 view builds per run. Host-side times only
 | 3 | incremental | 49.1 ms | 0.803 ms | 267 / 3 |
 | 4 | incremental | 46.8 ms | 0.757 ms | 267 / 3 |
 | median | full -> incremental | **64.0 -> 48.0 ms (-25%)** | **1.051 -> 0.780 ms (-26%)** | |
+
+Review re-run (T342 changes-requested, shared-culture tile key): four alternating single runs each (`--host-views full|incremental`), Release, same scenario.
+`Host.Capture + Host.BuildDelta + Host.Encode` median **1.252 -> 0.967 ms per recipient-command** and **67.6 -> 52.2 ms per turn** for 3 recipients (-23%);
+`Host.BuildDelta` median **1.103 -> 0.849 ms** (-23%); 267/270 incremental with 3 full builds in every incremental run. All eight runs ended in the same
+state (`turn=200 civs=13 cities=22 units=196`), and the engine late median was 171.0 (full) vs 173.8 ms/turn (incremental), unchanged within the shared
+machine's noise. `bench --golden` after the fix: small 50 and medium 200 turn hashes identical.
 
 The three full builds are the deliberate reveal-revision fallback (a measured human finishes a tech in the window). The engine late median is unchanged
 within noise (160.8 and 167.0 ms/turn for full, 164.1 and 165.7 for incremental; it is the same engine and the host cost is excluded by the harness). Adding
