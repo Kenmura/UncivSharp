@@ -30,7 +30,8 @@ namespace Unciv.GodotHarness;
 /// from the real controls, not from pixels: no visible text leaves the window, none is cut off or overlaps another (<see cref="LayoutChecks.Problems"/>), no visible button is under the minimum
 /// target height or over the maximum (<see cref="LayoutChecks.TargetProblems"/>), and no full-screen screen wastes the window by leaving empty side bands (<see cref="LayoutChecks.WastedSpaceProblems"/>).
 /// All problems of the run are printed and the run fails at the end when there is any. When <c>UNCIV_MATRIX_OUT</c> names a folder each screen is also written there as <c>layout-WxH-screen.png</c>
-/// (a real GPU draws it; never compared to goldens). <c>UNCIV_MATRIX_RES</c> (comma separated WxH or WxH@S) replaces the size list. <c>tools/layout-matrix.sh</c> runs it on the host GPU.
+/// (a real GPU draws it; never compared to goldens), and every Options tab as <c>layout-WxH-options-&lt;tab&gt;.png</c> (T335). <c>UNCIV_MATRIX_RES</c> (comma separated WxH or WxH@S) replaces the size list.
+/// <c>tools/layout-matrix.sh</c> runs it on the host GPU.
 /// </summary>
 public sealed class LayoutMatrixScenario : Scenario
 {
@@ -475,7 +476,26 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("open options", () => M().Push(new OptionsScreen(run.Settings, T(), null, ["Retro", "Neon"], null, new RelaySettingsStore(() => new RelaySettings { Url = "unciv-relay://relay.example.org:47831?fp=" + BrowseScenario.StrangerKey, AcceptedRelays = ["a.very.long.relay.host.name.example.net:47830", "friend.example.net:47830"] }, _ => true)))));
         steps.AddRange(check(at, "options", () => M().Top.NotNull(), false));
-        // T322: on every page the rows keep within the form width cap (a label next to its control, not across a 4K window)
+        steps.AddRange(OptionsTabSteps(at));
+        steps.Add(new Act("back", () => M().Pop()));
+        steps.Add(new Act("show the shared widgets", () => M().Push(at.Gallery = new WidgetGallery(T()))));
+        steps.AddRange(check(at, "widgets", () => M().Top.NotNull(), false));
+        steps.Add(new Act("back", () => M().Pop()));
+        steps.AddRange(SavesSteps(at, check));
+        steps.Add(new Act("show a modal", () => M().Popups.Show(new PopupSpec("Leave the game?", "Progress since the last save is lost.", [new PopupChoice("Cancel"), new PopupChoice("Leave", null, ChoiceRole.Primary)]))));
+        steps.AddRange(check(at, "modal", () => M().Popups, false));
+        steps.Add(new Act($"{at.Size}: free the menus", () => at.Sub.NotNull().QueueFree()));
+        steps.Add(new WaitFrames(2));
+        return steps;
+    }
+
+    /// <summary>
+    /// T322/T335: every Options page keeps its rows within the form width cap (a label next to its control, not across a 4K window) and is captured as its own PNG.
+    /// </summary>
+    private static ScenarioStep[] OptionsTabSteps(At at)
+    {
+        var steps = new List<ScenarioStep>();
+        ScreenManager M() => at.Manager.NotNull();
         for (int tab = 0; tab < 8; tab++) // 8 tabs with Language; it is absent without a localization and SelectTab then ignores the index
         {
             int index = tab;
@@ -488,17 +508,16 @@ public sealed class LayoutMatrixScenario : Scenario
                 var (rows, max) = panel.CurrentRows;
                 foreach (string it in LayoutChecks.WidthProblems(rows, max)) at.Run.Problems.Add($"{at.Size} options page {index}: {it}");
             }));
+            // T335: every Options tab is captured, not only the Display page the generic "options" check saves
+            steps.Add(new Act($"{at.Size} options page {index}: capture", () =>
+            {
+                if (at.Run.OutDir == null) return;
+                var panel = ((OptionsScreen)M().Top.NotNull()).Panel;
+                if (panel.SelectedTab != index) return;
+                Save(at.Sub.NotNull(), Path.Combine(at.Run.OutDir, $"layout-{at.Size}-options-{TabSlug(panel.TabNames[index])}.png"));
+            }));
         }
-        steps.Add(new Act("back", () => M().Pop()));
-        steps.Add(new Act("show the shared widgets", () => M().Push(at.Gallery = new WidgetGallery(T()))));
-        steps.AddRange(check(at, "widgets", () => M().Top.NotNull(), false));
-        steps.Add(new Act("back", () => M().Pop()));
-        steps.AddRange(SavesSteps(at, check));
-        steps.Add(new Act("show a modal", () => M().Popups.Show(new PopupSpec("Leave the game?", "Progress since the last save is lost.", [new PopupChoice("Cancel"), new PopupChoice("Leave", null, ChoiceRole.Primary)]))));
-        steps.AddRange(check(at, "modal", () => M().Popups, false));
-        steps.Add(new Act($"{at.Size}: free the menus", () => at.Sub.NotNull().QueueFree()));
-        steps.Add(new WaitFrames(2));
-        return steps;
+        return [.. steps];
     }
 
     /// <summary>T321: the saves dialog, with a readable save in its list (the compact breakpoint drops the ruleset and date columns).</summary>
@@ -891,6 +910,9 @@ public sealed class LayoutMatrixScenario : Scenario
 
     /// <summary>Not judged by the target-height check: the city grid's tile buttons (map cells, not controls to hit) and check boxes (a label row whose height is its text line).</summary>
     private static bool Exempt(BaseButton button) => button is CityTileButton or CheckBox;
+
+    /// <summary>T335: a tab's untranslated name as a file-name suffix ("Display" -> "display").</summary>
+    private static string TabSlug(string title) => title.ToLowerInvariant().Replace(' ', '-');
 
     private static void Save(SubViewport viewport, string path)
     {

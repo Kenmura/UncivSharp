@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # T312/T317: the multi-resolution layout matrix (scenario layout-matrix, see LayoutMatrixScenario.cs) on the real GPU: every main screen, popup and end screen at 640x360 (the
-# minimum window), 1366x768, 1920x1080, 2560x1440, 3440x1440 and 3840x2160, checks from the real controls plus one PNG per screen and size. Same host rules as scale-sheet.sh
+# minimum window), 1366x768, 1920x1080, 2560x1440, 3440x1440 and 3840x2160, checks from the real controls plus one PNG per screen and size, and one per Options tab (T335). Same host rules as scale-sheet.sh
 # (host, not dotnet-dev; build first inside dotnet-dev). Without a display use run-scenario.sh layout-matrix (asserts only).
 #
 #   tools/layout-matrix.sh <out-dir> [sizes]      sizes: comma separated WxH or WxH@osScale
