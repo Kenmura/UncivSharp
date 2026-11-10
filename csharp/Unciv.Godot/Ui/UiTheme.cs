@@ -138,6 +138,9 @@ public sealed class UiTheme
     /// <summary>A size in unscaled pixels at the current UI scale, rounded half away from zero.</summary>
     public int Px(int unscaled) => UiTokens.Scaled(unscaled, Scale);
 
+    /// <summary>T333: a full-screen frame's content cap in screen pixels, at the live scale and never above <see cref="UiTokens.MaxContentPixels"/>.</summary>
+    public int ContentWidth => UiTokens.ContentCapPx(Scale);
+
     public Texture2D Icon(AssetKey key) => Registry.Get<Texture2D>(key);
 
     public StyleBoxFlat Panel => (StyleBoxFlat)Theme.GetStylebox("panel", "PanelContainer");

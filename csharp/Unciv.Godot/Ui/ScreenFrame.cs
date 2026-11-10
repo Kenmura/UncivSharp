@@ -56,10 +56,10 @@ public partial class ScreenFrame : VBoxContainer
         AddChild(footer);
     }
 
-    /// <summary>T312: on a window wider than <see cref="UiTokens.MaxContentWidth"/> the content, header and footer rows keep that width, centred; the rest becomes side margin.</summary>
+    /// <summary>T312/T333: on a window wider than the content cap the content, header and footer rows keep that width, centred; the rest becomes side margin. The cap is in screen pixels and does not grow with the whole scale (a 4K window would otherwise keep 1500 logical px x 2.5 = 3750 px).</summary>
     private void FitWidth()
     {
-        int extra = Math.Max(0, (int)((Size.X - theme.Px(UiTokens.MaxContentWidth)) / 2f));
+        int extra = Math.Max(0, (int)((Size.X - theme.ContentWidth) / 2f));
         foreach (string side in new[] { "left", "right" })
         {
             content.AddThemeConstantOverride("margin_" + side, baseMargin + extra);
@@ -89,6 +89,17 @@ public partial class ScreenFrame : VBoxContainer
 
     /// <summary>The content area's own rectangle (below the header, above the footer).</summary>
     public Rect2 ContentRect => content.GetGlobalRect();
+
+    /// <summary>T333: the rectangle the page may actually use (the frame minus the centred side margins), i.e. the content cap in effect. <see cref="ContentRect"/> is the full-width margin container.</summary>
+    public Rect2 ContentColumnRect
+    {
+        get
+        {
+            var rect = content.GetGlobalRect();
+            float left = content.GetThemeConstant("margin_left"), right = content.GetThemeConstant("margin_right");
+            return new Rect2(rect.Position + new Vector2(left, 0), new Vector2(Size.X - left - right, rect.Size.Y));
+        }
+    }
 
     /// <summary>Sets the screen's content, filling the area between header and footer. A control the frame already holds is freed.</summary>
     public void SetContent(Control page)

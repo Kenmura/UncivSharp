@@ -61,13 +61,13 @@ public sealed class LayoutMatrixScenario : Scenario
             steps.AddRange(GameSteps(at));
             steps.AddRange(PopupSteps(at));
             steps.AddRange(EndScreenSteps(at));
-            steps.AddRange(MenuSteps(at, (a, n, r) => Check(a, n, r)));
+            steps.AddRange(MenuSteps(at, (a, n, r, cap) => Check(a, n, r, contentCap: cap)));
         }
 
         // T329: the game screens (the HUD, the city and the tech screen) are opened once and resized (and rescaled) live, like the menus
         steps.AddRange(GameResizeSteps(new At(run, 1366, 768, 1f)));
         // T316: the same menu screens, opened once and then resized (and rescaled) live
-        steps.AddRange(MenuSteps(new At(run, 1366, 768, 1f), (a, n, r) => ResizeCycle(a, n, r)));
+        steps.AddRange(MenuSteps(new At(run, 1366, 768, 1f), (a, n, r, cap) => ResizeCycle(a, n, r, contentCap: cap)));
         // T321: the dialogs over a game screen (a pending alert, a tutorial, a decision picker) through the same live cycle
         steps.AddRange(PopupResizeSteps(new At(run, 1366, 768, 1f)));
         // T405: the in-game save controller shares the game UI's bound theme, so at a large window with a user scale its breakpoint and pixel sizes are the game UI's
@@ -106,10 +106,34 @@ public sealed class LayoutMatrixScenario : Scenario
             foreach (string it in LayoutChecks.Problems(node, window)) at.Run.Problems.Add($"{at.Size} {name}: {it.Replace("\n", "\\n")}");
             foreach (string it in LayoutChecks.TargetProblems(node, t.Px(UiTokens.CompactControlMinHeight), t.Px(UiTokens.ControlMinHeight) * 4, exempt == null ? Exempt : it => Exempt(it) || exempt(it))) at.Run.Problems.Add($"{at.Size} {name}: {it}");
             if (contentCap is { } cap)
-                foreach (string it in LayoutChecks.WastedSpaceProblems(node, window, t.Px(cap))) at.Run.Problems.Add($"{at.Size} {name}: {it}");
+            {
+                int capPx = Math.Min(t.Px(cap), UiTokens.MaxContentPixels); // T333: the same physical ceiling ScreenFrame applies
+                // T333: the saves dialog is deliberately a share of the window, not a full-width screen, so only its frame content is capped.
+                if (name != "saves")
+                    foreach (string it in LayoutChecks.WastedSpaceProblems(node, window, capPx)) at.Run.Problems.Add($"{at.Size} {name}: {it}");
+                foreach (string it in LayoutChecks.ContentWidthProblems(node, capPx)) at.Run.Problems.Add($"{at.Size} {name}: {it}");
+            }
+            if (name == "new-game")
+            {
+                // T333: the Human/AI toggle of every player row stays beside the nation name at every size.
+                foreach (string it in NewGameGapProblems(node, t)) at.Run.Problems.Add($"{at.Size} {name}: {it}");
+            }
             if (at.Run.OutDir != null) Save(view, Path.Combine(at.Run.OutDir, $"layout-{at.Size}-{name}.png"));
         }),
     ];
+
+    /// <summary>T333: the gap between a New game player row's nation button and its Human/AI toggle, in screen pixels (they share one row, so only their separation should part them).</summary>
+    private static IEnumerable<string> NewGameGapProblems(Node root, UiTheme theme)
+    {
+        if (root is not NewGameScreen screen) return [];
+        var pairs = new List<(Control Left, Control Right, string What)>();
+        for (int i = 0; i < screen.Form.Slots.Count; i++)
+        {
+            if (screen.SlotNationButton(i) is { } nation && screen.SlotHumanButton(i) is { } human)
+                pairs.Add((nation, human, $"player row {i + 1} nation name to its Human/AI toggle"));
+        }
+        return LayoutChecks.GapProblems(pairs, theme.Px(UiTokens.S2));
+    }
 
     private static List<ScenarioStep> GameSteps(At at)
     {
@@ -356,7 +380,7 @@ public sealed class LayoutMatrixScenario : Scenario
     }
 
     /// <summary>The menu screens, through a screen manager over the same size.</summary>
-    private static List<ScenarioStep> MenuSteps(At at, Func<At, string, Func<Node>, ScenarioStep[]> check)
+    private static List<ScenarioStep> MenuSteps(At at, Func<At, string, Func<Node>, int?, ScenarioStep[]> check)
     {
         var run = at.Run;
         var steps = new List<ScenarioStep>
@@ -374,9 +398,10 @@ public sealed class LayoutMatrixScenario : Scenario
         };
         ScreenManager M() => at.Manager.NotNull();
         UiTheme T() => at.Theme.NotNull();
-        steps.AddRange(check(at, "main-menu", () => M().Top.NotNull()));
+        steps.AddRange(check(at, "main-menu", () => M().Top.NotNull(), null));
         steps.Add(new Act("open new game", () => M().Push(new NewGameScreen(T(), NewGameForm.FromRulesetCache(), _ => throw new InvalidOperationException("not started")))));
-        steps.AddRange(check(at, "new-game", () => M().Top.NotNull()));
+        // T333: the players page is a full-width screen whose rows must stay inside the frame's content cap
+        steps.AddRange(check(at, "new-game", () => M().Top.NotNull(), UiTokens.MaxContentWidth));
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("open host", () => M().Push(new HostScreen(T(), new HostSettingsForm(NewGameForm.FromRulesetCache()), new HostScreenEnvironment
         {
@@ -388,7 +413,8 @@ public sealed class LayoutMatrixScenario : Scenario
             SetClipboard = _ => { },
             Addresses = () => [new LocalAddress("192.168.1.20", "Wi-Fi", AddressScope.Lan)],
         }))));
-        steps.AddRange(check(at, "host", () => M().Top.NotNull()));
+        // T333: Host's tab pages were never inspected at 4K; its frame content and the width cap are checked now
+        steps.AddRange(check(at, "host", () => M().Top.NotNull(), UiTokens.MaxContentWidth));
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("open the lobby", () =>
         {
@@ -401,7 +427,7 @@ public sealed class LayoutMatrixScenario : Scenario
         }));
         steps.Add(new WaitUntil("the host joined its lobby", () => at.Joined.NotNull().IsCompleted && at.Joined.NotNull().Result.Joined, 3000));
         steps.Add(new Act("show the lobby", () => M().Push(new LobbyScreen(T(), NewGameForm.FromRulesetCache(), at.LobbySession.NotNull(), run.Identity.PlayerKey, at.Lobby.NotNull()))));
-        steps.AddRange(check(at, "lobby", () => M().Top.NotNull()));
+        steps.AddRange(check(at, "lobby", () => M().Top.NotNull(), UiTokens.MaxContentWidth));
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("open join", () => M().Push(new JoinScreen(T(), new JoinScreenEnvironment
         {
@@ -413,7 +439,7 @@ public sealed class LayoutMatrixScenario : Scenario
             Connect = (_, _) => throw new InvalidOperationException("not connecting"),
             RelayNeedsPrompt = _ => true,
         }))));
-        steps.AddRange(check(at, "join", () => M().Top.NotNull()));
+        steps.AddRange(check(at, "join", () => M().Top.NotNull(), UiTokens.MaxContentWidth));
         // T371: the relay trust prompt (the invite names a relay that is not the configured one) at every size
         steps.Add(new Act("type a relay invite and join", () =>
         {
@@ -422,7 +448,7 @@ public sealed class LayoutMatrixScenario : Scenario
             screen.Join();
         }));
         steps.Add(new WaitUntil("the relay prompt is open", () => M().Top is JoinScreen { RelayPrompt.Length: > 0 }, 600));
-        steps.AddRange(check(at, "join relay prompt", () => M().Top.NotNull()));
+        steps.AddRange(check(at, "join relay prompt", () => M().Top.NotNull(), null));
         steps.Add(new Act("decline the relay", () => ((JoinScreen)M().Top.NotNull()).RelayNoButton.EmitSignal(BaseButton.SignalName.Pressed)));
         steps.Add(new Act("back", () => M().Pop()));
         // T339: the browse screen with a list of games, the longest names the rules allow, and its join dialog
@@ -440,12 +466,12 @@ public sealed class LayoutMatrixScenario : Scenario
         }))));
         steps.Add(new WaitUntil("the list is shown", () => M().Top is BrowseScreen { Status: BrowseStatus.Ready }, 600));
         steps.Add(new Act("pick the first game", () => ((BrowseScreen)M().Top.NotNull()).RowButton(0)?.EmitSignal(BaseButton.SignalName.Pressed)));
-        steps.AddRange(check(at, "browse", () => M().Top.NotNull()));
+        steps.AddRange(check(at, "browse", () => M().Top.NotNull(), null));
         steps.Add(new Act("open the join dialog", () => ((BrowseScreen)M().Top.NotNull()).OpenJoinDialog()));
-        steps.AddRange(check(at, "browse join dialog", () => ((BrowseScreen)M().Top.NotNull()).Dialog.NotNull()));
+        steps.AddRange(check(at, "browse join dialog", () => ((BrowseScreen)M().Top.NotNull()).Dialog.NotNull(), null));
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("open options", () => M().Push(new OptionsScreen(run.Settings, T(), null, ["Retro", "Neon"], null, new RelaySettingsStore(() => new RelaySettings { Url = "unciv-relay://relay.example.org:47831?fp=" + BrowseScenario.StrangerKey, AcceptedRelays = ["a.very.long.relay.host.name.example.net:47830", "friend.example.net:47830"] }, _ => true)))));
-        steps.AddRange(check(at, "options", () => M().Top.NotNull()));
+        steps.AddRange(check(at, "options", () => M().Top.NotNull(), null));
         // T322: on every page the rows keep within the form width cap (a label next to its control, not across a 4K window)
         for (int tab = 0; tab < 8; tab++) // 8 tabs with Language; it is absent without a localization and SelectTab then ignores the index
         {
@@ -462,18 +488,18 @@ public sealed class LayoutMatrixScenario : Scenario
         }
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("show the shared widgets", () => M().Push(at.Gallery = new WidgetGallery(T()))));
-        steps.AddRange(check(at, "widgets", () => M().Top.NotNull()));
+        steps.AddRange(check(at, "widgets", () => M().Top.NotNull(), null));
         steps.Add(new Act("back", () => M().Pop()));
         steps.AddRange(SavesSteps(at, check));
         steps.Add(new Act("show a modal", () => M().Popups.Show(new PopupSpec("Leave the game?", "Progress since the last save is lost.", [new PopupChoice("Cancel"), new PopupChoice("Leave", null, ChoiceRole.Primary)]))));
-        steps.AddRange(check(at, "modal", () => M().Popups));
+        steps.AddRange(check(at, "modal", () => M().Popups, null));
         steps.Add(new Act($"{at.Size}: free the menus", () => at.Sub.NotNull().QueueFree()));
         steps.Add(new WaitFrames(2));
         return steps;
     }
 
     /// <summary>T321: the saves dialog, with a readable save in its list (the compact breakpoint drops the ruleset and date columns).</summary>
-    private static ScenarioStep[] SavesSteps(At at, Func<At, string, Func<Node>, ScenarioStep[]> check)
+    private static ScenarioStep[] SavesSteps(At at, Func<At, string, Func<Node>, int?, ScenarioStep[]> check)
     {
         var run = at.Run;
         return
@@ -486,7 +512,7 @@ public sealed class LayoutMatrixScenario : Scenario
                 at.Sub.NotNull().AddChild(at.Saves);
                 at.Saves.OpenDialog();
             }),
-            .. check(at, "saves", () => at.Saves.NotNull()),
+            .. check(at, "saves", () => at.Saves.NotNull(), UiTokens.MaxContentWidth),
             new Act("close the saves dialog", () => at.Saves.NotNull().CloseDialog()),
         ];
     }

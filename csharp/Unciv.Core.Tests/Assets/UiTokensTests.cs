@@ -93,6 +93,16 @@ public class UiTokensTests
     public void BordersNeverVanish(int unscaled, float scale, int expected) => Assert.Equal(expected, UiTokens.ScaledAtLeastOne(unscaled, scale));
 
     [Theory]
+    [InlineData(0.5f, 750)] // the design width at the smallest user scale
+    [InlineData(1f, 1500)]
+    [InlineData(1.5f, 2250)] // a 1080p window
+    [InlineData(1.75f, 2560)] // 2625 capped at a 1440p window's width
+    [InlineData(2.5f, 2560)] // T333: 4K does not get 3750, almost the whole 3840 px window
+    [InlineData(3f, 2560)]
+    [InlineData(4f, 2560)]
+    public void FullScreenContentCapDoesNotGrowWithTheWholeScale(float scale, int expected) => Assert.Equal(expected, UiTokens.ContentCapPx(scale));
+
+    [Theory]
     [InlineData(640, UiBreakpoint.Compact)]
     [InlineData(999.9f, UiBreakpoint.Compact)]
     [InlineData(1000, UiBreakpoint.Regular)]

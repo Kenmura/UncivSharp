@@ -153,6 +153,22 @@ internal static class LayoutChecks
         .Select(it => $"{it.GetType().Name} '{it.Name}' is {it.Size.X} wide, more than the {maxPx} px form width cap")
         .ToList();
 
+    /// <summary>T333: the content column of the frame under <paramref name="root"/> is no wider than <paramref name="maxPx"/>: a cap in logical pixels that grew with the whole automatic scale would let a 4K window's content span the window.</summary>
+    public static List<string> ContentWidthProblems(Node root, float maxPx)
+    {
+        if (Find<ScreenFrame>(root) is not { } frame) return [];
+        float width = frame.ContentColumnRect.Size.X;
+        return width <= maxPx + Tolerance ? [] : [$"the content column is {width:0} px wide, more than the {maxPx:0} px content cap"];
+    }
+
+    /// <summary>T333: the visible pairs whose horizontal gap is wider than <paramref name="maxGap"/> (a label and the control that belongs to it, measured from their real rectangles).</summary>
+    public static List<string> GapProblems(IEnumerable<(Control Left, Control Right, string What)> pairs, float maxGap) => pairs
+        .Where(it => it.Left.IsVisibleInTree() && it.Right.IsVisibleInTree())
+        .Select(it => (it.What, Gap: it.Right.GetGlobalRect().Position.X - it.Left.GetGlobalRect().End.X))
+        .Where(it => it.Gap > maxGap + Tolerance)
+        .Select(it => $"{it.What}: {it.Gap:0} px gap, more than the {maxGap:0} px allowed")
+        .ToList();
+
     /// <summary>T317: the share of the usable width (the window, or the content cap on a wider window) a full-screen frame must fill before its empty side margins count as wasted space.</summary>
     public const float MinContentShare = 0.85f;
 
@@ -166,7 +182,7 @@ internal static class LayoutChecks
         var frame = Find<ScreenFrame>(root);
         if (frame == null) return [];
         float usable = MathF.Min(window.Size.X, contentCapPx);
-        float content = frame.ContentRect.Size.X;
+        float content = frame.ContentColumnRect.Size.X;
         if (usable <= 0f || content + Tolerance >= usable * minShare) return [];
         return [$"the content column is {content:0} px wide, less than {minShare:P0} of the {usable:0} px usable width (window {window.Size.X:0} px, cap {contentCapPx:0} px): wasted side space"];
     }

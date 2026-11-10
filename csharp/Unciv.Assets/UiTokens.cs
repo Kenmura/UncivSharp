@@ -99,6 +99,12 @@ public static class UiTokens
     /// <summary>T312: the widest a full-screen screen's content (and its header and footer rows) grows, in logical pixels; a wider window leaves the extra as side margins (ultrawide).</summary>
     public const int MaxContentWidth = 1500;
 
+    /// <summary>T333: the widest a full-screen screen's content grows, in screen pixels. The design cap is in logical pixels, so at a 4K window's automatic scale (2.5) it would be 3750 px, almost the whole window; a 1440p window's width is a reading width at any scale.</summary>
+    public const int MaxContentPixels = 2560;
+
+    /// <summary>T333: the frame content cap at a live scale: the design width, but never more than <see cref="MaxContentPixels"/> (it must not grow with the whole automatic scale).</summary>
+    public static int ContentCapPx(float scale) => Math.Min(Scaled(MaxContentWidth, scale), MaxContentPixels);
+
     /// <summary>T322: the widest a settings or form page grows, in logical pixels: a label stays within a few hundred pixels of its control even on 4K and ultrawide.</summary>
     public const int MaxFormWidth = 560;
 

@@ -243,16 +243,18 @@ public partial class NewGameScreen : Control
             int slot = i;
             var line = new HBoxContainer { Name = $"Slot{(i + 1).ToString(CultureInfo.InvariantCulture)}" };
             line.FitConstant(theme, "separation", UiTokens.S2);
+            // T333: the nation button keeps a reading width instead of stretching across the content column, so the Human/AI toggle stays beside the
+            // nation name (a 4K window used to put it ~1500 px away from it).
             var nation = new Button
             {
                 Text = $"{(i + 1).ToString(CultureInfo.InvariantCulture)}. {Form.Slots[i].Nation.TrText()}",
                 ToggleMode = true,
                 ButtonPressed = i == selectedSlot,
                 ThemeTypeVariation = UiVariants.ButtonRow,
-                SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                SizeFlagsHorizontal = SizeFlags.ShrinkBegin,
                 Alignment = HorizontalAlignment.Left,
                 TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
-            };
+            }.FitMin(theme, 200);
             nation.Pressed += () =>
             {
                 selectedSlot = slot;
