@@ -97,6 +97,7 @@
 - [T299 (ticket not Done or unknown)](#t299-ticket-not-done-or-unknown)
 - [T300 (ticket not Done or unknown)](#t300-ticket-not-done-or-unknown)
 - [T312 (ticket not Done or unknown)](#t312-ticket-not-done-or-unknown)
+- [T333 (ticket not Done or unknown)](#t333-ticket-not-done-or-unknown)
 - [T334 (ticket not Done or unknown)](#t334-ticket-not-done-or-unknown)
 - [T339 (ticket not Done or unknown)](#t339-ticket-not-done-or-unknown)
 - [T340 (ticket not Done or unknown)](#t340-ticket-not-done-or-unknown)
@@ -2007,6 +2008,25 @@ Real-GPU (RTX 5060 Ti, Vulkan) renders of the layout-matrix scenario (design/ima
 ![3840x2160: main menu, new game, host, lobby, join, options.](design/images/layout/3840x2160-2.jpg)
 
 *3840x2160: main menu, new game, host, lobby, join, options.* (`design/images/layout/3840x2160-2.jpg`, documentation image, not a golden)
+
+## T333 (ticket not Done or unknown)
+
+Full-width pages at 4K: a screen frame's content is capped at 2560 screen px instead of growing with the whole automatic scale, and the New game player rows keep the Human/AI toggle beside the nation name instead of stretching it to the far end of the column.
+
+
+Real-GPU (RTX 5060 Ti, Vulkan) renders of the layout-matrix scenario (design/images/layout/README.md); not goldens.
+
+![3440x1440: the New game page is a centred capped column and every player row's Human/AI toggle sits immediately after its nation name.](design/images/layout/3440x1440-2.jpg)
+
+*3440x1440: the New game page is a centred capped column and every player row's Human/AI toggle sits immediately after its nation name.* (`design/images/layout/3440x1440-2.jpg`, documentation image, not a golden)
+
+![3840x2160: the same page at the largest size; the 2560 px cap leaves side margins instead of stretching the player rows across the window.](design/images/layout/3840x2160-2.jpg)
+
+*3840x2160: the same page at the largest size; the 2560 px cap leaves side margins instead of stretching the player rows across the window.* (`design/images/layout/3840x2160-2.jpg`, documentation image, not a golden)
+
+![The committed New game golden at 1920x1080 (re-recorded): the nation button and its Human/AI toggle stay together in every player row.](../Unciv.Godot.Harness/golden/setup/fhd.png)
+
+*The committed New game golden at 1920x1080 (re-recorded): the nation button and its Human/AI toggle stay together in every player row.* (`setup/fhd.png`)
 
 ## T334 (ticket not Done or unknown)
 

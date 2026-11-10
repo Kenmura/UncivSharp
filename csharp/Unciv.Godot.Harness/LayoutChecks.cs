@@ -161,10 +161,15 @@ internal static class LayoutChecks
         return width <= maxPx + Tolerance ? [] : [$"the content column is {width:0} px wide, more than the {maxPx:0} px content cap"];
     }
 
-    /// <summary>T333: the visible pairs whose horizontal gap is wider than <paramref name="maxGap"/> (a label and the control that belongs to it, measured from their real rectangles).</summary>
+    /// <summary>
+    /// T333: the visible pairs whose horizontal gap between the left control's drawn label and the right control is wider than <paramref name="maxGap"/>.
+    /// The left extent is its position plus its combined minimum size (its own minimum plus <c>CustomMinimumSize</c>), not its rectangle end: a stretched row
+    /// button draws its left-aligned label at its start, so a rectangle-end measurement is always one separation wide and misses the label that sits far from
+    /// the control beside it (the bug this check exists for).
+    /// </summary>
     public static List<string> GapProblems(IEnumerable<(Control Left, Control Right, string What)> pairs, float maxGap) => pairs
         .Where(it => it.Left.IsVisibleInTree() && it.Right.IsVisibleInTree())
-        .Select(it => (it.What, Gap: it.Right.GetGlobalRect().Position.X - it.Left.GetGlobalRect().End.X))
+        .Select(it => (it.What, Gap: it.Right.GetGlobalRect().Position.X - (it.Left.GetGlobalRect().Position.X + it.Left.GetCombinedMinimumSize().X)))
         .Where(it => it.Gap > maxGap + Tolerance)
         .Select(it => $"{it.What}: {it.Gap:0} px gap, more than the {maxGap:0} px allowed")
         .ToList();

@@ -1946,6 +1946,24 @@
   "T311": {
     "none": "A scale model, not a screen: the real-GPU scale sheet (tools/scale-sheet.sh) renders the HUD and menu at each common window size on demand and is deliberately not a CI golden; the all-screens pass with screenshots is T312."
   },
+  "T333": {
+    "about": "Full-width pages at 4K: a screen frame's content is capped at 2560 screen px instead of growing with the whole automatic scale, and the New game player rows keep the Human/AI toggle beside the nation name instead of stretching it to the far end of the column.",
+    "doc_note": "Real-GPU (RTX 5060 Ti, Vulkan) renders of the layout-matrix scenario (design/images/layout/README.md); not goldens.",
+    "shots": [
+      {
+        "doc": "layout/3440x1440-2.jpg",
+        "caption": "3440x1440: the New game page is a centred capped column and every player row's Human/AI toggle sits immediately after its nation name."
+      },
+      {
+        "doc": "layout/3840x2160-2.jpg",
+        "caption": "3840x2160: the same page at the largest size; the 2560 px cap leaves side margins instead of stretching the player rows across the window."
+      },
+      {
+        "golden": "setup/fhd.png",
+        "caption": "The committed New game golden at 1920x1080 (re-recorded): the nation button and its Human/AI toggle stay together in every player row."
+      }
+    ]
+  },
   "T312": {
     "about": "Multi-resolution layout pass: every main screen at 1366x768, 1920x1080, 2560x1440, 3440x1440 (ultrawide) and 3840x2160 on the real GPU, six screens per sheet.",
     "doc_note": "Real-GPU (RTX 5060 Ti, Vulkan) renders of the layout-matrix scenario (design/images/layout/README.md); not goldens.",
