@@ -116,7 +116,7 @@ public sealed class MpTurnScenario : Scenario
             new WaitFrames(2),
             new AssertQuery("the refusal is shown as turn-resolving", () =>
                 script.Refusals[0] == "turn-resolving" && screen.StatusText == "Cannot end the turn: the host is resolving the turn"),
-            new Capture("resolving", "The host is resolving the round: a compact card 'Processing the other civilizations / Waiting for AI/host' sits under the navigation strip, the bar says 'Resolving the turn...', and the status line shows the refusal"),
+            new Capture("resolving", "The host is resolving the round: the bar says 'Resolving the turn...', a compact card 'Processing the other civilizations / Waiting for AI/host' sits just below it, and the status line shows the refusal"),
             new Act("the host finishes: turn 2 starts with nobody ended", () => script.StartNextTurn()),
             new WaitFrames(2),
             new AssertQuery("the overlay is gone and the marks are cleared for the new turn", () =>

@@ -2134,9 +2134,9 @@ The End turn progress overlay on a late-game eight-civ game: it names the civ cu
 
 Scenario `next-turn-long`.
 
-![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
+![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Denmark - 5 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
 
-*A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)* (`next-turn-long/overlay.png`)
+*A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Denmark - 5 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)* (`next-turn-long/overlay.png`)
 
 ## T346 (ticket not Done or unknown)
 

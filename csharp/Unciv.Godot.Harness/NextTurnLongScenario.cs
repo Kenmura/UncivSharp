@@ -62,7 +62,7 @@ public sealed class NextTurnLongScenario : Scenario
                 screen.TryHotkey("Space");
                 InputSimulator.SimulateKey(host.GetViewport(), Key.Escape);
             }),
-            new WaitUntil("the cancelled turn stops between civs", () => !screen.IsEndingTurn, 900),
+            new WaitUntil("the cancelled turn stops and reports it", () => !screen.IsEndingTurn && screen.StatusText.Contains("cancelled", StringComparison.OrdinalIgnoreCase), 900),
             new AssertQuery("no overlay and the status says the turn was cancelled", () => !screen.TurnOverlay.Visible && screen.StatusText.Contains("cancelled", StringComparison.OrdinalIgnoreCase)),
             new Act("press Next turn to continue the interrupted turn, and measure it", () =>
             {
@@ -78,7 +78,9 @@ public sealed class NextTurnLongScenario : Scenario
                 return screen.TurnOverlay.HeadingText.Length > 0 && detail.Contains(" - ", StringComparison.Ordinal)
                     && screen.TurnOverlay.HintText == NextTurnProgressModel.CancelHint;
             }),
-            new Capture("overlay", "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel'"),
+            new AssertQuery("the resumed turn shows no stale cancelled status under the card", () =>
+                screen.TurnOverlay.Visible && !screen.StatusText.Contains("cancelled", StringComparison.OrdinalIgnoreCase)),
+            new Capture("overlay", "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Denmark - 5 of 8'), with a progress bar and 'Esc to cancel'"),
             new Act("zoom the map with the wheel while the overlay is up", () =>
             {
                 zoomBefore = screen.Map.Zoom;
