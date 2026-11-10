@@ -45,6 +45,7 @@ public sealed class MpTurnScenario : Scenario
         host.AddChild(screen);
         screen.Start(script, AssetRegistry.ForRuleset(game.Ruleset));
         screen.Hud.HoldBanner = true;
+        screen.TurnOverlay.RevealDelaySeconds = 0; // T345: the resolving overlay's delay is tested by next-turn and the model tests
 
         TurnBarRow Row(string civ) => screen.TurnBar.Data.NotNull().Rows.Single(it => it.CivId == civ);
         bool Playing() => screen.TurnBar.Data is { Resolving: false } && script.Snapshot.TurnStatus.Phase == "Playing";
@@ -91,17 +92,23 @@ public sealed class MpTurnScenario : Scenario
             new Capture("other-ended", "Bob has ended his turn (green 'Ended'); the bar says 'Waiting for Alice' and a toast under it reads 'Bob ended their turn'"),
             new Press("Next turn"),
             new WaitUntil("both ended", () => script.Snapshot.TurnStatus.Ended.Count == 2, 300),
-            new Act("the host starts resolving the round", () => script.SetPhase("Resolving")),
+            new Act("the host starts resolving the round", () =>
+            {
+                script.SetPhase("Resolving");
+                screen.TurnOverlay.Advance(1); // the runner froze real time; step the reveal like a frame would
+            }),
+            new WaitUntil("the resolving overlay appears", () => screen.TurnOverlay.Visible, 300),
             new WaitFrames(2),
-            new AssertQuery("the resolving overlay is up and the button says so", () =>
-                screen.TurnOverlay.Visible && screen.TurnOverlay.HeadingText == "Resolving the turn" && screen.TurnBar.HeadlineText == TurnBarModel.ResolvingHeadline
+            new AssertQuery("the resolving overlay names the host/AI and the button says so", () =>
+                screen.TurnOverlay.HeadingText == NextTurnProgressModel.Heading && screen.TurnOverlay.DetailText == NextTurnProgressModel.Waiting && screen.TurnOverlay.HintText == ""
+                && screen.TurnBar.HeadlineText == TurnBarModel.ResolvingHeadline
                 && screen.Hud.ActionText == "Resolving turn..." && screen.Hud.ActionDisabled && screen.IsResolving),
             new Act("a command during Resolving: End turn by hotkey", () => screen.TryHotkey("Space")),
             new WaitUntil("the host refused with turn-resolving", () => script.Refusals.Count == 1, 300),
             new WaitFrames(2),
             new AssertQuery("the refusal is shown as turn-resolving", () =>
                 script.Refusals[0] == "turn-resolving" && screen.StatusText == "Cannot end the turn: the host is resolving the turn"),
-            new Capture("resolving", "The host is resolving the round: a dimmed overlay 'Resolving the turn / Waiting for the host' covers the game, the bar says 'Resolving the turn...', and the status line shows the refusal"),
+            new Capture("resolving", "The host is resolving the round: a compact card 'Processing the other civilizations / Waiting for AI/host' sits under the navigation strip, the bar says 'Resolving the turn...', and the status line shows the refusal"),
             new Act("the host finishes: turn 2 starts with nobody ended", () => script.StartNextTurn()),
             new WaitFrames(2),
             new AssertQuery("the overlay is gone and the marks are cleared for the new turn", () =>

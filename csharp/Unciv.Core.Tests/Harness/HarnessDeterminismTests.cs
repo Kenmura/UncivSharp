@@ -29,6 +29,7 @@ public sealed partial class HarnessDeterminismTests
         ["AutoPlayRefreshScenario.cs"] = "T379: report-only wall time per AutoPlay turn (printed, never asserted; the budget asserted is a count of full redraws)",
         ["TwoInstancesScenario.cs"] = "T334: polls (Task.Delay, 20 ms, 20 s cap) for the host to seat a friend that joined over real loopback TCP; the outcome (who sits where) does not depend on the timing, and no frame or golden does",
         ["SplitBrainScenario.cs"] = "T340: polls (Task.Delay, 20 ms, bounded) for a real in-process host, standby replication and the crash election to settle over real loopback/TCP; the election itself is driven by a ManualClock, so no assertion or golden depends on wall time",
+        ["NextTurnLongScenario.cs"] = "T345: report-only wall time of one late-game 8-civ End turn (printed in the scenario output and the ticket's Notes, never asserted); the overlay delay is stepped by hand",
     };
 
     // The client reads the wall clock exactly twice, to seed a brand-new game at launch (a one-off, not frame-driven; scenarios build their own seeded sessions).
@@ -73,8 +74,8 @@ public sealed partial class HarnessDeterminismTests
             .Select(it => Path.GetFileNameWithoutExtension(it.Name))
             .OrderBy(it => it, StringComparer.Ordinal)
             .ToList();
-        // TurnBarView counts toast frames (no time); GameScreen redraws the turn bar when the countdown text changes (reads NowMs, fixed in scenarios); LobbyScreen drains the session events and rebuilds on change (no time); HostScreen refreshes the lobby slot table when it changed (no time); ScreenManager polls the safe area and keyboard height and acts on change only (no time); HudView/MinimapView count frames or redraw on change (no time); TooltipHost, MapView, CombatPresenter use the delta and are frozen/off in the harness
-        Assert.Equal(["CombatPresenter", "GameScreen", "HostScreen", "HudView", "LobbyScreen", "MapView", "MinimapView", "NotificationListView", "ScreenManager", "TooltipHost", "TurnBarView"], processUsers);
+        // TurnBarView counts toast frames (no time); GameScreen redraws the turn bar when the countdown text changes (reads NowMs, fixed in scenarios); LobbyScreen drains the session events and rebuilds on change (no time); HostScreen refreshes the lobby slot table when it changed (no time); ScreenManager polls the safe area and keyboard height and acts on change only (no time); HudView/MinimapView count frames or redraw on change (no time); TooltipHost, MapView, CombatPresenter use the delta and are frozen/off in the harness; NextTurnProgressView (T345) uses the delta for its reveal delay and is frozen, scenarios step Advance
+        Assert.Equal(["CombatPresenter", "GameScreen", "HostScreen", "HudView", "LobbyScreen", "MapView", "MinimapView", "NextTurnProgressView", "NotificationListView", "ScreenManager", "TooltipHost", "TurnBarView"], processUsers);
     }
 
     [Fact]

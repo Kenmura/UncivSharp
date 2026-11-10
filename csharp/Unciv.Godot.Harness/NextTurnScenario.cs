@@ -29,7 +29,8 @@ public sealed class NextTurnScenario : Scenario
     public override IReadOnlyList<string> Checklist =>
     [
         "Is it clear the game is busy (not frozen), and which civ is being played?",
-        "Does the dimmed overlay make it obvious nothing underneath can be clicked?",
+        "Does a turn that finishes quickly stay free of an overlay, while a long one shows the card and its cancel hint?",
+        "Can the map still be panned and the menu opened while the civs play?",
     ];
 
     public override IReadOnlyList<ScenarioStep> Build(Control host, GameSession session)
@@ -47,13 +48,27 @@ public sealed class NextTurnScenario : Scenario
         [
             new WaitFrames(4),
             new AssertQuery("the game has the human and the crowd of AI civs", () => game.Civilizations.Count(it => it.IsAI() && it.IsMajorCiv()) >= ScenarioGame.CrowdAiCount),
-            new Act("show the overlay at a fixed point of the turn", () => screen.TurnOverlay.Show(NextTurnProgressModel.Of(new TurnProgress(2, ScenarioGame.CrowdAiCount, "Rome"), id => id))),
+            new Act("start the overlay as a short turn would", () =>
+            {
+                screen.TurnOverlay.RevealDelaySeconds = 5;
+                screen.TurnOverlay.Start(NextTurnProgressModel.Begin(), NextTurnProgressModel.CancelHint);
+            }),
+            new AssertQuery("a turn that is over quickly shows no overlay", () => !screen.TurnOverlay.Visible),
+            new Act("the delay passes", () => screen.TurnOverlay.Advance(6)),
+            new AssertQuery("a long turn shows the card and its cancel hint", () => screen.TurnOverlay.Visible && screen.TurnOverlay.HintText == NextTurnProgressModel.CancelHint),
+            new Act("show the overlay at a fixed point of the turn", () => screen.TurnOverlay.ShowNow(NextTurnProgressModel.Of(new TurnProgress(2, ScenarioGame.CrowdAiCount, "Rome"), id => id))),
             new WaitFrames(2),
             new AssertQuery("the overlay names the civ and its position", () => screen.TurnOverlay.Visible && screen.TurnOverlay.DetailText == "Rome - 3 of 10"),
-            new Capture("overlay", "Next turn in progress: a dimmed screen with a bar, 'Rome - 3 of 10'"),
+            new Capture("overlay", "Next turn in progress: a compact card under the navigation strip, 'Rome - 3 of 10' and 'Esc to cancel'"),
             new Act("hide the overlay again", () => screen.TurnOverlay.Close()),
-            new Act("press Next turn (not settled: the processing is what is tested)", () => screen.TryHotkey("Space")),
-            new AssertQuery("pressing Next turn started processing and raised the overlay", () => screen.IsEndingTurn && screen.TurnOverlay.Visible && localHost.IsProcessingTurn),
+            new Act("reveal the real turn at once (the delay is tested above)", () => screen.TurnOverlay.RevealDelaySeconds = 0),
+            new Act("press Next turn (not settled: the processing is what is tested)", () =>
+            {
+                screen.TryHotkey("Space");
+                screen.TurnOverlay.Advance(1); // the runner froze real time; step the reveal like a frame would
+            }),
+            new AssertQuery("pressing Next turn started processing", () => screen.IsEndingTurn && localHost.IsProcessingTurn),
+            new WaitUntil("the overlay appears while the civs play", () => screen.TurnOverlay.Visible && screen.IsEndingTurn, 600),
             new WaitUntil("the turn is processed", () => !screen.IsEndingTurn && game.Turns > startTurn),
             new AssertQuery("the window kept drawing while the civs played (no long frame)", () => ScenarioRunner.LongestFrameMs < MaxFrameMs),
             new AssertQuery("the turn took several frames, so the work really ran beside the UI", () => ScenarioRunner.FramesWaited >= 3),

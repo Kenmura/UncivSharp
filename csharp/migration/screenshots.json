@@ -1086,11 +1086,11 @@
   },
   "C040": {
     "scenario": "next-turn",
-    "about": "End turn is processed off the UI thread with a progress overlay (civ n of m) that blocks input while the window keeps drawing.",
+    "about": "End turn is processed off the UI thread with a compact progress card (civ n of m) that appears only when the turn is long, so a short turn never flashes it.",
     "shots": [
       {
         "golden": "next-turn/overlay.png",
-        "caption": "Next turn in progress: dimmed screen, heading 'Processing the other civilizations', 'Rome - 3 of 10' and a progress bar"
+        "caption": "Next turn in progress: a compact card under the navigation strip, heading 'Processing the other civilizations', 'Rome - 3 of 10', a progress bar and 'Esc to cancel'"
       },
       {
         "golden": "next-turn/after.png",
@@ -1239,7 +1239,7 @@
       },
       {
         "golden": "mp-turn/resolving.png",
-        "caption": "Both ended and the host is resolving: dimmed 'Resolving the turn / Waiting for the host' overlay, disabled 'Resolving turn...' button, and the refusal in the status line."
+        "caption": "Both ended and the host is resolving: a compact 'Processing the other civilizations / Waiting for AI/host' card under the navigation strip, disabled 'Resolving turn...' button, and the refusal in the status line."
       }
     ]
   },
@@ -2091,6 +2091,16 @@
       {
         "golden": "autoplay-animations/options.png",
         "caption": "Options, Gameplay tab, AutoPlay section: the AutoPlay animations picker set to Skip, between the turns slider and Full AutoPlay AI."
+      }
+    ]
+  },
+  "T345": {
+    "scenario": "next-turn-long",
+    "about": "The End turn progress overlay on a late-game eight-civ game: it names the civ currently moving and its count, appears only when the turn outlasts a short delay, leaves the camera and the menu usable (Esc cancels a running turn), and shows joiners the host/AI wait instead.",
+    "shots": [
+      {
+        "golden": "next-turn-long/overlay.png",
+        "caption": "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)"
       }
     ]
   },

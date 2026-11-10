@@ -179,10 +179,10 @@ public partial class GameScreen : Control
     /// <summary>T376: what the running AutoPlay animates (fixed when the run starts).</summary>
     private AutoPlayAnimations autoPlayAnimations;
 
-    /// <summary>C040: the overlay shown while End turn is processed off the UI thread.</summary>
+    /// <summary>C040/T345: the overlay shown (after a delay) while End turn is processed off the UI thread.</summary>
     public NextTurnProgressView TurnOverlay { get; private set; } = null!; // JUSTIFY: C040 assigned in _Ready before any use
 
-    /// <summary>C040: True from pressing Next turn until the host answered; input is ignored meanwhile.</summary>
+    /// <summary>C040/T345: True from pressing Next turn until the host answered; a turn can be cancelled (Esc) but the map, camera and menus stay usable.</summary>
     public bool IsEndingTurn => turnCancellation != null;
 
     /// <summary>C036: the multiplayer turn bar (who ended, deadline, connection marks, toasts); hidden unless the session is a simultaneous game (<see cref="ITurnRoster"/>).</summary>
@@ -755,10 +755,12 @@ public partial class GameScreen : Control
         if (@event is InputEventKey { Pressed: true, Echo: false } key && HotkeyInput.TextOf(key) is { } text && TryHotkey(text)) GetViewport().SetInputAsHandled();
     }
 
-    /// <summary>C044: Escape closes the menu or the victory page when one is open, else opens the menu unless a screen or popup already covers the map (those take Escape themselves).</summary>
+    /// <summary>
+    /// C044/T345: Escape closes the menu or the victory page when one is open, cancels a running local turn (the overlay says so), else opens the menu unless a
+    /// screen or popup already covers the map (those take Escape themselves).
+    /// </summary>
     private bool TryEscape()
     {
-        if (IsEndingTurn) return false; // C040: nothing opens while the turn is processed
         if (AutoPlayMenu.Visible)
         {
             AutoPlayMenu.Close();
@@ -777,8 +779,24 @@ public partial class GameScreen : Control
             return true;
         }
         if (City.Visible || Diplomacy.Visible || Tech.Visible || Policies.Visible || Trade.Visible || Overview.Visible || Espionage.Visible || Alerts.Visible || Proposals.Visible || GameOver.Visible || VoteResult.Visible) return false;
+        if (IsEndingTurn)
+        {
+            CancelTurnProcessing();
+            return true;
+        }
         OpenGameMenu();
         return true;
+    }
+
+    /// <summary>
+    /// T345: Esc while the local End turn runs. The turn flow stops between two civs (never inside one), keeps what was played and leaves the round mid-way;
+    /// pressing Next turn again continues with the next civ, so nothing is lost and no turn is ended twice.
+    /// </summary>
+    public void CancelTurnProcessing()
+    {
+        if (turnCancellation == null) return;
+        SetStatus("Cancelling the turn...");
+        turnCancellation.Cancel();
     }
 
     /// <summary>C046: opens the developer console with the history and "Keep open" choice from the client settings (the screen's own memory when no settings are bound).</summary>
@@ -793,9 +811,20 @@ public partial class GameScreen : Control
 
     private async Task OpenGameMenuAsync()
     {
-        var outcome = await queries.GameOver();
+        // T345: a menu must open while the worker owns the engine gate; the game-over query would wait for it, so use what the snapshot already says.
+        string status = Unciv.Queries.Victory.GameOverQuery.Playing;
+        if (IsEndingTurn)
+        {
+            if (snapshot.Civs.Any(it => it.CivId == session.ViewerCivId && it.IsDefeated)) status = Unciv.Queries.Victory.GameOverQuery.Defeated;
+        }
+        else
+        {
+            var outcome = await queries.GameOver();
+            if (outcome?.Status is { } reported) status = reported;
+        }
+        if (!IsInstanceValid(this) || !IsInsideTree()) return;
         bool unsaved = HasUnsavedProgress?.Invoke() ?? true;
-        GameMenu.Open(GameMenuModel.Build(outcome?.Status ?? Unciv.Queries.Victory.GameOverQuery.Playing, unsaved));
+        GameMenu.Open(GameMenuModel.Build(status, unsaved));
     }
 
     private async Task OnMenuChosen(GameMenuKind kind)
@@ -1053,7 +1082,7 @@ public partial class GameScreen : Control
         Tutorials.LayoutIn(Size);
         TaskCard.LayoutIn(Size, World.NavBottom + HudMargin);
         TurnBar.LayoutIn(Size.X, TurnBarTop());
-        TurnOverlay.LayoutIn(Size);
+        TurnOverlay.LayoutIn(Size, World.NavBottom + HudMargin); // T345: a card under the navigation strip, out of the way of the map and the menus
         Panel.LayoutIn(Size);
         CombatPreview.LayoutIn(Size);
     }
@@ -1261,7 +1290,7 @@ public partial class GameScreen : Control
         MoveChild(MarkerMenu, -1);
         MoveChild(Tutorials, -1);
         AddChild(Tooltips); // above everything, so a tip is never covered by a screen
-        MoveChild(TurnOverlay, -1); // above every screen: while the turn is processed nothing underneath may be used
+        // T345: the progress card stays below the menus, popups and screens (it was added before them), because it no longer blocks any of them.
         ReachableOverlay.Setup(registry);
         AttackOverlay.Setup(registry);
         SiteOverlay.Setup(registry);
@@ -1383,6 +1412,7 @@ public partial class GameScreen : Control
 
     private void OnTileClicked(HexCoord? coord)
     {
+        if (IsEndingTurn) return; // T345: the camera still pans and zooms, but no order starts while the worker owns the engine gate
         MarkerMenu.Close();
         if (DisplayProfile.Current.Touch && Tooltips != null) ShowTileTip(coord, Map.ClickAt); // C100: tile info without hover
         if (coord is not { } tile)
@@ -1420,6 +1450,7 @@ public partial class GameScreen : Control
 
     private void OnTileRightClicked(HexCoord? coord)
     {
+        if (IsEndingTurn) return; // T345: no order while the turn runs (the overlay's cancel hint says how to stop it)
         MarkerMenu.Close();
         if (coord is { } marked && SelectedUnitId == null)
         {
@@ -1805,6 +1836,7 @@ public partial class GameScreen : Control
 
     private void OnMenuEntry(MenuEntry entry)
     {
+        if (IsEndingTurn) return; // T345: no unit order starts while the turn runs
         if (entry.Kind == MenuEntryKind.Engine && entry.Action?.Confirmation is { } confirmation)
             AskUnitConfirmation(entry, confirmation.Question, confirmation.ConfirmText);
         else if (entry.Kind == MenuEntryKind.Disband)
@@ -2350,12 +2382,17 @@ public partial class GameScreen : Control
         TurnBar.Show(bar);
         shownCountdown = bar?.Countdown;
         TurnBar.LayoutIn(Size.X, TurnBarTop());
-        if (bar is { Resolving: true }) TurnOverlay.Show(new NextTurnProgressViewData("Resolving the turn", "Waiting for the host", 0.0));
-        else if (turnCancellation == null) TurnOverlay.Close();
+        // T345: while the host (or the local worker) plays the other civs, both host and joiners see "waiting for AI/host"; a local turn owns the overlay and keeps its progress line.
+        if (turnCancellation == null)
+        {
+            if (bar is { Resolving: true }) TurnOverlay.WaitForHost(NextTurnProgressModel.WaitingForHost());
+            else TurnOverlay.Close();
+        }
     }
 
     public override void _Process(double delta)
     {
+        TurnOverlay.Advance(delta); // T345: the overlay appears only when the turn outlasts its delay
         if (pings.Count > 0) AdvancePings((float)delta);
         if (statusFrames > 0 && --statusFrames == 0) statusPanel.Visible = false;
         // the countdown moves with the clock, not with snapshots
@@ -2708,11 +2745,11 @@ public partial class GameScreen : Control
         using var cancellation = new CancellationTokenSource();
         turnCancellation = cancellation;
         var turnSession = session;
-        TurnOverlay.Show(NextTurnProgressModel.Begin());
+        TurnOverlay.Start(NextTurnProgressModel.Begin(), NextTurnProgressModel.CancelHint);
         var progress = new Progress<TurnProgress>(report =>
         {
             // reports arrive posted to this thread, so one can land after the turn ended or the screen left the tree
-            if (turnCancellation == cancellation && IsInsideTree()) TurnOverlay.Show(NextTurnProgressModel.Of(report, DisplayName));
+            if (turnCancellation == cancellation && IsInsideTree()) TurnOverlay.SetProgress(NextTurnProgressModel.Of(report, DisplayName));
         });
         TurnOutcome? outcome = null;
         try
@@ -2737,6 +2774,11 @@ public partial class GameScreen : Control
         }
         Refresh();
         if (outcome == null) return;
+        if (!outcome.Accepted && outcome.Message == ViewerSessionFlow.CancelledMessage)
+        {
+            SetStatus("Turn processing cancelled. Next turn continues it."); // T345
+            return;
+        }
         SetStatus(outcome.Accepted
             ? $"Turn {snapshot.Turn.ToString(CultureInfo.InvariantCulture)}: {outcome.AiTurnsRun.ToString(CultureInfo.InvariantCulture)} civ(s) played, {outcome.Events.Count.ToString(CultureInfo.InvariantCulture)} event(s)."
             : "Cannot end the turn: " + outcome.Message);

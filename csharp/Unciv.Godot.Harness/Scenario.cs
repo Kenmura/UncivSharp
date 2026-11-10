@@ -53,6 +53,9 @@ public abstract class Scenario
     /// <summary>C040: the solo game with <see cref="Unciv.Harness.ScenarioGame.CrowdAiCount"/> AI civs on a larger map, so one End turn runs many automatic civs.</summary>
     public virtual bool Crowd => false;
 
+    /// <summary>T345: the late-game eight-civ game (each civ with several cities and units), so one End turn is the long one the progress overlay is for.</summary>
+    public virtual bool LateGame => false;
+
     /// <summary>C050: the diplomacy game with espionage on, both capitals and the city-state's city explored, an idle spy in the hideout and a set-up spy in the city-state (see <see cref="Unciv.Harness.ScenarioGame.Create"/>).</summary>
     public virtual bool Espionage => false;
 

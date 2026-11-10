@@ -37,6 +37,12 @@ public static class ScenarioGame
     public const int ReligionReform = 2;
     public const int CrowdAiCount = 10;
 
+    /// <summary>T345: a full late-game table: the human and seven AI civs, each with several cities and a stack of units, so an End turn is the long one the overlay is for.</summary>
+    public const int LateGameCivCount = 8;
+
+    private const int LateGameCities = 8;
+    private const int LateGameUnits = 20;
+
     /// <summary>Loads the Vanilla ruleset into <see cref="RulesetCache"/> (from the repository's jsons, no mods) unless it is already there.</summary>
     public static RulesetClass LoadVanilla()
     {
@@ -61,11 +67,11 @@ public static class ScenarioGame
     /// <paramref name="rich"/> (C018): every human civ starts with <see cref="RichGold"/> gold, so a scenario can buy for real (God mode makes purchases free), and Babylon owns a puppet city (<see cref="SetUpRich"/>).
     /// <paramref name="godMode"/> (C041): the game setup's God mode switch, so a scenario can use the debug commands (free purchases, DebugAddTechnology) to reach a state quickly. The switch is part of the setup, not a command, so the replay passes it too.
     /// </summary>
-    public static GameSession Create(long gameSeed = GameSeed, int mapSeed = MapSeed, bool solo = false, bool godMode = false, bool skirmish = false, bool diplomacy = false, bool rich = false, bool policies = false, bool alerts = false, bool victory = false, bool defeat = false, bool trade = false, bool decisions = false, bool crowd = false, bool espionage = false, bool proposals = false, int religion = 0, bool voteResult = false, bool tutorialTasks = false)
+    public static GameSession Create(long gameSeed = GameSeed, int mapSeed = MapSeed, bool solo = false, bool godMode = false, bool skirmish = false, bool diplomacy = false, bool rich = false, bool policies = false, bool alerts = false, bool victory = false, bool defeat = false, bool trade = false, bool decisions = false, bool crowd = false, bool espionage = false, bool proposals = false, int religion = 0, bool voteResult = false, bool tutorialTasks = false, bool lateGame = false)
     {
         espionage |= religion == ReligionFoundEnhance;
         diplomacy |= alerts | trade | espionage | proposals | voteResult;
-        solo |= skirmish | diplomacy | policies | victory | defeat | decisions | crowd | religion > 0 | tutorialTasks;
+        solo |= skirmish | diplomacy | policies | victory | defeat | decisions | crowd | lateGame | religion > 0 | tutorialTasks;
         var vanilla = LoadVanilla();
         // C038: religion needs Gods & Kings (Vanilla has no beliefs); C054: so do the tutorial task Events; every other scenario plays Vanilla
         var ruleset = decisions || religion > 0 || tutorialTasks ? RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName()).NotNull().Clone() : vanilla;
@@ -77,7 +83,9 @@ public static class ScenarioGame
                     NumberOfCityStates = diplomacy ? 1 : 0,
                     GodMode = godMode,
                     VictoryTypes = ruleset.Victories.Keys.ToList(),
-                    Players = crowd
+                    Players = lateGame
+                        ? LatePlayers(ruleset)
+                        : crowd
                         ? CrowdPlayers(ruleset)
                         : solo
                         ? diplomacy
@@ -85,7 +93,7 @@ public static class ScenarioGame
                             : [new Player(HumanA, PlayerType.Human), new Player(Ai)]
                         : [new Player(HumanA, PlayerType.Human), new Player(HumanB, PlayerType.Human), new Player(Ai)],
                 },
-                new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = mapSeed, MapSize = crowd ? MapSize.Medium : MapSize.Tiny }),
+                new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = mapSeed, MapSize = crowd || lateGame ? MapSize.Medium : MapSize.Tiny }),
             gameSeed, FixedClockMillis);
         foreach (string name in solo ? Array.Empty<string>() : new[] { HumanA, HumanB })
         {
@@ -107,6 +115,7 @@ public static class ScenarioGame
         if (religion == ReligionFoundEnhance) SetUpReligion(game);
         if (religion == ReligionReform) SetUpReform(game);
         if (voteResult) SetUpVoteResult(game);
+        if (lateGame) SetUpLateGame(game);
         return new GameSession(game);
     }
 
@@ -117,6 +126,45 @@ public static class ScenarioGame
         new Player(Ai),
         .. ruleset.Nations.Values.Where(it => it.IsMajorCiv && it.Name != HumanA && it.Name != Ai).Select(it => it.Name).Order(StringComparer.Ordinal).Take(CrowdAiCount - 1).Select(it => new Player(it)),
     ];
+
+    /// <summary>T345: the human and <see cref="LateGameCivCount"/> - 1 AI civs, the full late-game table whose End turn the progress overlay is measured on.</summary>
+    private static List<Player> LatePlayers(RulesetClass ruleset) =>
+    [
+        new Player(HumanA, PlayerType.Human),
+        .. ruleset.Nations.Values.Where(it => it.IsMajorCiv && it.Name != HumanA).Select(it => it.Name).Order(StringComparer.Ordinal).Take(LateGameCivCount - 1).Select(it => new Player(it)),
+    ];
+
+    /// <summary>
+    /// T345: a late-game table, set up directly on the state so the headless replay builds the same game: every major civ owns <see cref="LateGameCities"/> cities
+    /// (a capital and the rest at least 4 tiles away) and <see cref="LateGameUnits"/> units, so one End turn runs a realistic, long set of AI turns.
+    /// Babylon's cities have production and research queued so End turn is not refused for a pending decision.
+    /// </summary>
+    private static void SetUpLateGame(GameInfo game)
+    {
+        game.Turns = 220; // the calendar reads late-game, as the table's scale does
+        foreach (var civ in game.Civilizations.Where(it => it.IsMajorCiv()).ToList())
+        {
+            while (civ.Cities.Count < LateGameCities)
+            {
+                var capital = civ.Cities.FirstOrDefault()?.GetCenterTile();
+                var site = game.TileMap.Values
+                    .Where(it => it.IsLand && !it.IsImpassible() && !it.IsCityCenter() && it.GetOwner() == null
+                        && (capital == null || it.AerialDistanceTo(capital) >= 4))
+                    .OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).FirstOrDefault();
+                if (site == null) break;
+                civ.AddCity(site.Position);
+            }
+            foreach (var city in civ.Cities) city.CityConstructions.AddToQueue("Warrior");
+            if (civ.IsHuman())
+            {
+                var research = game.Ruleset.Technologies.Keys.Order(StringComparer.Ordinal).FirstOrDefault(it => !civ.Tech.IsResearched(it));
+                if (research != null) civ.Tech.TechsToResearch.Add(research);
+            }
+            if (civ.Cities.Count == 0) continue;
+            for (int i = 0; i < LateGameUnits; i++)
+                civ.Units.PlaceUnitNearTile(civ.Cities[i % civ.Cities.Count].Location, i % 2 == 0 ? "Warrior" : "Archer");
+        }
+    }
 
     /// <summary>
     /// C018: every human civ has <see cref="RichGold"/> gold and Babylon owns a second, puppet city (the first land tile at least 5 tiles from its capital, in coordinate

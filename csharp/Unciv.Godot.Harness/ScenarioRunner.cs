@@ -57,6 +57,7 @@ public partial class ScenarioRunner : Control
         {
             case Unciv.GodotClient.Ui.TooltipHost host: host.Delay = UnreachableDelay; break;
             case Unciv.GodotClient.Map.MapView map: map.RealTimePanning = false; break;
+            case NextTurnProgressView overlay: overlay.RealTime = false; break; // T345: scenarios step the reveal delay themselves
         }
     }
 
@@ -104,7 +105,7 @@ public partial class ScenarioRunner : Control
         GetViewport().TransparentBg = false;
         MouseFilter = MouseFilterEnum.Ignore; // keep mouse events flowing to scenarios that handle them in the 3D world
         if (!scenario.Uses3D) AddChild(new ColorRect { Color = new Color(0.12f, 0.14f, 0.2f), AnchorRight = 1, AnchorBottom = 1 });
-        var session = ScenarioGame.Create(solo: scenario.Solo, godMode: scenario.GodMode, skirmish: scenario.Skirmish, diplomacy: scenario.Diplomacy, rich: scenario.Rich, policies: scenario.Policies, alerts: scenario.Alerts, victory: scenario.Victory, defeat: scenario.Defeat, trade: scenario.Trade, decisions: scenario.Decisions, crowd: scenario.Crowd, espionage: scenario.Espionage, proposals: scenario.Proposals, religion: scenario.Religion, voteResult: scenario.VoteResult, tutorialTasks: scenario.TutorialTasks);
+        var session = ScenarioGame.Create(solo: scenario.Solo, godMode: scenario.GodMode, skirmish: scenario.Skirmish, diplomacy: scenario.Diplomacy, rich: scenario.Rich, policies: scenario.Policies, alerts: scenario.Alerts, victory: scenario.Victory, defeat: scenario.Defeat, trade: scenario.Trade, decisions: scenario.Decisions, crowd: scenario.Crowd, espionage: scenario.Espionage, proposals: scenario.Proposals, religion: scenario.Religion, voteResult: scenario.VoteResult, tutorialTasks: scenario.TutorialTasks, lateGame: scenario.LateGame);
         var script = scenario.Build(this, session);
 
         bool stepTimes = System.Environment.GetEnvironmentVariable("UNCIV_STEP_TIMES") != null;
@@ -118,7 +119,7 @@ public partial class ScenarioRunner : Control
         }
 
         string stateHash = ScenarioGame.StateHash(session);
-        var result = new ScenarioResult(scenario.Name, ScenarioGame.GameSeed, ScenarioGame.MapSeed, stateHash, session.Log, captures, scenario.Checklist, failures, scenario.Solo, scenario.GodMode, scenario.Skirmish, scenario.Diplomacy, scenario.Rich, scenario.Policies, scenario.Alerts, scenario.Victory, scenario.Defeat, scenario.Trade, scenario.Decisions, scenario.Crowd, scenario.Espionage, scenario.Proposals, scenario.Religion, scenario.VoteResult, scenario.TutorialTasks);
+        var result = new ScenarioResult(scenario.Name, ScenarioGame.GameSeed, ScenarioGame.MapSeed, stateHash, session.Log, captures, scenario.Checklist, failures, scenario.Solo, scenario.GodMode, scenario.Skirmish, scenario.Diplomacy, scenario.Rich, scenario.Policies, scenario.Alerts, scenario.Victory, scenario.Defeat, scenario.Trade, scenario.Decisions, scenario.Crowd, scenario.Espionage, scenario.Proposals, scenario.Religion, scenario.VoteResult, scenario.TutorialTasks, scenario.LateGame);
         string? replayFailure = ScenarioReplay.Verify(result);
         if (replayFailure != null) failures.Add(replayFailure);
         result = result with { Failures = failures.ToList() };

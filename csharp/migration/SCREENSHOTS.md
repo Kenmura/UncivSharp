@@ -101,6 +101,7 @@
 - [T339 (ticket not Done or unknown)](#t339-ticket-not-done-or-unknown)
 - [T340 (ticket not Done or unknown)](#t340-ticket-not-done-or-unknown)
 - [T343 (ticket not Done or unknown)](#t343-ticket-not-done-or-unknown)
+- [T345 (ticket not Done or unknown)](#t345-ticket-not-done-or-unknown)
 - [T371 (ticket not Done or unknown)](#t371-ticket-not-done-or-unknown)
 - [T372 (ticket not Done or unknown)](#t372-ticket-not-done-or-unknown)
 - [T376 (ticket not Done or unknown)](#t376-ticket-not-done-or-unknown)
@@ -837,9 +838,9 @@ Scenario `mp-turn`.
 
 *After Undo, Bob ends his turn: his row turns Ended, the bar says 'Waiting for Alice' and a toast reads 'Bob ended their turn'.* (`mp-turn/other-ended.png`)
 
-![Both ended and the host is resolving: dimmed 'Resolving the turn / Waiting for the host' overlay, disabled 'Resolving turn...' button, and the refusal in the status line.](../Unciv.Godot.Harness/golden/mp-turn/resolving.png)
+![Both ended and the host is resolving: a compact 'Processing the other civilizations / Waiting for AI/host' card under the navigation strip, disabled 'Resolving turn...' button, and the refusal in the status line.](../Unciv.Godot.Harness/golden/mp-turn/resolving.png)
 
-*Both ended and the host is resolving: dimmed 'Resolving the turn / Waiting for the host' overlay, disabled 'Resolving turn...' button, and the refusal in the status line.* (`mp-turn/resolving.png`)
+*Both ended and the host is resolving: a compact 'Processing the other civilizations / Waiting for AI/host' card under the navigation strip, disabled 'Resolving turn...' button, and the refusal in the status line.* (`mp-turn/resolving.png`)
 
 ## C038 Decision pickers: promotion, free tech, free great person, pantheon and religion found/enhance/reform, spy assignment, diplomatic vote and vote result
 
@@ -887,13 +888,13 @@ Scenario `proposals`.
 
 ## C040 Run end-turn processing and AI turns off the UI thread with a next-turn progress overlay
 
-End turn is processed off the UI thread with a progress overlay (civ n of m) that blocks input while the window keeps drawing.
+End turn is processed off the UI thread with a compact progress card (civ n of m) that appears only when the turn is long, so a short turn never flashes it.
 
 Scenario `next-turn`.
 
-![Next turn in progress: dimmed screen, heading 'Processing the other civilizations', 'Rome - 3 of 10' and a progress bar](../Unciv.Godot.Harness/golden/next-turn/overlay.png)
+![Next turn in progress: a compact card under the navigation strip, heading 'Processing the other civilizations', 'Rome - 3 of 10', a progress bar and 'Esc to cancel'](../Unciv.Godot.Harness/golden/next-turn/overlay.png)
 
-*Next turn in progress: dimmed screen, heading 'Processing the other civilizations', 'Rome - 3 of 10' and a progress bar* (`next-turn/overlay.png`)
+*Next turn in progress: a compact card under the navigation strip, heading 'Processing the other civilizations', 'Rome - 3 of 10', a progress bar and 'Esc to cancel'* (`next-turn/overlay.png`)
 
 ![After the turn: overlay gone, Turn 1, status line reports 11 civs played](../Unciv.Godot.Harness/golden/next-turn/after.png)
 
@@ -2105,6 +2106,16 @@ Scenario `confirm-dialogs`.
 ![Declare war asks first: the danger button becomes Confirm: Declare war and the hint says to press again; Rome is still at peace.](../Unciv.Godot.Harness/golden/confirm-dialogs/war-armed.png)
 
 *Declare war asks first: the danger button becomes Confirm: Declare war and the hint says to press again; Rome is still at peace.* (`confirm-dialogs/war-armed.png`)
+
+## T345 (ticket not Done or unknown)
+
+The End turn progress overlay on a late-game eight-civ game: it names the civ currently moving and its count, appears only when the turn outlasts a short delay, leaves the camera and the menu usable (Esc cancels a running turn), and shows joiners the host/AI wait instead.
+
+Scenario `next-turn-long`.
+
+![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
+
+*A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)* (`next-turn-long/overlay.png`)
 
 ## T371 (ticket not Done or unknown)
 

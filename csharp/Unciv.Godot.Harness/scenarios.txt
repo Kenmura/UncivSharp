@@ -45,6 +45,7 @@ autoplay-refresh
 audio
 console
 next-turn
+next-turn-long
 proposals
 espionage
 vote-result

@@ -398,4 +398,19 @@ public sealed class ScenarioHarnessTests : IDisposable
         Assert.True(ScenarioResult.FromJson(new ScenarioResult("v", 1, 2, "h", [], [], [], [], Crowd: true).ToJson()).Crowd);
         Assert.False(ScenarioResult.FromJson(new ScenarioResult("v", 1, 2, "h", [], [], [], []).ToJson()).Crowd);
     }
+
+    [Fact]
+    public void LateGameHasEightMajorCivsWithCitiesAndUnitsAndReplaysEqual()
+    {
+        var session = ScenarioGame.Create(lateGame: true);
+        var major = session.Game.Civilizations.Where(it => it.IsMajorCiv()).ToList();
+        Assert.Equal(ScenarioGame.LateGameCivCount, major.Count);
+        Assert.Single(major, it => it.IsHuman());
+        Assert.All(major, it => Assert.True(it.Cities.Count >= 2, it.CivId + " has " + it.Cities.Count + " cities"));
+        Assert.All(major, it => Assert.True(it.Units.GetCivUnits().Count() >= 4, it.CivId + " has " + it.Units.GetCivUnits().Count() + " units"));
+        Assert.Equal(220, session.Game.Turns);
+        Assert.Equal(ScenarioGame.StateHash(session), ScenarioReplay.ReplayHash(ScenarioGame.GameSeed, ScenarioGame.MapSeed, session.Log, lateGame: true));
+        Assert.True(ScenarioResult.FromJson(new ScenarioResult("l", 1, 2, "h", [], [], [], [], LateGame: true).ToJson()).LateGame);
+        Assert.False(ScenarioResult.FromJson(new ScenarioResult("l", 1, 2, "h", [], [], [], []).ToJson()).LateGame);
+    }
 }
