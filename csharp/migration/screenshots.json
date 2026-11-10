@@ -2099,5 +2099,23 @@
   },
   "T301": {
     "none": "Window resize/maximize robustness scenario (window-resize): asserts viewport, camera and HUD layout after window mode and size changes; a window manager decides the sizes, so nothing is captured."
+  },
+  "T340": {
+    "scenario": "split-brain",
+    "about": "The two-human split brain of host migration: the backup host takes over its own copy when the host machine is unreachable, warns that the game may have split, and the old host is fenced by the newer epoch when the two meet.",
+    "shots": [
+      {
+        "golden": "split-brain/successor-warning.png",
+        "caption": "The backup host after the partition: it continued alone because there are only two players, and the playable notice says the other player may still be playing on their own copy, to agree which copy continues and to rejoin with an invite. Continue playing puts it aside."
+      },
+      {
+        "golden": "split-brain/old-host-playing.png",
+        "caption": "The old host's machine during the same partition: it still plays its copy and has no warning, because it does not know the other machine continued without it. That is the split."
+      },
+      {
+        "golden": "split-brain/old-host-fenced.png",
+        "caption": "The old host when the two machines meet: the verified claim fences it at the newer epoch, its own player is told stale-epoch, and the screen says another host took over and to leave and join that game with the same key."
+      }
+    ]
   }
 }

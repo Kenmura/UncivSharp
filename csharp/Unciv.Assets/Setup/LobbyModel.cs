@@ -88,6 +88,7 @@ public static class LobbyModel
         JoinRefusedCodes.Kicked => "The host removed you from the lobby.",
         JoinRefusedCodes.SlotTaken => "That seat is taken.",
         JoinRefusedCodes.AuthFailed or JoinRefusedCodes.BadKey => "The host did not accept your identity.",
+        JoinRefusedCodes.StaleEpoch => HostMigrationModel.FencedTitle + ": this copy of the game is out of date and refuses players. " + HostMigrationModel.FencedDetail,
         _ => $"The host refused the connection ({code}).",
     };
 

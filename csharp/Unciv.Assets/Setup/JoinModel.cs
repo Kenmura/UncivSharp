@@ -25,8 +25,11 @@ public sealed record JoinTarget(string Host, int Port, string? Fingerprint, stri
 /// <summary>What <see cref="JoinModel.Parse"/> made of the typed text: a target, or the sentence that says what is wrong. A bad input is a result, never an exception.</summary>
 public sealed record JoinParse(JoinTarget? Target, string? Problem);
 
-/// <summary>What the reconnect overlay shows: nothing, a waiting message, or a final one with only Leave.</summary>
-public sealed record ConnectionView(bool Visible, string Title, string Detail, bool Final);
+/// <summary>
+/// What the reconnect overlay shows: nothing, a waiting message, a warning the player can put aside and keep playing (T340), or a final one with only Leave.
+/// <see cref="Dismissible"/> is set only for a playable warning; <see cref="Final"/> is set only for a session that is over.
+/// </summary>
+public sealed record ConnectionView(bool Visible, string Title, string Detail, bool Final, bool Dismissible = false);
 
 /// <summary>
 /// C006: the words of the join side, with no UI in them. <see cref="Parse"/> accepts an invite code (<c>unciv://host:port/fingerprint[/token]</c>), <c>host:port</c>, a bare host (default port)
@@ -45,6 +48,7 @@ public static class JoinModel
     private const string HandshakeTimeout = "handshake-timeout";
     private const string ProtocolMismatch = "protocol-mismatch";
     private const string SessionClosed = "session-closed";
+    private const string StaleEpoch = "stale-epoch"; // T340
 
     /// <param name="text">What the player typed or pasted.</param>
     /// <param name="relay">T338: the relay of the settings, if any. A typed room code (<c>K7QF-3MXP4A</c>) is joined through it, trusting the host's key on first use; without one the player is told to set a relay first.</param>
@@ -110,6 +114,7 @@ public static class JoinModel
     public static string RefusalText(string code) => code switch
     {
         ConnectFailed => "Could not reach the host. Check the address and port, that the host is hosting, and that the port is forwarded if you are not on the same network.",
+        StaleEpoch => HostMigrationModel.FencedTitle + ": this copy of the game is out of date and refuses players. " + HostMigrationModel.FencedDetail,
         HandshakeTimeout => "The host did not answer in time. It may be busy or the address may be wrong.",
         ConnectionLost => "The connection to the host was lost.",
         ReconnectFailed => "Could not get back to the host after several tries.",
@@ -162,18 +167,21 @@ public static class JoinModel
     /// <param name="connected">the session is connected (or has no connection state yet).</param>
     /// <param name="hostClosing">the host announced it is shutting down.</param>
     /// <param name="endedReason">set when the session is over for good: the code of the reason.</param>
-    public static ConnectionView Connection(bool connected, bool hostClosing, string? endedReason)
+    /// <param name="migration">T340: a warning that the game this session runs may be one of two after a two-human split; shown only while connected, so a connection state is never hidden by it.</param>
+    public static ConnectionView Connection(bool connected, bool hostClosing, string? endedReason, HostMigrationNotice? migration = null)
     {
         if (endedReason != null)
         {
+            if (endedReason == StaleEpoch) return new ConnectionView(true, HostMigrationModel.FencedTitle, HostMigrationModel.FencedDetail, true);
             string detail = endedReason is ConnectionLost or ConnectFailed or ReconnectFailed
                 ? "Could not get back to the host. Your seat is kept: join the same address again later with the same key and you continue where you were."
                 : RefusalText(endedReason);
             return new ConnectionView(true, "Disconnected", detail, true);
         }
-        if (connected && !hostClosing) return new ConnectionView(false, "", "", false);
-        return hostClosing
-            ? new ConnectionView(true, "The host went away", "The host is shutting down or restarting. Waiting for it to come back; you will rejoin by yourself with the same key.", false)
-            : new ConnectionView(true, "Connection lost", "Trying to reconnect to the host with the same key. Your commands are kept and sent once you are back.", false);
+        if (hostClosing)
+            return new ConnectionView(true, "The host went away", "The host is shutting down or restarting. Waiting for it to come back; you will rejoin by yourself with the same key.", false);
+        if (!connected) return new ConnectionView(true, "Connection lost", "Trying to reconnect to the host with the same key. Your commands are kept and sent once you are back.", false);
+        if (migration != null) return new ConnectionView(true, migration.Title, migration.Detail, false, Dismissible: true);
+        return new ConnectionView(false, "", "", false);
     }
 }

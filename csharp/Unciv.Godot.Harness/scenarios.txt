@@ -75,3 +75,4 @@ layout-matrix
 confirm-dialogs
 two-instances
 relay-session
+split-brain

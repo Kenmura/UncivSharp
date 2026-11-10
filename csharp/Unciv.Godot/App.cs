@@ -308,6 +308,7 @@ public partial class App : Node
             };
             root.AddChild(reconnect);
             reconnect.Attach(netSession);
+            reconnect.WarningAcknowledged += netSession.DismissMigrationWarning; // T340: a split warning stays gone once read
         }
         hotseat = new HotseatController(screen, cover, loaded => AssetRegistry.ForRuleset(loaded.Ruleset, OptionsModel.RegistryPack(settings.Current.AssetPack)), id => id);
         root.AddChild(hotseat);

@@ -96,10 +96,11 @@ public sealed class LobbyModelTests
     public void EveryRefusalCodeHasASentence()
     {
         string[] codes = [JoinRefusedCodes.RulesetMismatch, JoinRefusedCodes.ProtocolMismatch, JoinRefusedCodes.BadCredentials, JoinRefusedCodes.RateLimited, JoinRefusedCodes.LobbyFull,
-            JoinRefusedCodes.GameAlreadyStarted, JoinRefusedCodes.Kicked, JoinRefusedCodes.SlotTaken, JoinRefusedCodes.AuthFailed, JoinRefusedCodes.BadKey];
+            JoinRefusedCodes.GameAlreadyStarted, JoinRefusedCodes.Kicked, JoinRefusedCodes.SlotTaken, JoinRefusedCodes.AuthFailed, JoinRefusedCodes.BadKey, JoinRefusedCodes.StaleEpoch];
         Assert.All(codes, code => Assert.DoesNotContain(code, LobbyModel.RefusalText(code), StringComparison.Ordinal));
         Assert.Equal(codes.Length - 1, codes.Select(LobbyModel.RefusalText).Distinct().Count()); // AuthFailed and BadKey share one
         Assert.Equal("The host refused the connection (weird).", LobbyModel.RefusalText("weird"));
+        Assert.Contains("join the other player's game", LobbyModel.RefusalText(JoinRefusedCodes.StaleEpoch), StringComparison.Ordinal);
     }
 
     [Fact]

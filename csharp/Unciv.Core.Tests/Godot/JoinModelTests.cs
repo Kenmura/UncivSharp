@@ -161,4 +161,50 @@ public sealed class JoinModelTests
         Assert.Contains("- Gamma: not installed, 5 MB", text, StringComparison.Ordinal);
         Assert.Contains("trust this host", text, StringComparison.Ordinal);
     }
+
+    // T340: the two-human split-brain warning and the fenced old host's recovery path.
+
+    [Fact]
+    public void Connection_StaleEpoch_SaysAnotherHostTookOverAndHowToRecover()
+    {
+        var view = JoinModel.Connection(true, false, "stale-epoch");
+        Assert.True(view.Visible);
+        Assert.True(view.Final);
+        Assert.Equal(HostMigrationModel.FencedTitle, view.Title);
+        Assert.Contains("out of date", view.Detail, StringComparison.Ordinal);
+        Assert.Contains("join the other player's game", view.Detail, StringComparison.Ordinal);
+        var text = JoinModel.RefusalText("stale-epoch");
+        Assert.DoesNotContain("stale-epoch", text, StringComparison.Ordinal);
+        Assert.Contains(HostMigrationModel.FencedTitle, text, StringComparison.Ordinal);
+        Assert.Contains("join the other player's game", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Connection_MigrationWarning_IsPlayableAndCanBePutAside()
+    {
+        var view = JoinModel.Connection(true, false, null, HostMigrationModel.MayHaveSplitNotice());
+        Assert.True(view.Visible);
+        Assert.False(view.Final);
+        Assert.True(view.Dismissible);
+        Assert.Equal("The game may have split", view.Title);
+        Assert.Contains("two separate games", view.Detail, StringComparison.Ordinal);
+        Assert.Contains("invite", view.Detail, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Connection_AMigrationWarningNeverHidesAConnectionState()
+    {
+        var warning = HostMigrationModel.MayHaveSplitNotice();
+        Assert.Equal("Connection lost", JoinModel.Connection(false, false, null, warning).Title);
+        Assert.Equal("The host went away", JoinModel.Connection(true, true, null, warning).Title);
+        Assert.False(JoinModel.Connection(true, false, null).Dismissible);
+    }
+
+    [Theory]
+    [InlineData(true, 2, true)]
+    [InlineData(true, 3, false)]
+    [InlineData(false, 2, false)]
+    [InlineData(true, 0, false)]
+    public void MayHaveSplit_OnlyAnElectionWithExactlyTwoHumans(bool election, int humans, bool expected) =>
+        Assert.Equal(expected, HostMigrationModel.MayHaveSplit(election, humans));
 }

@@ -3,6 +3,7 @@ using Unciv.Client.Net.Session;
 using Unciv.Commands;
 using Unciv.Commands.Events;
 using Unciv.Commands.Turn;
+using Unciv.GodotClient.Setup;
 using Unciv.Models.Ruleset;
 using Unciv.Net;
 using Unciv.Net.Remote;
@@ -92,7 +93,19 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
 
     public string? EndedReason { get; private set; }
 
+    /// <summary>T340: set when this session followed a crash-election promotion in a game of exactly two humans, where the other player may still be running a host of their own; the in-game overlay
+    /// shows it until the player puts it aside (<see cref="DismissMigrationWarning"/>). Null for a graceful hand-off, more players, or a session that never saw an election.</summary>
+    public HostMigrationNotice? MigrationWarning { get; private set; }
+
     public event Action? ConnectionChanged;
+
+    /// <summary>T340: the player read the two-human split warning; it does not come back for the same game.</summary>
+    public void DismissMigrationWarning()
+    {
+        if (MigrationWarning == null) return;
+        MigrationWarning = null;
+        Raise(() => ConnectionChanged?.Invoke());
+    }
 
     public IReadOnlyList<ChatLine> Chat
     {
@@ -161,6 +174,14 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
                         break;
                     case MapPingReceived pinged:
                         Raise(() => PingReceived?.Invoke(pinged.Ping));
+                        break;
+                    case HostChanged changed: // T340: an election in a two-human game can leave the other player hosting their own copy
+                        if (!HostMigrationModel.MayHaveSplit(changed.Election, changed.Humans)) break;
+                        Raise(() =>
+                        {
+                            MigrationWarning = HostMigrationModel.MayHaveSplitNotice();
+                            ConnectionChanged?.Invoke();
+                        });
                         break;
                     case StateChanged moved:
                         Raise(() =>

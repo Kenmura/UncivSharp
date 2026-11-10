@@ -221,6 +221,7 @@ public sealed class ClientSession : IAsyncDisposable
 
     // T274: crash election state (receive-loop task only, except where noted).
     private bool redirectIsElection;
+    private int electionHumans; // T340: the human seats the old host last announced at the moment this election started; 0 when it announced none
     private long lossStart = -1; // clock time of the last frame from the lost host, -1 while connected
     private long lastFrameAt;
     private bool lossAnnounced;
@@ -887,6 +888,7 @@ public sealed class ClientSession : IAsyncDisposable
     {
         redirect = new HostHandoff { GameId = gameId!, Epoch = connectionEpoch + 1, Successor = info, FinalSeq = -1, FinalHash = "" };
         redirectIsElection = true;
+        electionHumans = Successor?.Roster.Count ?? 0; // T340: read before the new host's JoinOk can replace the announcement
         redirectPrepared = true;
         redirectAnnounced = false;
         redirectConnector = connector;
@@ -1214,6 +1216,7 @@ public sealed class ClientSession : IAsyncDisposable
         gameId ??= handoff.GameId;
         redirect = handoff;
         redirectIsElection = false;
+        electionHumans = 0;
         redirectPrepared = false;
         redirectAnnounced = false;
         redirectConnector = null;
@@ -1342,6 +1345,7 @@ public sealed class ClientSession : IAsyncDisposable
             Emit(new ProtocolError(ClientCodes.HostStillAlive));
             redirect = null;
             redirectIsElection = false;
+            electionHumans = 0;
             redirectConnector = null;
             skipElectionStep = true;
             hostAddress = options.HostAddress;
@@ -1440,7 +1444,7 @@ public sealed class ClientSession : IAsyncDisposable
         {
             // The redirect is done. The session stays on the successor (a later drop reconnects there, not to the old host).
             redirectAnnounced = true;
-            Emit(new HostChanged(redirect.Epoch));
+            Emit(new HostChanged(redirect.Epoch, redirectIsElection, electionHumans));
         }
 
         // The state moves before JoinAsync completes, so a caller that awaits the join never observes the stale Joining state.

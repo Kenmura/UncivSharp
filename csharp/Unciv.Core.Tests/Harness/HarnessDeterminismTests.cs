@@ -28,6 +28,7 @@ public sealed partial class HarnessDeterminismTests
         ["UnitVisualsScenario.cs"] = "report-only frame time of full against reduced unit formations (C085); asserts only the relative comparison, best of three batches",
         ["AutoPlayRefreshScenario.cs"] = "T379: report-only wall time per AutoPlay turn (printed, never asserted; the budget asserted is a count of full redraws)",
         ["TwoInstancesScenario.cs"] = "T334: polls (Task.Delay, 20 ms, 20 s cap) for the host to seat a friend that joined over real loopback TCP; the outcome (who sits where) does not depend on the timing, and no frame or golden does",
+        ["SplitBrainScenario.cs"] = "T340: polls (Task.Delay, 20 ms, bounded) for a real in-process host, standby replication and the crash election to settle over real loopback/TCP; the election itself is driven by a ManualClock, so no assertion or golden depends on wall time",
     };
 
     // The client reads the wall clock exactly twice, to seed a brand-new game at launch (a one-off, not frame-driven; scenarios build their own seeded sessions).

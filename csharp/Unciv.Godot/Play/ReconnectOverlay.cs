@@ -16,6 +16,7 @@ public partial class ReconnectOverlay : Control
     private readonly Label titleLabel = new() { Name = "ReconnectTitle", HorizontalAlignment = HorizontalAlignment.Center };
     private readonly Label detailLabel = new() { Name = "ReconnectDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart, HorizontalAlignment = HorizontalAlignment.Center };
     private NetGameSession? net;
+    private readonly int mainThread = System.Environment.CurrentManagedThreadId;
 
     public ReconnectOverlay(UiTheme theme)
     {
@@ -36,9 +37,23 @@ public partial class ReconnectOverlay : Control
         LeaveButton = new Button { Text = "Leave game".Tr(), Name = "ReconnectLeaveButton", Visible = false };
         LeaveButton.Pressed += () => LeaveRequested?.Invoke();
         column.AddChild(LeaveButton);
+        ContinueButton = new Button { Text = "Continue playing".Tr(), Name = "ReconnectContinueButton", Visible = false };
+        ContinueButton.ThemeTypeVariation = UiVariants.ButtonPrimary;
+        ContinueButton.Pressed += () =>
+        {
+            Visible = false; // the warning is only advice; the game under it stays playable
+            WarningAcknowledged?.Invoke();
+        };
+        column.AddChild(ContinueButton);
     }
 
     public Button LeaveButton { get; }
+
+    /// <summary>T340: the button of a playable warning that puts the notice aside (a final one leaves instead).</summary>
+    public Button ContinueButton { get; }
+
+    /// <summary>T340: the player put aside a playable warning; the owner clears it so it does not come back on the next connection change.</summary>
+    public event Action? WarningAcknowledged;
 
     public string Title => titleLabel.Text;
 
@@ -67,7 +82,13 @@ public partial class ReconnectOverlay : Control
     public void Refresh()
     {
         if (net == null) return;
-        Apply(JoinModel.Connection(net.Connection == ClientSessionState.InGame, net.HostClosing, net.EndedReason));
+        // NetGameSession raises its events on the thread that pumps the session; a session built without a synchronization context (scenarios, tools) would otherwise touch Godot nodes off the main thread.
+        if (System.Environment.CurrentManagedThreadId != mainThread)
+        {
+            Callable.From(Refresh).CallDeferred();
+            return;
+        }
+        Apply(JoinModel.Connection(net.Connection == ClientSessionState.InGame, net.HostClosing, net.EndedReason, net.MigrationWarning));
     }
 
     /// <summary>Shows <paramref name="view"/> (what <see cref="Refresh"/> does with the session's state; a scenario uses it to show each state without a live connection).</summary>
@@ -77,5 +98,6 @@ public partial class ReconnectOverlay : Control
         titleLabel.Text = view.Title.Tr();
         detailLabel.Text = view.Detail.Tr();
         LeaveButton.Visible = view.Final;
+        ContinueButton.Visible = view.Dismissible;
     }
 }

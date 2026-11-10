@@ -99,6 +99,7 @@
 - [T312 (ticket not Done or unknown)](#t312-ticket-not-done-or-unknown)
 - [T334 (ticket not Done or unknown)](#t334-ticket-not-done-or-unknown)
 - [T339 (ticket not Done or unknown)](#t339-ticket-not-done-or-unknown)
+- [T340 (ticket not Done or unknown)](#t340-ticket-not-done-or-unknown)
 - [T343 (ticket not Done or unknown)](#t343-ticket-not-done-or-unknown)
 - [T371 (ticket not Done or unknown)](#t371-ticket-not-done-or-unknown)
 - [T372 (ticket not Done or unknown)](#t372-ticket-not-done-or-unknown)
@@ -2068,6 +2069,24 @@ Scenario `browse`.
 ![Join dialog for a password game from a known host: asks for the password and refuses an empty one.](../Unciv.Godot.Harness/golden/browse/join-password.png)
 
 *Join dialog for a password game from a known host: asks for the password and refuses an empty one.* (`browse/join-password.png`)
+
+## T340 (ticket not Done or unknown)
+
+The two-human split brain of host migration: the backup host takes over its own copy when the host machine is unreachable, warns that the game may have split, and the old host is fenced by the newer epoch when the two meet.
+
+Scenario `split-brain`.
+
+![The backup host after the partition: it continued alone because there are only two players, and the playable notice says the other player may still be playing on their own copy, to agree which copy continues and to rejoin with an invite. Continue playing puts it aside.](../Unciv.Godot.Harness/golden/split-brain/successor-warning.png)
+
+*The backup host after the partition: it continued alone because there are only two players, and the playable notice says the other player may still be playing on their own copy, to agree which copy continues and to rejoin with an invite. Continue playing puts it aside.* (`split-brain/successor-warning.png`)
+
+![The old host's machine during the same partition: it still plays its copy and has no warning, because it does not know the other machine continued without it. That is the split.](../Unciv.Godot.Harness/golden/split-brain/old-host-playing.png)
+
+*The old host's machine during the same partition: it still plays its copy and has no warning, because it does not know the other machine continued without it. That is the split.* (`split-brain/old-host-playing.png`)
+
+![The old host when the two machines meet: the verified claim fences it at the newer epoch, its own player is told stale-epoch, and the screen says another host took over and to leave and join that game with the same key.](../Unciv.Godot.Harness/golden/split-brain/old-host-fenced.png)
+
+*The old host when the two machines meet: the verified claim fences it at the newer epoch, its own player is told stale-epoch, and the screen says another host took over and to leave and join that game with the same key.* (`split-brain/old-host-fenced.png`)
 
 ## T343 (ticket not Done or unknown)
 

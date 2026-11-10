@@ -110,8 +110,10 @@ public sealed record StandbyRejected(string Reason) : ClientEvent;
 /// <summary>T273: the host quit cleanly and handed the game to its backup host (<see cref="HostHandoff"/>); the session now reconnects to the announced endpoint with the same key. Replaces <see cref="HostClosed"/> for such a quit.</summary>
 public sealed record HostHandedOff(HostHandoff Handoff) : ClientEvent;
 
-/// <summary>T273: the session joined the promoted host (<see cref="Epoch"/> is the new host epoch); the mirror is resumed from it.</summary>
-public sealed record HostChanged(int Epoch) : ClientEvent;
+/// <summary>T273: the session joined the promoted host (<see cref="Epoch"/> is the new host epoch); the mirror is resumed from it.
+/// T340: <see cref="Election"/> is true when a crash election promoted this host (not a graceful hand-off) and <see cref="Humans"/> is how many human seats the old host last announced,
+/// so the UI can warn when exactly two humans could now be running a host each.</summary>
+public sealed record HostChanged(int Epoch, bool Election = false, int Humans = 0) : ClientEvent;
 
 /// <summary>T273: the new host did not have the last <see cref="LostCommands"/> commands this client had applied (they were never replicated); the mirror was replaced and the UI should say so.</summary>
 public sealed record HostRolledBack(long LostCommands) : ClientEvent;
