@@ -105,6 +105,15 @@ public sealed partial class DedicatedServerTests : IDisposable
         Assert.Contains("--parallel-views", ServerOptions.HelpText);
     }
 
+    [Fact]
+    public void IncrementalViews_DefaultsOn_AndCanBeTurnedOff()
+    {
+        Assert.True(ServerOptions.Parse([]).ToHostLimits().IncrementalViewBuilding);
+        Assert.False(ServerOptions.Parse(["--no-incremental-views"]).ToHostLimits().IncrementalViewBuilding);
+        Assert.True(ServerOptions.Parse(["--parallel-views", "4"]).ToHostLimits().IncrementalViewBuilding);
+        Assert.Contains("--no-incremental-views", ServerOptions.HelpText);
+    }
+
     [Theory]
     [InlineData("65")]
     [InlineData("-1")]

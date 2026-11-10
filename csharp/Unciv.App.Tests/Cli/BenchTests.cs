@@ -17,12 +17,14 @@ public sealed class BenchTests : IDisposable
         Directory.Delete(dir, recursive: true);
     }
 
-    private JsonNode Bench(params string[] args)
+    private JsonNode Bench(params string[] args) => BenchScenario("small", args);
+
+    private JsonNode BenchScenario(string scenario, params string[] args)
     {
         var path = Path.Combine(dir, $"bench{Directory.GetFiles(dir).Length}.json");
         var output = new StringWriter();
         var error = new StringWriter();
-        var code = CliRunner.Run(["bench", "--scenario", "small", "--json", path, .. args], output, error);
+        var code = CliRunner.Run(["bench", "--scenario", scenario, "--json", path, .. args], output, error);
         Assert.True(code == 0, error.ToString());
         return JsonNode.Parse(File.ReadAllText(path))!;
     }
@@ -82,6 +84,24 @@ public sealed class BenchTests : IDisposable
         Assert.True((int)host["commands"]! > 0);
         Assert.NotNull(host["phases"]!["Host.BuildDelta"]);
         Assert.Equal(0, (int)sequential["scenarios"]![0]!["host"]!["parallelTasks"]!);
+    }
+
+    // T342: the six table has three human seats, so one round drives BeginTurn, the scripted human and the idle human seats; the full and incremental
+    // view builders must report the same per-turn hashes, and each must say which one it measured.
+    [Fact]
+    public void SixScenario_ThreeHumanSeats_BothViewBuildersKeepTheSameHashes()
+    {
+        var full = BenchScenario("six", "--turns", "3", "--host-turns", "2", "--recipients", "3", "--host-views", "full");
+        var incremental = BenchScenario("six", "--turns", "3", "--host-turns", "2", "--recipients", "3", "--host-views", "incremental");
+        Assert.Equal(Hashes(full), Hashes(incremental));
+        var fullHost = full["scenarios"]![0]!["host"]!;
+        var incrementalHost = incremental["scenarios"]![0]!["host"]!;
+        Assert.Equal("full", (string)fullHost["views"]!);
+        Assert.Equal(0, (int)fullHost["incrementalRounds"]!);
+        Assert.Equal("incremental", (string)incrementalHost["views"]!);
+        Assert.True((int)incrementalHost["incrementalRounds"]! > 0);
+        Assert.Equal(3, (int)incrementalHost["recipients"]!);
+        Assert.NotNull(incrementalHost["phases"]!["View.TileSets"]);
     }
 
     [Fact]

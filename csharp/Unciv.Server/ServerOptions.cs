@@ -46,6 +46,7 @@ public sealed record ServerOptions
           --jsons DIR         The rulesets folder (default: data/jsons next to the executable, else android/assets/jsons above the current folder).
           --mods-dir DIR      A folder of mods to offer.
           --parallel-views N  Build the per-player views of a round on up to N tasks (2 to 64; 0, 1 or absent: off, the default). Frames are byte-identical either way; it only pays on a host with spare cores and several players.
+          --no-incremental-views  Rebuild every player's view from scratch after every command instead of reusing the unchanged fogged tiles (the default is incremental, which produces byte-identical frames).
           --log-level LEVEL   debug, info (default), warn or error. Log lines go to stdout.
           --help, -h          Show this help and exit.
 
@@ -104,8 +105,14 @@ public sealed record ServerOptions
     /// <summary>T302: <c>--parallel-views N</c>; 0 (default) keeps the sequential view building. Reaches the game host through <see cref="ToHostLimits"/>.</summary>
     public int ParallelViews { get; init; }
 
+    /// <summary>T342: the incremental view builder is on unless <c>--no-incremental-views</c> is given. Reaches the game host through <see cref="ToHostLimits"/>.</summary>
+    public bool IncrementalViews { get; init; } = true;
+
     /// <summary>The host limits this command line asks for: the defaults, plus parallel view building when <see cref="ParallelViews"/> is 2 or more.</summary>
-    public HostLimits ToHostLimits() => ParallelViews >= 2 ? new HostLimits { ParallelViewBuilding = true, MaxViewParallelism = ParallelViews } : new HostLimits();
+    public HostLimits ToHostLimits() => (ParallelViews >= 2
+        ? new HostLimits { ParallelViewBuilding = true, MaxViewParallelism = ParallelViews }
+        : new HostLimits()) with
+    { IncrementalViewBuilding = IncrementalViews };
 
     public static ServerOptions Parse(IReadOnlyList<string> args)
     {
@@ -125,6 +132,7 @@ public sealed record ServerOptions
                 case "auto-start": result = result with { AutoStart = true }; continue;
                 case "print-invite": result = result with { PrintInvite = true }; continue;
                 case "list": result = result with { List = true }; continue;
+                case "no-incremental-views": result = result with { IncrementalViews = false }; continue;
             }
 
             if (name is not ("port" or "data-dir" or "password" or "password-file" or "game-id" or "max-players" or "min-humans" or "settings" or "address" or "jsons" or "mods-dir" or "log-level" or "parallel-views" or "relay" or "relay-fingerprint" or "list-name"))

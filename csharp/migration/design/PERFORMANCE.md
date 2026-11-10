@@ -21,6 +21,7 @@
   - [Ordered list of safe candidates and the risks](#ordered-list-of-safe-candidates-and-the-risks)
   - [Cache-write audit of host view building (T296)](#cache-write-audit-of-host-view-building-t296)
   - [Result of T297 (the go, implemented)](#result-of-t297-the-go-implemented)
+- [Result of T342 (incremental host views, implemented)](#result-of-t342-incremental-host-views-implemented)
 - [Follow-ups](#follow-ups)
 <!-- /toc -->
 
@@ -390,10 +391,57 @@ Speed-up measurement, **inconclusive** (`bench --scenario medium --host-turns 5 
 
 Honest reading: the machine was shared and loaded (load average 7 to 54 on 20 logical cores) and the sequential time itself varies 3x between runs, so this bench cannot show a reliable gain; the median ratio is 1.16x and one pair is slower. The T263 prototype measured 1.3-2.2x with 6 recipients under similar load, from an in-run A/B on identical inputs, which is the better method; this run compares separate runs. Per-recipient phases (`View.*`) are not attributed in parallel mode, and the parallel path records one timed block where the sequential one records enter/exit per phase and recipient, so the comparison slightly favours the parallel side. A real gain needs an idle machine or a dedicated host; leave the option off until measured there.
 
+## Result of T342 (incremental host views, implemented)
+
+`HostLimits.IncrementalViewBuilding` is **on by default**; `Unciv.Server --no-incremental-views` turns it off. Per recipient the host keeps the last
+`ClientSnapshot`, the canonical JSON element of each tile, each tile's map index, the map-content revision and the viewer's tech/policy reveal revision
+(`ViewDeltaBuilder.ViewMark` now carries the latter two). After a command the builder:
+
+- reuses every explored fogged tile by reference (a human's fog snapshot carries only remembered improvement/owner plus static terrain/resource, and those
+  inputs are covered by the revisions);
+- rebuilds the currently visible tiles, tiles that changed visibility, newly explored tiles (including one that a unit explored and left in the same
+  command) and the positions named by the command's events, and compares the new `TileDto` to the old one field by field so an unchanged visible tile is
+  reused too;
+- rebuilds units from the visible tiles in map order (the same set and order the full build emits) and reuses an unchanged unit DTO;
+- builds the rest of the snapshot (cities, civs, diplomacy, notifications, ...) the same way as the full build, but computes the view hash from the cached
+  per-tile canonical JSON instead of serializing every tile again;
+- computes the `SnapshotDiff` from the rebuilt keys (tiles can never reorder; unit order is derived exactly as the full diff does).
+
+Anything it cannot prove safe falls back to the full build and re-seeds the state: a non-human or spectator viewer (whose fog view shows live improvement),
+a stale/foreign previous snapshot, a map-content revision change (terrain, features, resource/site placement), or a technology/policy count change that can
+reveal a resource on a fogged tile. The fallback is covered by `IncrementalViewBuilderTests` (each condition) and by the host test that drops the state
+between commands; the client's existing resync path still catches a diff applied to the wrong base (`SnapshotDiffTests`).
+
+Proof of equal output: `IncrementalViewBuilderTests.ScriptedLateGameCommands_ProduceByteIdenticalSnapshotsAndDiffs` drives a scripted two-human game and
+compares every command's full and incremental snapshot (canonical JSON), diff, events and view hash, applying the incremental diff to a client mirror;
+`GameHostParallelViewTests.IncrementalFrames_EqualTheFullBuildFrames` (2/4 recipients, 3/6 rounds), `IncrementalWithParallelViews_EqualsTheFullBuild` and
+`LostIncrementalState_FallsBackToTheFullBuild_...` compare every encoded host frame with the full-build run. `bench --golden design/perf-golden.json`
+after the change: small 50 and medium 200 turn hashes identical (the engine is untouched; the revisions are transient).
+
+Measurement: `bench --scenario six --turns 200 --host-turns 5 --recipients 3 --host-views full|incremental --repeat 1`, Release, alternating full and
+incremental in one session (the machine is shared; four interleaved runs). The six scenario is the ticket's late-game table: 6 majors with **3 human seats**
+(Babylon is scripted, the other two take their turns without actions), 6 city states, Medium map, 22 cities and ~195 units at turn 200; the last 5 turns
+carry 90 commands x 3 recipients = 270 view builds per run. Host-side times only (the bench subtracts them from the engine numbers):
+
+| Run | View mode | `Host.Capture` + `Host.BuildDelta` + `Host.Encode` per turn | `Host.BuildDelta` per recipient-command | Incremental / full builds |
+|---|---|---|---|---|
+| 1 | full | 63.6 ms | 1.037 ms | 0 / 270 |
+| 2 | full | 64.4 ms | 1.065 ms | 0 / 270 |
+| 3 | incremental | 49.1 ms | 0.803 ms | 267 / 3 |
+| 4 | incremental | 46.8 ms | 0.757 ms | 267 / 3 |
+| median | full -> incremental | **64.0 -> 48.0 ms (-25%)** | **1.051 -> 0.780 ms (-26%)** | |
+
+The three full builds are the deliberate reveal-revision fallback (a measured human finishes a tech in the window). The engine late median is unchanged
+within noise (160.8 and 167.0 ms/turn for full, 164.1 and 165.7 for incremental; it is the same engine and the host cost is excluded by the harness). Adding
+the measured host cost back to the late median gives about 228 ms -> 213 ms per turn for these 3 connected players (about -7% wall time); the gain grows with
+the number of connected humans and with the explored fraction of the map, and is absent when there is one recipient or when the fallback runs. The host stays
+sequential here; incremental view building composes with `--parallel-views` (tested for equal frames).
+
 ## Follow-ups
 
 - ~~Call-level profiling inside `AI.AutomateUnitMoves` and the spike turns (install `dotnet-trace`; or add `Measure` points in pathfinding), and a GC-count column per phase.~~
   Done in T351: see [T351](#t351-call-level-breakdown-of-ai-unit-moves); the worthwhile fixes are T406-T409.
-- Incremental host view diff (T178 note), once the host cost per recipient is chosen as a target.
+- ~~Incremental host view diff (T178 note), once the host cost per recipient is chosen as a target.~~
+  Done in T342: see [Result of T342](#result-of-t342-incremental-host-views-implemented).
 - Per-unit `GetViewableTiles` cache keyed on position, range and a terrain revision counter (still the top allocator after T262), and a struct `ViewableTile`.
 - Remaining refresh cost: civ-level dirty tracking needs a proof that every input to `UpdateCivilizationState` is covered by a revision counter.

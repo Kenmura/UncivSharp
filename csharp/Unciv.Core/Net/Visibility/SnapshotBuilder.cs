@@ -31,23 +31,31 @@ public static class SnapshotBuilder
         var tiles = new List<TileDto>();
         var units = new List<UnitDto>();
         var emittedUnitIds = new HashSet<int>();
-        var referencedCivs = new HashSet<string> { viewer.CivId };
         foreach (var tile in gameInfo.TileMap.TileList)
         {
             var tileView = gameView.TileMapView.GetTile(tile);
             if (!tileView.IsExplored()) continue;
-            var tileDto = BuildTile(tileView, gameView);
-            tiles.Add(tileDto);
-            if (tileDto.Owner != null) referencedCivs.Add(tileDto.Owner);
+            tiles.Add(BuildTile(tileView, gameView));
             // Defense in depth: GetVisibleUnits already filters per unit, but fog must never depend on that alone.
             if (!tileView.IsVisible()) continue;
             foreach (var unit in tileView.GetVisibleUnits())
             {
                 if (!emittedUnitIds.Add(unit.Id)) continue;
                 units.Add(BuildUnit(unit, tileView));
-                referencedCivs.Add(unit.Civ().CivId);
             }
         }
+
+        return Complete(gameView, gameInfo, viewer, seq, turnStatus, tiles, units, computeHash: true);
+    }
+
+    /// <summary>T342: the part of <see cref="Build"/> after the tiles and units, so the incremental builder can supply the ones it reused.</summary>
+    internal static ClientSnapshot Complete(GameView gameView, GameInfo gameInfo, CivilizationClass viewer, long seq, TurnStatusDto turnStatus,
+        List<TileDto> tiles, List<UnitDto> units, bool computeHash)
+    {
+        var referencedCivs = new HashSet<string> { viewer.CivId };
+        foreach (var tileDto in tiles)
+            if (tileDto.Owner != null) referencedCivs.Add(tileDto.Owner);
+        foreach (var unit in units) referencedCivs.Add(unit.Owner);
 
         var cities = new List<CityDto>();
         foreach (var civ in gameInfo.Civilizations)
@@ -84,7 +92,7 @@ public static class SnapshotBuilder
             PendingDecisions = PendingDecisions.For(viewer)
                 .Select(it => new PendingDecisionDto { Kind = it.Kind.ToString(), Subject = it.Subject, ResolvedBy = it.ResolvedBy, Blocking = it.Blocking, Index = it.Index }).ToList()
         };
-        return snapshot with { ViewHash = ComputeViewHash(snapshot) };
+        return computeHash ? snapshot with { ViewHash = ComputeViewHash(snapshot) } : snapshot;
     }
 
     /// <summary>Canonical JSON of one DTO (the form hashes and diffs compare).</summary>
@@ -103,6 +111,25 @@ public static class SnapshotBuilder
     /// <summary>FNV-1a (T011 <see cref="StateHasher"/>) over the canonical JSON; an integrity and bug detector, not a security control.</summary>
     public static string ComputeViewHash(ClientSnapshot snapshot) =>
         StateHasher.ComputeHexString(hasher => hasher.Add(Encoding.UTF8.GetBytes(ToCanonicalJson(snapshot))));
+
+    /// <summary>
+    /// T342: the same hash as <see cref="ComputeViewHash(ClientSnapshot)"/>, written from the already-serialized canonical JSON of each tile (the incremental builder reuses
+    /// the elements of unchanged tiles instead of serializing every tile again). The form repeats <see cref="ClientSnapshot"/>'s declaration order exactly,
+    /// because that order is what the canonical JSON and therefore the hash depend on.
+    /// </summary>
+    internal static string ComputeViewHash(ClientSnapshot snapshot, IReadOnlyList<JsonElement> tileElements)
+    {
+        if (tileElements.Count != snapshot.Tiles.Count) throw new ArgumentException("one element per tile is required", nameof(tileElements));
+        var form = new ViewHashForm(snapshot.Seq, snapshot.Turn, snapshot.Phase, snapshot.TurnStatus, snapshot.You, snapshot.Civs, tileElements.ToList(),
+            snapshot.Cities, snapshot.Units, snapshot.Diplomacy, snapshot.PendingTrades, snapshot.Notifications, snapshot.PopupAlerts,
+            snapshot.PendingDecisions, snapshot.ViewHash);
+        return StateHasher.ComputeHexString(hasher => hasher.Add(JsonSerializer.SerializeToUtf8Bytes(form, CanonicalOptions)));
+    }
+
+    private sealed record ViewHashForm(long Seq, int Turn, string Phase, TurnStatusDto TurnStatus, string You, List<CivDto> Civs,
+        List<JsonElement> Tiles, List<CityDto> Cities, List<UnitDto> Units, List<DiplomacyDto> Diplomacy,
+        List<PendingTradeDto> PendingTrades, List<NotificationDto> Notifications, List<PopupAlertDto> PopupAlerts,
+        List<PendingDecisionDto> PendingDecisions, string? ViewHash);
 
     /// <summary>The wire message for this snapshot (the Snapshot message carries each DTO as an opaque JSON element).</summary>
     public static Snapshot ToMessage(ClientSnapshot snapshot)

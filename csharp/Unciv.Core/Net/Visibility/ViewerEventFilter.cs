@@ -6,7 +6,7 @@ namespace Unciv.Net.Visibility;
 
 /// <summary>
 /// C037: what one civ may see of the raw events a command produced, through the same <see cref="EventFilter"/> and <see cref="GameViewVisibility"/> the
-/// server uses per recipient (<see cref="ViewDeltaBuilder.BuildEvents"/>). A single-player host runs this between the engine and its client so the
+/// server uses per recipient (<c>ViewDeltaBuilder.BuildEvents</c>). A single-player host runs this between the engine and its client so the
 /// client stream never carries another civ's fogged moves or private events. Capture <see cref="Mark"/> before a command, call <see cref="Filter"/> after it.
 /// </summary>
 public sealed class ViewerEventFilter(GameInfo game, string viewerCivId)

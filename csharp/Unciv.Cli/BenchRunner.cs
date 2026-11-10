@@ -25,8 +25,9 @@ namespace Unciv.Cli;
 public static class BenchRunner
 {
     public const string Usage = """
-        bench [--scenario small|medium|all] [--turns N] [--repeat N] [--json FILE|-] [--ruleset NAME] [--host-turns K] [--recipients R] [--host-parallel N] [--no-probe] [--golden FILE]
+        bench [--scenario small|medium|six|all] [--turns N] [--repeat N] [--json FILE|-] [--ruleset NAME] [--host-turns K] [--recipients R] [--host-parallel N] [--host-views full|incremental] [--no-probe] [--golden FILE]
               Profile end-turn time. small: 4 civs + 2 city states, Small map, 50 turns. medium: 8 civs + 8 city states, Medium map, 200 turns.
+              six (T342): 6 civs with 3 human seats + 6 city states, Medium map, 200 turns, the late-game host-view bench.
               Per turn: wall time of the whole turn (the human's turn, every AI civ, the checkpoint hash), split by phase; at the end the top 20 phases by
               inclusive time, the time per civ and per command type, the five slowest turns with their phases, the unit-automation/pathfinding call profile
               (T351), and (medium, the last K turns, default 3) the host-side ViewDelta cost per recipient
@@ -36,6 +37,7 @@ public static class BenchRunner
               of the late median and the total time); the state hashes must be equal across runs. --golden compares the median run.
               --host-parallel N (T297, 2-64) builds the recipients' views on up to N tasks the way GameHost does with HostLimits.ParallelViewBuilding: capture and
               build+encode become one timed step each (per-recipient phases are not attributed), so compare the host section with a run without the flag.
+              --host-views full|incremental (T342, default incremental) chooses the view builder the host section measures, so a pair of runs compares them.
               --no-probe runs without the phase probe (wall time and hashes only; the per-turn state hashes must be equal to a probed run).
               --golden FILE compares every turn's state hash with migration/design/perf-golden.json (exit 1 on a difference).
               Use a Release build for numbers: dotnet run -c Release --project Unciv.Cli -- bench --scenario small --turns 10
@@ -44,14 +46,18 @@ public static class BenchRunner
     private static readonly string[] Nations = ["Babylon", "Greece", "Rome", "Egypt", "China", "England", "France", "Russia"];
 
     /// <summary>A named, fully seeded game.</summary>
-    public sealed record Scenario(string Name, int Majors, int CityStates, string MapSizeName, string MapTypeName, long GameSeed, long MapSeed, int Turns, int HostTurns);
+    public sealed record Scenario(string Name, int Majors, int CityStates, string MapSizeName, string MapTypeName, long GameSeed, long MapSeed, int Turns, int HostTurns, int Humans = 1);
 
     public static readonly Scenario Small = new("small", 4, 2, "Small", MapType.SmallContinents, 11L, 5L, 50, 0);
 
     public static readonly Scenario Medium = new("medium", 8, 8, "Medium", MapType.ContinentAndIslands, 23L, 9L, 200, 3);
 
+    /// <summary>T342: the late-game host-view bench the ticket asks for: 6 civs, 3 human seats (all but the first idle), 6 city states, 200 turns.</summary>
+    public static readonly Scenario Six = new("six", 6, 6, "Medium", MapType.ContinentAndIslands, 31L, 13L, 200, 3, Humans: 3);
+
     /// <summary>What a scenario run is told besides the scenario.</summary>
-    public sealed record Options(bool Probe = true, int? Turns = null, int? HostTurns = null, int Recipients = 3, string? Ruleset = null, int HostParallel = 0);
+    public sealed record Options(bool Probe = true, int? Turns = null, int? HostTurns = null, int Recipients = 3, string? Ruleset = null, int HostParallel = 0,
+        bool HostIncrementalViews = true);
 
     // The phases that make up a turn, in the order the report lists them per turn.
     private static readonly string[] TurnColumns =
@@ -73,6 +79,8 @@ public static class BenchRunner
         var hostTurns = cli.Get("host-turns") == null ? (int?)null : cli.GetInt("host-turns", 0, 0, 1000);
         var recipients = cli.GetInt("recipients", 3, 1, 8);
         var hostParallel = cli.GetInt("host-parallel", 0, 2, 64);
+        var hostViews = cli.Get("host-views") ?? "incremental";
+        if (hostViews is not ("full" or "incremental")) throw new UsageException("--host-views must be full or incremental");
         var jsonPath = cli.Get("json");
         var noProbe = cli.Flag("no-probe");
         var goldenPath = cli.Get("golden");
@@ -84,11 +92,12 @@ public static class BenchRunner
         {
             "small" => [Small],
             "medium" => [Medium],
-            "all" => new[] { Small, Medium },
-            _ => throw new UsageException($"--scenario '{scenarioName}' is not one of: small, medium, all"),
+            "six" => [Six],
+            "all" => new[] { Small, Medium, Six },
+            _ => throw new UsageException($"--scenario '{scenarioName}' is not one of: small, medium, six, all"),
         };
         loadRulesets(cli);
-        var options = new Options(!noProbe, turns, hostTurns, recipients, ruleset, hostParallel);
+        var options = new Options(!noProbe, turns, hostTurns, recipients, ruleset, hostParallel, hostViews == "incremental");
         var results = scenarios.Select(it => RunRepeated(it, options, repeat, output)).ToList();
         var report = new JsonObject
         {
@@ -189,6 +198,9 @@ public static class BenchRunner
         public int HostCommands { get; set; }
         public int HostFromTurn { get; set; }
         public int HostParallel { get; set; }
+        public string HostViews { get; set; } = "";
+        public int HostIncrementalRounds;
+        public int HostFullRounds;
         public double TotalSeconds { get; set; }
         public string Summary { get; set; } = "";
         public int HumanAliveUntilTurn { get; set; }
@@ -399,7 +411,7 @@ public static class BenchRunner
             VictoryTypes = ["Time"],   // a conquest or a victory must not end the measured game early
             MaxTurns = 10_000,
             Players = Enumerable.Range(0, scenario.Majors)
-                .Select(i => new Player(Nations[i % Nations.Length], i == 0 ? PlayerType.Human : PlayerType.AI)).ToList(),
+                .Select(i => new Player(Nations[i % Nations.Length], i < scenario.Humans ? PlayerType.Human : PlayerType.AI)).ToList(),
         },
         new MapParameters { Type = scenario.MapTypeName, Shape = MapShape.Rectangular, Seed = scenario.MapSeed, MapSize = new MapSize(scenario.MapSizeName), BaseRuleset = ruleset });
 
@@ -442,7 +454,7 @@ public static class BenchRunner
         var probe = new BenchProbe(engine);
         var hostFrom = turns - hostTurns + 1;
         result.HostFromTurn = hostTurns > 0 ? hostFrom : 0;
-        var host = hostTurns > 0 ? new HostMeasurement(game, probe, options.Recipients, result, options.HostParallel) : null;
+        var host = hostTurns > 0 ? new HostMeasurement(game, probe, options.Recipients, result, options.HostParallel, options.HostIncrementalViews) : null;
         var total = Timestamp();
         TurnProbe.Current = options.Probe ? probe : null;
         try
@@ -456,7 +468,7 @@ public static class BenchRunner
                 var gen1 = GC.CollectionCount(1);
                 var gen2 = GC.CollectionCount(2);
                 var start = engine.Now();
-                var done = PlayRound(session, human, writer);
+                var done = scenario.Humans == 1 ? PlayRound(session, human, writer) : PlayMultiHumanRound(session, human, writer);
                 var wall = engine.Now() - start;
                 if (done == 0) break;
                 if (options.Probe) engine.EndTurn();
@@ -509,6 +521,42 @@ public static class BenchRunner
         return result;
     }
 
+    /// <summary>T342: one round of a scenario with more than one human seat. The first human plays through <see cref="ScriptedHuman"/>; the other seats
+    /// take their turns without scripted actions (the bench measures the host views, not the players' choices).</summary>
+    private static int PlayMultiHumanRound(GameSession session, ScriptedHuman human, CommandLogWriter writer)
+    {
+        var game = session.Game;
+        var before = game.Turns;
+        var steps = 0;
+        void Server(GameCommand command)
+        {
+            var result = session.SubmitAsServer(command);
+            if (!result.Accepted) throw new InvalidOperationException($"{command.Type} refused: {result.Validation.Message}");
+            writer.Sync(session);
+        }
+        while (game.Turns < before + 1 && game.TurnPhase is not TurnPhase.GameOver && steps++ < 100_000)
+        {
+            switch (game.TurnPhase)
+            {
+                case TurnPhase.AutoPlayers auto:
+                    Server(new RunAiTurn { CivId = auto.NextCiv.CivId });
+                    break;
+                case TurnPhase.AwaitingInput waiting when !game.IsTurnStarted(waiting.Civ):
+                    Server(new BeginTurn { CivId = waiting.Civ.CivId });
+                    break;
+                case TurnPhase.AwaitingInput waiting when waiting.Civ.CivId == Nations[0] && waiting.Civ.IsAlive():
+                    human.PlayCurrentTurn();
+                    break;
+                case TurnPhase.AwaitingInput waiting:
+                    Server(new ForceEndTurn { CivId = waiting.Civ.CivId });
+                    break;
+                default:
+                    return game.Turns - before;
+            }
+        }
+        return game.Turns - before;
+    }
+
     // One round: the human plays (or, when the human is gone, the host keeps the civs going) until the next human turn has begun.
     private static int PlayRound(GameSession session, ScriptedHuman human, CommandLogWriter writer)
     {
@@ -537,11 +585,12 @@ public static class BenchRunner
     /// view before, build the snapshot diff and delta after, encode it. Measured on its own recorder around each command; the time it takes is added to the
     /// engine recorder's skew, so the engine numbers are those of a game without recipients. Events are not passed (the filtered-event part is small).
     /// </summary>
-    private sealed class HostMeasurement(GameInfo game, BenchProbe probe, int recipientCount, ScenarioResult result, int parallel)
+    private sealed class HostMeasurement(GameInfo game, BenchProbe probe, int recipientCount, ScenarioResult result, int parallel, bool incremental)
     {
         private readonly Recorder recorder = new();
         private List<(Civilization Civ, ClientSnapshot Snapshot)> recipients = [];
         private List<ViewDeltaBuilder.ViewMark> marks = [];
+        private List<IncrementalViewBuilder.State?> states = [];
         private long seq;
 
         public void Start()
@@ -550,7 +599,9 @@ public static class BenchRunner
             var status = new TurnStatusDto { Ended = [], Deadline = null, Phase = "Playing" };
             recipients = game.Civilizations.Where(it => it.IsMajorCiv() && it.IsAlive()).Take(recipientCount)
                 .Select(it => (it, SnapshotBuilder.Build(game, it, 0, status))).ToList();
+            states = recipients.Select(it => incremental ? IncrementalViewBuilder.Seed(game, it.Civ, it.Snapshot) : null).ToList();
             result.HostRecipients = recipients.Count;
+            result.HostViews = incremental ? "incremental" : "full";
             result.HostParallel = parallel >= 2 && recipients.Count >= 2 ? parallel : 0;
             probe.BeforeCommand = Before;
             probe.AfterCommand = After;
@@ -589,6 +640,21 @@ public static class BenchRunner
             }
         });
 
+        /// <summary>T342: the one recipient's view, incremental when the bench runs that mode and the builder can prove it safe, else the full build.</summary>
+        private (ViewDelta Delta, ClientSnapshot After) BuildView(int i, Civilization civ, ClientSnapshot before, TurnStatusDto status)
+        {
+            if (incremental && IncrementalViewBuilder.TryBuildWithDiff(game, civ, before, marks[i], [], seq, status, states[i]) is { } built)
+            {
+                Interlocked.Increment(ref result.HostIncrementalRounds);
+                states[i] = built.State;
+                return (built.Delta, built.After);
+            }
+            Interlocked.Increment(ref result.HostFullRounds);
+            var pair = ViewDeltaBuilder.BuildWithDiff(game, civ, before, marks[i], [], seq, status);
+            states[i] = incremental ? IncrementalViewBuilder.Seed(game, civ, pair.After) : null;
+            return pair;
+        }
+
         private void After() => Measure(() =>
         {
             var status = new TurnStatusDto { Ended = [], Deadline = null, Phase = "Playing" };
@@ -599,7 +665,7 @@ public static class BenchRunner
                 recorder.Enter("Host.BuildDelta", null);
                 var built = Fan(i =>
                 {
-                    var (delta, after) = ViewDeltaBuilder.BuildWithDiff(game, recipients[i].Civ, recipients[i].Snapshot, marks[i], [], seq, status);
+                    var (delta, after) = BuildView(i, recipients[i].Civ, recipients[i].Snapshot, status);
                     return (After: after, Frame: ProtocolCodec.Encode(delta));
                 });
                 recorder.Exit("Host.BuildDelta", null);
@@ -610,7 +676,7 @@ public static class BenchRunner
             {
                 var (civ, before) = recipients[i];
                 recorder.Enter("Host.BuildDelta", null);
-                var (delta, after) = ViewDeltaBuilder.BuildWithDiff(game, civ, before, marks[i], [], seq, status);
+                var (delta, after) = BuildView(i, civ, before, status);
                 recorder.Exit("Host.BuildDelta", null);
                 recorder.Enter("Host.Encode", null);
                 _ = ProtocolCodec.Encode(delta);
@@ -852,7 +918,10 @@ public static class BenchRunner
                 ["recipients"] = result.HostRecipients,
                 ["commands"] = result.HostCommands,
                 ["parallelTasks"] = result.HostParallel,
-                ["note"] = "ViewDeltaBuilder.Capture before and BuildWithDiff plus ProtocolCodec.Encode after every command, per recipient, without engine events; engine times above exclude this",
+                ["views"] = result.HostViews,
+                ["incrementalRounds"] = result.HostIncrementalRounds,
+                ["fullRounds"] = result.HostFullRounds,
+                ["note"] = "ViewDeltaBuilder.Capture before and the configured view builder plus ProtocolCodec.Encode after every command, per recipient, without engine events; engine times above exclude this",
             };
             foreach (var (name, agg) in result.Host.Total.OrderBy(it => it.Key, StringComparer.Ordinal))
             {

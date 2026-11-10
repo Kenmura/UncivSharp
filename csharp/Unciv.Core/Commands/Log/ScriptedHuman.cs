@@ -56,6 +56,16 @@ public sealed class ScriptedHuman(GameSession session, string civId, CommandLogW
         }
     }
 
+    /// <summary>T342: plays the turn the game is waiting for when it belongs to this scripted human (used by the multi-human bench); false otherwise.</summary>
+    public bool PlayCurrentTurn()
+    {
+        var game = session.Game;
+        if (game.TurnPhase is not TurnPhase.AwaitingInput waiting || waiting.Civ.CivId != civId || !waiting.Civ.IsAlive() || !game.IsTurnStarted(waiting.Civ))
+            return false;
+        PlayHumanTurn(waiting.Civ);
+        return true;
+    }
+
     private void PlayHumanTurn(CivilizationObject civ)
     {
         foreach (var unit in civ.Units.GetCivUnits().ToList())

@@ -174,6 +174,7 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
                 Resource = value.Name;
                 tileResourceCache = value;
             }
+            if (IsTilemapInitialized() && ReferenceEquals(TileMap.GetOrNull(Position.x, Position.y), this)) TileMap.BumpMapContentRevision();
         }
     }
 
@@ -906,6 +907,7 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
             return;
         }
         Resource = newResource;
+        if (IsTilemapInitialized() && ReferenceEquals(TileMap.GetOrNull(Position.x, Position.y), this)) TileMap.BumpMapContentRevision();
     }
 
     /// <summary>
@@ -954,9 +956,7 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
         if (NaturalWonder != null) all.Add(GetNaturalWonder());
         all.AddRange(TerrainFeatureObjects);
         AllTerrains = all; // Save in memory
-
         UpdateUniqueMap();
-
         if (TerrainFeatures.Count > 0)
             LastTerrain = Ruleset.Terrains.GetValueOrDefault(TerrainFeatures[^1])
                 ?? GetBaseTerrain();  // defense against rare edge cases involving baseTerrain Hill deprecation
@@ -970,7 +970,7 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
         TileHeight = TerrainHasUnique(UniqueType.BlocksLineOfSightAtSameElevation) ? UnitHeight + 1
             : UnitHeight;
         // T349: the vision caches' only terrain input; clones and display tiles share the map but cannot change any map tile's visibility.
-        if (IsTilemapInitialized() && ReferenceEquals(TileMap.GetOrNull(Position.x, Position.y), this)) TileMap.BumpTerrainRevision();
+        if (IsTilemapInitialized() && ReferenceEquals(TileMap.GetOrNull(Position.x, Position.y), this)) { TileMap.BumpTerrainRevision(); TileMap.BumpMapContentRevision(); }
     }
 
     private void UpdateUniqueMap()

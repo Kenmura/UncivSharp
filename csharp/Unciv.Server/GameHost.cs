@@ -27,6 +27,9 @@ public sealed class HostSession
     public required ITransport Transport { get; init; }
     public ClientSnapshot? PreviousSnapshot { get; set; }
 
+    /// <summary>T342: the incremental diff builder's state for this recipient; null until a full snapshot seeds it.</summary>
+    public IncrementalViewBuilder.State? IncrementalView { get; set; }
+
     /// <summary>T273: the client's Hello advertised host migration, so a clean quit may send it <see cref="HostHandoff"/>.</summary>
     public bool HostMigration { get; init; }
     public bool IsOpen => Transport.IsOpen;
@@ -90,6 +93,10 @@ public sealed record HostLimits
 
     /// <summary>T297: most tasks used for one view-building round (below 2 turns the option off); keep it under the cores the host can spare.</summary>
     public int MaxViewParallelism { get; init; } = 4;
+
+    /// <summary>T342: reuse the recipient's previous snapshot and rebuild only the tiles/units a command can have changed, falling back to the full build when
+    /// that cannot be proven safe. On by default (the late-game bench in design/PERFORMANCE.md shows the gain); frames are byte-identical either way.</summary>
+    public bool IncrementalViewBuilding { get; init; } = true;
 }
 
 /// <summary>
@@ -224,6 +231,7 @@ public sealed partial class GameHost : IAsyncDisposable
                 {
                     var initialSnapshot = SnapshotBuilder.Build(session.Game, civ, session.LastSeq, CreateTurnStatusDto());
                     hostSession.PreviousSnapshot = initialSnapshot;
+                    hostSession.IncrementalView = IncrementalViewBuilder.Seed(session.Game, civ, initialSnapshot);
                     await hostSession.Transport.SendAsync(ProtocolCodec.Encode(SnapshotBuilder.ToMessage(initialSnapshot)));
                 }
 
@@ -660,6 +668,7 @@ public sealed partial class GameHost : IAsyncDisposable
         var turnStatusDto = CreateTurnStatusDto();
         var snapshot = SnapshotBuilder.Build(session.Game, civ, session.LastSeq, turnStatusDto);
         hostSession.PreviousSnapshot = snapshot;
+        hostSession.IncrementalView = IncrementalViewBuilder.Seed(session.Game, civ, snapshot);
 
         var msg = SnapshotBuilder.ToMessage(snapshot);
         if (lostCommands is > 0) msg = msg with { RolledBack = true, LostCommands = lostCommands };
@@ -893,22 +902,45 @@ public sealed partial class GameHost : IAsyncDisposable
             return;
         }
 
+        var events = result.Events.OfType<EngineEvent>().ToList();
         foreach (var (s, civ, mark) in targets)
         {
-            var (delta, after) = ViewDeltaBuilder.BuildWithDiff(
-                session.Game,
-                civ,
-                s.PreviousSnapshot!,
-                mark,
-                result.Events.OfType<EngineEvent>(),
-                result.Seq,
-                turnStatusDto);
-
+            var (delta, after) = BuildDelta(s, civ, mark, events, result.Seq, turnStatusDto);
             s.PreviousSnapshot = after;
             _ = SafeSendAsync(s, delta);
             viewsWarm = true; // T297: one full sequential round has run on this game
         }
     }
+
+    /// <summary>T342: the incremental builder when it can prove the reuse safe, otherwise the full build (which also seeds the incremental state).</summary>
+    private (ViewDelta Delta, ClientSnapshot After) BuildDelta(HostSession hostSession, Civilization civ, ViewDeltaBuilder.ViewMark mark,
+        IReadOnlyList<EngineEvent> events, long seq, TurnStatusDto turnStatus)
+    {
+        if (limits.IncrementalViewBuilding)
+        {
+            var built = IncrementalViewBuilder.TryBuildWithDiff(session.Game, civ, hostSession.PreviousSnapshot!, mark, events, seq, turnStatus,
+                hostSession.IncrementalView);
+            if (built != null)
+            {
+                Interlocked.Increment(ref incrementalViewRounds);
+                hostSession.IncrementalView = built.State;
+                return (built.Delta, built.After);
+            }
+        }
+        Interlocked.Increment(ref fullViewRounds);
+        var (delta, after) = ViewDeltaBuilder.BuildWithDiff(session.Game, civ, hostSession.PreviousSnapshot!, mark, events, seq, turnStatus);
+        hostSession.IncrementalView = limits.IncrementalViewBuilding ? IncrementalViewBuilder.Seed(session.Game, civ, after) : null;
+        return (delta, after);
+    }
+
+    private int incrementalViewRounds;
+    private int fullViewRounds;
+
+    /// <summary>T342: how many view builds used the incremental builder (a diagnostic for tests and the bench; the rest fell back to the full build).</summary>
+    public int IncrementalViewRounds => Volatile.Read(ref incrementalViewRounds);
+
+    /// <summary>T342: how many view builds used the full build.</summary>
+    public int FullViewRounds => Volatile.Read(ref fullViewRounds);
 
     private TurnStatusDto CreateTurnStatusDto()
     {

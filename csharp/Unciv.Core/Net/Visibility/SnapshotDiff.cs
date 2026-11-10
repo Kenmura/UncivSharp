@@ -75,6 +75,62 @@ public sealed record SnapshotDiff
         };
     }
 
+    /// <summary>
+    /// T342: <see cref="Compute"/> when the caller knows which tiles (and optionally units) it rebuilt. An item that was reused by reference cannot have
+    /// changed, so it is not serialized. Tile list order is the fixed map order, so the tile diff never needs an <see cref="KeyedDiff{T}.Order"/>; unit order
+    /// can change when a unit moves to another tile, so it is derived exactly as in <see cref="Compute"/>.
+    /// </summary>
+    internal static SnapshotDiff ComputeIncremental(ClientSnapshot before, ClientSnapshot after, IReadOnlySet<string> rebuiltTileKeys,
+        IReadOnlySet<string>? rebuiltUnitKeys = null)
+    {
+        KeyedDiff<T>? Keyed<T>(List<T> old, List<T> now, Func<T, string> key) => Compare(old, now, key) is { IsEmpty: false } d ? d : null;
+        List<T>? Whole<T>(List<T> old, List<T> now) => Json(old) == Json(now) ? null : now;
+
+        return new SnapshotDiff
+        {
+            Seq = after.Seq,
+            Turn = before.Turn == after.Turn ? null : after.Turn,
+            Phase = before.Phase == after.Phase ? null : after.Phase,
+            TurnStatus = Json(before.TurnStatus) == Json(after.TurnStatus) ? null : after.TurnStatus,
+            Civs = Keyed(before.Civs, after.Civs, CivKey),
+            Tiles = CompareKeyed(before.Tiles, after.Tiles, TileKey, rebuiltTileKeys, orderMatters: false) is { IsEmpty: false } tiles ? tiles : null,
+            Cities = Keyed(before.Cities, after.Cities, CityKey),
+            Units = CompareKeyed(before.Units, after.Units, UnitKey, rebuiltUnitKeys, orderMatters: true) is { IsEmpty: false } units ? units : null,
+            Diplomacy = Keyed(before.Diplomacy, after.Diplomacy, DiplomacyKey),
+            PendingTrades = Whole(before.PendingTrades, after.PendingTrades),
+            Notifications = Whole(before.Notifications, after.Notifications),
+            PopupAlerts = Whole(before.PopupAlerts, after.PopupAlerts),
+            PendingDecisions = Whole(before.PendingDecisions, after.PendingDecisions)
+        };
+    }
+
+    private static KeyedDiff<T> CompareKeyed<T>(List<T> before, List<T> after, Func<T, string> key, IReadOnlySet<string>? rebuilt,
+        bool orderMatters)
+    {
+        var oldByKey = new Dictionary<string, T>(before.Count, StringComparer.Ordinal);
+        foreach (var item in before) oldByKey[key(item)] = item;
+        var afterKeys = after.Select(key).ToList();
+        var afterSet = afterKeys.ToHashSet(StringComparer.Ordinal);
+        var changed = new List<T>();
+        var added = new List<T>();
+        var addedAt = new List<int>();
+        for (var i = 0; i < after.Count; i++)
+        {
+            if (!oldByKey.TryGetValue(afterKeys[i], out var old)) { added.Add(after[i]); addedAt.Add(i); }
+            else if ((rebuilt == null || rebuilt.Contains(afterKeys[i])) && !ReferenceEquals(old, after[i]) && Json(old) != Json(after[i]))
+                changed.Add(after[i]);
+        }
+        var removed = before.Select(key).Where(it => !afterSet.Contains(it)).ToList();
+        List<string>? order = null;
+        if (orderMatters)
+        {
+            var survivorsBefore = before.Select(key).Where(afterSet.Contains);
+            var survivorsAfter = afterKeys.Where(oldByKey.ContainsKey);
+            if (!survivorsBefore.SequenceEqual(survivorsAfter)) order = afterKeys;
+        }
+        return new KeyedDiff<T> { Changed = changed, Added = added, AddedAt = addedAt, Removed = removed, Order = order };
+    }
+
     /// <summary>The mirror after this diff. <see cref="ClientSnapshot.ViewHash"/> is recomputed from the result, so the caller compares it with the hash the host sent.</summary>
     public ClientSnapshot Apply(ClientSnapshot mirror)
     {

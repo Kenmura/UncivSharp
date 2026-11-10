@@ -63,7 +63,7 @@ public sealed class GameHostParallelViewTests : IDisposable
     }
 
     /// <summary>Plays a scripted multi-recipient game (client commands, server commands, turn resolution) and returns every frame each recipient was sent.</summary>
-    private async Task<(Dictionary<string, List<string>> Frames, int ParallelRounds)> PlayAsync(HostLimits limits, string[] recipients, int rounds)
+    private async Task<(Dictionary<string, List<string>> Frames, int ParallelRounds, int IncrementalRounds, int FullRounds)> PlayAsync(HostLimits limits, string[] recipients, int rounds, bool dropIncrementalState = false)
     {
         var game = NewGame();
         var clock = new ManualClock(1000L);
@@ -81,6 +81,12 @@ public sealed class GameHostParallelViewTests : IDisposable
         {
             foreach (var civ in recipients)
             {
+                if (dropIncrementalState)
+                    await host.EnqueueAsync(() =>
+                    {
+                        foreach (var s in host.Sessions.Values) s.IncrementalView = null;
+                        return Task.CompletedTask;
+                    });
                 var tech = ruleset.Technologies.Keys.Where(k => !game.GetCivilization(civ).Tech.IsResearched(k)).ElementAt(round);
                 await host.HandleInboundAsync("s-" + civ, new Command
                 {
@@ -101,7 +107,7 @@ public sealed class GameHostParallelViewTests : IDisposable
         }
         Assert.True(researched > 0);
         await host.EnqueueAsync(() => Task.CompletedTask);
-        return (frames, host.ParallelViewRounds);
+        return (frames, host.ParallelViewRounds, host.IncrementalViewRounds, host.FullViewRounds);
     }
 
     private static void AssertSameFrames(Dictionary<string, List<string>> expected, Dictionary<string, List<string>> actual)
@@ -122,9 +128,9 @@ public sealed class GameHostParallelViewTests : IDisposable
     public async Task ParallelFrames_EqualSequentialFrames(int recipientCount, int cap)
     {
         var recipients = Humans.Take(recipientCount).ToArray();
-        var (sequential, seqRounds) = await PlayAsync(new HostLimits(), recipients, 3);
+        var (sequential, seqRounds, _, _) = await PlayAsync(new HostLimits(), recipients, 3);
         Assert.Equal(0, seqRounds);
-        var (parallel, parRounds) = await PlayAsync(new HostLimits { ParallelViewBuilding = true, MaxViewParallelism = cap }, recipients, 3);
+        var (parallel, parRounds, _, _) = await PlayAsync(new HostLimits { ParallelViewBuilding = true, MaxViewParallelism = cap }, recipients, 3);
         Assert.True(parRounds > 0);
         AssertSameFrames(sequential, parallel);
     }
@@ -133,10 +139,10 @@ public sealed class GameHostParallelViewTests : IDisposable
     public async Task ParallelFrames_RepeatedTwentyTimes_AlwaysEqual()
     {
         var recipients = Humans.ToArray();
-        var (sequential, _) = await PlayAsync(new HostLimits(), recipients, 2);
+        var (sequential, _, _, _) = await PlayAsync(new HostLimits(), recipients, 2);
         for (var run = 0; run < 20; run++)
         {
-            var (parallel, _) = await PlayAsync(new HostLimits { ParallelViewBuilding = true }, recipients, 2);
+            var (parallel, _, _, _) = await PlayAsync(new HostLimits { ParallelViewBuilding = true }, recipients, 2);
             AssertSameFrames(sequential, parallel);
         }
     }
@@ -176,7 +182,7 @@ public sealed class GameHostParallelViewTests : IDisposable
     [Fact]
     public async Task SingleRecipient_NeverUsesTasks_EvenWhenOn()
     {
-        var (frames, rounds) = await PlayAsync(new HostLimits { ParallelViewBuilding = true }, ["Babylon"], 2);
+        var (frames, rounds, _, _) = await PlayAsync(new HostLimits { ParallelViewBuilding = true }, ["Babylon"], 2);
         Assert.Equal(0, rounds);
         Assert.NotEmpty(frames["Babylon"]);
     }
@@ -184,10 +190,53 @@ public sealed class GameHostParallelViewTests : IDisposable
     [Fact]
     public async Task CapBelowTwo_TurnsTheOptionOff()
     {
-        var (_, rounds) = await PlayAsync(new HostLimits { ParallelViewBuilding = true, MaxViewParallelism = 1 }, Humans, 1);
+        var (_, rounds, _, _) = await PlayAsync(new HostLimits { ParallelViewBuilding = true, MaxViewParallelism = 1 }, Humans, 1);
         Assert.Equal(0, rounds);
     }
 
     [Fact]
     public void Default_IsOff() => Assert.False(HostLimits.Default.ParallelViewBuilding);
+
+    // ---------------------------------------------------------------- T342: incremental views
+
+    [Theory]
+    [InlineData(4, 3)]
+    [InlineData(4, 6)]
+    [InlineData(2, 3)]
+    public async Task IncrementalFrames_EqualTheFullBuildFrames(int recipientCount, int rounds)
+    {
+        var recipients = Humans.Take(recipientCount).ToArray();
+        var (full, _, incrementalRounds, fullRounds) = await PlayAsync(new HostLimits { IncrementalViewBuilding = false }, recipients, rounds);
+        Assert.Equal(0, incrementalRounds);
+        var (incremental, _, usedIncremental, _) = await PlayAsync(new HostLimits(), recipients, rounds);
+        Assert.True(fullRounds > 0);
+        Assert.True(usedIncremental > 0, "the incremental builder never ran");
+        AssertSameFrames(full, incremental);
+    }
+
+    [Fact]
+    public async Task IncrementalWithParallelViews_EqualsTheFullBuild()
+    {
+        var recipients = Humans.ToArray();
+        var (full, _, _, _) = await PlayAsync(new HostLimits { IncrementalViewBuilding = false }, recipients, 3);
+        var (incremental, parallelRounds, usedIncremental, _) = await PlayAsync(
+            new HostLimits { IncrementalViewBuilding = true, ParallelViewBuilding = true, MaxViewParallelism = 3 }, recipients, 3);
+        Assert.True(parallelRounds > 0);
+        Assert.True(usedIncremental > 0);
+        AssertSameFrames(full, incremental);
+    }
+
+    [Fact]
+    public void Default_IsIncremental() => Assert.True(HostLimits.Default.IncrementalViewBuilding);
+
+    [Fact]
+    public async Task LostIncrementalState_FallsBackToTheFullBuild_AndTheFramesStayEqual()
+    {
+        var recipients = Humans.ToArray();
+        var (full, _, _, _) = await PlayAsync(new HostLimits { IncrementalViewBuilding = false }, recipients, 2);
+        var (recovered, _, usedIncremental, usedFull) = await PlayAsync(new HostLimits(), recipients, 2, dropIncrementalState: true);
+        Assert.True(usedFull > 0, "dropping the state must force at least one full build");
+        Assert.True(usedIncremental > 0, "the later commands must be incremental again");
+        AssertSameFrames(full, recovered);
+    }
 }

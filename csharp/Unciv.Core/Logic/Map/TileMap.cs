@@ -120,6 +120,14 @@ public class TileMap : IsPartOfGameInfoSerialization
 
     internal void BumpTerrainRevision() => TerrainRevision = unchecked(TerrainRevision + 1);
 
+    /// <summary>T342: bumped by <see cref="Tiles.Tile.SetTerrainFeatures"/> and by every change of a tile's resource. A recipient's view of an explored,
+    /// fogged tile is reused between commands; this revision is how the incremental view builder knows that a map-content change it cannot see in the
+    /// command's events happened somewhere, so it can fall back to the full build. Transient and not part of the state hash (like <see cref="TerrainRevision"/>).</summary>
+    [JsonIgnore]
+    internal int MapContentRevision { get; private set; }
+
+    internal void BumpMapContentRevision() => MapContentRevision = unchecked(MapContentRevision + 1);
+
     // this works several times faster than a hashmap, the performance difference is really astounding
     private List<List<Tile?>> tileMatrix = [];
     public IReadOnlyList<IReadOnlyList<Tile?>> TileMatrix => tileMatrix;

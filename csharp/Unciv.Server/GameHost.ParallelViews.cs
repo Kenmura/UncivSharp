@@ -65,7 +65,6 @@ public sealed partial class GameHost
 
     private void BroadcastParallel(List<(HostSession Session, Civilization Civ, ViewDeltaBuilder.ViewMark Mark)> targets, Unciv.Commands.CommandResult result, TurnStatusDto status)
     {
-        var game = session.Game;
         var events = result.Events.OfType<EngineEvent>().ToList(); // enumerated once, then only read by the tasks
         // A failing recipient must not stop the others (as in the sequential loop, where earlier recipients were already sent): capture it per index.
         var built = BuildPerRecipient<(ClientSnapshot? After, string? Frame, Exception? Error)>(targets.Count, i =>
@@ -73,7 +72,7 @@ public sealed partial class GameHost
             try
             {
                 var (s, civ, mark) = targets[i];
-                var (delta, after) = ViewDeltaBuilder.BuildWithDiff(game, civ, s.PreviousSnapshot!, mark, events, result.Seq, status);
+                var (delta, after) = BuildDelta(s, civ, mark, events, result.Seq, status);
                 return (After: after, Frame: ProtocolCodec.Encode(delta), Error: null);
             }
             catch (Exception ex)

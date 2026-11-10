@@ -3,6 +3,7 @@ using Unciv.Commands.Events;
 using Unciv.Json;
 using Unciv.Logic;
 using Unciv.Logic.Map;
+using Unciv.Logic.Map.Tiles;
 using Unciv.Models.StatTypes;
 using Unciv.Utils;
 using Unciv.View;
@@ -61,7 +62,8 @@ public static class ViewDeltaBuilder
 {
     /// <summary>The recipient's state before a command, to diff against after it.</summary>
     public sealed record ViewMark(HashSet<HexCoord> Explored, int Gold, int Happiness, HashSet<(string CivId, int UnitId)> HiddenUnits,
-        HashSet<HexCoord>? Visible = null, HashSet<string>? KnownCivs = null, YieldsPerTurn? Yields = null);
+        HashSet<HexCoord>? Visible = null, HashSet<string>? KnownCivs = null, YieldsPerTurn? Yields = null,
+        int MapContentRevision = -1, long RevealRevision = -1);
 
     /// <summary>Per-turn yields of the recipient's own civ.</summary>
     public sealed record YieldsPerTurn(int Gold, int Science, int Culture, int Faith);
@@ -87,24 +89,47 @@ public static class ViewDeltaBuilder
         var hidden = gameInfo.Civilizations.Where(it => it != viewer).SelectMany(it => it.Units.GetCivUnits().Select(unit => (Civ: it, Unit: unit)))
             .Where(it => it.Unit.HasActiveInvisibilityUnique(viewer) && !it.Unit.IsVisibleTo(viewer))
             .Select(it => (it.Civ.CivId, it.Unit.Id)).ToHashSet();
-        return new ViewMark(ExploredSet(gameInfo, viewer), view.Gold, view.GetHappiness(), hidden, VisibleSet(gameInfo, viewer), KnownSet(view), Yields(view));
+        var (explored, visibleOrder) = TileSets(gameInfo, viewer);
+        return new ViewMark(explored, view.Gold, view.GetHappiness(), hidden, visibleOrder.ToHashSet(), KnownSet(view), Yields(view),
+            gameInfo.TileMap.MapContentRevision, RevealRevision(viewer));
     }
 
-    private static HashSet<HexCoord> VisibleSet(GameInfo gameInfo, CivilizationClass viewer)
+    /// <summary>T342: the explored set and the visible tiles in map order, from one pass over the tile list.</summary>
+    internal static (HashSet<HexCoord> Explored, List<HexCoord> VisibleOrder) TileSets(GameInfo gameInfo, CivilizationClass viewer)
     {
         var tileMapView = new GameView(gameInfo, viewer).TileMapView;
-        return gameInfo.TileMap.TileList.Where(it => it.IsExplored(viewer) && tileMapView.GetTile(it).IsVisible()).Select(it => it.Position).ToHashSet();
+        var explored = new HashSet<HexCoord>();
+        var visibleOrder = new List<HexCoord>();
+        foreach (var tile in gameInfo.TileMap.TileList)
+        {
+            if (!tile.IsExplored(viewer)) continue;
+            explored.Add(tile.Position);
+            if (tileMapView.GetTile(tile).IsVisible()) visibleOrder.Add(tile.Position);
+        }
+        return (explored, visibleOrder);
     }
 
-    private static HashSet<HexCoord> ExploredSet(GameInfo gameInfo, CivilizationClass viewer) =>
-        gameInfo.TileMap.TileList.Where(it => it.IsExplored(viewer)).Select(it => it.Position).ToHashSet();
+    /// <summary>T342: a viewer's researched technologies and adopted policies are the only inputs besides the tile itself that change what an explored,
+    /// fogged tile shows (<see cref="TileDto.Resource"/>). When this changes the incremental builder falls back to a full build.</summary>
+    internal static long RevealRevision(CivilizationClass viewer) =>
+        ((long)viewer.Tech.TechsResearched.Count << 32) | (uint)viewer.Policies.GetAdoptedPolicies().Count;
 
     /// <summary>Events in order: reveals first (so later events can refer to new tiles), the filtered engine events, then stat changes.</summary>
-    public static IReadOnlyList<EngineEvent> BuildEvents(GameInfo gameInfo, CivilizationClass viewer, ViewMark before, IEnumerable<EngineEvent> events)
+    public static IReadOnlyList<EngineEvent> BuildEvents(GameInfo gameInfo, CivilizationClass viewer, ViewMark before, IEnumerable<EngineEvent> events) =>
+        BuildEvents(gameInfo, viewer, before, events, null);
+
+    /// <param name="gameInfo">The game to build the events for.</param>
+    /// <param name="viewer">The recipient.</param>
+    /// <param name="before">The recipient's mark before the command.</param>
+    /// <param name="events">The command's engine events.</param>
+    /// <param name="revealCandidates">T342: the tiles that can have been newly revealed, in map order (newly explored plus currently visible); when given,
+    /// only those are examined instead of the whole map. A tile can only become explored or leave the fog while the viewer sees it.</param>
+    internal static IReadOnlyList<EngineEvent> BuildEvents(GameInfo gameInfo, CivilizationClass viewer, ViewMark before, IEnumerable<EngineEvent> events,
+        IReadOnlyList<HexCoord>? revealCandidates)
     {
         var visibility = new GameViewVisibility(gameInfo, viewer, before.HiddenUnits);
         var result = new List<EngineEvent>();
-        var revealed = RevealedSince(gameInfo, viewer, before);
+        var revealed = revealCandidates == null ? RevealedSince(gameInfo, viewer, before) : RevealedSince(gameInfo, viewer, before, revealCandidates);
         if (revealed != null) result.Add(revealed);
         foreach (var gameEvent in events) result.AddRange(EventFilter.Classify(gameEvent, viewer.CivId, visibility));
         var view = new GameView(gameInfo, viewer).CivView;
@@ -120,6 +145,15 @@ public static class ViewDeltaBuilder
         Events = BuildEvents(gameInfo, viewer, before, events)
             .Select(it => JsonSerializer.SerializeToElement(GameEventRegistry.ToEnvelope(it), UncivJson.DefaultOptions)).ToList()
     };
+
+    /// <summary>T342: <see cref="Build(GameInfo, CivilizationClass, ViewMark, IEnumerable{EngineEvent}, long)"/> for the incremental path, which already knows which tiles can have been revealed.</summary>
+    internal static ViewDelta Build(GameInfo gameInfo, CivilizationClass viewer, ViewMark before, IEnumerable<EngineEvent> events, long seq,
+        IReadOnlyList<HexCoord> revealCandidates) => new()
+        {
+            Seq = seq,
+            Events = BuildEvents(gameInfo, viewer, before, events, revealCandidates)
+            .Select(it => JsonSerializer.SerializeToElement(GameEventRegistry.ToEnvelope(it), UncivJson.DefaultOptions)).ToList()
+        };
 
     /// <summary>
     /// T224: the recipient's delta for one accepted command. <see cref="ViewDelta.Diff"/> is the change between the recipient's snapshot before the command
@@ -142,21 +176,46 @@ public static class ViewDeltaBuilder
     private static TilesRevealed? RevealedSince(GameInfo gameInfo, CivilizationClass viewer, ViewMark before)
     {
         var gameView = new GameView(gameInfo, viewer);
+        return RevealedSince(gameView, gameInfo, viewer, before, null);
+    }
+
+    /// <summary>T342: the same as the full scan for a given visible-tile list in map order (only visible tiles can be revealed or refreshed).</summary>
+    private static TilesRevealed? RevealedSince(GameInfo gameInfo, CivilizationClass viewer, ViewMark before, IReadOnlyList<HexCoord> visibleOrder)
+    {
+        var gameView = new GameView(gameInfo, viewer);
+        return RevealedSince(gameView, gameInfo, viewer, before, visibleOrder);
+    }
+
+    private static TilesRevealed? RevealedSince(GameView gameView, GameInfo gameInfo, CivilizationClass viewer, ViewMark before,
+        IReadOnlyList<HexCoord>? visibleOrder)
+    {
         var tiles = new List<TileDto>();
         var units = new List<UnitDto>();
-        foreach (var tile in gameInfo.TileMap.TileList)
+        if (visibleOrder == null)
+        {
+            foreach (var tile in gameInfo.TileMap.TileList)
+                AddRevealed(tile);
+        }
+        else
+        {
+            foreach (var position in visibleOrder)
+                AddRevealed(gameInfo.TileMap[position]);
+        }
+
+        void AddRevealed(Tile tile)
         {
             var wasExplored = before.Explored.Contains(tile.Position);
             var tileView = gameView.TileMapView.GetTile(tile);
-            if (!tileView.IsExplored()) continue;
+            if (!tileView.IsExplored()) return;
             var visible = tileView.IsVisible();
             // Fog to visible: the client holds a terrain-only fogged tile and needs the live ownership and units.
             var refreshed = wasExplored && visible && before.Visible != null && !before.Visible.Contains(tile.Position);
-            if (wasExplored && !refreshed) continue;
+            if (wasExplored && !refreshed) return;
             tiles.Add(SnapshotBuilder.BuildTile(tileView, gameView));
-            if (!visible) continue;
+            if (!visible) return;
             units.AddRange(tileView.GetVisibleUnits().Select(it => SnapshotBuilder.BuildUnit(it, tileView)));
         }
+
         var known = KnownSet(gameView.CivView);
         var introduced = new HashSet<string>(known.Where(it => before.KnownCivs != null && !before.KnownCivs.Contains(it)));
         foreach (var unit in units) introduced.Add(unit.Owner);
