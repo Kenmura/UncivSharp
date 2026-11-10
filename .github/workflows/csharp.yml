@@ -427,6 +427,4 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
       - name: Soak
         working-directory: csharp
-        env:
-          UNCIV_SOAK: 1
-        run: dotnet test Unciv.Core.Tests --filter Category=Soak --logger "console;verbosity=detailed"
+        run: python3 -I migration/tools/soak.py
