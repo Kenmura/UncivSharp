@@ -52,6 +52,9 @@ public partial class TurnBarView : Control
 
     public Rect2 PanelRect => panel.GetGlobalRect();
 
+    /// <summary>T345: the drawn bar's size, so the progress card can be placed below it instead of over it.</summary>
+    public Vector2 PanelSize => panel.Size;
+
     public void Init(UiTheme uiTheme)
     {
         theme = uiTheme;

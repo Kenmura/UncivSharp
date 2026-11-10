@@ -1239,7 +1239,7 @@
       },
       {
         "golden": "mp-turn/resolving.png",
-        "caption": "Both ended and the host is resolving: a compact 'Processing the other civilizations / Waiting for AI/host' card under the navigation strip, disabled 'Resolving turn...' button, and the refusal in the status line."
+        "caption": "Both ended and the host is resolving: the turn bar reads 'Resolving the turn...' and the compact 'Processing the other civilizations / Waiting for AI/host' card sits just below it (it never covers the bar), beside the disabled 'Resolving turn...' button and the refusal in the status line."
       }
     ]
   },
@@ -2118,7 +2118,7 @@
     "shots": [
       {
         "golden": "next-turn-long/overlay.png",
-        "caption": "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)"
+        "caption": "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)"
       }
     ]
   },

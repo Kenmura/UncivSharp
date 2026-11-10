@@ -48,6 +48,17 @@ public sealed class NextTurnScenario : Scenario
         [
             new WaitFrames(4),
             new AssertQuery("the game has the human and the crowd of AI civs", () => game.Civilizations.Count(it => it.IsAI() && it.IsMajorCiv()) >= ScenarioGame.CrowdAiCount),
+            // T345 review: real time is frozen in the harness, so only an explicit Advance may move the delay; a reveal after these frames would mean a second driver steps it.
+            new Act("start an overlay with no delay while the harness clock is frozen", () =>
+            {
+                screen.TurnOverlay.RevealDelaySeconds = 0;
+                screen.TurnOverlay.Start(NextTurnProgressModel.Begin(), NextTurnProgressModel.CancelHint);
+            }),
+            new WaitFrames(5),
+            new AssertQuery("the frozen harness clock does not advance the reveal delay", () => !screen.TurnOverlay.Visible),
+            new Act("step the delay explicitly, like a frame would", () => screen.TurnOverlay.Advance(0)),
+            new AssertQuery("the explicit step reveals the card", () => screen.TurnOverlay.Visible),
+            new Act("close the card again", () => screen.TurnOverlay.Close()),
             new Act("start the overlay as a short turn would", () =>
             {
                 screen.TurnOverlay.RevealDelaySeconds = 5;

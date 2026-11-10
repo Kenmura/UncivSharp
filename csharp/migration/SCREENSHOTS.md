@@ -839,9 +839,9 @@ Scenario `mp-turn`.
 
 *After Undo, Bob ends his turn: his row turns Ended, the bar says 'Waiting for Alice' and a toast reads 'Bob ended their turn'.* (`mp-turn/other-ended.png`)
 
-![Both ended and the host is resolving: a compact 'Processing the other civilizations / Waiting for AI/host' card under the navigation strip, disabled 'Resolving turn...' button, and the refusal in the status line.](../Unciv.Godot.Harness/golden/mp-turn/resolving.png)
+![Both ended and the host is resolving: the turn bar reads 'Resolving the turn...' and the compact 'Processing the other civilizations / Waiting for AI/host' card sits just below it (it never covers the bar), beside the disabled 'Resolving turn...' button and the refusal in the status line.](../Unciv.Godot.Harness/golden/mp-turn/resolving.png)
 
-*Both ended and the host is resolving: a compact 'Processing the other civilizations / Waiting for AI/host' card under the navigation strip, disabled 'Resolving turn...' button, and the refusal in the status line.* (`mp-turn/resolving.png`)
+*Both ended and the host is resolving: the turn bar reads 'Resolving the turn...' and the compact 'Processing the other civilizations / Waiting for AI/host' card sits just below it (it never covers the bar), beside the disabled 'Resolving turn...' button and the refusal in the status line.* (`mp-turn/resolving.png`)
 
 ## C038 Decision pickers: promotion, free tech, free great person, pantheon and religion found/enhance/reform, spy assignment, diplomatic vote and vote result
 
@@ -2114,9 +2114,9 @@ The End turn progress overlay on a late-game eight-civ game: it names the civ cu
 
 Scenario `next-turn-long`.
 
-![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
+![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
 
-*A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)* (`next-turn-long/overlay.png`)
+*A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)* (`next-turn-long/overlay.png`)
 
 ## T346 (ticket not Done or unknown)
 

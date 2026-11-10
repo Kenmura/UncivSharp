@@ -47,6 +47,9 @@ public partial class NextTurnProgressView : Control
 
     public double Fraction => bar.Value;
 
+    /// <summary>T345: the card's drawn rect, so a scenario can assert it does not cover the multiplayer turn bar.</summary>
+    public Rect2 CardRect => panel.GetGlobalRect();
+
     /// <summary>T345: how long a turn may take before the card appears (the default is <see cref="NextTurnOverlayState.DefaultRevealDelaySeconds"/>).</summary>
     public double RevealDelaySeconds
     {
@@ -67,7 +70,7 @@ public partial class NextTurnProgressView : Control
     /// <summary>C067/T345: the overlay fills its parent by anchors and its card sits centred under <paramref name="top"/> (the navigation strip).</summary>
     public void LayoutIn(Vector2 screen, float top)
     {
-        Size = screen;
+        if (Size != screen) Size = screen; // the bar can be redrawn between layouts; an unchanged size must not be set again (Godot warns and the anchors would override it)
         this.top = top;
         LayoutCard();
     }

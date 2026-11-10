@@ -207,6 +207,9 @@ public partial class GameScreen : Control
     /// <summary>The turn bar sits centred below the two rows of screen buttons, so it covers none of them.</summary>
     private float TurnBarTop() => World.NavBottom + HudMargin;
 
+    /// <summary>T345: the progress card goes under the turn bar when that is shown, so it never covers the bar it reports on; otherwise it takes the bar's place.</summary>
+    private float OverlayTop() => TurnBarTop() + (TurnBar.Visible ? TurnBar.PanelSize.Y + HudMargin : 0f);
+
     private CancellationTokenSource? turnCancellation;
 
     /// <summary>
@@ -1083,7 +1086,7 @@ public partial class GameScreen : Control
         Tutorials.LayoutIn(Size);
         TaskCard.LayoutIn(Size, World.NavBottom + HudMargin);
         TurnBar.LayoutIn(Size.X, TurnBarTop());
-        TurnOverlay.LayoutIn(Size, World.NavBottom + HudMargin); // T345: a card under the navigation strip, out of the way of the map and the menus
+        TurnOverlay.LayoutIn(Size, OverlayTop()); // T345: a card under the navigation strip (below the multiplayer turn bar when shown), out of the way of the map and the menus
         Panel.LayoutIn(Size);
         CombatPreview.LayoutIn(Size);
     }
@@ -2377,6 +2380,7 @@ public partial class GameScreen : Control
         if (session is not ITurnRoster roster || snapshot == null)
         {
             TurnBar.Show(null);
+            TurnOverlay.LayoutIn(Size, OverlayTop());
             return;
         }
         var bar = TurnBarModel.Of(snapshot.TurnStatus, roster.Roster, session.ViewerCivId, NowMs());
@@ -2390,11 +2394,11 @@ public partial class GameScreen : Control
             if (bar is { Resolving: true }) TurnOverlay.WaitForHost(NextTurnProgressModel.WaitingForHost());
             else TurnOverlay.Close();
         }
+        TurnOverlay.LayoutIn(Size, OverlayTop()); // the bar's height decides where the card goes
     }
 
     public override void _Process(double delta)
     {
-        TurnOverlay.Advance(delta); // T345: the overlay appears only when the turn outlasts its delay
         if (pings.Count > 0) AdvancePings((float)delta);
         if (statusFrames > 0 && --statusFrames == 0) statusPanel.Visible = false;
         // the countdowns move with the clock, not with snapshots
@@ -2751,6 +2755,7 @@ public partial class GameScreen : Control
         using var cancellation = new CancellationTokenSource();
         turnCancellation = cancellation;
         var turnSession = session;
+        SetStatus("", quiet: true); // T345: the card carries the turn's state; a previous result or cancellation line must not sit under the resumed turn
         TurnOverlay.Start(NextTurnProgressModel.Begin(), NextTurnProgressModel.CancelHint);
         var progress = new Progress<TurnProgress>(report =>
         {

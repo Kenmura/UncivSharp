@@ -99,6 +99,14 @@ public sealed class MpTurnScenario : Scenario
             }),
             new WaitUntil("the resolving overlay appears", () => screen.TurnOverlay.Visible, 300),
             new WaitFrames(2),
+            new AssertQuery("the resolving card is drawn below the turn bar, not over it", () =>
+            {
+                Rect2 card = screen.TurnOverlay.CardRect;
+                Rect2 bar = screen.TurnBar.PanelRect;
+                return screen.TurnOverlay.Visible && screen.TurnBar.Visible
+                    && card.Size.X > 0 && card.Size.Y > 0 && bar.Size.X > 0 && bar.Size.Y > 0
+                    && card.Position.Y >= bar.End.Y && !card.Intersects(bar);
+            }),
             new AssertQuery("the resolving overlay names the host/AI and the button says so", () =>
                 screen.TurnOverlay.HeadingText == NextTurnProgressModel.Heading && screen.TurnOverlay.DetailText == NextTurnProgressModel.Waiting && screen.TurnOverlay.HintText == ""
                 && screen.TurnBar.HeadlineText == TurnBarModel.ResolvingHeadline
