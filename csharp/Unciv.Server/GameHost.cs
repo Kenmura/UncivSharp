@@ -765,6 +765,7 @@ public sealed partial class GameHost : IAsyncDisposable
                 Kind = civ.IsHuman() ? "Human" : "AI",
                 PlayerKeyId = binding is { PlayerKey.Length: > 0 } ? binding.PlayerKey : null,
                 Connected = sessions.Values.Any(it => it.IsOpen && string.Equals(it.BoundCivId, civ.CivId, StringComparison.Ordinal)),
+                GraceEndsAt = turnTimer.DropDeadline(civ.CivId), // T346: the turn bar counts this down for an offline player
             });
         }
         return new LobbyState

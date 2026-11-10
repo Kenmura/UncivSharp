@@ -109,6 +109,30 @@ public sealed class NetGameSessionTests
         Assert.Equal("left", net.EndedReason);
     }
 
+    // T346: the roster carries the drop grace, so the turn bar can say whom the game waits for and for how long.
+    [Fact]
+    public async Task Roster_CarriesTheDropGraceOfAnOfflineSeat()
+    {
+        await using var rig = new ClientNetRig();
+        var (net, host) = await StartAsync(rig, ClientNetRig.Snap(5, 1));
+        await using var _ = net;
+        var rosterChanged = new TaskCompletionSource();
+        net.RosterChanged += () => rosterChanged.TrySetResult();
+        await host.SendAsync(new LobbyState
+        {
+            Settings = JsonDocument.Parse("{}").RootElement.Clone(),
+            HostName = "Alice",
+            Slots =
+            [
+                new LobbySlot { Slot = 0, PlayerName = "Alice", Nation = "A", Ready = true, Kind = "Human", Connected = true },
+                new LobbySlot { Slot = 1, PlayerName = "Bob", Nation = "Greece", Ready = true, Kind = "Human", Connected = false, GraceEndsAt = 100_000 },
+            ]
+        });
+        await rosterChanged.Task.WaitAsync(Limit);
+        Assert.Equal(100_000, net.Roster.Single(it => it.CivId == "Greece").GraceEndsAt);
+        Assert.Equal("Waiting for Alice, Bob (offline, 1:35 to reconnect)", net.WaitingFor(5_000));
+    }
+
     [Fact]
     public async Task Constructor_WithoutSnapshot_Throws()
     {

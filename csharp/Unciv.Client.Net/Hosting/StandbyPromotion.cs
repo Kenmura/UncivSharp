@@ -101,6 +101,7 @@ public sealed class StandbyPromotion(string standbyRoot, ClientIdentity identity
         {
             host = InProcessHost.ResumeFromDirectory(directory, identity.PlayerKey, (hostOptions ?? new InProcessHostOptions()) with
             {
+                AnnounceRoster = true, // T346: the promoted host keeps the turn bar's roster/grace live
                 Promotion = new HostPromotion { Epoch = epoch, Proof = proof, FinalSeq = facts.FinalSeq, FinalHash = facts.FinalHash, DepartedKeyId = facts.DepartedKeyId, DroppedKeyId = facts.DroppedKeyId },
             });
         }

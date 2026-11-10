@@ -102,6 +102,7 @@
 - [T340 (ticket not Done or unknown)](#t340-ticket-not-done-or-unknown)
 - [T343 (ticket not Done or unknown)](#t343-ticket-not-done-or-unknown)
 - [T345 (ticket not Done or unknown)](#t345-ticket-not-done-or-unknown)
+- [T346 (ticket not Done or unknown)](#t346-ticket-not-done-or-unknown)
 - [T371 (ticket not Done or unknown)](#t371-ticket-not-done-or-unknown)
 - [T372 (ticket not Done or unknown)](#t372-ticket-not-done-or-unknown)
 - [T376 (ticket not Done or unknown)](#t376-ticket-not-done-or-unknown)
@@ -234,9 +235,9 @@ Scenario `join`.
 
 *The host's key differs from the pinned one: a hard stop explaining what it may mean and that nothing was sent; only Back and Forget the old key.* (`join/key-changed.png`)
 
-![Connection lost: the game is covered by a panel saying it retries with the same key and keeps commands; no buttons.](../Unciv.Godot.Harness/golden/join/reconnecting.png)
+![Connection lost: the game is covered by a panel saying it retries with the same key and keeps commands; Rejoin dials again at once, Leave only once the session gave up (T346).](../Unciv.Godot.Harness/golden/join/reconnecting.png)
 
-*Connection lost: the game is covered by a panel saying it retries with the same key and keeps commands; no buttons.* (`join/reconnecting.png`)
+*Connection lost: the game is covered by a panel saying it retries with the same key and keeps commands; Rejoin dials again at once, Leave only once the session gave up (T346).* (`join/reconnecting.png`)
 
 ## C008 Client scenario runner and owner review sheet
 
@@ -2116,6 +2117,24 @@ Scenario `next-turn-long`.
 ![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
 
 *A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Aztecs - 3 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same run)* (`next-turn-long/overlay.png`)
+
+## T346 (ticket not Done or unknown)
+
+Reconnect experience over real loopback TCP: the turn bar names an offline player with the host's drop-grace countdown, and the reconnect overlay shows the automatic attempt, the backoff, whom the game waits for and a Rejoin button.
+
+Scenario `reconnect`.
+
+![The friend's turn bar while the host player's connection is down: 'Waiting for Host (offline, 2:00 to reconnect), Friend'. The countdown is the host's 120 s drop grace, so the game says how long it still waits before ending that player's turn.](../Unciv.Godot.Harness/golden/reconnect/waiting-grace.png)
+
+*The friend's turn bar while the host player's connection is down: 'Waiting for Host (offline, 2:00 to reconnect), Friend'. The countdown is the host's 120 s drop grace, so the game says how long it still waits before ending that player's turn.* (`reconnect/waiting-grace.png`)
+
+![The friend's own connection dropped: 'Connection lost' says it retries with the same key, shows 'Attempt 1 of 5, next try in 1 s', repeats whom the game waits for, and offers Rejoin now (Leave is only for giving up).](../Unciv.Godot.Harness/golden/reconnect/reconnect-overlay.png)
+
+*The friend's own connection dropped: 'Connection lost' says it retries with the same key, shows 'Attempt 1 of 5, next try in 1 s', repeats whom the game waits for, and offers Rejoin now (Leave is only for giving up).* (`reconnect/reconnect-overlay.png`)
+
+![After pressing Rejoin: the overlay is gone and the friend plays the same seat and mirror again; the address and password were not asked for.](../Unciv.Godot.Harness/golden/reconnect/restored.png)
+
+*After pressing Rejoin: the overlay is gone and the friend plays the same seat and mirror again; the address and password were not asked for.* (`reconnect/restored.png`)
 
 ## T371 (ticket not Done or unknown)
 

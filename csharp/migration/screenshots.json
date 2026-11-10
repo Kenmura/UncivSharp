@@ -1319,7 +1319,25 @@
       },
       {
         "golden": "join/reconnecting.png",
-        "caption": "Connection lost: the game is covered by a panel saying it retries with the same key and keeps commands; no buttons."
+        "caption": "Connection lost: the game is covered by a panel saying it retries with the same key and keeps commands; Rejoin dials again at once, Leave only once the session gave up (T346)."
+      }
+    ]
+  },
+  "T346": {
+    "scenario": "reconnect",
+    "about": "Reconnect experience over real loopback TCP: the turn bar names an offline player with the host's drop-grace countdown, and the reconnect overlay shows the automatic attempt, the backoff, whom the game waits for and a Rejoin button.",
+    "shots": [
+      {
+        "golden": "reconnect/waiting-grace.png",
+        "caption": "The friend's turn bar while the host player's connection is down: 'Waiting for Host (offline, 2:00 to reconnect), Friend'. The countdown is the host's 120 s drop grace, so the game says how long it still waits before ending that player's turn."
+      },
+      {
+        "golden": "reconnect/reconnect-overlay.png",
+        "caption": "The friend's own connection dropped: 'Connection lost' says it retries with the same key, shows 'Attempt 1 of 5, next try in 1 s', repeats whom the game waits for, and offers Rejoin now (Leave is only for giving up)."
+      },
+      {
+        "golden": "reconnect/restored.png",
+        "caption": "After pressing Rejoin: the overlay is gone and the friend plays the same seat and mirror again; the address and password were not asked for."
       }
     ]
   },

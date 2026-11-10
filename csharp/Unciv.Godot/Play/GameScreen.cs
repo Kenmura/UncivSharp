@@ -202,6 +202,7 @@ public partial class GameScreen : Control
     public bool IsResolving => snapshot?.TurnStatus.Phase == "Resolving" && session is ITurnRoster;
 
     private string? shownCountdown;
+    private string? shownGrace; // T346: the soonest drop-grace countdown drawn, so the bar moves with the clock
 
     /// <summary>The turn bar sits centred below the two rows of screen buttons, so it covers none of them.</summary>
     private float TurnBarTop() => World.NavBottom + HudMargin;
@@ -2381,6 +2382,7 @@ public partial class GameScreen : Control
         var bar = TurnBarModel.Of(snapshot.TurnStatus, roster.Roster, session.ViewerCivId, NowMs());
         TurnBar.Show(bar);
         shownCountdown = bar?.Countdown;
+        shownGrace = bar?.GraceCountdown;
         TurnBar.LayoutIn(Size.X, TurnBarTop());
         // T345: while the host (or the local worker) plays the other civs, both host and joiners see "waiting for AI/host"; a local turn owns the overlay and keeps its progress line.
         if (turnCancellation == null)
@@ -2395,9 +2397,13 @@ public partial class GameScreen : Control
         TurnOverlay.Advance(delta); // T345: the overlay appears only when the turn outlasts its delay
         if (pings.Count > 0) AdvancePings((float)delta);
         if (statusFrames > 0 && --statusFrames == 0) statusPanel.Visible = false;
-        // the countdown moves with the clock, not with snapshots
-        if (session is not ITurnRoster || TurnBar.Data == null || snapshot?.TurnStatus.Deadline == null) return;
-        if (TurnBarModel.Countdown(snapshot.TurnStatus.Deadline, NowMs()) != shownCountdown) RefreshTurnBar();
+        // the countdowns move with the clock, not with snapshots
+        if (session is not ITurnRoster || TurnBar.Data == null) return;
+        var now = NowMs();
+        var soonestGrace = TurnBar.Data.Rows.Where(it => !it.Ended && it.GraceEndsAt != null).Select(it => it.GraceEndsAt!.Value).DefaultIfEmpty(0).Min();
+        if (TurnBarModel.Countdown(snapshot?.TurnStatus.Deadline, now) != shownCountdown
+            || (soonestGrace != 0 && TurnBarModel.Countdown(soonestGrace, now) != shownGrace))
+            RefreshTurnBar();
     }
 
     /// <summary>C057: where the engine's sound cues are played (the app's sound player); null in scenarios that do not care, which then play nothing.</summary>

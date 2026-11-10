@@ -30,10 +30,11 @@ public sealed partial class HarnessDeterminismTests
         ["TwoInstancesScenario.cs"] = "T334: polls (Task.Delay, 20 ms, 20 s cap) for the host to seat a friend that joined over real loopback TCP; the outcome (who sits where) does not depend on the timing, and no frame or golden does",
         ["SplitBrainScenario.cs"] = "T340: polls (Task.Delay, 20 ms, bounded) for a real in-process host, standby replication and the crash election to settle over real loopback/TCP; the election itself is driven by a ManualClock, so no assertion or golden depends on wall time",
         ["NextTurnLongScenario.cs"] = "T345: report-only wall time of one late-game 8-civ End turn (printed in the scenario output and the ticket's Notes, never asserted); the overlay delay is stepped by hand",
+        ["ReconnectScenario.cs"] = "T346: polls (Task.Delay, 20 ms, 20 s cap) for two real TCP clients to join and receive their first snapshot; the host clock is frozen, so no countdown, assertion or golden depends on wall time",
     };
 
     // The client reads the wall clock exactly twice, to seed a brand-new game at launch (a one-off, not frame-driven; scenarios build their own seeded sessions).
-    private static readonly HashSet<string> AllowedClientClock = new(StringComparer.Ordinal) { "App.cs", "GameScreen.cs", "LongPress.cs" }; // LongPress (C100): a finger held 0.5 s on a control, a SceneTreeTimer that only fires when a touch profile is set (scenarios hold the finger for it, like the map's frame-delta long press); GameScreen: the turn bar countdown reads GameScreen.NowMs (C036), which every multiplayer scenario replaces with a fixed time
+    private static readonly HashSet<string> AllowedClientClock = new(StringComparer.Ordinal) { "App.cs", "GameScreen.cs", "LongPress.cs", "ReconnectOverlay.cs" }; // LongPress (C100): a finger held 0.5 s on a control, a SceneTreeTimer that only fires when a touch profile is set (scenarios hold the finger for it, like the map's frame-delta long press); GameScreen: the turn bar countdown reads GameScreen.NowMs (C036), which every multiplayer scenario replaces with a fixed time; ReconnectOverlay (T346): a per-second redraw of the reconnect status and grace countdown, with NowMs fixed in scenarios
 
     // C080/C081: these files only find a model's AnimationPlayer and stand it at an explicit clip time while it stays paused (UnitAnimator, driven by the presenter's clock; nothing ever plays, UNIT-MODELS.md section 2);
     // the word AnimationPlayer is ignored there, every other clock/timer API still fails the test.
@@ -74,8 +75,8 @@ public sealed partial class HarnessDeterminismTests
             .Select(it => Path.GetFileNameWithoutExtension(it.Name))
             .OrderBy(it => it, StringComparer.Ordinal)
             .ToList();
-        // TurnBarView counts toast frames (no time); GameScreen redraws the turn bar when the countdown text changes (reads NowMs, fixed in scenarios); LobbyScreen drains the session events and rebuilds on change (no time); HostScreen refreshes the lobby slot table when it changed (no time); ScreenManager polls the safe area and keyboard height and acts on change only (no time); HudView/MinimapView count frames or redraw on change (no time); TooltipHost, MapView, CombatPresenter use the delta and are frozen/off in the harness; NextTurnProgressView (T345) uses the delta for its reveal delay and is frozen, scenarios step Advance
-        Assert.Equal(["CombatPresenter", "GameScreen", "HostScreen", "HudView", "LobbyScreen", "MapView", "MinimapView", "NextTurnProgressView", "NotificationListView", "ScreenManager", "TooltipHost", "TurnBarView"], processUsers);
+        // TurnBarView counts toast frames (no time); GameScreen redraws the turn bar when the countdown text changes (reads NowMs, fixed in scenarios); LobbyScreen drains the session events and rebuilds on change (no time); HostScreen refreshes the lobby slot table when it changed (no time); ScreenManager polls the safe area and keyboard height and acts on change only (no time); HudView/MinimapView count frames or redraw on change (no time); TooltipHost, MapView, CombatPresenter use the delta and are frozen/off in the harness; NextTurnProgressView (T345) uses the delta for its reveal delay and is frozen, scenarios step Advance; ReconnectOverlay (T346) redraws once a second while visible, with NowMs fixed in scenarios
+        Assert.Equal(["CombatPresenter", "GameScreen", "HostScreen", "HudView", "LobbyScreen", "MapView", "MinimapView", "NextTurnProgressView", "NotificationListView", "ReconnectOverlay", "ScreenManager", "TooltipHost", "TurnBarView"], processUsers);
     }
 
     [Fact]

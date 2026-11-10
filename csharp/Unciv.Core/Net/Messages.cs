@@ -197,6 +197,12 @@ public sealed record LobbySlot
     public string? Kind { get; init; }
     public string? PlayerKeyId { get; init; }
     public bool? Connected { get; init; }
+
+    /// <summary>
+    /// T346: while this human seat is disconnected in a simultaneous round, the absolute time (Unix ms) the host force-ends its turn (the drop grace). Null while
+    /// connected or unknown, so the turn bar can say "waiting for X (offline, 1:58 to reconnect)".
+    /// </summary>
+    public long? GraceEndsAt { get; init; }
 }
 
 public sealed record LobbyState : Message

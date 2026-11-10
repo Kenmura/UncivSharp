@@ -191,6 +191,14 @@ public sealed class ClientSession : IAsyncDisposable
     private Task? loop;
     private bool stopped;
 
+    // T346: what the reconnect overlay shows while the connection is down.
+    private volatile int reconnectAttempt; // the number of the attempt being tried or waited for; 0 while connected
+    private long nextRetryAt = long.MinValue; // clock time of the next automatic attempt (long.MinValue: none)
+    private long giveUpAt = long.MinValue; // clock time after which an election-mode outage gives up (long.MinValue: no election)
+    private CancellationTokenSource? retryWait; // the backoff (or election poll) being awaited; RejoinNow cancels it (guarded by retryGate against disposal)
+    private readonly Lock retryGate = new();
+    private int rejoinRequested;
+
     // Receive-loop state (touched by the loop only, except where noted).
     private bool everJoined;
     private bool connectionSettled; // the connection delivered a lobby view or a snapshot, so the host really accepted us
@@ -765,7 +773,14 @@ public sealed class ClientSession : IAsyncDisposable
             catch (Exception) { /* any failure to connect (socket, TLS, factory bug) is a failed attempt: fall through to the retry logic */ }
 
             if (current != null) await RunConnectionAsync(current, timer, token).ConfigureAwait(false);
-            if (connectionSettled) attempt = 0;
+            if (connectionSettled)
+            {
+                attempt = 0;
+                reconnectAttempt = 0;
+                Volatile.Write(ref nextRetryAt, long.MinValue);
+                Volatile.Write(ref giveUpAt, long.MinValue);
+                Interlocked.Exchange(ref rejoinRequested, 0); // a Rejoin pressed while dialling does not carry into the next outage
+            }
             if (stopped) break;
 
             if (!everJoined)
@@ -792,13 +807,16 @@ public sealed class ClientSession : IAsyncDisposable
                 }
                 SetState(ClientSessionState.Reconnecting);
                 FailWaiters();
+                reconnectAttempt = 0; // the election runs on the give-up time, not on the attempt budget
+                Volatile.Write(ref giveUpAt, lost + options.Election.GiveUpSeconds * 1000L); // T346: the overlay counts down to this
                 if (redirect == null && !skipElectionStep) await ElectionStepAsync(token).ConfigureAwait(false);
                 skipElectionStep = false;
                 if (stopped) break;
                 attempt++;
                 if (redirect != null && redirectIsElection && !redirectAnnounced) continue; // the successor is the host now: connect to it at once
-                try { await Task.Delay(options.ElectionPoll, token).ConfigureAwait(false); }
-                catch (OperationCanceledException) { break; }
+                Volatile.Write(ref nextRetryAt, clock.NowMillis + (long)options.ElectionPoll.TotalMilliseconds);
+                try { await WaitRetryAsync(ct => Task.Delay(options.ElectionPoll, ct), token).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (token.IsCancellationRequested) { break; }
                 continue;
             }
             if (++attempt > options.MaxReconnectAttempts)
@@ -808,8 +826,14 @@ public sealed class ClientSession : IAsyncDisposable
             }
             SetState(ClientSessionState.Reconnecting);
             FailWaiters();
-            try { await options.ReconnectDelay(attempt, token).ConfigureAwait(false); }
-            catch (OperationCanceledException) { break; }
+            reconnectAttempt = attempt;
+            Volatile.Write(ref nextRetryAt, clock.NowMillis + BackoffSeconds(attempt) * 1000L);
+            try { await WaitRetryAsync(ct => options.ReconnectDelay(attempt, ct), token).ConfigureAwait(false); }
+            catch (OperationCanceledException)
+            {
+                if (token.IsCancellationRequested) break;
+                if (InterruptedByRejoin()) attempt = 0; // T346: Rejoin dials now and restarts the budget
+            }
         }
     }
 
@@ -895,6 +919,67 @@ public sealed class ClientSession : IAsyncDisposable
         hostAddress = info.Endpoints[0];
         expectedFingerprint = info.Fingerprint;
         forceTakeOver = false;
+    }
+
+    /// <summary>
+    /// T346: the attempt number the reconnect loop is on (1-based), or 0 while the connection is up. The overlay shows it ("attempt 3 of 5") so the player sees that
+    /// the client keeps trying; <see cref="RejoinNow"/> restarts the budget.
+    /// </summary>
+    public int ReconnectAttempt => reconnectAttempt;
+
+    /// <summary>T346: how many automatic attempts one outage gets before the session ends with <c>reconnect-failed</c>.</summary>
+    public int MaxReconnectAttempts => options.MaxReconnectAttempts;
+
+    /// <summary>T346: seconds until the next automatic attempt, read on this session's own clock (the overlay must not mix it with the host's game clock).</summary>
+    public int? SecondsToNextAttempt
+    {
+        get
+        {
+            long at = Volatile.Read(ref nextRetryAt);
+            return at == long.MinValue ? null : (int)Math.Max(0L, (at - clock.NowMillis + 999) / 1000);
+        }
+    }
+
+    /// <summary>T346: seconds until an election-mode outage gives up, read on this session's own clock; null without an election.</summary>
+    public int? SecondsToGiveUp
+    {
+        get
+        {
+            long at = Volatile.Read(ref giveUpAt);
+            return at == long.MinValue ? null : (int)Math.Max(0L, (at - clock.NowMillis + 999) / 1000);
+        }
+    }
+
+    /// <summary>T346: the wait before automatic attempt <paramref name="attempt"/> (1-based): 1, 2, 4, ... capped at 30 s (the default <see cref="ClientSessionOptions.ReconnectDelay"/>).</summary>
+    public static int BackoffSeconds(int attempt) => Math.Min(30, 1 << Math.Min(Math.Max(attempt, 1) - 1, 5));
+
+    /// <summary>
+    /// T346: the player pressed Rejoin. While the session is reconnecting this dials the host now instead of waiting out the current backoff, and gives the attempt
+    /// budget a fresh start; while it is up or over it does nothing (the overlay then offers Leave or a fresh join instead).
+    /// </summary>
+    public void RejoinNow()
+    {
+        if (state != ClientSessionState.Reconnecting) return;
+        Interlocked.Exchange(ref rejoinRequested, 1);
+        lock (retryGate) retryWait?.Cancel(); // the same gate holds off disposal, so a Cancel can never hit a disposed source
+    }
+
+    /// <summary>T346: awaits one backoff (or election poll) and reports a Rejoin request as "skip it".</summary>
+    private bool InterruptedByRejoin() => Interlocked.Exchange(ref rejoinRequested, 0) == 1;
+
+    private async Task WaitRetryAsync(Func<CancellationToken, Task> wait, CancellationToken token)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(token);
+        lock (retryGate) retryWait = cts;
+        try { await wait(cts.Token).ConfigureAwait(false); }
+        finally
+        {
+            lock (retryGate)
+            {
+                retryWait = null;
+                cts.Dispose();
+            }
+        }
     }
 
     /// <summary>
@@ -1631,6 +1716,9 @@ public sealed class ClientSession : IAsyncDisposable
             all = [.. pending.Values];
             pending.Clear();
         }
+        reconnectAttempt = 0;
+        Volatile.Write(ref nextRetryAt, long.MinValue);
+        Volatile.Write(ref giveUpAt, long.MinValue);
         joined.TrySetResult(new JoinResult(false, reason));
         foreach (var entry in all) entry.Completion.TrySetResult(new CommandOutcome(entry.Message.ClientCmdId, false, ClientCodes.SessionClosed, null));
         FailWaiters();

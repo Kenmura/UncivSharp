@@ -194,16 +194,18 @@ public sealed class JoinScenario : Scenario
                 overlay.Apply(JoinModel.Connection(false, false, null));
             }),
             new WaitFrames(2),
-            new AssertQuery("the overlay waits and offers no way out", () => overlay.Visible && overlay.Title == "Connection lost" && !overlay.IsFinal),
-            new Capture("reconnecting", "Connection lost: the game is covered and says it is reconnecting with the same key; commands are kept. No buttons while it retries."),
+            new AssertQuery("the overlay waits, offers Rejoin now and keeps Leave for giving up", () =>
+                overlay.Visible && overlay.Title == "Connection lost" && !overlay.IsFinal && overlay.RejoinButton.Visible && !overlay.LeaveButton.Visible),
+            new Capture("reconnecting", "Connection lost: the game is covered and says it is reconnecting with the same key; commands are kept. Rejoin dials again at once (T346); Leave only appears once the session gave up."),
             new Act("the host announces it is closing", () => overlay.Apply(JoinModel.Connection(false, true, null))),
             new WaitFrames(2),
             new AssertQuery("the host-went-away wording is shown", () => overlay.Title == "The host went away"),
-            new Capture("host-away", "The host announced it is shutting down: 'The host went away', waiting for it to come back; the client rejoins by itself."),
+            new Capture("host-away", "The host announced it is shutting down: 'The host went away', waiting for it to come back; the client rejoins by itself, or Rejoin dials now."),
             new Act("reconnecting gave up", () => overlay.Apply(JoinModel.Connection(false, false, "reconnect-failed"))),
             new WaitFrames(2),
-            new AssertQuery("only Leave remains", () => overlay.IsFinal && overlay.LeaveButton.Visible && overlay.Title == "Disconnected"),
-            new Capture("gave-up", "The session gave up: 'Disconnected' with only Leave game."),
+            new AssertQuery("Rejoin stays (a fresh join keeps the seat) and Leave is there too", () =>
+                overlay.IsFinal && overlay.LeaveButton.Visible && overlay.RejoinButton.Visible && overlay.Title == "Disconnected"),
+            new Capture("gave-up", "The session gave up: 'Disconnected', the seat is kept; Rejoin starts a fresh join for the same address, Leave returns to the menu."),
             new Act("the connection is back", () => overlay.Apply(JoinModel.Connection(true, false, null))),
             new AssertQuery("the overlay is gone", () => !overlay.Visible),
             new Act("clean up", () =>

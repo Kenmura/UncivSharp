@@ -33,6 +33,31 @@ public class TurnBarModelTests
         Assert.False(TurnBarModel.Of(Status(), roster, "Rome", 0)!.Rows[1].Connected);
     }
 
+    // T346: the host announces the drop grace on the roster, so the bar says how long it still waits.
+    [Fact]
+    public void OfflineSeatShowsTheHostsGraceCountdown()
+    {
+        var roster = new TurnRosterEntry[] { new("Rome", "Alice", true), new("Greece", "Bob", false, 125_000) };
+        var status = Status();
+        var bar = TurnBarModel.Of(status, roster, "Rome", 5_000)!;
+        Assert.Equal("Waiting for Alice, Bob (offline, 2:00 to reconnect)", bar.Headline);
+        Assert.Equal("2:00", bar.GraceCountdown);
+        Assert.Equal(125_000, bar.Rows[1].GraceEndsAt);
+        Assert.Null(bar.Rows[0].GraceEndsAt);
+        // the same roster on the player's own screen: their turn is the one about to be ended
+        Assert.Equal("Waiting for Alice, Bob (offline, 2:00 to reconnect)", TurnBarModel.Of(status, roster, "Greece", 5_000)!.Headline);
+    }
+
+    // T346: an ended seat is not waited for, so its grace stops counting down.
+    [Fact]
+    public void EndedSeatsDropOutOfTheGraceCountdown()
+    {
+        var roster = new TurnRosterEntry[] { new("Rome", "Alice", true), new("Greece", "Bob", false, 125_000) };
+        var bar = TurnBarModel.Of(Status(ended: "Greece"), roster, "Rome", 5_000)!;
+        Assert.Null(bar.GraceCountdown);
+        Assert.Equal("Waiting for Alice", bar.Headline);
+    }
+
     [Fact]
     public void EveryoneEndedAndResolvingHeadlines()
     {

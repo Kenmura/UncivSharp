@@ -335,6 +335,37 @@ public sealed class InProcessHostTests : IDisposable
         }
     }
 
+    // T346: when a friend's connection drops, the host announces the seat's grace deadline to the players still connected, so their turn bar says
+    // "waiting for Friend (1:58)" and moves with the clock without a command.
+    [Fact]
+    public async Task DroppedSeat_IsAnnouncedWithItsGraceDeadlineToTheRemainingPlayers()
+    {
+        await using var host = StartHost("grace", new InProcessHostOptions { TickInterval = null, AnnounceRoster = true });
+        using var cert = HostCertificate.Generate();
+        host.Listen(cert, 0);
+        var hostPlayer = await host.ConnectHostPlayerAsync();
+        await ReadAsync(hostPlayer); // snapshot
+        var (friend, last) = await JoinOverTcpAsync(host, greece);
+        Assert.IsType<JoinOk>(last);
+        Assert.IsType<Snapshot>(await ReadAsync(friend));
+
+        await friend.CloseAsync();
+        LobbyState? roster = null;
+        for (var i = 0; i < 12; i++)
+        {
+            if (await ReadAsync(hostPlayer) is not LobbyState found) continue;
+            if (found.Slots.All(it => it.Nation != "Greece" || it.GraceEndsAt == null)) continue; // an earlier roster
+            roster = found;
+            break;
+        }
+
+        Assert.NotNull(roster);
+        var greeceSlot = Assert.Single(roster!.Slots, it => it.Nation == "Greece");
+        Assert.False(greeceSlot.Connected);
+        Assert.Equal(host.Host.TurnTimer.DropDeadline("Greece"), greeceSlot.GraceEndsAt);
+        Assert.True(greeceSlot.GraceEndsAt > StartClock);
+    }
+
     [Fact]
     public async Task InProcessHost_TcpListener_UnboundKeyAndBadProofAreRefused()
     {

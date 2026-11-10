@@ -127,6 +127,69 @@ public sealed class JoinModelTests
         Assert.DoesNotContain("refused", JoinModel.RefusalText("reconnect-failed"), StringComparison.Ordinal);
     }
 
+    // T346: the reconnect overlay says how far the automatic retry is and whom the game still waits for, and offers Rejoin.
+    [Fact]
+    public void Connection_RetryingShowsTheAttemptTheNextTryTheGiveUpAndTheWaitingLine()
+    {
+        var view = JoinModel.Connection(false, false, null, null, new ReconnectView(3, 5, 4, 90), "Waiting for Bob (offline, 1:58 to reconnect)");
+        Assert.True(view.Visible);
+        Assert.False(view.Final);
+        Assert.True(view.Rejoin);
+        Assert.Contains("Attempt 3 of 5", view.Detail, StringComparison.Ordinal);
+        Assert.Contains("next try in 4 s", view.Detail, StringComparison.Ordinal);
+        Assert.Contains("giving up in 1:30", view.Detail, StringComparison.Ordinal);
+        Assert.Contains("Waiting for Bob (offline, 1:58 to reconnect)", view.Detail, StringComparison.Ordinal);
+        Assert.Equal("Connection lost", view.Title);
+    }
+
+    [Fact]
+    public void Connection_ReconnectDetailWithoutNumbersIsStillASentence()
+    {
+        var text = JoinModel.ReconnectDetail(null);
+        Assert.Equal("Trying to reconnect to the host with the same key. Your commands are kept and sent once you are back.", text);
+        Assert.DoesNotContain("Attempt", JoinModel.ReconnectDetail(new ReconnectView(0, 0)), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Connection_GaveUp_IsACleanSentenceAndOffersRejoin()
+    {
+        var view = JoinModel.Connection(true, false, "gave-up");
+        Assert.True(view.Final);
+        Assert.True(view.Rejoin);
+        Assert.Contains("Could not get back", view.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("gave-up", view.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("refused", view.Detail, StringComparison.Ordinal);
+        Assert.Contains("ten minutes", JoinModel.RefusalText("gave-up"), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Connection_RefusalOffersNoRejoin()
+    {
+        Assert.False(JoinModel.Connection(true, false, "kicked").Rejoin);
+        Assert.False(JoinModel.Connection(true, false, "stale-epoch").Rejoin);
+        Assert.False(JoinModel.Connection(true, false, null).Rejoin);
+    }
+
+    [Theory]
+    [InlineData("connection-lost")]
+    [InlineData("session-closed")]
+    [InlineData("snapshot-rejected")]
+    [InlineData("internal-error")]
+    public void RefusalText_ForConnectionCodes_IsASentenceNotTheCode(string code)
+    {
+        var text = JoinModel.RefusalText(code);
+        Assert.DoesNotContain(code, text, StringComparison.Ordinal);
+        Assert.EndsWith(".", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("refused the connection", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Connection_LeftIsACleanSentence()
+    {
+        Assert.Equal("You left the game.", JoinModel.RefusalText("left"));
+        Assert.Equal("The game was closed.", JoinModel.RefusalText("disposed"));
+    }
+
     [Theory]
     [InlineData("reconnect-failed")]
     [InlineData("connection-lost")]

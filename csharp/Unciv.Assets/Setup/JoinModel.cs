@@ -1,4 +1,5 @@
 using System.Globalization;
+using Unciv.Assets;
 using Unciv.Net.Identity;
 using Unciv.Net.Mods;
 using Unciv.Net.Relay;
@@ -27,9 +28,13 @@ public sealed record JoinParse(JoinTarget? Target, string? Problem);
 
 /// <summary>
 /// What the reconnect overlay shows: nothing, a waiting message, a warning the player can put aside and keep playing (T340), or a final one with only Leave.
-/// <see cref="Dismissible"/> is set only for a playable warning; <see cref="Final"/> is set only for a session that is over.
+/// <see cref="Dismissible"/> is set only for a playable warning; <see cref="Final"/> is set only for a session that is over; <see cref="Rejoin"/> asks for the
+/// Rejoin button (T346: the connection is down, so the player may dial the host now or start a fresh join); the caller's Rejoin either redials at once or opens the join screen again.
 /// </summary>
-public sealed record ConnectionView(bool Visible, string Title, string Detail, bool Final, bool Dismissible = false);
+public sealed record ConnectionView(bool Visible, string Title, string Detail, bool Final, bool Dismissible = false, bool Rejoin = false);
+
+/// <summary>T346: what the overlay says about the automatic reconnect: the attempt number and, when known, the time to the next try and to the election give-up.</summary>
+public sealed record ReconnectView(int Attempt, int MaxAttempts, int? SecondsToNextAttempt = null, int? SecondsToGiveUp = null);
 
 /// <summary>
 /// C006: the words of the join side, with no UI in them. <see cref="Parse"/> accepts an invite code (<c>unciv://host:port/fingerprint[/token]</c>), <c>host:port</c>, a bare host (default port)
@@ -48,6 +53,9 @@ public static class JoinModel
     private const string HandshakeTimeout = "handshake-timeout";
     private const string ProtocolMismatch = "protocol-mismatch";
     private const string SessionClosed = "session-closed";
+    private const string GaveUp = "gave-up"; // T346
+    private const string InternalError = "internal-error"; // T346
+    private const string SnapshotRejected = "snapshot-rejected"; // T346
     private const string StaleEpoch = "stale-epoch"; // T340
 
     /// <param name="text">What the player typed or pasted.</param>
@@ -119,6 +127,11 @@ public static class JoinModel
         ConnectionLost => "The connection to the host was lost.",
         ReconnectFailed => "Could not get back to the host after several tries.",
         SessionClosed => "You left the game.",
+        "left" => "You left the game.",
+        "disposed" => "The game was closed.",
+        "gave-up" => "Could not reach the host or another player's copy for ten minutes. Your seat is kept: join the same address again later with the same key and you continue where you were.",
+        "snapshot-rejected" => "The host could not send a usable picture of the game. Rejoin to get a fresh one; if it happens again, ask the host to restart the game.",
+        "internal-error" => "Something went wrong in this game's connection. Rejoin to start it fresh.",
         HostUntrusted => "You did not trust this host, so nothing was sent to it.",
         HostKeyMismatch => "The host's key does not match the invite. Someone may be pretending to be the host. Ask the host for a fresh invite over a channel you trust.",
         HostKeyChanged => KeyChangedText("this host"),
@@ -168,20 +181,42 @@ public static class JoinModel
     /// <param name="hostClosing">the host announced it is shutting down.</param>
     /// <param name="endedReason">set when the session is over for good: the code of the reason.</param>
     /// <param name="migration">T340: a warning that the game this session runs may be one of two after a two-human split; shown only while connected, so a connection state is never hidden by it.</param>
-    public static ConnectionView Connection(bool connected, bool hostClosing, string? endedReason, HostMigrationNotice? migration = null)
+    /// <param name="reconnect">T346: the automatic reconnect's attempt number and next try, so the player sees it is still trying and may Rejoin now.</param>
+    /// <param name="waitingFor">T346: the turn bar's headline ("Waiting for Bob (offline, 1:58 to reconnect)"), shown while disconnected so the player still knows whom the game waits for.</param>
+    public static ConnectionView Connection(bool connected, bool hostClosing, string? endedReason, HostMigrationNotice? migration = null,
+        ReconnectView? reconnect = null, string? waitingFor = null)
     {
         if (endedReason != null)
         {
             if (endedReason == StaleEpoch) return new ConnectionView(true, HostMigrationModel.FencedTitle, HostMigrationModel.FencedDetail, true);
-            string detail = endedReason is ConnectionLost or ConnectFailed or ReconnectFailed
+            string detail = endedReason is ConnectionLost or ConnectFailed or ReconnectFailed or GaveUp
                 ? "Could not get back to the host. Your seat is kept: join the same address again later with the same key and you continue where you were."
                 : RefusalText(endedReason);
-            return new ConnectionView(true, "Disconnected", detail, true);
+            // T346: Rejoin is offered for an outage; a refusal (wrong key, fence, mods) has nothing to retry.
+            bool retry = endedReason is ConnectionLost or ConnectFailed or ReconnectFailed or GaveUp or InternalError or SnapshotRejected;
+            return new ConnectionView(true, "Disconnected", detail, true, Rejoin: retry);
         }
         if (hostClosing)
-            return new ConnectionView(true, "The host went away", "The host is shutting down or restarting. Waiting for it to come back; you will rejoin by yourself with the same key.", false);
-        if (!connected) return new ConnectionView(true, "Connection lost", "Trying to reconnect to the host with the same key. Your commands are kept and sent once you are back.", false);
+            return new ConnectionView(true, "The host went away", Waiting("The host is shutting down or restarting. Waiting for it to come back; you will rejoin by yourself with the same key.", waitingFor), false, Rejoin: true);
+        if (!connected)
+            return new ConnectionView(true, "Connection lost", Waiting(ReconnectDetail(reconnect), waitingFor), false, Rejoin: true);
         if (migration != null) return new ConnectionView(true, migration.Title, migration.Detail, false, Dismissible: true);
         return new ConnectionView(false, "", "", false);
     }
+
+    /// <summary>The status line of a retrying connection: attempt N of M, the next try, and the election give-up when one runs (T346).</summary>
+    public static string ReconnectDetail(ReconnectView? reconnect)
+    {
+        var text = "Trying to reconnect to the host with the same key. Your commands are kept and sent once you are back.";
+        if (reconnect == null) return text;
+        var parts = new List<string>();
+        if (reconnect.Attempt > 0 && reconnect.MaxAttempts > 0) parts.Add($"Attempt {reconnect.Attempt} of {reconnect.MaxAttempts}");
+        if (reconnect.SecondsToNextAttempt is { } next) parts.Add($"next try in {next} s");
+        if (reconnect.SecondsToGiveUp is { } giveUp) parts.Add($"giving up in {TurnBarModel.Countdown(giveUp * 1000L, 0)}");
+        return parts.Count == 0 ? text : text + " " + string.Join(", ", parts) + ".";
+    }
+
+    /// <summary>Appends the turn bar's waiting line while disconnected, so the overlay carries the same information as the bar under it (T346).</summary>
+    private static string Waiting(string text, string? waitingFor) =>
+        string.IsNullOrEmpty(waitingFor) ? text : text + " " + waitingFor + ".";
 }

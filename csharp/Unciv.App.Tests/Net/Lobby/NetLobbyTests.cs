@@ -925,7 +925,12 @@ public sealed class NetLobbyTests : IDisposable
         Assert.False(await lobby.Lobby.ReleaseSeatAsync("Nobody", null));
         Assert.Null(lobby.Lobby.Bindings.SlotOf(id.PlayerKey));
         Assert.Equal(0, lobby.Lobby.Bindings.SlotOf(newId.PlayerKey));
-        Assert.Null(await c1.ReceiveAsync()); // the old player's connection was closed
+        // T346: a game host announces its roster after a seat change, so a final roster frame may arrive before the old connection closes.
+        using (var closed = new CancellationTokenSource(Bound))
+        {
+            while (await c1.ReceiveAsync(closed.Token) is { } frame)
+                Assert.IsType<LobbyState>(ProtocolCodec.Decode(frame));
+        }
 
         var (c2, s2) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s2);
@@ -963,7 +968,8 @@ public sealed class NetLobbyTests : IDisposable
         while (await c1.ReceiveAsync(cts.Token) is { } frame)
         {
             var message = ProtocolCodec.Decode(frame);
-            Assert.IsNotType<LobbyState>(message);
+            // T346: the game host announces its own roster (who is connected); lobby administration must still never reach a seated player.
+            if (message is LobbyState roster) Assert.DoesNotContain(roster.Slots, it => it.Kind == "Closed");
             Assert.IsNotType<JoinRefused>(message);
             if (message is Pong) return;
         }

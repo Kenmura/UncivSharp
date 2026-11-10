@@ -5,14 +5,14 @@ using Unciv.Net.Visibility;
 
 namespace Unciv.Assets;
 
-/// <summary>One human of a simultaneous game as the host's lobby describes them: their civ, the name to show, and whether they are connected right now.</summary>
-public sealed record TurnRosterEntry(string CivId, string Name, bool Connected);
+/// <summary>One human of a simultaneous game as the host's lobby describes them: their civ, the name to show, whether they are connected right now, and (T346) when their drop grace ends.</summary>
+public sealed record TurnRosterEntry(string CivId, string Name, bool Connected, long? GraceEndsAt = null);
 
-/// <summary>One line of the turn bar.</summary>
-public sealed record TurnBarRow(string CivId, string Name, bool Ended, bool Connected, bool IsYou);
+/// <summary>One line of the turn bar. <see cref="GraceEndsAt"/> (T346) is, for a dropped seat the round still waits for, the absolute time (Unix ms) its turn is force-ended; null when connected or unknown.</summary>
+public sealed record TurnBarRow(string CivId, string Name, bool Ended, bool Connected, bool IsYou, long? GraceEndsAt = null);
 
-/// <summary>What the turn bar draws: a line per human, the headline ("Waiting for ..."), the countdown text (null without a timer) and whether the host is resolving the round.</summary>
-public sealed record TurnBarData(IReadOnlyList<TurnBarRow> Rows, string Headline, string? Countdown, bool Resolving);
+/// <summary>What the turn bar draws: a line per human, the headline ("Waiting for ..."), the countdown text (null without a timer), whether the host is resolving the round, and the soonest drop-grace countdown (T346).</summary>
+public sealed record TurnBarData(IReadOnlyList<TurnBarRow> Rows, string Headline, string? Countdown, bool Resolving, string? GraceCountdown = null);
 
 /// <summary>
 /// C036: the multiplayer turn bar as plain data (Godot-free, unit-tested). It shows whom the game is waiting for from the host's <see cref="TurnStatusDto"/> (who ended,
@@ -29,18 +29,24 @@ public static class TurnBarModel
     {
         if (roster.Count == 0) return null;
         var rows = roster
-            .Select(it => new TurnBarRow(it.CivId, it.Name, status.Ended.Contains(it.CivId, StringComparer.Ordinal), it.Connected, it.CivId == viewer))
+            .Select(it => new TurnBarRow(it.CivId, it.Name, status.Ended.Contains(it.CivId, StringComparer.Ordinal), it.Connected, it.CivId == viewer, it.GraceEndsAt))
             .ToList();
         var resolving = status.Phase == "Resolving";
-        return new TurnBarData(rows, Headline(rows, resolving), Countdown(status.Deadline, nowMs), resolving);
+        var soonest = rows.Where(it => !it.Ended && it.GraceEndsAt != null).Select(it => it.GraceEndsAt!.Value).DefaultIfEmpty(0).Min();
+        return new TurnBarData(rows, Headline(rows, resolving, nowMs), Countdown(status.Deadline, nowMs), resolving,
+            soonest == 0 ? null : Countdown(soonest, nowMs));
     }
 
-    private static string Headline(IReadOnlyList<TurnBarRow> rows, bool resolving)
+    private static string Headline(IReadOnlyList<TurnBarRow> rows, bool resolving, long nowMs)
     {
         if (resolving) return ResolvingHeadline;
-        var waiting = rows.Where(it => !it.Ended).Select(it => it.Connected ? it.Name : it.Name + " (offline)").ToList();
+        var waiting = rows.Where(it => !it.Ended).Select(it => Describe(it, nowMs)).ToList();
         return waiting.Count == 0 ? EveryoneEnded : "Waiting for " + string.Join(", ", waiting);
     }
+
+    /// <summary>How a waited-for seat is named: plain while connected, "(offline)" without grace data, and with the host's countdown once it announced one (T346).</summary>
+    private static string Describe(TurnBarRow row, long nowMs) => row.Connected ? row.Name
+        : row.GraceEndsAt is { } grace ? $"{row.Name} (offline, {Countdown(grace, nowMs)} to reconnect)" : row.Name + " (offline)";
 
     /// <summary>"m:ss" until the deadline (never negative); null when no timer runs.</summary>
     public static string? Countdown(long? deadlineMs, long nowMs)

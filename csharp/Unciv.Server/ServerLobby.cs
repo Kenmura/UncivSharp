@@ -188,7 +188,7 @@ public sealed class ServerLobby : IAsyncDisposable
             var policy = lobbyHost.Settings.ToTurnPolicy();
             if (store == null && gameDirectory != null) store = CreateStore(startResult, policy); // T270: the game is saved from its first moment
             else if (store != null) store.WriteMeta(store.ReadMeta() with { TimerPolicy = policy }); // a resume must run the same turn rules
-            gameHost = new GameHost(new GameSession(startResult.Game) { Clock = () => clock.NowMillis }, store, clock: clock, turnPolicy: policy, limits: hostLimits, standby: lobbyHost.Standby); // the designation made in the lobby carries over
+            gameHost = new GameHost(new GameSession(startResult.Game) { Clock = () => clock.NowMillis }, store, clock: clock, announceRoster: true, turnPolicy: policy, limits: hostLimits, standby: lobbyHost.Standby); // the designation made in the lobby carries over; T346: the roster (who is connected, and their drop grace) must keep reaching the turn bar after the start
             foreach (var slot in startResult.Slots)
             {
                 if (slot.Kind != SlotKind.Human) continue;
@@ -274,7 +274,7 @@ public sealed class ServerLobby : IAsyncDisposable
         lobbyHost.RestoreStarted(seated.Select(x => (x.Key, x.Value.PlayerKey, x.Value.DisplayName)));
         lobbyHost.Standby.Restore(meta.Standby); // before the host persists the coordinator: otherwise the stored designation would be overwritten with nothing
         var session = new GameSession(opened.Session.Game, lastSeq: opened.Session.LastSeq) { Clock = () => clock.NowMillis };
-        var gameHost = new GameHost(session, opened.Store, clock: clock, turnPolicy: policyOverride ?? meta.TimerPolicy, limits: hostLimits, standby: lobbyHost.Standby);
+        var gameHost = new GameHost(session, opened.Store, clock: clock, announceRoster: true, turnPolicy: policyOverride ?? meta.TimerPolicy, limits: hostLimits, standby: lobbyHost.Standby); // T346: a resumed game keeps announcing the roster/grace too
         gameHost.Warn = warn; // before the pump below, so a round that cannot resume is logged
         store = opened.Store;
         activeGameHost = gameHost; // owned from here: a failure below is cleaned up by DisposeAsync

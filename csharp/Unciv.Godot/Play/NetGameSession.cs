@@ -99,6 +99,35 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
 
     public event Action? ConnectionChanged;
 
+    /// <summary>T346: the attempt number the session's reconnect loop is on (0 while connected), and the cap it gives up after.</summary>
+    public int ReconnectAttempt => session.ReconnectAttempt;
+
+    public int MaxReconnectAttempts => session.MaxReconnectAttempts;
+
+    /// <summary>T346: seconds until the next automatic reconnect attempt, or null while connected, dialling, or over. Read on the session's own clock.</summary>
+    public int? SecondsToNextAttempt => session.SecondsToNextAttempt;
+
+    /// <summary>T346: seconds until an election-mode outage gives up, or null (the attempt budget then applies).</summary>
+    public int? SecondsToGiveUp => session.SecondsToGiveUp;
+
+    /// <summary>T346: the Rejoin button while the connection is down: dial the host now instead of waiting out the backoff, with a fresh attempt budget.</summary>
+    public void RejoinNow()
+    {
+        session.RejoinNow();
+        Raise(() => ConnectionChanged?.Invoke());
+    }
+
+    /// <summary>
+    /// T346: who the simultaneous round is waiting for right now, with the drop-grace countdown ("Waiting for Bob (offline, 1:58 to reconnect)"), or null when the session has no
+    /// roster or is waiting for nobody but the viewer. The reconnect overlay shows it so a player still knows whom the game waits for while they are cut off.
+    /// </summary>
+    public string? WaitingFor(long nowMs)
+    {
+        if (Roster.Count == 0) return null;
+        var bar = TurnBarModel.Of(snapshot.TurnStatus, Roster, ViewerCivId, nowMs);
+        return bar == null || bar.Rows.All(it => it.Ended || it.IsYou) ? null : bar.Headline;
+    }
+
     /// <summary>T340: the player read the two-human split warning; it does not come back for the same game.</summary>
     public void DismissMigrationWarning()
     {
@@ -139,7 +168,7 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
     [
         .. lobby.Slots
             .Where(it => it.Kind == "Human" && !string.IsNullOrEmpty(it.Nation))
-            .Select(it => new TurnRosterEntry(it.Nation!, string.IsNullOrEmpty(it.PlayerName) ? it.Nation! : it.PlayerName, it.Connected ?? false))
+            .Select(it => new TurnRosterEntry(it.Nation!, string.IsNullOrEmpty(it.PlayerName) ? it.Nation! : it.PlayerName, it.Connected ?? false, it.GraceEndsAt))
     ];
 
     private static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -331,10 +360,17 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
     {
         var outcome = await session.SubmitAsync(command, cancellation).ConfigureAwait(false);
         if (outcome.Code is ClientCodes.SessionClosed or ClientCodes.ConnectionLost or ClientCodes.ConnectFailed)
-            throw new InvalidOperationException(outcome.Code);
+            throw new InvalidOperationException(ProblemText(outcome.Code));
         if (!outcome.Accepted || outcome.Seq is not { } seq) return new SubmitResult(false, outcome.Code ?? "refused", []);
         return new SubmitResult(true, "", await EventsOfAsync(seq).ConfigureAwait(false));
     }
+
+    /// <summary>T346: a connection failure a player sees (the command's host code would mean nothing); the overlay carries the details.</summary>
+    private static string ProblemText(string code) => code switch
+    {
+        ClientCodes.SessionClosed => "the game is over",
+        _ => "the connection was lost; the game is trying to reconnect",
+    };
 
     /// <summary>The events the host sent for command <paramref name="seq"/>: the delta may land before or after the command's answer, so wait until the mirror has reached it.</summary>
     private async Task<IReadOnlyList<GameEvent>> EventsOfAsync(long seq)

@@ -447,6 +447,25 @@ public sealed class NetTurnPolicyTests : IDisposable
         Assert.Equal(PlayerType.Human, game.GetCivilization("Babylon").PlayerType);
     }
 
+    // T346: the host announces the dropped seat's grace deadline on the roster, so every client can say how long the round still waits.
+    [Fact]
+    public void DisconnectGraceDeadlineFollowsTheDroppedSeat()
+    {
+        var clock = new ManualClock(5_000L);
+        var game = NewGame();
+        var session = Session(game, clock);
+        var timer = new TurnTimer(session, new TurnPolicy { DropGraceSeconds = 120 }, clock);
+
+        Assert.Null(timer.DropDeadline("Greece"));
+
+        timer.Disconnect("Greece");
+        Assert.Equal(125_000L, timer.DropDeadline("Greece"));
+
+        // coming back clears the deadline (the roster then no longer carries it)
+        timer.Connect("Greece");
+        Assert.Null(timer.DropDeadline("Greece"));
+    }
+
     [Fact]
     public void TurnStatusMessageReflectsDeadlinePhaseAndEnded()
     {

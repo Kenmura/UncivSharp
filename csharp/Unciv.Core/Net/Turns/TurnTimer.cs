@@ -62,6 +62,15 @@ public sealed class TurnTimer
     public bool WasForceEndedByDisconnect(string civId) =>
         playerStates.TryGetValue(civId, out var state) && state.ForceEndedByDisconnect;
 
+    /// <summary>
+    /// T346: the absolute time (Unix ms) the host force-ends <paramref name="civId"/>'s turn because it is disconnected, or null while it is connected (or never dropped).
+    /// The value does not move while the player stays away: the grace runs from the first drop. The roster carries it to every client.
+    /// </summary>
+    public long? DropDeadline(string civId) =>
+        playerStates.TryGetValue(civId, out var state) && !state.IsConnected && state.DisconnectedAt is { } dropped
+            ? dropped + policy.DropGraceSeconds * 1000L
+            : null;
+
     /// <summary>Marks a player as connected. If their turn was force-ended due to disconnect grace expiry, undos it.</summary>
     public void Connect(string civId, string? playerKeyId = null)
     {

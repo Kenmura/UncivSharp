@@ -149,7 +149,7 @@ public sealed class HostingSession : IAsyncDisposable
         InProcessHost host;
         try
         {
-            host = InProcessHost.ResumeFromDirectory(directory, identity.PlayerKey);
+            host = InProcessHost.ResumeFromDirectory(directory, identity.PlayerKey, new InProcessHostOptions { AnnounceRoster = true }); // T346: the turn bar keeps getting the roster/grace
         }
         catch (Exception e) when (e is Unciv.Net.Persistence.GameStoreException or IOException or System.Text.Json.JsonException)
         {

@@ -76,4 +76,5 @@ layout-matrix
 confirm-dialogs
 two-instances
 relay-session
+reconnect
 split-brain

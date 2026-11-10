@@ -354,6 +354,8 @@ public sealed class HostElectionTests : IDisposable
         await seatOfGreece.Transport.CloseAsync();
         await AdvanceAsync(25);
         await rig.Successor.Tap.WaitAsync<HostLossDetected>();
+        Assert.NotNull(rig.Successor.Session.SecondsToGiveUp); // T346: the overlay's "giving up in m:ss" counts the election give-up
+        Assert.True(rig.Successor.Session.SecondsToGiveUp > 0);
         await WaitUntilAsync(() => rig.Successor.Election!.Tally is { VoteCount: 1, Quorum: 2 }, "the successor never opened its cycle");
         await AdvanceAsync(50); // several polls, even a restarted cycle: still nothing
         await AdvanceAsync(50);

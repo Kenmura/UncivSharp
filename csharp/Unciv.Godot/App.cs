@@ -267,6 +267,11 @@ public partial class App : Node
             await net.DisposeAsync();
             await session.LeaveAsync();
             await session.DisposeAsync();
+        }, async () =>
+        {
+            // T346: Rejoin after the session gave up keeps the seat: dispose, do not Leave, so the host still waits for this key.
+            await net.DisposeAsync();
+            await session.DisposeAsync();
         });
     }
 
@@ -280,7 +285,7 @@ public partial class App : Node
     // A new or loaded game takes over the screen; its own save controller keeps autosaving it.
     private void ShowGame(IGameSession session) => ShowGame(session, null);
 
-    private void ShowGame(IGameSession session, Func<Task>? leaveNetwork)
+    private void ShowGame(IGameSession session, Func<Task>? leaveNetwork, Func<Task>? rejoinNetwork = null)
     {
         var registry = AssetRegistry.ForRuleset(session.Ruleset, OptionsModel.RegistryPack(settings.Current.AssetPack));
         var root = new Control { Name = "Play", MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -306,6 +311,22 @@ public partial class App : Node
                 _ = leaveNetwork?.Invoke();
                 ShowMenu(first: false);
             };
+            // T346: Rejoin dials now while the session still retries; once it gave up it disposes (no Leave, so the seat is kept) and reopens the join screen with the last address.
+            reconnect.RejoinRequested += () =>
+            {
+                if (netSession.Connection == ClientSessionState.Reconnecting)
+                {
+                    netSession.RejoinNow();
+                    return;
+                }
+                _ = RejoinNetworkAsync();
+            };
+            async Task RejoinNetworkAsync()
+            {
+                if (rejoinNetwork != null) await rejoinNetwork();
+                ShowMenu(first: false);
+                OpenJoin();
+            }
             root.AddChild(reconnect);
             reconnect.Attach(netSession);
             reconnect.WarningAcknowledged += netSession.DismissMigrationWarning; // T340: a split warning stays gone once read

@@ -1166,6 +1166,56 @@ public sealed class ClientNetSessionTests
         Assert.Equal(ClientSessionState.Disconnected, rig.Session.State);
     }
 
+    // T346: Rejoin dials the host at once instead of waiting out the backoff, and gives the attempt budget a fresh start.
+    [Fact]
+    public async Task Reconnect_RejoinNowSkipsTheBackoffAndRestartsTheAttemptBudget()
+    {
+        var delays = 0;
+        var firstWait = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var rig = new ClientNetRig(id => new ClientSessionOptions
+        {
+            Identity = id,
+            DisplayName = "A",
+            RulesetHash = "h",
+            ExpectedFingerprint = ClientNetRig.Fingerprint,
+            MaxReconnectAttempts = 1,
+            ReconnectDelay = (attempt, token) =>
+            {
+                if (Interlocked.Increment(ref delays) == 1)
+                {
+                    firstWait.TrySetResult();
+                    return Task.Delay(Timeout.Infinite, token);
+                }
+                return Task.CompletedTask;
+            }
+        });
+        var host = await rig.StartInGameAsync(ClientNetRig.Snap(5, 1));
+        await host.CloseAsync();
+        await rig.NextAsync(it => it is StateChanged { State: ClientSessionState.Reconnecting });
+        await firstWait.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(1, rig.Session.ReconnectAttempt);
+        Assert.NotNull(rig.Session.SecondsToNextAttempt);
+        Assert.InRange(rig.Session.SecondsToNextAttempt!.Value, 0, 2);
+        Assert.Null(rig.Session.SecondsToGiveUp); // no successor announcement: the attempt budget applies, not an election give-up
+        Assert.Equal(1, rig.Session.MaxReconnectAttempts);
+
+        rig.Session.RejoinNow();
+        using var limit = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        while (rig.ConnectAttempts < 2) await Task.Delay(10, limit.Token);
+        Assert.True(delays >= 2, $"delays {delays}"); // the backoff was abandoned, not awaited
+    }
+
+    [Fact]
+    public async Task Reconnect_RejoinNowWithoutAnOutageDoesNothing()
+    {
+        await using var rig = new ClientNetRig();
+        var host = await rig.StartInGameAsync(ClientNetRig.Snap(5, 1));
+        Assert.Equal(ClientSessionState.InGame, rig.Session.State);
+        rig.Session.RejoinNow();
+        Assert.Equal(1, rig.ConnectAttempts);
+        await host.CloseAsync();
+    }
+
     [Fact]
     public async Task Leave_SendsLeaveAndEndsSession()
     {
