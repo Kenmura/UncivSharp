@@ -96,9 +96,12 @@ public sealed class LobbyModelTests
     public void EveryRefusalCodeHasASentence()
     {
         string[] codes = [JoinRefusedCodes.RulesetMismatch, JoinRefusedCodes.ProtocolMismatch, JoinRefusedCodes.BadCredentials, JoinRefusedCodes.RateLimited, JoinRefusedCodes.LobbyFull,
-            JoinRefusedCodes.GameAlreadyStarted, JoinRefusedCodes.Kicked, JoinRefusedCodes.SlotTaken, JoinRefusedCodes.AuthFailed, JoinRefusedCodes.BadKey, JoinRefusedCodes.StaleEpoch];
+            JoinRefusedCodes.GameAlreadyStarted, JoinRefusedCodes.Kicked, JoinRefusedCodes.Banned, JoinRefusedCodes.SlotTaken, JoinRefusedCodes.AuthFailed, JoinRefusedCodes.BadKey, JoinRefusedCodes.StaleEpoch];
         Assert.All(codes, code => Assert.DoesNotContain(code, LobbyModel.RefusalText(code), StringComparison.Ordinal));
-        Assert.Equal(codes.Length - 1, codes.Select(LobbyModel.RefusalText).Distinct().Count()); // AuthFailed and BadKey share one
+        Assert.Equal(codes.Length - 1, codes.Select(c => LobbyModel.RefusalText(c)).Distinct().Count()); // AuthFailed and BadKey share one
+        Assert.Equal("The host removed you from the lobby.", LobbyModel.RefusalText(JoinRefusedCodes.Kicked));
+        Assert.Equal("The host removed you from the lobby. Afk.", LobbyModel.RefusalText(JoinRefusedCodes.Kicked, " Afk. "));
+        Assert.Equal("The host removed you and will not let you back in.", LobbyModel.RefusalText(JoinRefusedCodes.Banned));
         Assert.Equal("The host refused the connection (weird).", LobbyModel.RefusalText("weird"));
         Assert.Contains("join the other player's game", LobbyModel.RefusalText(JoinRefusedCodes.StaleEpoch), StringComparison.Ordinal);
     }

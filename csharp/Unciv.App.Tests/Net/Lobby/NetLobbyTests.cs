@@ -7,6 +7,7 @@ using Unciv.Net;
 using Unciv.Net.Identity;
 using Unciv.Net.Lobby;
 using Unciv.Net.Persistence;
+using Unciv.Net.Turns;
 using Unciv.Server;
 
 namespace Unciv.Core.Tests.Net.Lobby;
@@ -339,6 +340,169 @@ public sealed class NetLobbyTests : IDisposable
 
         Assert.Equal(SlotKind.Open, lobby.Slots[0].Kind);
         Assert.Null(lobby.Slots[0].PlayerKeyId);
+    }
+
+    // ------------------------------------------------------------ T348: chat limits, kick/ban reason, rejoin by name
+
+    /// <summary>Completes the Hello/Join/Auth handshake against a raw <see cref="LobbyHost"/> and drains the first LobbyState.</summary>
+    private static async Task<(ClientIdentity Id, ITransport Client)> JoinRawAsync(LobbyHost lobby, string name, string? password = null)
+    {
+        var (client, server) = InMemoryTransport.CreatePair();
+        _ = lobby.AttachConnectionAsync(server);
+        var id = ClientIdentity.Generate();
+        await client.SendAsync(ProtocolCodec.Encode(new Hello { Protocol = ProtocolVersion.Current, ClientVersion = "1", RulesetHash = lobby.Settings.ComputeRulesetHash(), ModList = [] }));
+        var welcome = await ReceiveMessageAsync<Welcome>(client);
+        await client.SendAsync(ProtocolCodec.Encode(new Join { PlayerKey = id.PlayerKey, DisplayName = name, Password = password }));
+        await client.SendAsync(ProtocolCodec.Encode(new Auth { Proof = id.Sign(lobby.HostFingerprint, welcome.SessionId, welcome.Challenge) }));
+        await ReceiveMessageAsync<JoinOk>(client);
+        await ReceiveMessageAsync<LobbyState>(client);
+        return (id, client);
+    }
+
+    [Fact]
+    public async Task LobbyChat_BlankLinesAreDroppedAndLongOnesCut()
+    {
+        await using var lobby = new LobbyHost();
+        var (id, client) = await JoinRawAsync(lobby, "Alice");
+        using var idScope = id;
+
+        await client.SendAsync(ProtocolCodec.Encode(new LobbyChat { Text = " \t " }));
+        await client.SendAsync(ProtocolCodec.Encode(new LobbyChat { Text = new string('x', LobbyLimits.Default.MaxChatChars + 200) }));
+
+        // The blank line was dropped; the first (and only) chat is the cut long line.
+        var line = await ReceiveMessageAsync<LobbyChat>(client);
+        Assert.Equal(new string('x', LobbyLimits.Default.MaxChatChars), line.Text);
+        Assert.Equal("Alice", line.Sender);
+    }
+
+    [Fact]
+    public async Task LobbyChat_RateLimitDropsTheExcessUntilTheWindowPasses()
+    {
+        var clock = new ManualClock(1_000_000);
+        await using var lobby = new LobbyHost(clock: clock, limits: new LobbyLimits { MaxChatPerWindow = 2, ChatWindowMillis = 10_000 });
+        var (id, client) = await JoinRawAsync(lobby, "Alice");
+        using var idScope = id;
+
+        await client.SendAsync(ProtocolCodec.Encode(new LobbyChat { Text = "a" }));
+        await client.SendAsync(ProtocolCodec.Encode(new LobbyChat { Text = "b" }));
+        await client.SendAsync(ProtocolCodec.Encode(new LobbyChat { Text = "c" }));
+        Assert.Equal("a", (await ReceiveMessageAsync<LobbyChat>(client)).Text);
+        Assert.Equal("b", (await ReceiveMessageAsync<LobbyChat>(client)).Text);
+
+        // "c" was dropped, not queued: once the host has seen it (Ping round-trip), the window still lets one new line through after it passes.
+        await client.SendAsync(ProtocolCodec.Encode(new Ping()));
+        await ReceiveMessageAsync<Pong>(client);
+        clock.Advance(10_001);
+        await client.SendAsync(ProtocolCodec.Encode(new LobbyChat { Text = "d" }));
+        Assert.Equal("d", (await ReceiveMessageAsync<LobbyChat>(client)).Text);
+    }
+
+    [Fact]
+    public async Task Kick_SendsTheHostsReasonAndStripsControls()
+    {
+        await using var lobby = new LobbyHost();
+        var (id, client) = await JoinRawAsync(lobby, "Alice");
+        using var idScope = id;
+
+        await lobby.KickAsync(0, " \nPlease be nice\t ");
+
+        var refused = await ReceiveMessageAsync<JoinRefused>(client);
+        Assert.Equal(JoinRefusedCodes.Kicked, refused.Code);
+        Assert.Equal("Please be nice", refused.Reason);
+        Assert.Equal(SlotKind.Open, lobby.Slots[0].Kind);
+        Assert.Null(lobby.Slots[0].PlayerKeyId);
+    }
+
+    [Fact]
+    public async Task Kick_WithoutAReasonSendsNoReason()
+    {
+        await using var lobby = new LobbyHost();
+        var (id, client) = await JoinRawAsync(lobby, "Alice");
+        using var idScope = id;
+
+        await lobby.KickAsync(0);
+
+        var refused = await ReceiveMessageAsync<JoinRefused>(client);
+        Assert.Equal(JoinRefusedCodes.Kicked, refused.Code);
+        Assert.Null(refused.Reason);
+    }
+
+    [Fact]
+    public async Task Ban_RemovesThePlayerAndRefusesTheKeyUntilUnbanned()
+    {
+        await using var lobby = new LobbyHost();
+        var (id, client) = await JoinRawAsync(lobby, "Alice");
+        using var idScope = id;
+
+        await lobby.BanAsync(0, "Cheater");
+
+        var refused = await ReceiveMessageAsync<JoinRefused>(client);
+        Assert.Equal(JoinRefusedCodes.Banned, refused.Code);
+        Assert.Equal("Cheater", refused.Reason);
+        Assert.Equal(SlotKind.Open, lobby.Slots[0].Kind);
+        Assert.Contains(id.PlayerKey, lobby.BannedKeys);
+
+        // The same key is refused again on a fresh connection (admission passes — no password — then the ban check refuses).
+        var (client2, server2) = InMemoryTransport.CreatePair();
+        _ = lobby.AttachConnectionAsync(server2);
+        await client2.SendAsync(ProtocolCodec.Encode(new Hello { Protocol = ProtocolVersion.Current, ClientVersion = "1", RulesetHash = lobby.Settings.ComputeRulesetHash(), ModList = [] }));
+        await ReceiveMessageAsync<Welcome>(client2);
+        await client2.SendAsync(ProtocolCodec.Encode(new Join { PlayerKey = id.PlayerKey, DisplayName = "Alice" }));
+        Assert.Equal(JoinRefusedCodes.Banned, (await ReceiveMessageAsync<JoinRefused>(client2)).Code);
+
+        Assert.True(lobby.UnbanAsync(id.PlayerKey));
+        Assert.False(lobby.UnbanAsync(id.PlayerKey));
+    }
+
+    [Fact]
+    public async Task Ban_DoesNotLeakThroughABadPassword()
+    {
+        var settings = new LobbySettings { Password = "SecureLobbyPassword123" };
+        var random = SystemSecureRandom.Instance;
+        var admission = new LobbyAdmission(JoinPassword.Create("SecureLobbyPassword123", random), inviteOnly: false, new InviteTokens(TimeProvider.System, random), new AttemptLimiter(TimeProvider.System));
+        await using var lobby = new LobbyHost(settings: settings, admission: admission);
+        var (id, client) = await JoinRawAsync(lobby, "Alice", "SecureLobbyPassword123");
+        using var idScope = id;
+        await lobby.BanAsync(0);
+
+        // A new connection with the banned key but the wrong password learns nothing about the ban.
+        var (client2, server2) = InMemoryTransport.CreatePair();
+        _ = lobby.AttachConnectionAsync(server2);
+        await client2.SendAsync(ProtocolCodec.Encode(new Hello { Protocol = ProtocolVersion.Current, ClientVersion = "1", RulesetHash = lobby.Settings.ComputeRulesetHash(), ModList = [] }));
+        await ReceiveMessageAsync<Welcome>(client2);
+        await client2.SendAsync(ProtocolCodec.Encode(new Join { PlayerKey = id.PlayerKey, DisplayName = "Alice", Password = "wrong" }));
+        Assert.Equal(JoinRefusedCodes.BadCredentials, (await ReceiveMessageAsync<JoinRefused>(client2)).Code);
+    }
+
+    [Fact]
+    public async Task RejoinByName_NewKeyWithTheSameNameReclaimsTheDroppedSlot()
+    {
+        await using var lobby = new LobbyHost();
+        var (id1, c1) = await JoinRawAsync(lobby, "Alice");
+        using var id1Scope = id1;
+
+        await c1.SendAsync(ProtocolCodec.Encode(new LobbySet { Slot = 0, Nation = "Greece", Ready = true }));
+        await ReceiveMessageAsync<LobbyState>(c1);
+        Assert.Equal("Greece", lobby.Slots[0].Nation);
+
+        await c1.CloseAsync();
+        for (var i = 0; i < 100 && lobby.Slots[0].Connected; i++) await Task.Delay(5);
+        Assert.False(lobby.Slots[0].Connected);
+
+        var (id2, c2) = await JoinRawAsync(lobby, "Alice");
+        using var id2Scope = id2;
+
+        Assert.Equal(0, lobby.Bindings.SlotOf(id2.PlayerKey));
+        Assert.Null(lobby.Bindings.SlotOf(id1.PlayerKey));
+        Assert.Equal("Greece", lobby.Slots[0].Nation);
+        Assert.Equal(id2.PlayerKey, lobby.Slots[0].PlayerKeyId);
+        Assert.True(lobby.Slots[0].Connected);
+
+        // A connected player is never displaced by name: a third key with the same name takes the next open slot, not slot 0.
+        var (id3, _) = await JoinRawAsync(lobby, "Alice");
+        using var id3Scope = id3;
+        Assert.Equal(0, lobby.Bindings.SlotOf(id2.PlayerKey));
+        Assert.Equal(1, lobby.Bindings.SlotOf(id3.PlayerKey));
     }
 
     [Fact]

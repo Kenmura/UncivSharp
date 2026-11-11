@@ -76,21 +76,27 @@ public static class LobbyModel
         return new StartCheck(true, "Everybody is ready.");
     }
 
-    /// <summary>What the player is told when the host would not let them in (or removed them). Never says more than the code does.</summary>
-    public static string RefusalText(string code) => code switch
+    /// <summary>What the player is told when the host would not let them in (or removed them). Never says more than the code does, plus the host's own reason for a kick or ban.</summary>
+    public static string RefusalText(string code, string? reason = null)
     {
-        JoinRefusedCodes.RulesetMismatch => "The host plays with different rules (base ruleset or mods) than you, so you cannot join. Ask the host which mods are on and install the same ones.",
-        JoinRefusedCodes.ProtocolMismatch => "Your game version and the host's cannot talk to each other. Both of you need the same version.",
-        JoinRefusedCodes.BadCredentials => "Wrong password or invite.",
-        JoinRefusedCodes.RateLimited => "Too many wrong attempts. Wait a little and try again.",
-        JoinRefusedCodes.LobbyFull => "The lobby is full.",
-        JoinRefusedCodes.GameAlreadyStarted => "The game has already started.",
-        JoinRefusedCodes.Kicked => "The host removed you from the lobby.",
-        JoinRefusedCodes.SlotTaken => "That seat is taken.",
-        JoinRefusedCodes.AuthFailed or JoinRefusedCodes.BadKey => "The host did not accept your identity.",
-        JoinRefusedCodes.StaleEpoch => HostMigrationModel.FencedTitle + ": this copy of the game is out of date and refuses players. " + HostMigrationModel.FencedDetail,
-        _ => $"The host refused the connection ({code}).",
-    };
+        var text = code switch
+        {
+            JoinRefusedCodes.RulesetMismatch => "The host plays with different rules (base ruleset or mods) than you, so you cannot join. Ask the host which mods are on and install the same ones.",
+            JoinRefusedCodes.ProtocolMismatch => "Your game version and the host's cannot talk to each other. Both of you need the same version.",
+            JoinRefusedCodes.BadCredentials => "Wrong password or invite.",
+            JoinRefusedCodes.RateLimited => "Too many wrong attempts. Wait a little and try again.",
+            JoinRefusedCodes.LobbyFull => "The lobby is full.",
+            JoinRefusedCodes.GameAlreadyStarted => "The game has already started.",
+            JoinRefusedCodes.Kicked => "The host removed you from the lobby.",
+            JoinRefusedCodes.Banned => "The host removed you and will not let you back in.",
+            JoinRefusedCodes.SlotTaken => "That seat is taken.",
+            JoinRefusedCodes.AuthFailed or JoinRefusedCodes.BadKey => "The host did not accept your identity.",
+            JoinRefusedCodes.StaleEpoch => HostMigrationModel.FencedTitle + ": this copy of the game is out of date and refuses players. " + HostMigrationModel.FencedDetail,
+            _ => $"The host refused the connection ({code}).",
+        };
+        var cleanReason = reason?.Trim();
+        return string.IsNullOrEmpty(cleanReason) ? text : $"{text} {cleanReason}";
+    }
 
     private static string Text(JsonElement settings, string name) =>
         settings.ValueKind == JsonValueKind.Object && settings.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";

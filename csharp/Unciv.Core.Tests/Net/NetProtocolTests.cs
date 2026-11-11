@@ -36,6 +36,7 @@ public class NetProtocolTests
         { new Welcome { Protocol = 1, SessionId = "s", Challenge = "ch", HostKeyFingerprint = "fp", RequiresPassword = false }, """{"type":"Welcome","protocol":1,"sessionId":"s","challenge":"ch","hostKeyFingerprint":"fp","requiresPassword":false}""" },
         { new JoinOk(), """{"type":"JoinOk"}""" },
         { new JoinRefused { Code = "bad-password" }, """{"type":"JoinRefused","code":"bad-password"}""" },
+        { new JoinRefused { Code = "banned", Reason = "Afk" }, """{"type":"JoinRefused","code":"banned","reason":"Afk"}""" },
         { new LobbyState { Settings = J("""{"map":"small"}"""), Slots = [new LobbySlot { Slot = 0, PlayerName = "Ann", Ready = false }], HostName = "Bob" }, """{"type":"LobbyState","settings":{"map":"small"},"slots":[{"slot":0,"playerName":"Ann","ready":false}],"hostName":"Bob"}""" },
         { new GameStarting(), """{"type":"GameStarting"}""" },
         { Status, """{"type":"TurnStatus","turn":3,"ended":["Rome"],"deadline":1700000000000,"phase":"playing"}""" },

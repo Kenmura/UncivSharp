@@ -221,6 +221,8 @@ public sealed class LobbyScenario : Scenario
         private ScenarioStep[] Hosting() =>
         [
             new Click(() => Centre(() => Host().KickButton(2))),
+            new WaitUntil("the kick reason popup is open", () => Host().ReasonView.Visible),
+            new Click(() => Centre(() => Host().ReasonView.ConfirmButton)),
             new WaitUntil("friend B was removed", () => Host().State is { } s && s.Slots[2].Kind == "Open"),
             new Act("friend B's session saw why", () =>
             {

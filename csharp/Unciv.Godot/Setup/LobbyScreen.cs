@@ -43,11 +43,13 @@ public partial class LobbyScreen : Control
     private readonly Dictionary<string, Button> nationButtons = [];
     private readonly Dictionary<string, Button> colourButtons = [];
     private readonly Dictionary<int, Button> kickButtons = [];
+    private readonly Dictionary<int, Button> banButtons = [];
     private readonly Dictionary<int, Button> closeButtons = [];
     private readonly Dictionary<int, Button> aiButtons = [];
     private readonly Dictionary<int, Button> openButtons = [];
     private readonly List<Label> slotLabels = [];
     private readonly List<string> chat = [];
+    private KickBanView? reasonView;
     private LobbyState? lobby;
     private bool busy;
     private bool ended;
@@ -61,6 +63,8 @@ public partial class LobbyScreen : Control
         this.hostControls = hostControls;
         Name = "LobbyScreen";
         Build(hostControls != null);
+        reasonView = new KickBanView(theme);
+        AddChild(reasonView);
         lobby = session.Lobby;
         Rebuild();
     }
@@ -121,6 +125,11 @@ public partial class LobbyScreen : Control
 
     public Button? KickButton(int slot) => kickButtons.GetValueOrDefault(slot);
 
+    public Button? BanButton(int slot) => banButtons.GetValueOrDefault(slot);
+
+    /// <summary>T348: the kick/ban reason popup, open after the host pressed Kick or Ban on a seat.</summary>
+    public KickBanView ReasonView => reasonView ?? throw new InvalidOperationException("the host screen always builds a reason view");
+
     public Button? CloseButton(int slot) => closeButtons.GetValueOrDefault(slot);
 
     public Button? AiButton(int slot) => aiButtons.GetValueOrDefault(slot);
@@ -154,7 +163,7 @@ public partial class LobbyScreen : Control
                     GameStarting?.Invoke();
                     break;
                 case JoinRefusedEvent refused:
-                    End(LobbyModel.RefusalText(refused.Code));
+                    End(LobbyModel.RefusalText(refused.Code, refused.Reason));
                     return;
                 case HostClosed:
                     End("The host closed the lobby.");
@@ -237,7 +246,7 @@ public partial class LobbyScreen : Control
         chatScroll.AddChild(chatBox);
         right.AddChild(chatScroll);
         var send = new HBoxContainer();
-        ChatField = new LineEdit { Name = "ChatField", PlaceholderText = "Say something".Tr(), SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        ChatField = new LineEdit { Name = "ChatField", PlaceholderText = "Say something".Tr(), SizeFlagsHorizontal = SizeFlags.ExpandFill, MaxLength = SocialModel.MaxChatChars };
         ChatField.TextSubmitted += _ => SendChat();
         SendButton = new Button { Text = "Send".Tr(), Name = "SendButton" };
         SendButton.Pressed += SendChat;
@@ -268,6 +277,7 @@ public partial class LobbyScreen : Control
         Clear(slotsBox);
         slotLabels.Clear();
         kickButtons.Clear();
+        banButtons.Clear();
         closeButtons.Clear();
         aiButtons.Clear();
         openButtons.Clear();
@@ -318,7 +328,8 @@ public partial class LobbyScreen : Control
         switch (slot.Kind)
         {
             case "Human" when slot.PlayerKeyId != ownKey:
-                kickButtons[index] = Add(line, "Kick", () => lobbyHost.KickAsync(index));
+                kickButtons[index] = Add(line, "Kick", () => AskReasonAsync("Kick", slot, (reason) => lobbyHost.KickAsync(index, reason)));
+                banButtons[index] = Add(line, "Ban", () => AskReasonAsync("Ban", slot, (reason) => lobbyHost.BanAsync(index, reason)));
                 break;
             case "Open":
                 aiButtons[index] = Add(line, "AI", () => lobbyHost.SetSlotKindAsync(index, SlotKind.AI));
@@ -331,6 +342,14 @@ public partial class LobbyScreen : Control
                 openButtons[index] = Add(line, "Open", () => lobbyHost.OpenSlotAsync(index));
                 break;
         }
+    }
+
+    /// <summary>T348: asks the host for an optional reason, then runs the action with it. The reason the removed player sees is never taken from a slot or a name.</summary>
+    private Task AskReasonAsync(string verb, LobbySlot slot, Func<string?, Task> action)
+    {
+        string name = slot.PlayerName ?? $"Player {slot.Slot + 1}";
+        reasonView.NotNull().Open(verb, name, reason => _ = RunAsync(() => action(reason)));
+        return Task.CompletedTask;
     }
 
     private Button Add(HBoxContainer line, string text, Func<Task> action)
@@ -455,6 +474,7 @@ public partial class LobbyScreen : Control
     private void End(string reason)
     {
         ended = true;
+        if (reasonView != null) reasonView.Visible = false;
         ReadyButton.Visible = false;
         NationToggle.Visible = false;
         ShowPicker(false);

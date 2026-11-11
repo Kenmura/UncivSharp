@@ -68,8 +68,8 @@ public sealed record LobbyChatReceived(string? Sender, string Text) : ClientEven
 
 public sealed record GameStarted : ClientEvent;
 
-/// <summary>The join (or a later seat check) was refused; the session is over. <see cref="Code"/> is a <c>JoinRefusedCodes</c> or <see cref="ClientCodes"/> value.</summary>
-public sealed record JoinRefusedEvent(string Code) : ClientEvent;
+/// <summary>The join (or a later seat check) was refused; the session is over. <see cref="Code"/> is a <c>JoinRefusedCodes</c> or <see cref="ClientCodes"/> value. <see cref="Reason"/> is the host's own sentence for a kick or ban, else null.</summary>
+public sealed record JoinRefusedEvent(string Code, string? Reason = null) : ClientEvent;
 
 /// <summary>The mirror was replaced by a full snapshot (join, resync, resume).</summary>
 public sealed record SnapshotReplaced(ClientSnapshot Snapshot) : ClientEvent;

@@ -185,6 +185,9 @@ public sealed record JoinOk : Message
 public sealed record JoinRefused : Message
 {
     public required string Code { get; init; }
+
+    /// <summary>T348: the host's reason for a kick or a ban, shown to the removed player (bounded, control characters stripped). Absent for every other refusal: the reply never says why a join was refused beyond the code.</summary>
+    public string? Reason { get; init; }
 }
 
 public sealed record LobbySlot

@@ -39,7 +39,9 @@ public sealed class LobbyHost : IAsyncDisposable
     private readonly Dictionary<string, LobbySession> sessions = new(StringComparer.Ordinal);
     private readonly ISecureRandom random;
     private readonly IClock clock;
+    private readonly LobbyLimits limits;
     private readonly List<Slot> slots = [];
+    private readonly HashSet<string> bannedKeys = new(StringComparer.Ordinal);
     private bool disposed;
 
     public LobbyHost(
@@ -49,12 +51,14 @@ public sealed class LobbyHost : IAsyncDisposable
         string? hostFingerprint = null,
         ISecureRandom? random = null,
         IClock? clock = null,
-        string hostName = "Host")
+        string hostName = "Host",
+        LobbyLimits? limits = null)
     {
         Settings = settings ?? new LobbySettings();
         Bindings = bindings ?? new SlotBindings();
         this.random = random ?? SystemSecureRandom.Instance;
         this.clock = clock ?? SystemClock.Instance;
+        this.limits = limits ?? LobbyLimits.Default;
         HostFingerprint = hostFingerprint ?? "ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z";
         HostName = hostName;
         Standby = new StandbyCoordinator(this.clock);
@@ -120,6 +124,9 @@ public sealed class LobbyHost : IAsyncDisposable
         public ModManifest? ModManifestSent { get; set; }
 
         public HashSet<string> ModFilesServed { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>T348: the timestamps (host clock, ms) of this session's recent chat lines, for the sliding rate limit.</summary>
+        public Queue<long> ChatTimes { get; } = new();
 
         /// <summary>Set once this seat's transport belongs to the running game: the lobby reader (the only reader of the socket) then forwards every frame here.</summary>
         public Channel<string>? Handoff { get; set; }
@@ -596,6 +603,16 @@ public sealed class LobbyHost : IAsyncDisposable
             return;
         }
 
+        // T348: a banned key is refused only after it passed admission (password or invite), so a probe without credentials cannot tell whether a key is banned.
+        lock (gate)
+        {
+            if (bannedKeys.Contains(join.PlayerKey))
+            {
+                _ = SendAsync(session.Transport, new JoinRefused { Code = JoinRefusedCodes.Banned });
+                return;
+            }
+        }
+
         lock (gate)
         {
             session.PendingPlayerKey = join.PlayerKey;
@@ -679,27 +696,14 @@ public sealed class LobbyHost : IAsyncDisposable
             }
             else
             {
-                var freeSlot = slots.FirstOrDefault(s => s.Kind == SlotKind.Open);
-                if (freeSlot == null)
+                // T348: rejoin by name — a dropped human seat keeps its display name; a new key that authenticates with the same name takes the seat back
+                // (the old, absent key's binding is dropped). Only a disconnected seat is reclaimable this way, so a connected player is never displaced by name.
+                var refusal = SeatNewKeyLocked(session, session.PlayerKey);
+                if (refusal != null)
                 {
-                    _ = SendAsync(session.Transport, new JoinRefused { Code = JoinRefusedCodes.LobbyFull });
+                    _ = SendAsync(session.Transport, new JoinRefused { Code = refusal });
                     return;
                 }
-
-                if (!Bindings.TryBind(freeSlot.Index, session.PlayerKey))
-                {
-                    _ = SendAsync(session.Transport, new JoinRefused { Code = JoinRefusedCodes.SlotTaken });
-                    return;
-                }
-
-                freeSlot.Kind = SlotKind.Human;
-                freeSlot.PlayerKeyId = session.PlayerKey;
-                freeSlot.DisplayName = session.DisplayName;
-                freeSlot.Connected = true;
-                freeSlot.Transport = session.Transport;
-                freeSlot.SessionId = session.SessionId;
-                freeSlot.Ready = false;
-                session.SlotIndex = freeSlot.Index;
                 stateChanged = true;
             }
         }
@@ -734,6 +738,43 @@ public sealed class LobbyHost : IAsyncDisposable
         {
             await CloseQuietlyAsync(socket).ConfigureAwait(false); // never seated: the client must see the drop, not wait for a snapshot
         }
+    }
+
+    /// <summary>
+    /// T348: seats a key that holds no binding yet, under the lobby lock. First a dropped human seat with the same display name is reclaimed (rejoin by name, the absent key's
+    /// binding dropped, the nation kept), otherwise the first Open slot is taken. Returns the refusal code when the player cannot be seated, null on success.
+    /// </summary>
+    private string? SeatNewKeyLocked(LobbySession session, string playerKey)
+    {
+        var dropped = slots.FirstOrDefault(s => s.Kind == SlotKind.Human && !s.Connected
+            && !string.IsNullOrEmpty(s.DisplayName)
+            && string.Equals(s.DisplayName, session.DisplayName, StringComparison.Ordinal));
+        if (dropped != null)
+        {
+            Bindings.Clear(dropped.Index);
+            if (!Bindings.TryBind(dropped.Index, playerKey)) return JoinRefusedCodes.SlotTaken;
+            dropped.PlayerKeyId = playerKey;
+            dropped.DisplayName = session.DisplayName;
+            dropped.Connected = true;
+            dropped.Transport = session.Transport;
+            dropped.SessionId = session.SessionId;
+            dropped.Ready = false;
+            session.SlotIndex = dropped.Index;
+            return null;
+        }
+
+        var freeSlot = slots.FirstOrDefault(s => s.Kind == SlotKind.Open);
+        if (freeSlot == null) return JoinRefusedCodes.LobbyFull;
+        if (!Bindings.TryBind(freeSlot.Index, playerKey)) return JoinRefusedCodes.SlotTaken;
+        freeSlot.Kind = SlotKind.Human;
+        freeSlot.PlayerKeyId = playerKey;
+        freeSlot.DisplayName = session.DisplayName;
+        freeSlot.Connected = true;
+        freeSlot.Transport = session.Transport;
+        freeSlot.SessionId = session.SessionId;
+        freeSlot.Ready = false;
+        session.SlotIndex = freeSlot.Index;
+        return null;
     }
 
     private async Task HandleLobbySetAsync(LobbySession session, LobbySet set)
@@ -797,9 +838,20 @@ public sealed class LobbyHost : IAsyncDisposable
     {
         if (!session.IsAuthenticated) return;
 
+        var text = chat.Text.Trim();
+        if (text.Length == 0) return;
+        long now = clock.NowMillis;
+        lock (gate)
+        {
+            while (session.ChatTimes.Count > 0 && now - session.ChatTimes.Peek() >= limits.ChatWindowMillis) session.ChatTimes.Dequeue();
+            if (session.ChatTimes.Count >= limits.MaxChatPerWindow) return; // T348: the excess is dropped silently, never queued
+            session.ChatTimes.Enqueue(now);
+        }
+        if (text.Length > limits.MaxChatChars) text = text[..limits.MaxChatChars];
+
         var broadcastMsg = new LobbyChat
         {
-            Text = chat.Text,
+            Text = text,
             Sender = session.DisplayName ?? "Anonymous"
         };
         await BroadcastAsync(broadcastMsg).ConfigureAwait(false);
@@ -831,10 +883,31 @@ public sealed class LobbyHost : IAsyncDisposable
         }
     }
 
-    /// <summary>Kicks a player from a slot and clears the slot binding.</summary>
-    public async Task KickAsync(int slotIndex)
+    /// <summary>Kicks a player from a slot and clears the slot binding. <paramref name="reason"/> (optional, host-written) is shown to the removed player.</summary>
+    public Task KickAsync(int slotIndex, string? reason = null) => KickOrBanAsync(slotIndex, reason, ban: false);
+
+    /// <summary>
+    /// T348: kicks a player and bans their key, so the key is refused on every later join. <paramref name="reason"/> (optional, host-written) is shown to the removed player.
+    /// The ban lives only as long as this lobby (like the join password, it is never written to disk).
+    /// </summary>
+    public Task BanAsync(int slotIndex, string? reason = null) => KickOrBanAsync(slotIndex, reason, ban: true);
+
+    /// <summary>T348: removes a key from the ban list so it can join again. Returns false when the key was not banned.</summary>
+    public bool UnbanAsync(string playerKey)
+    {
+        lock (gate) return bannedKeys.Remove(playerKey);
+    }
+
+    /// <summary>T348: the keys the host has banned, for the host UI (a snapshot; never the authority).</summary>
+    public IReadOnlyList<string> BannedKeys
+    {
+        get { lock (gate) return bannedKeys.ToList(); }
+    }
+
+    private async Task KickOrBanAsync(int slotIndex, string? reason, bool ban)
     {
         LobbySession? sessionToKick = null;
+        string? bannedKey = null;
         lock (gate)
         {
             if (Status != LobbyStatus.InLobby) return; // after the start the host kicks through GameHost/ServerLobby, never by writing to a seat's raw transport
@@ -846,6 +919,7 @@ public sealed class LobbyHost : IAsyncDisposable
                 sessions.Remove(slot.SessionId);
             }
 
+            if (ban && slot.PlayerKeyId != null) bannedKey = slot.PlayerKeyId;
             Bindings.Clear(slotIndex);
             if (Settings.BackupHost == slotIndex) Settings.BackupHost = null; // the designated player was removed: the host picks again
             slot.Kind = SlotKind.Open;
@@ -857,13 +931,15 @@ public sealed class LobbyHost : IAsyncDisposable
             slot.Connected = false;
             slot.SessionId = null;
             slot.Transport = null;
+            if (bannedKey != null) bannedKeys.Add(bannedKey);
         }
 
+        var cleanReason = CleanReason(reason);
         if (sessionToKick != null)
         {
             try
             {
-                await SendAsync(sessionToKick.Transport, new JoinRefused { Code = JoinRefusedCodes.Kicked }).ConfigureAwait(false);
+                await SendAsync(sessionToKick.Transport, new JoinRefused { Code = ban ? JoinRefusedCodes.Banned : JoinRefusedCodes.Kicked, Reason = cleanReason }).ConfigureAwait(false);
                 await sessionToKick.Transport.CloseAsync().ConfigureAwait(false);
             }
             catch { }
@@ -871,6 +947,15 @@ public sealed class LobbyHost : IAsyncDisposable
 
         await SyncBackupHostAsync().ConfigureAwait(false);
         await BroadcastLobbyStateAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>T348: the kick/ban reason as it goes on the wire: control characters stripped, cut to <see cref="LobbyLimits.MaxReasonChars"/>, null when blank.</summary>
+    private string? CleanReason(string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) return null;
+        var clean = new string(reason.Where(it => !char.IsControl(it)).ToArray()).Trim();
+        if (clean.Length == 0) return null;
+        return clean.Length > limits.MaxReasonChars ? clean[..limits.MaxReasonChars].TrimEnd() : clean;
     }
 
     /// <summary>Closes a slot so players cannot take it.</summary>

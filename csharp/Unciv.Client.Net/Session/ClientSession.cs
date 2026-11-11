@@ -1237,7 +1237,7 @@ public sealed class ClientSession : IAsyncDisposable
                 await HandleStandbyFrameAsync(message, token).ConfigureAwait(false);
                 return true;
             case JoinRefused refused:
-                await EndAsync(refused.Code, refused: true).ConfigureAwait(false);
+                await EndAsync(refused.Code, refused: true, refusedReason: refused.Reason).ConfigureAwait(false);
                 return false;
             case ModManifest manifest:
                 return await HandleModManifestAsync(manifest, token).ConfigureAwait(false);
@@ -1723,7 +1723,7 @@ public sealed class ClientSession : IAsyncDisposable
     }
 
     /// <summary>The session is over for good: answers everything still waiting and reports why.</summary>
-    private async Task EndAsync(string reason, bool refused)
+    private async Task EndAsync(string reason, bool refused, string? refusedReason = null)
     {
         List<PendingCommand> all;
         lock (gate)
@@ -1739,7 +1739,7 @@ public sealed class ClientSession : IAsyncDisposable
         joined.TrySetResult(new JoinResult(false, reason));
         foreach (var entry in all) entry.Completion.TrySetResult(new CommandOutcome(entry.Message.ClientCmdId, false, ClientCodes.SessionClosed, null));
         FailWaiters();
-        if (refused) Emit(new JoinRefusedEvent(reason));
+        if (refused) Emit(new JoinRefusedEvent(reason, refusedReason));
         SetState(ClientSessionState.Disconnected);
         Emit(new SessionEnded(reason));
         events.Writer.TryComplete();

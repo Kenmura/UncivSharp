@@ -14,6 +14,9 @@ public static class JoinRefusedCodes
     public const string GameAlreadyStarted = "game-started";
     public const string Kicked = "kicked";
 
+    /// <summary>T348: the host banned this key from the lobby; the removed player is told the reason, the key is refused again on every later join attempt.</summary>
+    public const string Banned = "banned";
+
     /// <summary>T269: the host is superseded (the client has seen a newer host epoch). One code for every case.</summary>
     public const string StaleEpoch = "stale-epoch";
 

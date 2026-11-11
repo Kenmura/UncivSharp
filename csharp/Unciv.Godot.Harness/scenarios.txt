@@ -54,6 +54,7 @@ tutorial-tasks
 tutorial-dismiss
 host-screen
 lobby
+lobby-admin
 mp-turn
 mp-social
 join

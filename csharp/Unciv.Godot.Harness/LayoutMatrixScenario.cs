@@ -428,10 +428,21 @@ public sealed class LayoutMatrixScenario : Scenario
             _ = lobby.AttachConnectionAsync(hostEnd);
             var clientSession = at.LobbySession = new ClientSession(_ => Task.FromResult<ITransport>(client), new ClientSessionOptions { Identity = run.Identity, DisplayName = "Host", RulesetHash = lobbySettings.ComputeRulesetHash(), ExpectedFingerprint = Fingerprint, MaxReconnectAttempts = 0 });
             at.Joined = clientSession.JoinAsync();
+
+            // T348: a second player seats the host's Kick/Ban buttons (and their reason popup) into the layout check.
+            at.FriendIdentity = ClientIdentity.Generate();
+            var (friendClient, friendHostEnd) = InMemoryTransport.CreatePair();
+            _ = lobby.AttachConnectionAsync(friendHostEnd);
+            at.FriendSession = new ClientSession(_ => Task.FromResult<ITransport>(friendClient), new ClientSessionOptions { Identity = at.FriendIdentity, DisplayName = "Friend", RulesetHash = lobbySettings.ComputeRulesetHash(), ExpectedFingerprint = Fingerprint, MaxReconnectAttempts = 0 });
+            at.FriendJoined = at.FriendSession.JoinAsync();
         }));
-        steps.Add(new WaitUntil("the host joined its lobby", () => at.Joined.NotNull().IsCompleted && at.Joined.NotNull().Result.Joined, 3000));
+        steps.Add(new WaitUntil("the host and friend joined the lobby", () =>
+            at.Joined.NotNull().IsCompleted && at.Joined.NotNull().Result.Joined && at.FriendJoined.NotNull().IsCompleted && at.FriendJoined.NotNull().Result.Joined, 3000));
         steps.Add(new Act("show the lobby", () => M().Push(new LobbyScreen(T(), NewGameForm.FromRulesetCache(), at.LobbySession.NotNull(), run.Identity.PlayerKey, at.Lobby.NotNull()))));
         steps.AddRange(check(at, "lobby", () => M().Top.NotNull(), true));
+        steps.Add(new Act("open the kick reason popup", () => ((LobbyScreen)M().Top.NotNull()).ReasonView.Open("Kick", "Friend", _ => { })));
+        steps.AddRange(check(at, "lobby kick reason", () => ((LobbyScreen)M().Top.NotNull()).ReasonView, false));
+        steps.Add(new Act("close the kick reason popup", () => ((LobbyScreen)M().Top.NotNull()).ReasonView.Visible = false));
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("open join", () => M().Push(new JoinScreen(T(), new JoinScreenEnvironment
         {
@@ -897,6 +908,13 @@ public sealed class LayoutMatrixScenario : Scenario
         public ClientSession? LobbySession { get; set; }
 
         public ServerLobby? Lobby { get; set; }
+
+        /// <summary>T348: a second seated player in the lobby, so the host's Kick/Ban buttons (and the reason popup) are part of the layout check.</summary>
+        public ClientIdentity? FriendIdentity { get; set; }
+
+        public ClientSession? FriendSession { get; set; }
+
+        public Task<JoinResult>? FriendJoined { get; set; }
 
         public WidgetGallery? Gallery { get; set; }
 
