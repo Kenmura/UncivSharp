@@ -103,7 +103,7 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T275 T313 T330 T332 T344 T348 T352 T353 T362 T400 T401 T406 T407 T408 T409 T410
-- in progress: T363
+- in review: T363
 - blocked: T290 T355 T357 T394 T404
 
 ## Remaining tickets over time
@@ -172,6 +172,6 @@ xychart-beta
 | T347 | Available (waiting on T278) | T278 | 0 | Share the invite code from Android with the system share sheet |
 | T355 | Blocked | T338 | 0 | Verify nested TLS and the relay path on Windows, macOS and Android (manual, UNVERIFIED until run) |
 | T357 | Blocked | T337, T338 | 0 | WebSocket gateway so the web export can join and host through the relay (optional) |
-| T363 | In-Progress [DeepSeek-T363c] | none | 0 | QuickStart and harness scenario games still start on Vanilla/Gods & Kings: move them to BNW and regenerate goldens |
+| T363 | Needs-Review [DeepSeek-T363] | none | 0 | QuickStart and harness scenario games still start on Vanilla/Gods & Kings: move them to BNW and regenerate goldens |
 | T394 | Blocked | T356 | 0 | Owner-run independent verification of the civsharp relay (CONNECTIVITY.md rows R2-R4, R7-R9, R13) and record results |
 | T404 | Blocked | T301 | 0 | T301 follow-up: window maximize/resize on Wayland-native, Windows, macOS and with UiScale != 1 in the real app |
