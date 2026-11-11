@@ -192,6 +192,35 @@ internal static class LayoutChecks
         return [$"the content column is {content:0} px wide, less than {minShare:P0} of the {usable:0} px usable width (window {window.Size.X:0} px, cap {contentCapPx:0} px): wasted side space"];
     }
 
+    /// <summary>
+    /// T363: the transient status line under a <see cref="GameScreen"/> is fully readable (inside the window, not clipped) and clear of the bottom-left
+    /// unit panel and the bottom-right next-action dock. The BNW re-record showed it running under the dock; this keeps that from coming back.
+    /// </summary>
+    public static List<string> StatusProblems(GameScreen screen)
+    {
+        var problems = new List<string>();
+        if (screen.FindChild("StatusPanel", true, false) is not Control panel || !panel.IsVisibleInTree())
+            return ["the status line is not shown"];
+        var window = new Rect2(Vector2.Zero, screen.GetViewport().GetVisibleRect().Size);
+        problems.AddRange(Problems(panel, window));
+        foreach ((string what, Control other) in new (string, Control)[] { ("next-action dock", screen.Hud.Dock), ("unit panel", screen.Panel) })
+        {
+            if (!other.IsVisibleInTree() || other.Size.X <= 0f) continue;
+            var overlap = panel.GetGlobalRect().Intersection(other.GetGlobalRect());
+            if (overlap.Size.X > Tolerance && overlap.Size.Y > Tolerance)
+                problems.Add($"the status line {panel.GetGlobalRect()} overlaps the {what} {other.GetGlobalRect()}");
+        }
+        return problems;
+    }
+
+    /// <summary>The script step asserting <see cref="StatusProblems"/> is empty.</summary>
+    public static ScenarioStep StatusClear(string what, GameScreen screen) => new AssertQuery(what, () =>
+    {
+        var problems = StatusProblems(screen);
+        foreach (string problem in problems.Take(12)) GD.PrintErr($"[status] {what}: {problem}");
+        return problems.Count == 0;
+    });
+
     private static T? Find<T>(Node root) where T : Node
     {
         if (root is T found) return found;

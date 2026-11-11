@@ -400,7 +400,7 @@
       },
       {
         "golden": "unit-visuals/formations.png",
-        "caption": "Close view: Infantry (3 figures), Tank (4, hurt, promotion mark) and Cannon (3, automated mark)."
+        "caption": "Close view: Infantry (4 figures), Tank (4, hurt, promotion mark) and Cannon (2, automated mark)."
       },
       {
         "golden": "unit-visuals/warrior.png",
@@ -2136,7 +2136,7 @@
     "shots": [
       {
         "golden": "next-turn-long/overlay.png",
-        "caption": "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Denmark - 5 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)"
+        "caption": "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('America - 1 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)"
       }
     ]
   },

@@ -188,9 +188,9 @@ Scenario `unit-visuals`.
 
 *Gallery of 15 units: civilians, land units by era (1 to 4 figures), ships and a plane; red and blue civs, health bars and status marks.* (`unit-visuals/gallery.png`)
 
-![Close view: Infantry (3 figures), Tank (4, hurt, promotion mark) and Cannon (3, automated mark).](../Unciv.Godot.Harness/golden/unit-visuals/formations.png)
+![Close view: Infantry (4 figures), Tank (4, hurt, promotion mark) and Cannon (2, automated mark).](../Unciv.Godot.Harness/golden/unit-visuals/formations.png)
 
-*Close view: Infantry (3 figures), Tank (4, hurt, promotion mark) and Cannon (3, automated mark).* (`unit-visuals/formations.png`)
+*Close view: Infantry (4 figures), Tank (4, hurt, promotion mark) and Cannon (2, automated mark).* (`unit-visuals/formations.png`)
 
 ![Close view of the Warrior, now a CC0 animated model file in its idle pose with its TeamColor material tinted in the red civ's colour (C080).](../Unciv.Godot.Harness/golden/unit-visuals/warrior.png)
 
@@ -2134,9 +2134,9 @@ The End turn progress overlay on a late-game eight-civ game: it names the civ cu
 
 Scenario `next-turn-long`.
 
-![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Denmark - 5 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
+![A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('America - 1 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)](../Unciv.Godot.Harness/golden/next-turn-long/overlay.png)
 
-*A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Denmark - 5 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)* (`next-turn-long/overlay.png`)
+*A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('America - 1 of 8'), with a progress bar and 'Esc to cancel' (the camera and menu were used during this same resumed turn)* (`next-turn-long/overlay.png`)
 
 ## T346 (ticket not Done or unknown)
 

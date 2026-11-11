@@ -85,8 +85,8 @@ public sealed class SetupScenario : Scenario
             new Capture("defaults", "New game screen, Players tab, with the defaults"),
             .. LayoutChecks.Widths(host, "setup screen", () => Screen(), "1280x720: the Players tab with the nation grid and the detail card using the extra width", "1920x1080: the same screen at full HD"),
             .. GermanSteps(host, manager, () => Screen()),
-
             new Press("Rules"),
+            new AssertQuery("the rules tab starts on the default ruleset, Brave New World", () => Screen().Form.BaseRuleset == BaseRuleset.Civ_V_BNW.FullName()),
             // T363: deliberate Vanilla coverage: the default is Brave New World, so choosing Vanilla proves a non-default ruleset still starts.
             new Click(() => Centre(() => Screen().ChoiceButton("Base ruleset", "Civ V - Vanilla"))),
             new AssertQuery("the base ruleset is Vanilla", () => Screen().Form.BaseRuleset == "Civ V - Vanilla"),

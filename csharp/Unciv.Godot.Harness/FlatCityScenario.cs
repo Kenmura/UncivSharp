@@ -90,6 +90,7 @@ public sealed class FlatCityScenario : Scenario
             new AssertQuery("the city's territory has a border in the civ's colour: at least the outline of the work radius", () => screen.Overlays.BorderEdgeCount >= 18),
             new AssertQuery("no road yet", () => screen.Overlays.RoadLinkCount == 0),
             new Act("dismiss the banner", screen.Hud.HideBanner),
+            // T363: this capture has no status line (founding runs straight on the state); the road and improvement captures after a Next turn do.
             new Capture("city", "The founded city: block, banner (name, size) and the territory border"),
             new Press("Next turn"),
             new WaitFrames(1),
@@ -103,6 +104,7 @@ public sealed class FlatCityScenario : Scenario
             new Act("dismiss the new-turn banner", screen.Hud.HideBanner),
             new AssertQuery("the finished road is drawn as a link from the city to the worker's tile", () =>
                 refusals.Count == 0 && game.TileMap[roadTile].RoadStatus != RoadStatus.None && screen.Overlays.RoadLinkCount == 1),
+            LayoutChecks.StatusClear("the road status line is fully readable and clear of the bottom controls", screen),
             new Capture("road", "The road next to the city, drawn as a strip from the city to the next tile"),
             new Act("order the worker to build a trading post", () =>
             {
@@ -113,6 +115,7 @@ public sealed class FlatCityScenario : Scenario
             new Act("dismiss the new-turn banner", screen.Hud.HideBanner),
             new AssertQuery("the finished improvement is marked on its tile", () =>
                 refusals.Count == 0 && game.TileMap[roadTile].Improvement == "Trading post" && screen.Overlays.ImprovementCount == 1 && screen.Overlays.PillagedImprovementCount == 0),
+            LayoutChecks.StatusClear("the improvement status line is fully readable and clear of the bottom controls", screen),
             new Capture("improvement", "The trading post marker on the road tile"),
 
             new Click(() => screen.Map.ScreenPositionOf(cityTile)),

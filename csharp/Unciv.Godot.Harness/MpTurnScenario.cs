@@ -75,6 +75,7 @@ public sealed class MpTurnScenario : Scenario
             new WaitFrames(2),
             new AssertQuery("the bar marks Bob offline in red and the headline says so", () =>
                 !Row("Greece").Connected && screen.TurnBar.HeadlineText == "Waiting for Bob (offline)"),
+            LayoutChecks.StatusClear("the end-turn status line is fully readable and clear of the bottom controls", screen),
             new Capture("ended-offline", "Alice (you) has ended her turn and the button reads Undo end turn; the bar says 'Waiting for Bob (offline)' with Bob's dot red"),
             new Press("Undo end turn"),
             new WaitUntil("the host takes Alice's end back", () => !Row("Babylon").Ended, 300),

@@ -80,7 +80,8 @@ public sealed class NextTurnLongScenario : Scenario
             }),
             new AssertQuery("the resumed turn shows no stale cancelled status under the card", () =>
                 screen.TurnOverlay.Visible && !screen.StatusText.Contains("cancelled", StringComparison.OrdinalIgnoreCase)),
-            new Capture("overlay", "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('Denmark - 5 of 8'), with a progress bar and 'Esc to cancel'"),
+            new AssertQuery("the first civ of the turn is America, one of eight", () => screen.TurnOverlay.DetailText == "America - 1 of 8"),
+            new Capture("overlay", "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('America - 1 of 8'), with a progress bar and 'Esc to cancel'"),
             new Act("zoom the map with the wheel while the overlay is up", () =>
             {
                 zoomBefore = screen.Map.Zoom;

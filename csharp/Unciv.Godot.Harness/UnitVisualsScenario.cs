@@ -233,7 +233,7 @@ public sealed class UnitVisualsScenario : Scenario
             .. RigidSteps(view, nodes, Node, Coord),
             CloseView("close view of the formations", view, Coord(8), new Vector3(-1.5f, 0f, 0f), 5f),
             new WaitFrames(2),
-            new Capture("formations", "Close view: Infantry (3 figures), Tank (4, hurt, promotion mark) and Cannon (3, automated mark)"),
+            new Capture("formations", "Close view: Infantry (4 figures), Tank (4, hurt, promotion mark) and Cannon (2, automated mark)"),
             CloseView("close view of the Warrior model", view, Coord(1), Vector3.Zero, 3f),
             new WaitFrames(2),
             new Capture("warrior", "Close view of the Warrior, now a CC0 animated model file in its idle pose with its TeamColor material tinted in the red civ's colour (C080)"),

@@ -1069,7 +1069,6 @@ public partial class GameScreen : Control
             Espionage.Position = new Vector2(0f, Hud.TopBarHeight);
             Espionage.Size = new Vector2(Size.X, Size.Y - Hud.TopBarHeight);
         }
-        if (statusPanel.Visible) LayoutStatus();
         LayoutSocial();
         Alerts.LayoutIn(Size);
         Proposals.LayoutIn(Size);
@@ -1088,6 +1087,7 @@ public partial class GameScreen : Control
         TurnBar.LayoutIn(Size.X, TurnBarTop());
         TurnOverlay.LayoutIn(Size, OverlayTop()); // T345: a card under the navigation strip (below the multiplayer turn bar when shown), out of the way of the map and the menus
         Panel.LayoutIn(Size);
+        if (statusPanel.Visible) LayoutStatus(); // after the unit panel and the HUD's bottom dock, whose rectangles it must avoid
         CombatPreview.LayoutIn(Size);
     }
 
@@ -2829,8 +2829,44 @@ public partial class GameScreen : Control
 
     private void LayoutStatus()
     {
+        // T363: the line is centred in the free gap the bottom-left unit panel and the bottom-right next-action dock leave, and wraps when a
+        // longer message would run under either of them instead of being cut off by the dock (the BNW turns made that line long enough to hit it).
+        float LocalX(float globalX) => globalX - GetGlobalRect().Position.X;
+        float LocalY(float globalY) => globalY - GetGlobalRect().Position.Y;
         statusPanel.Size = Vector2.Zero;
-        var size = statusPanel.GetCombinedMinimumSize();
-        statusPanel.Position = new Vector2(Math.Max(HudMargin, (Size.X - size.X) / 2f), Size.Y - HudMargin - size.Y);
+        statusLabel.AutowrapMode = TextServer.AutowrapMode.Off;
+        statusLabel.CustomMinimumSize = Vector2.Zero;
+        var oneLine = statusPanel.GetCombinedMinimumSize();
+        var labelOneLine = statusLabel.GetCombinedMinimumSize();
+        var padding = new Vector2(Math.Max(0f, oneLine.X - labelOneLine.X), Math.Max(0f, oneLine.Y - labelOneLine.Y));
+        float left = HudMargin, right = Size.X - HudMargin, bottom = Size.Y - HudMargin;
+        var unitPanel = Panel.Visible && Panel.Size.X > 0f ? Panel.GetGlobalRect() : default;
+        if (unitPanel.Size.X > 0f) left = Math.Max(left, LocalX(unitPanel.End.X) + HudMargin);
+        var dock = Hud.Dock;
+        var dockRect = dock.IsVisibleInTree() && dock.Size.X > 0f ? dock.GetGlobalRect() : default;
+        if (dockRect.Size.X > 0f) right = Math.Min(right, LocalX(dockRect.Position.X) - HudMargin);
+        float minWidth = ui?.Px(120) ?? 120f;
+        if (right - left < minWidth)
+        {
+            // Too narrow between them: put the line above the bottom controls rather than through one of them.
+            left = HudMargin;
+            right = Size.X - HudMargin;
+            if (unitPanel.Size.Y > 0f) bottom = Math.Min(bottom, LocalY(unitPanel.Position.Y) - HudMargin);
+            if (dockRect.Size.Y > 0f) bottom = Math.Min(bottom, LocalY(dockRect.Position.Y) - HudMargin);
+        }
+        float available = Math.Max(minWidth, right - left);
+        float width = Math.Min(oneLine.X, available), height = oneLine.Y;
+        if (oneLine.X > available + 0.5f)
+        {
+            statusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            statusLabel.CustomMinimumSize = new Vector2(available - padding.X, 0f);
+            statusPanel.Size = new Vector2(available, 0f);
+            float textHeight = Math.Max(1, statusLabel.GetLineCount()) * (float)Math.Max(1, statusLabel.GetLineHeight());
+            statusLabel.Size = new Vector2(available - padding.X, textHeight);
+            height = textHeight + padding.Y;
+        }
+        statusPanel.Size = new Vector2(width, height);
+        float x = left + Math.Max(0f, (right - left - width) / 2f);
+        statusPanel.Position = new Vector2(x, bottom - height);
     }
 }

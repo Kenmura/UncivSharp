@@ -86,6 +86,7 @@ public sealed class NextTurnScenario : Scenario
             new AssertQuery("the overlay is gone and the game moved on", () => !screen.TurnOverlay.Visible && !localHost.IsProcessingTurn && game.Turns == startTurn + 1 && screen.Turn == game.Turns),
             new AssertQuery("the status line reports the civs played", () => screen.StatusText.Contains("civ(s) played", StringComparison.Ordinal)),
             new WaitFrames(2),
+            LayoutChecks.StatusClear("the status line is fully readable and clear of the bottom controls", screen),
             new Capture("after", "Back in control on the next turn"),
         ];
     }
