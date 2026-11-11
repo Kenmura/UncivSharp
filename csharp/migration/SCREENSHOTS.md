@@ -87,6 +87,7 @@
 - [C101 Phone layouts of the full screens (split by screen group when claimed): HUD and menus, city, tech and policy, tables, pedia](#c101-phone-layouts-of-the-full-screens-split-by-screen-group-when-claimed-hud-and-menus-city-tech-and-policy-tables-pedia)
 - [T252 (ticket not Done or unknown)](#t252-ticket-not-done-or-unknown)
 - [T256 (ticket not Done or unknown)](#t256-ticket-not-done-or-unknown)
+- [T275 (ticket not Done or unknown)](#t275-ticket-not-done-or-unknown)
 - [T283 (ticket not Done or unknown)](#t283-ticket-not-done-or-unknown)
 - [T284 (ticket not Done or unknown)](#t284-ticket-not-done-or-unknown)
 - [T285 (ticket not Done or unknown)](#t285-ticket-not-done-or-unknown)
@@ -1786,6 +1787,40 @@ Scenario `unit-visuals`.
 ![Aircraft, missiles and the helicopter: aircraft hover on a pole above their shadow, the helicopter stands on its skids.](../Unciv.Godot.Harness/golden/unit-visuals/air.png)
 
 *Aircraft, missiles and the helicopter: aircraft hover on a pole above their shadow, the helicopter stands on its skids.* (`unit-visuals/air.png`)
+
+## T275 (ticket not Done or unknown)
+
+The client UI of host migration: the host picks a backup host in the lobby and sees where the backup host stands; the chosen player is shown the trust notice and asked to consent; a third player sees the name-free trust notice before they send anything; and a player whose last actions were lost in a host change sees the rollback toast. The superseded-host screen (another host took over) is the split-brain scenario's old-host-fenced capture.
+
+Scenario `host-migration`.
+
+![The host's lobby before any backup host: the backup-host picker below the seats offers None and the friend's seat. The host's own seat is the host, not a candidate.](../Unciv.Godot.Harness/golden/host-migration/lobby-picker.png)
+
+*The host's lobby before any backup host: the backup-host picker below the seats offers None and the friend's seat. The host's own seat is the host, not a candidate.* (`host-migration/lobby-picker.png`)
+
+![The host's lobby after choosing the friend: the picker shows the friend chosen, the trust notice names them, and the standby status says they have been asked and not answered yet.](../Unciv.Godot.Harness/golden/host-migration/lobby-standby.png)
+
+*The host's lobby after choosing the friend: the picker shows the friend chosen, the trust notice names them, and the standby status says they have been asked and not answered yet.* (`host-migration/lobby-standby.png`)
+
+![The friend's lobby: the trust notice names them as the backup host and says they are trusted like the host, and the consent prompt asks them to accept or decline before anything is copied.](../Unciv.Godot.Harness/golden/host-migration/lobby-trust.png)
+
+*The friend's lobby: the trust notice names them as the backup host and says they are trusted like the host, and the consent prompt asks them to accept or decline before anything is copied.* (`host-migration/lobby-trust.png`)
+
+![The host's lobby once the friend accepted: the standby status says the backup host is ready and holds an up-to-date copy.](../Unciv.Godot.Harness/golden/host-migration/host-standby.png)
+
+*The host's lobby once the friend accepted: the standby status says the backup host is ready and holds an up-to-date copy.* (`host-migration/host-standby.png`)
+
+![The join screen: before anything is sent, the player is told the game has a backup host who holds a complete copy and is trusted like the host. Continue joins; Do not join sends nothing.](../Unciv.Godot.Harness/golden/host-migration/join-notice.png)
+
+*The join screen: before anything is sent, the player is told the game has a backup host who holds a complete copy and is trusted like the host. Continue joins; Do not join sends nothing.* (`host-migration/join-notice.png`)
+
+![The game screen with the rollback toast: the host changed and did not have the player's last three actions, so they were rolled back; the toast says the rest is unchanged.](../Unciv.Godot.Harness/golden/host-migration/rollback.png)
+
+*The game screen with the rollback toast: the host changed and did not have the player's last three actions, so they were rolled back; the toast says the rest is unchanged.* (`host-migration/rollback.png`)
+
+![The superseded-host screen: the old host fenced by the newer epoch says another host took over and to leave and join that game with the same key (recorded by the split-brain scenario).](../Unciv.Godot.Harness/golden/split-brain/old-host-fenced.png)
+
+*The superseded-host screen: the old host fenced by the newer epoch says another host took over and to leave and join that game with the same key (recorded by the split-brain scenario).* (`split-brain/old-host-fenced.png`)
 
 ## T283 (ticket not Done or unknown)
 

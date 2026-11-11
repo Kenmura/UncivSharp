@@ -2166,5 +2166,39 @@
   },
   "T344": {
     "none": "The new tooltips are hover-only native TooltipText (the top bar's per-turn yield source breakdown and the combat card's strength formula), which the headless harness cannot render as a visible tip (its tooltip delay is forced unreachable); the tooltips scenario and the unit-orders scenario assert them through the TooltipText accessors, and no default capture changed."
+  },
+  "T275": {
+    "scenario": "host-migration",
+    "about": "The client UI of host migration: the host picks a backup host in the lobby and sees where the backup host stands; the chosen player is shown the trust notice and asked to consent; a third player sees the name-free trust notice before they send anything; and a player whose last actions were lost in a host change sees the rollback toast. The superseded-host screen (another host took over) is the split-brain scenario's old-host-fenced capture.",
+    "shots": [
+      {
+        "golden": "host-migration/lobby-picker.png",
+        "caption": "The host's lobby before any backup host: the backup-host picker below the seats offers None and the friend's seat. The host's own seat is the host, not a candidate."
+      },
+      {
+        "golden": "host-migration/lobby-standby.png",
+        "caption": "The host's lobby after choosing the friend: the picker shows the friend chosen, the trust notice names them, and the standby status says they have been asked and not answered yet."
+      },
+      {
+        "golden": "host-migration/lobby-trust.png",
+        "caption": "The friend's lobby: the trust notice names them as the backup host and says they are trusted like the host, and the consent prompt asks them to accept or decline before anything is copied."
+      },
+      {
+        "golden": "host-migration/host-standby.png",
+        "caption": "The host's lobby once the friend accepted: the standby status says the backup host is ready and holds an up-to-date copy."
+      },
+      {
+        "golden": "host-migration/join-notice.png",
+        "caption": "The join screen: before anything is sent, the player is told the game has a backup host who holds a complete copy and is trusted like the host. Continue joins; Do not join sends nothing."
+      },
+      {
+        "golden": "host-migration/rollback.png",
+        "caption": "The game screen with the rollback toast: the host changed and did not have the player's last three actions, so they were rolled back; the toast says the rest is unchanged."
+      },
+      {
+        "golden": "split-brain/old-host-fenced.png",
+        "caption": "The superseded-host screen: the old host fenced by the newer epoch says another host took over and to leave and join that game with the same key (recorded by the split-brain scenario)."
+      }
+    ]
   }
 }

@@ -282,6 +282,30 @@ public sealed class LobbyStandbyTests : IDisposable
         Assert.Equal(StandbyStates.None, lobby.Standby.State);
         Assert.Equal(1, lobby.Settings.BackupHost);
     }
+
+    [Fact]
+    public async Task SetBackupHostAsync_IsTheHostsPicker_AndRefusesTheHostsOwnSeatAndEmptySeats()
+    {
+        await using var lobby = NewLobby(null, new FakeProber { Answer = (_, _) => Fp });
+        using var host = ClientIdentity.Generate();
+        using var bob = ClientIdentity.Generate();
+        var (hostWire, _) = await JoinAsync(lobby, host, "Host"); // slot 0
+        await using var _host = hostWire;
+        var (bobWire, _) = await JoinAsync(lobby, bob, "Bob"); // slot 1
+        await using var _ = bobWire;
+
+        Assert.Equal("own-seat", await lobby.SetBackupHostAsync(0));
+        Assert.Equal("not-a-human-seat", await lobby.SetBackupHostAsync(2));
+        Assert.Equal("not-a-human-seat", await lobby.SetBackupHostAsync(-1));
+        Assert.Null(await lobby.SetBackupHostAsync(1));
+        Assert.Equal(1, lobby.Settings.BackupHost);
+        await bobWire.WaitAsync<StandbyOffer>();
+        Assert.Equal(StandbyNotice.For("Bob"), (await bobWire.WaitAsync<LobbyState>(it => it.BackupHost == 1)).BackupHostNotice);
+
+        Assert.Null(await lobby.SetBackupHostAsync(null));
+        Assert.Null(lobby.Settings.BackupHost);
+        await bobWire.WaitAsync<StandbyRevoke>();
+    }
 }
 
 /// <summary>T281 in a running game over TCP+TLS: the host designates a seat, the candidate consents, game.json remembers, and nobody else gets standby frames.</summary>

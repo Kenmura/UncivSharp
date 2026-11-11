@@ -79,3 +79,4 @@ two-instances
 relay-session
 reconnect
 split-brain
+host-migration

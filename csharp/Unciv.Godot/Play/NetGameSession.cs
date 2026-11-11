@@ -99,6 +99,12 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
 
     public event Action? ConnectionChanged;
 
+    /// <summary>T275: raised once when the host changed and this client was rolled back; the toast text is <see cref="HostMigrationModel.RolledBackNotice"/>.</summary>
+    public event Action<HostMigrationNotice>? HostRolledBack;
+
+    /// <summary>T275: raised once when this client followed the game to a new host (graceful hand-off or a crash election that is not the two-human split).</summary>
+    public event Action<HostMigrationNotice>? HostChangedNotice;
+
     /// <summary>T346: the attempt number the session's reconnect loop is on (0 while connected), and the cap it gives up after.</summary>
     public int ReconnectAttempt => session.ReconnectAttempt;
 
@@ -205,12 +211,22 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
                         Raise(() => PingReceived?.Invoke(pinged.Ping));
                         break;
                     case HostChanged changed: // T340: an election in a two-human game can leave the other player hosting their own copy
-                        if (!HostMigrationModel.MayHaveSplit(changed.Election, changed.Humans)) break;
-                        Raise(() =>
+                        if (HostMigrationModel.MayHaveSplit(changed.Election, changed.Humans))
                         {
-                            MigrationWarning = HostMigrationModel.MayHaveSplitNotice();
-                            ConnectionChanged?.Invoke();
-                        });
+                            Raise(() =>
+                            {
+                                MigrationWarning = HostMigrationModel.MayHaveSplitNotice();
+                                ConnectionChanged?.Invoke();
+                            });
+                        }
+                        else
+                        {
+                            // T275: a graceful hand-off or a crash election with a real quorum: a plain notice, once.
+                            Raise(() => HostChangedNotice?.Invoke(HostMigrationModel.HostChangedNotice(changed.Election)));
+                        }
+                        break;
+                    case Unciv.Client.Net.Session.HostRolledBack rolledBack: // T275: the new host lacked the last commands this client applied
+                        Raise(() => HostRolledBack?.Invoke(HostMigrationModel.RolledBackNotice(rolledBack.LostCommands)));
                         break;
                     case StateChanged moved:
                         Raise(() =>

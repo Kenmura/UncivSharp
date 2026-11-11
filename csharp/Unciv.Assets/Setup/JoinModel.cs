@@ -57,6 +57,7 @@ public static class JoinModel
     private const string InternalError = "internal-error"; // T346
     private const string SnapshotRejected = "snapshot-rejected"; // T346
     private const string StaleEpoch = "stale-epoch"; // T340
+    private const string NoticeDeclined = "notice-declined"; // T275
 
     /// <param name="text">What the player typed or pasted.</param>
     /// <param name="relay">T338: the relay of the settings, if any. A typed room code (<c>K7QF-3MXP4A</c>) is joined through it, trusting the host's key on first use; without one the player is told to set a relay first.</param>
@@ -133,6 +134,7 @@ public static class JoinModel
         "snapshot-rejected" => "The host could not send a usable picture of the game. Rejoin to get a fresh one; if it happens again, ask the host to restart the game.",
         "internal-error" => "Something went wrong in this game's connection. Rejoin to start it fresh.",
         HostUntrusted => "You did not trust this host, so nothing was sent to it.",
+        NoticeDeclined => "You chose not to join a game with a backup host, so nothing was sent to it.",
         HostKeyMismatch => "The host's key does not match the invite. Someone may be pretending to be the host. Ask the host for a fresh invite over a channel you trust.",
         HostKeyChanged => KeyChangedText("this host"),
         ProtocolMismatch => "Your game version and the host's cannot talk to each other. Both of you need the same version.",

@@ -628,7 +628,7 @@
     "Unciv.Core/Net/Identity/LobbyAdmission.cs": {"branch": 95.45, "line": 100.0},
     "Unciv.Core/Net/Identity/SecureRandom.cs": {"branch": 87.5, "line": 95.0},
     "Unciv.Core/Net/InMemoryTransport.cs": {"branch": 90.0, "line": 96.67},
-    "Unciv.Core/Net/Lobby/LobbyHost.cs": {"branch": 87.98, "line": 94.99},
+    "Unciv.Core/Net/Lobby/LobbyHost.cs": {"branch": 88.27, "line": 95.4},
     "Unciv.Core/Net/Lobby/LobbySettings.cs": {"branch": 50.0, "line": 100.0},
     "Unciv.Core/Net/Lobby/Slot.cs": {"branch": 100.0, "line": 100.0},
     "Unciv.Core/Net/Messages.cs": {"branch": 100.0, "line": 100.0},

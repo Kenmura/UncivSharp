@@ -76,11 +76,14 @@ public partial class JoinScreen : Control
     private readonly Label modLabel = new() { Name = "ModSyncText", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly VBoxContainer stopPanel = new() { Name = "KeyChangedPanel", Visible = false };
     private readonly Label stopLabel = new() { Name = "KeyChangedText", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly VBoxContainer backupNoticePanel = new() { Name = "BackupHostNoticePanel", Visible = false };
+    private readonly Label backupNoticeLabel = new() { Name = "BackupHostNoticeText", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private CancellationTokenSource? attempt;
     private ClientSession? connecting;
     private TaskCompletionSource<bool>? trustAnswer;
     private TaskCompletionSource<bool>? modAnswer;
     private TaskCompletionSource<bool>? relayAnswer;
+    private TaskCompletionSource<bool>? backupNoticeAnswer;
     private string? changedAddress;
     private bool busy;
 
@@ -177,6 +180,17 @@ public partial class JoinScreen : Control
         stopButtons.AddChild(ForgetButton);
         stopPanel.AddChild(stopButtons);
 
+        column.AddChild(backupNoticePanel);
+        backupNoticePanel.AddChild(backupNoticeLabel);
+        var noticeButtons = new HBoxContainer();
+        BackupNoticeContinueButton = new Button { Text = "Continue".Tr(), Name = "BackupNoticeContinueButton" };
+        BackupNoticeContinueButton.Pressed += () => AnswerBackupNotice(true);
+        BackupNoticeDeclineButton = new Button { Text = "Do not join".Tr(), Name = "BackupNoticeDeclineButton" };
+        BackupNoticeDeclineButton.Pressed += () => AnswerBackupNotice(false);
+        noticeButtons.AddChild(BackupNoticeDeclineButton);
+        noticeButtons.AddChild(BackupNoticeContinueButton);
+        backupNoticePanel.AddChild(noticeButtons);
+
         column.AddChild(messageLabel);
         FillHosts();
     }
@@ -213,6 +227,14 @@ public partial class JoinScreen : Control
     public Button ForgetButton { get; }
 
     public Button StopBackButton { get; }
+
+    /// <summary>T275: the answers of the backup-host trust notice shown before the join.</summary>
+    public Button BackupNoticeContinueButton { get; }
+
+    public Button BackupNoticeDeclineButton { get; }
+
+    /// <summary>The backup-host trust notice's text while it is open, else empty.</summary>
+    public string BackupNoticePrompt => backupNoticePanel.Visible ? backupNoticeLabel.Text : "";
 
     /// <summary>What the screen tells the player (a problem, progress, a refusal), or empty.</summary>
     public string Message => messageLabel.Text;
@@ -345,6 +367,8 @@ public partial class JoinScreen : Control
                 KnownHosts = env.KnownHosts,
                 PersistKnownHosts = env.PersistKnownHosts,
                 TrustPrompt = (address, fingerprint) => AskTrustAsync(address, fingerprint, cancellation),
+                // T275: the host intends a backup host; the player is told before anything is sent and may decline.
+                BackupHostNoticePrompt = notice => AskBackupNoticeAsync(notice, cancellation),
                 // T273: a host that quits cleanly hands the game to its backup host; the session follows the announced endpoint (its fingerprint is checked by the session itself).
                 ConnectEndpoint = (endpoint, token) => JoinModel.Parse(endpoint).Target is { } successor ? env.Connect(successor, token) : throw new InvalidOperationException("The announced endpoint is not usable"),
                 ModChecksums = round == 0 ? sync?.LocalChecksums() : null,
@@ -500,6 +524,33 @@ public partial class JoinScreen : Control
         answer?.TrySetResult(trusted);
     }
 
+    // T275: the session asks after the host's Welcome (before Join is sent), so a game with a backup host is joined only with the player's eyes open.
+    private Task<bool> AskBackupNoticeAsync(string notice, CancellationToken cancellation)
+    {
+        var answer = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        cancellation.Register(() => answer.TrySetResult(false));
+        void Show()
+        {
+            if (cancellation.IsCancellationRequested) return;
+            backupNoticeAnswer = answer;
+            backupNoticeLabel.Text = notice;
+            ShowPanel(backupNoticePanel);
+            messageLabel.Text = "";
+        }
+        if (context == null) Callable.From(Show).CallDeferred();
+        else context.Post(static state => ((Action)state!)(), (Action)Show);
+        return answer.Task;
+    }
+
+    private void AnswerBackupNotice(bool proceed)
+    {
+        var answer = backupNoticeAnswer;
+        backupNoticeAnswer = null;
+        ShowPanel(formPanel);
+        if (proceed) messageLabel.Text = "Connecting...".Tr();
+        answer?.TrySetResult(proceed);
+    }
+
     private void ForgetChanged()
     {
         if (changedAddress != null)
@@ -540,6 +591,11 @@ public partial class JoinScreen : Control
             modAnswer = null;
             modsAnswer.TrySetResult(false);
         }
+        if (backupNoticeAnswer is { } noticeAnswer)
+        {
+            backupNoticeAnswer = null;
+            noticeAnswer.TrySetResult(false);
+        }
         ShowPanel(formPanel);
         SetBusy(false, "Cancelled.".Tr());
         if (pending != null) _ = pending.DisposeAsync().AsTask();
@@ -562,6 +618,7 @@ public partial class JoinScreen : Control
         relayPanel.Visible = panel == relayPanel;
         modPanel.Visible = panel == modPanel;
         stopPanel.Visible = panel == stopPanel;
+        backupNoticePanel.Visible = panel == backupNoticePanel;
         // T318: the footer actions belong to the form; a prompt or the hard stop replaces them (the prompt's own answers stay on screen)
         JoinButton.Visible = panel == formPanel;
         CancelButton.Visible = busy && panel == formPanel;

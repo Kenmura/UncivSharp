@@ -42,6 +42,12 @@ public sealed class ClientSessionOptions
     /// <summary>The TOFU prompt: (host address, fingerprint) to "trust this host?". Without it an unknown host is refused.</summary>
     public Func<string, string, Task<bool>>? TrustPrompt { get; init; }
 
+    /// <summary>
+    /// T275: shown, and awaited, when a host's <c>Welcome</c> carries the backup-host trust notice (a backup host is designated), before this client sends <c>Join</c>. The notice is the name-free
+    /// <see cref="Unciv.Net.Standby.StandbyNotice.Generic"/>. True continues the join; false ends it with <see cref="ClientCodes.NoticeDeclined"/> and sends nothing. Absent: the notice is not shown and the join proceeds.
+    /// </summary>
+    public Func<string, Task<bool>>? BackupHostNoticePrompt { get; init; }
+
     /// <summary>Accept a host with neither an invite fingerprint nor known hosts (the in-process loopback host, tests). Off by default.</summary>
     public bool AllowUnpinnedHost { get; init; }
 
@@ -424,6 +430,9 @@ public sealed class ClientSession : IAsyncDisposable
 
     /// <summary>The latest backup-host announcement from the host this session is connected to (null until one arrives).</summary>
     public HostSuccessor? Successor { get; private set; }
+
+    /// <summary>T275: the name-free backup-host trust notice the host's <c>Welcome</c> carried (a backup host is designated), so the UI can show it before the join. Null while none.</summary>
+    public string? BackupHostNotice { get; private set; }
 
     /// <summary>Consents to the backup-host role offered by <see cref="StandbyOffered"/>: <paramref name="endpoints"/> are the addresses this player can be reached on, <paramref name="port"/> and <paramref name="fingerprint"/> those of its own listener. The host probes one endpoint before the standby counts as ready. T354: <paramref name="relay"/> is this player's unlisted room on a relay (<see cref="Unciv.Server.Transport.StandbyListener.Relay"/>), for a player with no reachable address: <paramref name="endpoints"/> may then be empty.</summary>
     public ValueTask AcceptStandbyAsync(IReadOnlyList<string> endpoints, int port, string fingerprint, RelayRoute? relay = null)
@@ -1470,6 +1479,22 @@ public sealed class ClientSession : IAsyncDisposable
         connectedHostFingerprint = welcome.HostKeyFingerprint;
         connectionEpoch = epoch;
         pendingEpoch = epoch; // remembered only once the host accepted our seat (JoinOk), so a refused join or a wrong game cannot move the stored epoch
+
+        // T275: the backup-host trust notice is shown, and waited on, before Join is sent, so the player can decline before their key reaches a game with a backup host.
+        BackupHostNotice = welcome.BackupHostNotice;
+        if (welcome.BackupHostNotice is { Length: > 0 } notice && options.BackupHostNoticePrompt != null)
+        {
+            handshakeTimer?.CancelAfter(Timeout.InfiniteTimeSpan); // the player may take as long as they like
+            bool proceed;
+            try { proceed = await options.BackupHostNoticePrompt(notice).ConfigureAwait(false); }
+            catch (Exception e) when (e is not OperationCanceledException) { proceed = false; }
+            handshakeTimer?.CancelAfter(options.HandshakeTimeout);
+            if (!proceed)
+            {
+                await EndAsync(ClientCodes.NoticeDeclined, refused: true).ConfigureAwait(false);
+                return false;
+            }
+        }
 
         await SendAsync(new Join
         {

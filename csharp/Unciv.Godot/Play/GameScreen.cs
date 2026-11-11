@@ -9,6 +9,7 @@ using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Map;
 using Unciv.GodotClient.Settings;
+using Unciv.GodotClient.Setup;
 using Unciv.GodotClient.Ui;
 using Unciv.Logic;
 using Unciv.Logic.Civilization;
@@ -1104,10 +1105,19 @@ public partial class GameScreen : Control
         {
             session.SnapshotChanged -= OnSnapshotChanged;
             session.EventsReceived -= OnEventsReceived;
+            if (session is NetGameSession oldNet)
+            {
+                oldNet.HostRolledBack -= OnHostRolledBack;
+                oldNet.HostChangedNotice -= OnHostChangedNotice;
+            }
             if (session is ITurnRoster roster) roster.RosterChanged -= RefreshTurnBar;
             BindSocial(null);
         }
     }
+
+    private void OnHostRolledBack(HostMigrationNotice notice) => Notifications.PushToast(notice.Title + ": " + notice.Detail);
+
+    private void OnHostChangedNotice(HostMigrationNotice notice) => Notifications.PushToast(notice.Title + ": " + notice.Detail);
 
     /// <summary>Connects the screen to a game and draws it, centred on the human's first unit. Call after the screen entered the tree; calling it again switches to another game (C016: load).</summary>
     public void Start(IGameSession gameSession, AssetRegistry registry)
@@ -1116,6 +1126,11 @@ public partial class GameScreen : Control
         {
             session.SnapshotChanged -= OnSnapshotChanged;
             session.EventsReceived -= OnEventsReceived;
+            if (session is NetGameSession oldNet)
+            {
+                oldNet.HostRolledBack -= OnHostRolledBack;
+                oldNet.HostChangedNotice -= OnHostChangedNotice;
+            }
             if (session is ITurnRoster previous) previous.RosterChanged -= RefreshTurnBar;
             BindSocial(null);
             Presenter.Reset();
@@ -1304,6 +1319,12 @@ public partial class GameScreen : Control
         session.EventsReceived += OnEventsReceived;
         Presenter.Bind(id => unitNodes.GetValueOrDefault(id), coord => UnitPosition(coord, 0));
         session.SnapshotChanged += OnSnapshotChanged; // commands made elsewhere (another screen, a scenario) change what the HUD shows
+        // T275: a host change that rolled this client back, or moved it to a new host, is a toast (the two-human split has its own dismissible overlay, wired by the owner).
+        if (session is NetGameSession netSession)
+        {
+            netSession.HostRolledBack += OnHostRolledBack;
+            netSession.HostChangedNotice += OnHostChangedNotice;
+        }
         if (session is ITurnRoster roster) roster.RosterChanged += RefreshTurnBar;
         BindSocial(session as IGameSocial);
         Refresh();

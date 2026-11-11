@@ -1387,4 +1387,89 @@ public sealed class ClientNetSessionTests
         while (rig.Session.Events.TryRead(out var next)) all.Add(next);
         return all;
     }
+
+    // T275: the backup-host trust notice is shown, and awaited, before Join is sent.
+
+    [Fact]
+    public async Task BackupHostNotice_IsShownBeforeJoin_AndContinuesOnYes()
+    {
+        string? shown = null;
+        await using var rig = new ClientNetRig(id => new ClientSessionOptions
+        {
+            Identity = id,
+            DisplayName = "Alice",
+            RulesetHash = "hash",
+            ExpectedFingerprint = ClientNetRig.Fingerprint,
+            ReconnectDelay = (_, _) => Task.CompletedTask,
+            BackupHostNoticePrompt = notice => { shown = notice; return Task.FromResult(true); },
+        });
+        var host = rig.NewConnection();
+        var join = rig.Session.JoinAsync();
+        await host.ReceiveAsync<Hello>();
+        await host.SendAsync(new Welcome { Protocol = ProtocolVersion.Current, SessionId = "s1", Challenge = "c1", HostKeyFingerprint = ClientNetRig.Fingerprint, RequiresPassword = false, BackupHostNotice = Unciv.Net.Standby.StandbyNotice.Generic });
+        await host.ReceiveAsync<Join>();
+        await host.ReceiveAsync<Auth>();
+        await host.SendAsync(new JoinOk());
+        Assert.True((await join).Joined);
+        Assert.Equal(Unciv.Net.Standby.StandbyNotice.Generic, shown);
+        Assert.Equal(Unciv.Net.Standby.StandbyNotice.Generic, rig.Session.BackupHostNotice);
+    }
+
+    [Fact]
+    public async Task BackupHostNotice_Declined_EndsTheJoinWithoutSendingAnything()
+    {
+        await using var rig = new ClientNetRig(id => new ClientSessionOptions
+        {
+            Identity = id,
+            DisplayName = "Alice",
+            RulesetHash = "hash",
+            ExpectedFingerprint = ClientNetRig.Fingerprint,
+            ReconnectDelay = (_, _) => Task.CompletedTask,
+            BackupHostNoticePrompt = _ => Task.FromResult(false),
+        });
+        var host = rig.NewConnection();
+        var join = rig.Session.JoinAsync();
+        await host.ReceiveAsync<Hello>();
+        await host.SendAsync(new Welcome { Protocol = ProtocolVersion.Current, SessionId = "s1", Challenge = "c1", HostKeyFingerprint = ClientNetRig.Fingerprint, RequiresPassword = false, BackupHostNotice = Unciv.Net.Standby.StandbyNotice.Generic });
+        var result = await join;
+        Assert.False(result.Joined);
+        Assert.Equal(ClientCodes.NoticeDeclined, result.Code);
+        Assert.Equal(ClientCodes.NoticeDeclined, (await rig.NextAsync<JoinRefusedEvent>()).Code);
+    }
+
+    [Fact]
+    public async Task BackupHostNotice_APromptThatThrowsIsTreatedAsNo()
+    {
+        await using var rig = new ClientNetRig(id => new ClientSessionOptions
+        {
+            Identity = id,
+            DisplayName = "Alice",
+            RulesetHash = "hash",
+            ExpectedFingerprint = ClientNetRig.Fingerprint,
+            ReconnectDelay = (_, _) => Task.CompletedTask,
+            BackupHostNoticePrompt = _ => throw new InvalidOperationException("the prompt could not show"),
+        });
+        var host = rig.NewConnection();
+        var join = rig.Session.JoinAsync();
+        await host.ReceiveAsync<Hello>();
+        await host.SendAsync(new Welcome { Protocol = ProtocolVersion.Current, SessionId = "s1", Challenge = "c1", HostKeyFingerprint = ClientNetRig.Fingerprint, RequiresPassword = false, BackupHostNotice = Unciv.Net.Standby.StandbyNotice.Generic });
+        var result = await join;
+        Assert.False(result.Joined);
+        Assert.Equal(ClientCodes.NoticeDeclined, result.Code);
+    }
+
+    [Fact]
+    public async Task BackupHostNotice_WithoutAPrompt_IsStoredAndTheJoinProceeds()
+    {
+        await using var rig = new ClientNetRig(); // no prompt: the notice is stored and the join continues
+        var host = rig.NewConnection();
+        var join = rig.Session.JoinAsync();
+        await host.ReceiveAsync<Hello>();
+        await host.SendAsync(new Welcome { Protocol = ProtocolVersion.Current, SessionId = "s1", Challenge = "c1", HostKeyFingerprint = ClientNetRig.Fingerprint, RequiresPassword = false, BackupHostNotice = Unciv.Net.Standby.StandbyNotice.Generic });
+        await host.ReceiveAsync<Join>();
+        await host.ReceiveAsync<Auth>();
+        await host.SendAsync(new JoinOk());
+        Assert.True((await join).Joined);
+        Assert.Equal(Unciv.Net.Standby.StandbyNotice.Generic, rig.Session.BackupHostNotice);
+    }
 }

@@ -75,6 +75,7 @@ public sealed class JoinModelTests
     [InlineData("protocol-mismatch", "same version")]
     [InlineData("bad-credentials", "Wrong password")]
     [InlineData("ruleset-mismatch", "different rules")]
+    [InlineData("notice-declined", "backup host")]
     public void RefusalText_SaysWhatToDo(string code, string fragment) => Assert.Contains(fragment, JoinModel.RefusalText(code), StringComparison.Ordinal);
 
     [Fact]

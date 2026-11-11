@@ -76,6 +76,8 @@ public partial class HostScreen : Control
     private X509Certificate2? certificate;
     private int selectedAddress;
     private string slotSignature = "";
+    private string standbySignatureSeen = "";
+    private bool stopConfirmed;
     private bool busy;
 
     public HostScreen(UiTheme theme, HostSettingsForm form, HostScreenEnvironment env)
@@ -196,11 +198,14 @@ public partial class HostScreen : Control
 
     public override void _Process(double delta)
     {
-        if (Session is not { Lobby: not null } session) return;
+        if (Session is not { } session) return;
         var signature = string.Join("|", session.Slots.Select(it => $"{it.Slot}:{it.Kind}:{it.PlayerName}:{it.Connected}"));
-        if (signature == slotSignature) return;
+        var standbySignature = StandbyState() ?? "";
+        if (signature == slotSignature && standbySignature == standbySignatureSeen) return;
         slotSignature = signature;
+        standbySignatureSeen = standbySignature;
         FillSlots();
+        UpdateStandby();
         UpdateListing();
     }
 
@@ -306,17 +311,28 @@ public partial class HostScreen : Control
     private async Task StopAsync()
     {
         if (Session is not { } running) return;
+        // T275: a quit without a ready backup host leaves the others stranded if this process ends; the player confirms once.
+        if (!stopConfirmed && StandbyPending)
+        {
+            stopConfirmed = true;
+            StopButton.Text = "Stop anyway".Tr();
+            SetMessage(HostMigrationModel.QuitWarningDetail, true);
+            return;
+        }
+        stopConfirmed = false;
         Session = null;
         StopButton.Disabled = true;
         await running.DisposeAsync();
         StopButton.Disabled = false;
         StopButton.Visible = false;
+        StopButton.Text = "Stop hosting".Tr();
         StartButton.Visible = true;
         hostingScroll.Visible = false;
         settingsColumn.Visible = true;
         resumedInfo = null;
         hostedSettings = null;
         slotSignature = "";
+        standbySignatureSeen = "";
         Refresh();
         SetMessage("Hosting stopped.", false);
     }
@@ -344,6 +360,8 @@ public partial class HostScreen : Control
         hostingStatus.Text = $"{"Friends connect to port".TrText()} {started.Port.ToString(CultureInfo.InvariantCulture)}. {"Host key".TrText()}: {started.Fingerprint}";
         RefreshInvite();
         FillSlots();
+        standbySignatureSeen = "";
+        UpdateStandby();
         UpdateListing();
         SetMessage("", false);
         HostingStarted?.Invoke(started);
@@ -394,6 +412,8 @@ public partial class HostScreen : Control
         };
         hostingPanel.AddChild(ListedCheck);
         hostingPanel.AddChild(listingStatus);
+        StandbyStatusLabel = new Label { Name = "StandbyStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        hostingPanel.AddChild(StandbyStatusLabel);
         hostingPanel.AddChild(slotsBox);
         StopButton = new Button { Text = "Stop hosting".Tr(), Name = "StopHostingButton", Visible = false };
         StopButton.Pressed += () => _ = StopAsync();
@@ -407,6 +427,12 @@ public partial class HostScreen : Control
 
     /// <summary>T339: what the screen says about the public listing while hosting (empty when there is no relay to list on).</summary>
     public string ListingText => listingStatus.Text;
+
+    /// <summary>T275: where the backup-host designation stands (empty while none).</summary>
+    public Label StandbyStatusLabel { get; private set; } = null!; // JUSTIFY: T275 assigned by BuildHostingPanel, which the constructor runs
+
+    /// <summary>T275: what the screen says about the backup host, as a sentence.</summary>
+    public string StandbyStatusText => StandbyStatusLabel.Text;
 
     private bool CanList => env.Relay() != null;
 
@@ -483,6 +509,20 @@ public partial class HostScreen : Control
     }
 
     private ChoiceRow? FindAddressRow() => (Session != null ? hostingAddresses : networkPage).GetChildren().OfType<ChoiceRow>().FirstOrDefault(it => it.Name == "AddressRow");
+
+    /// <summary>T275: the backup-host state of the running host (a new lobby or a resumed game), or null when not hosting.</summary>
+    private string? StandbyState() => Session?.Lobby?.Lobby.Standby.State ?? Session?.Resumed?.Host.Standby.State;
+
+    /// <summary>T275: whether the host's backup host is designated but not ready, so a quit would leave the others stranded.</summary>
+    private bool StandbyPending =>
+        Session is { } s && (s.Lobby?.Lobby.Standby.KeyId != null || s.Resumed?.Host.Standby.KeyId != null)
+        && StandbyState() is { } state && state != Unciv.Net.Standby.StandbyStates.Ready;
+
+    private void UpdateStandby()
+    {
+        StandbyStatusLabel.Text = HostMigrationModel.BackupHostStateText(StandbyState());
+        StandbyStatusLabel.Visible = StandbyStatusLabel.Text.Length > 0;
+    }
 
     private void FillSlots()
     {

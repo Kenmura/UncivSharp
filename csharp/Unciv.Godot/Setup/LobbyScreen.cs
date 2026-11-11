@@ -50,17 +50,28 @@ public partial class LobbyScreen : Control
     private readonly List<Label> slotLabels = [];
     private readonly List<string> chat = [];
     private KickBanView? reasonView;
+    private readonly Func<Task>? acceptStandby;
+    private readonly Func<Task>? declineStandby;
+    private readonly VBoxContainer backupBox = new() { Name = "BackupHost" };
+    private readonly Label trustLabel = new() { Name = "BackupHostNotice", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly Label standbyStatusLabel = new() { Name = "StandbyStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly HFlowContainer backupPickerBox = new() { Name = "BackupHostPicker" };
+    private readonly VBoxContainer offerBox = new() { Name = "StandbyOffer", Visible = false };
+    private readonly Label offerLabel = new() { Name = "StandbyOfferText", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private bool standbyOffered;
     private LobbyState? lobby;
     private bool busy;
     private bool ended;
 
-    public LobbyScreen(UiTheme theme, NewGameForm nations, ClientSession session, string ownKey, ServerLobby? hostControls = null)
+    public LobbyScreen(UiTheme theme, NewGameForm nations, ClientSession session, string ownKey, ServerLobby? hostControls = null, Func<Task>? acceptStandby = null, Func<Task>? declineStandby = null)
     {
         this.theme = theme;
         this.nations = nations;
         this.session = session;
         this.ownKey = ownKey;
         this.hostControls = hostControls;
+        this.acceptStandby = acceptStandby;
+        this.declineStandby = declineStandby;
         Name = "LobbyScreen";
         Build(hostControls != null);
         reasonView = new KickBanView(theme);
@@ -118,6 +129,22 @@ public partial class LobbyScreen : Control
 
     public bool IsHost => hostControls != null;
 
+    /// <summary>T275: the trust notice naming the backup host (from <see cref="LobbyState.BackupHostNotice"/>), empty while none is designated.</summary>
+    public string BackupHostNoticeText => trustLabel.Text;
+
+    /// <summary>T275: where this player's own standby stands, or what the host sees of the designation, as a sentence.</summary>
+    public string StandbyStatusText => standbyStatusLabel.Text;
+
+    /// <summary>T275: the consent prompt's text while it is open (this player was offered the backup-host role), else empty.</summary>
+    public string StandbyOfferText => offerBox.Visible ? offerLabel.Text : "";
+
+    /// <summary>T275: the host's backup-host picker: "None" or the name of the human slot that is the backup host.</summary>
+    public string BackupHostChoice { get; private set; } = "";
+
+    public Button? AcceptStandbyButton { get; private set; }
+
+    public Button? DeclineStandbyButton { get; private set; }
+
     /// <summary>The nation button of the picker (the picker is open), including "Random".</summary>
     public Button? NationButton(string nation) => nationButtons.GetValueOrDefault(nation);
 
@@ -168,6 +195,19 @@ public partial class LobbyScreen : Control
                 case HostClosed:
                     End("The host closed the lobby.");
                     return;
+                case StandbyOffered: // T275: this player was chosen as the backup host; nothing is stored or shared until Accept.
+                    standbyOffered = true;
+                    offerLabel.Text = HostMigrationModel.BackupHostOfferText();
+                    offerBox.Visible = true;
+                    break;
+                case StandbyStatusChanged standby: // T275: where this player's own standby stands.
+                    standbyStatusLabel.Text = HostMigrationModel.BackupHostStateText(standby.Status.State);
+                    break;
+                case StandbyRevoked: // T275: the designation ended.
+                    standbyOffered = false;
+                    offerBox.Visible = false;
+                    standbyStatusLabel.Text = "";
+                    break;
                 case SessionEnded over when !string.IsNullOrEmpty(over.Reason) && over.Reason != ClientCodes.SessionClosed:
                     End(LobbyModel.RefusalText(over.Reason));
                     return;
@@ -189,6 +229,51 @@ public partial class LobbyScreen : Control
         StartButton.Disabled = busy || !check.CanStart;
         startHint.Visible = IsHost;
         startHint.Text = check.Reason;
+        FillBackupHost(state);
+    }
+
+    /// <summary>T275: the backup-host block: the trust notice to everyone, the picker and standby status for the host, the consent prompt for the chosen player.</summary>
+    private void FillBackupHost(LobbyState state)
+    {
+        // The notice names the backup host and is shown to every player while one is designated.
+        trustLabel.Visible = !string.IsNullOrEmpty(state.BackupHostNotice);
+        trustLabel.Text = state.BackupHostNotice ?? "";
+        // The host picks the backup host (and sees the standby status of the coordinator); the chosen player sees its own status from the StandbyStatusChanged event.
+        if (IsHost && hostControls != null)
+        {
+            if (hostControls.Lobby.Settings.BackupHost is int designated && designated >= 0 && designated < state.Slots.Count)
+            {
+                var slot = state.Slots[designated];
+                BackupHostChoice = slot.Kind == "Human" && slot.PlayerName != null ? slot.PlayerName : "None";
+            }
+            else
+            {
+                BackupHostChoice = "None";
+            }
+            standbyStatusLabel.Text = HostMigrationModel.BackupHostStateText(hostControls.Lobby.Standby.State);
+            FillBackupPicker(state);
+        }
+        // The block collapses when there is nothing to say, so a lobby without a backup host keeps its old layout.
+        backupBox.Visible = trustLabel.Visible || standbyStatusLabel.Text.Length > 0 || offerBox.Visible || backupPickerBox.GetChildCount() > 0;
+    }
+
+    private void FillBackupPicker(LobbyState state)
+    {
+        Clear(backupPickerBox);
+        var picker = new List<(string Label, int? Slot)> { ("None", null) };
+        picker.AddRange(state.Slots.Where(it => it.Slot != 0 && it.Kind == "Human" && !string.IsNullOrEmpty(it.PlayerName))
+            .Select(it => (it.PlayerName ?? $"Player {it.Slot + 1}", (int?)it.Slot)));
+        foreach (var (label, slot) in picker)
+        {
+            var captured = slot;
+            var button = new Button { Text = label.Tr(), Name = "BackupHost_" + (slot?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "None"), ToggleMode = true, ButtonPressed = slot == hostControls.NotNull().Lobby.Settings.BackupHost };
+            button.Pressed += () => _ = RunAsync(async () =>
+            {
+                var refusal = await hostControls.NotNull().Lobby.SetBackupHostAsync(captured);
+                if (refusal != null) SetMessage(HostMigrationModel.BackupHostRefusal(refusal), true);
+            });
+            backupPickerBox.AddChild(button);
+        }
     }
 
     private LobbySlot? Own(LobbyState state) => state.Slots.FirstOrDefault(it => it.Kind == "Human" && it.PlayerKeyId == ownKey);
@@ -214,6 +299,38 @@ public partial class LobbyScreen : Control
         theme.Fit(this, FitBody);
         slotsBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         column.AddChild(slotsBox);
+
+        // T275: the backup-host block (trust notice to everyone, the picker and standby status for the host) and the consent prompt for the chosen player.
+        backupBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        backupBox.FitConstant(theme, "separation", UiTokens.S1);
+        column.AddChild(backupBox);
+        backupBox.AddChild(trustLabel);
+        backupBox.AddChild(standbyStatusLabel);
+        backupPickerBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        backupBox.AddChild(backupPickerBox);
+        var offer = new VBoxContainer { Name = "StandbyOfferRow" };
+        offer.FitConstant(theme, "separation", UiTokens.S1);
+        offerBox.AddChild(offerLabel);
+        var offerButtons = new HBoxContainer();
+        AcceptStandbyButton = new Button { Text = "Accept".Tr(), Name = "AcceptStandbyButton" };
+        AcceptStandbyButton.Pressed += () => _ = RunAsync(async () =>
+        {
+            var accept = acceptStandby;
+            if (accept != null) await accept();
+            offerBox.Visible = false;
+        });
+        DeclineStandbyButton = new Button { Text = "Decline".Tr(), Name = "DeclineStandbyButton" };
+        DeclineStandbyButton.Pressed += () => _ = RunAsync(async () =>
+        {
+            var decline = declineStandby ?? (session == null ? null : (Func<Task>)(() => session.DeclineStandbyAsync().AsTask()));
+            if (decline != null) await decline();
+            offerBox.Visible = false;
+        });
+        offerButtons.AddChild(AcceptStandbyButton);
+        offerButtons.AddChild(DeclineStandbyButton);
+        offer.AddChild(offerButtons);
+        offerBox.AddChild(offer);
+        backupBox.AddChild(offerBox);
 
         var seat = new HBoxContainer();
         ReadyButton = new Button { Text = "Ready".Tr(), Name = "ReadyButton", ToggleMode = true, Visible = false };

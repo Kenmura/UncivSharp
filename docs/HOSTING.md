@@ -75,3 +75,30 @@ If you cannot forward ports due to Carrier-Grade NAT (CGNAT) or prefer not to ex
 - **Framing**: Bounded length-prefixed frames (up to 64 KB per frame) guard against unbounded memory buffering and denial of service.
 - **Host Certificate**: Stored in PKCS#12 (`host-key.pfx`) with an empty password, generated with ECDSA P-256.
 - **Known-Hosts Pinning**: `known-hosts.json` maintains host-to-fingerprint mappings with timestamps. Changes trigger hard verification failures.
+
+---
+
+## 4. Backup host (automatic host migration)
+
+By default a game has a single host and, if the host's process ends, the game is saved and can be resumed later (the Host screen's Saved games tab). Optionally, the host can designate one of the other players as a **backup host**, so the game can continue automatically if the host quits or crashes.
+
+### What a backup host is
+
+- In the lobby, the host picks one human player as the backup host. That player is asked to consent, and only an explicit *Accept* makes it effective; nobody is made a keeper of the full game silently.
+- The backup host receives a complete copy of the game (everything the host holds, including what it could not see as a player, and the per-game secret used for combat rolls) and is therefore **trusted like the host**. Every player sees a notice naming the backup host before they join and in the lobby.
+- The host probes the backup host's address before counting it *ready*, so a backup behind a NAT with no port forward is shown as *not reachable* rather than failing later. The host screen and the lobby show where the backup host stands (*offered*, *unreachable*, *ready*, *syncing*, *lagging*).
+
+### How a change of host works
+
+- **Clean quit**: when the host quits with a *ready* backup host, it hands the game over losslessly and the backup host's computer becomes the new host. The other players reconnect to it automatically with the same keys and seats; nothing is lost.
+- **Crash or disconnection**: the backup host waits through a loss window and, once enough players agree the old host is gone, takes over its copy. Commands the old host acknowledged but never copied to the backup are lost, and the affected players are told so.
+- **No ready backup host**: if the host quits without a ready backup host, the game cannot continue automatically. The host is warned before stopping; the other players can still resume it later from a copy of the game folder.
+
+### Choosing a backup host
+
+- Prefer **three or more humans** (or a dedicated server) when automatic host migration matters. With exactly two humans a network partition can leave both machines running a copy of the game; the player who took over is told the game may have split, and the two players must agree which copy continues (send an invite so the other player keeps their seat and key).
+- A game started with the feature off (the default) behaves exactly as before: no backup copy is made and no traffic about one is sent.
+
+### Manual fallback
+
+If the host and the backup host are both gone, the backup host's copy is a normal game directory. The host's *saved game* resume (or handing the folder to a friend) continues the game from it at the next host epoch.

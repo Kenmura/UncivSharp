@@ -49,6 +49,9 @@ public static class ClientCodes
 
     /// <summary>T274: neither the host nor the successor could be reached for the give-up time; the session ended (the UI shows the manual hand-off help).</summary>
     public const string GaveUp = "gave-up";
+
+    /// <summary>T275: the player read the backup-host trust notice before joining and chose not to continue; nothing was sent to the host.</summary>
+    public const string NoticeDeclined = "notice-declined";
 }
 
 /// <summary>The final answer to one submitted command. <see cref="Code"/> is a host code or a <see cref="ClientCodes"/> value, never free text.</summary>

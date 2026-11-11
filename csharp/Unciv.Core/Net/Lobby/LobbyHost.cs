@@ -1280,6 +1280,28 @@ public sealed class LobbyHost : IAsyncDisposable
         return true;
     }
 
+    /// <summary>
+    /// T275: the host's backup-host picker. Designates the human seated in <paramref name="slotIndex"/> as the backup host (<see cref="LobbySettings.BackupHost"/>), or ends the designation when
+    /// <paramref name="slotIndex"/> is null. The seated player is offered the role and every player is told; nothing is replicated before that player accepts. Returns null on success, else
+    /// <c>not-a-human-seat</c> (the slot is not a bound human) or <c>own-seat</c> (the host's own seat cannot be the backup).
+    /// </summary>
+    public async Task<string?> SetBackupHostAsync(int? slotIndex)
+    {
+        lock (gate)
+        {
+            if (Status != LobbyStatus.InLobby) return "not-in-lobby";
+            if (slotIndex is int idx)
+            {
+                if (idx < 0 || idx >= slots.Count || slots[idx].Kind != SlotKind.Human || string.IsNullOrEmpty(slots[idx].PlayerKeyId)) return "not-a-human-seat";
+                if (idx == 0) return "own-seat";
+            }
+            Settings.BackupHost = slotIndex;
+        }
+        await SyncBackupHostAsync().ConfigureAwait(false);
+        await BroadcastLobbyStateAsync().ConfigureAwait(false);
+        return null;
+    }
+
     /// <summary>The designated candidate (re)connected: offered the role again, or told where it stands.</summary>
     private async Task SendStandbyHelloAsync(LobbySession session)
     {
