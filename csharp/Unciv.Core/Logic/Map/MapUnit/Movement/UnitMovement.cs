@@ -947,20 +947,16 @@ public class UnitMovement
             && !tile.IsCityCenter())
             return CannotMoveToReason.BoatCannotGoOnLand;
 
-        var unitSpecificAllowOcean = new KotlinLazy<bool>(() =>
-            Unit.Civ.Tech.SpecificUnitsCanEnterOcean &&
-            Unit.Civ.GetMatchingUniques(UniqueType.UnitsMayEnterOcean)
-                .Any(it => Unit.MatchesFilter(it.Params[0])));
         if (tile.IsWater && Unit.BaseUnit.IsLandUnit && !Unit.Cache.CanMoveOnWater)
         {
             if (!Unit.Civ.Tech.UnitsCanEmbark) return CannotMoveToReason.CannotEmbark;
             if (Unit.Cache.CannotEmbark) return CannotMoveToReason.CannotEmbark;
-            if (tile.IsOcean && !Unit.Civ.Tech.EmbarkedUnitsCanEnterOcean && !unitSpecificAllowOcean.Value)
+            if (tile.IsOcean && !Unit.Civ.Tech.EmbarkedUnitsCanEnterOcean && !UnitSpecificAllowOcean())
                 return CannotMoveToReason.CannotEnterOcean;
         }
         if (tile.IsOcean && !Unit.Civ.Tech.AllUnitsCanEnterOcean) // Apparently all Polynesian naval units can enter oceans
         {
-            if (!unitSpecificAllowOcean.Value && Unit.Cache.CannotEnterOceanTiles) return CannotMoveToReason.CannotEnterOcean;
+            if (!UnitSpecificAllowOcean() && Unit.Cache.CannotEnterOceanTiles) return CannotMoveToReason.CannotEnterOcean;
         }
 
         if (Unit.Cache.CanEnterCityStates && ((CivilizationObject?)tile.GetOwner())?.IsCityState == true)
@@ -991,6 +987,16 @@ public class UnitMovement
         }
         return null;
     }
+
+    /// <summary>
+    /// Whether this specific unit may enter ocean tiles via a <see cref="UniqueType.UnitsMayEnterOcean"/> filter (e.g. Polynesian wayfinding).
+    /// T407: was a <c>new KotlinLazy&lt;bool&gt;(...)</c> allocated on every <see cref="CannotPassThroughReason"/> call, the pathfinding allocation
+    /// hotspot. The value is read only at the two ocean branches above, so computing it directly is behaviour-preserving and allocates nothing.
+    /// </summary>
+    private bool UnitSpecificAllowOcean() =>
+        Unit.Civ.Tech.SpecificUnitsCanEnterOcean &&
+        Unit.Civ.GetMatchingUniques(UniqueType.UnitsMayEnterOcean)
+            .Any(it => Unit.MatchesFilter(it.Params[0]));
 
     /// <param name="considerZoneOfControl">Whether zone of control makes movement cost all movement points.</param>
     /// <param name="passThroughCacheNew">Cache of <see cref="CanPassThrough"/> per tile index (shared across calls of one path search).</param>

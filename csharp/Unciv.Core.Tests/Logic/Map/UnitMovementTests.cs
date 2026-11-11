@@ -154,6 +154,38 @@ public class UnitMovementTests
         Assert.True(plain.Movement.CanPassThrough(w.TileAt(0, 0)));
     }
 
+    // T407: the per-call KotlinLazy<bool> for unitSpecificAllowOcean was a pathfinding allocation hotspot. The value is only read at the
+    // two ocean branches, so it is now computed directly. The common (land) path must allocate nothing.
+
+    [Fact]
+    public void CannotPassThroughReason_AllocatesNothingOnTheCommonPath()
+    {
+        var w = NewWorld();
+        var unit = w.Unit("Warrior", "Land", 2, 2);
+        var tile = w.TileAt(3, 3); // empty, unowned land tile
+
+        // Warm up any one-time caches (unit cache, terrain transients, filter caches) outside the measurement.
+        for (var i = 0; i < 100; i++) unit.Movement.CannotPassThroughReason(tile);
+
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var i = 0; i < 10_000; i++) unit.Movement.CannotPassThroughReason(tile);
+        var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.Equal(0, allocated);
+    }
+
+    [Fact]
+    public void UnitSpecificOceanEntry_LetsOnlyMatchingUnitsThroughOcean()
+    {
+        var w = NewWorld("Enables [Pilgrim] units to enter ocean tiles");
+        w.Civ.Tech.SpecificUnitsCanEnterOcean = true;
+        w.SetTerrain(0, 0, "Ocean");
+        var matching = w.Unit("Pilgrim", "Water", 3, 3, null, "Cannot enter ocean tiles");
+        var other = w.Unit("Frigate", "Water", 3, 4, null, "Cannot enter ocean tiles");
+        Assert.True(matching.Movement.CanPassThrough(w.TileAt(0, 0)));
+        Assert.False(other.Movement.CanPassThrough(w.TileAt(0, 0)));
+    }
+
     [Fact]
     public void CanNotPassThroughTileWithEnemyUnits()
     {
