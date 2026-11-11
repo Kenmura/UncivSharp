@@ -424,6 +424,52 @@ public abstract class WorkerAutomationTestsBase
         Assert.False(settler.IsDestroyed);
         Assert.False(worker.IsDestroyed);
     }
+
+    // ---- T406: per-turn memoisation of the worker improvement evaluation ----
+
+    [Fact]
+    public void WorkerImprovementEvaluationIsMemoisedInTheAutomationCache()
+    {
+        Research("Farm", "Mine");
+        civInfo.Tech.TechsResearched.Add(testGame.Ruleset.TileResources["Iron"].RevealedBy!);
+        testGame.AddCity(civInfo, testGame.TileMap[0, 0]);
+
+        var ironTile = testGame.TileMap[1, 1]; // owned by city
+        ironTile.SetTileResource("Iron");
+
+        var cache = new AutomationCache();
+        workerAutomation.AutomateWorkerAction(ViewOf(testGame.AddUnit("Worker", civInfo, ironTile)), [], cache);
+
+        // The chosen improvement is correct, and both memoisation tables hold an entry for the evaluated (tile, improvement):
+        // the buildable improvement's ranking is positive and its building-problem set is empty (nothing blocks it).
+        Assert.Equal("Mine", ironTile.ImprovementInProgress);
+        Assert.Contains(cache.WorkerImprovementRankings, it => it.Key.Tile == ironTile && it.Key.Improvement == "Mine" && it.Value > 0f);
+        Assert.Contains(cache.WorkerImprovementBuildingProblems, it => it.Key.Tile == ironTile && it.Key.Improvement == "Mine" && it.Value.Count == 0);
+    }
+
+    [Fact]
+    public void WorkerImprovementMemoisationIsSharedAcrossWorkers()
+    {
+        Research("Farm", "Mine");
+        civInfo.Tech.TechsResearched.Add(testGame.Ruleset.TileResources["Iron"].RevealedBy!);
+        testGame.AddCity(civInfo, testGame.TileMap[0, 0]);
+
+        var firstIron = testGame.TileMap[1, 1]; // owned by city
+        firstIron.SetTileResource("Iron");
+        var secondIron = testGame.TileMap[-1, -1]; // owned by city
+        secondIron.SetTileResource("Iron");
+
+        // One AutomationCache is shared across the civ's workers, as in NextTurnAutomation.AutomateUnits.
+        var cache = new AutomationCache();
+        workerAutomation.AutomateWorkerAction(ViewOf(testGame.AddUnit("Worker", civInfo, firstIron)), [], cache);
+        workerAutomation.AutomateWorkerAction(ViewOf(testGame.AddUnit("Worker", civInfo, secondIron)), [], cache);
+
+        Assert.Equal("Mine", firstIron.ImprovementInProgress);
+        Assert.Equal("Mine", secondIron.ImprovementInProgress);
+        // Each tile's evaluation is memoised independently, keyed by its own tile reference.
+        Assert.Contains(cache.WorkerImprovementRankings, it => it.Key.Tile == firstIron && it.Key.Improvement == "Mine");
+        Assert.Contains(cache.WorkerImprovementRankings, it => it.Key.Tile == secondIron && it.Key.Improvement == "Mine");
+    }
 }
 
 [Collection("RulesetCache")]

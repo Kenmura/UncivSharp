@@ -1,3 +1,4 @@
+using Unciv.Logic.Automation.Civilization;
 using Unciv.Logic.Civilization;
 using Unciv.Logic.Map.MapUnit.Actions;
 using Unciv.Logic.Map.Tiles;
@@ -47,8 +48,9 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
     ///////////////////////////////////////// Methods /////////////////////////////////////////
 
     /// <summary>Automate one Worker - decide what to do and where, move, start or continue work.</summary>
-    public void AutomateWorkerAction(MapUnitView unitView, HashSet<TileView> dangerousTiles)
+    public void AutomateWorkerAction(MapUnitView unitView, HashSet<TileView> dangerousTiles, AutomationCache? cache = null)
     {
+        cache ??= new AutomationCache();
         var unit = unitView.Unwrap();
         var currentTile = unit.GetTile();
         var currentTileIsCreatesOneImprovementMarker = currentTile.IsMarkedForCreatesOneImprovement();
@@ -57,21 +59,21 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
         // Shortcut, we are working a suitable tile, and we're better off minimizing worker-turns by finishing everything on this tile
         if (!currentTileIsCreatesOneImprovementMarker
             && currentTile.ImprovementInProgress != null && !dangerousTiles.Contains(unitView.GetTile())
-            && GetFullPriority(unit.GetTile(), unitView) >= 2)
+            && GetFullPriority(unit.GetTile(), unitView, cache) >= 2)
         {
             return;
         }
-        var tileToWork = FindTileToWork(unitView, dangerousTiles);
+        var tileToWork = FindTileToWork(unitView, dangerousTiles, cache);
 
         if (tileToWork != currentTile && tileToWork != null)
         {
-            HeadTowardsTileToWork(unitView, tileToWork);
+            HeadTowardsTileToWork(unitView, tileToWork, cache);
             return;
         }
 
         if (!currentTileIsCreatesOneImprovementMarker && currentTile.ImprovementInProgress != null) return; // we're working!
 
-        if (tileToWork == currentTile && TileHasWorkToDo(currentTile, unitView))
+        if (tileToWork == currentTile && TileHasWorkToDo(currentTile, unitView, cache))
         {
             StartWorkOnCurrentTile(unitView);
             return;
@@ -80,7 +82,7 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
         // Support Alpha Frontier-Style Workers that _also_ have the "May create improvements on water resources" unique
         if (unit.Cache.HasUniqueToCreateWaterImprovements && AutomateWorkBoats(unitView)) return;
 
-        if (TryHeadTowardsUndevelopedCity(unitView, currentTile)) return;
+        if (TryHeadTowardsUndevelopedCity(unitView, currentTile, cache)) return;
 
         // Nothing to do, try again to connect cities
         if (RoadBetweenCitiesAutomation.TryConnectingCities(unit, citiesToConnect)) return;
@@ -104,7 +106,7 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
             workersPerCity.Add(ClosestCity(unit), 1);
     }
 
-    private bool TryHeadTowardsUndevelopedCity(MapUnitView unitView, TileClass currentTile)
+    private bool TryHeadTowardsUndevelopedCity(MapUnitView unitView, TileClass currentTile, AutomationCache cache)
     {
         var unit = unitView.Unwrap();
         if (unit.Civ.Cities.Count == 0) return false;
@@ -119,7 +121,7 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
                 && workersPerCity[it] < workersPerCity[ClosestCity(unit)]
                 && it.GetTiles().Any(tile => tile.IsLand
                     && !tile.GetUnits().Any(u => u.Cache.HasUniqueToBuildImprovements)
-                    && (tile.IsPillaged() || TileHasWorkToDo(tile, unitView)))
+                    && (tile.IsPillaged() || TileHasWorkToDo(tile, unitView, cache)))
                 && unit.Movement.CanReach(it.GetCenterTile())); // goto closest undeveloped city
 
         if (closestUndevelopedCity != null)
@@ -152,7 +154,7 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
         throw new InvalidOperationException("We didn't find anything to improve on this tile even though there was supposed to be something to improve!");
     }
 
-    private void HeadTowardsTileToWork(MapUnitView unitView, TileClass tileToWork)
+    private void HeadTowardsTileToWork(MapUnitView unitView, TileClass tileToWork, AutomationCache cache)
     {
         var unit = unitView.Unwrap();
         var currentTile = unit.GetTile();
@@ -182,20 +184,20 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
 
         // tileRankings is updated in getBasePriority, which is only called if isAutomationWorkableTile is true
         // Meaning, there are tiles we can't/shouldn't work, and they won't even be in tileRankings
-        if (TileHasWorkToDo(unit.CurrentTile, unitView))
+        if (TileHasWorkToDo(unit.CurrentTile, unitView, cache))
             StartWorkOnCurrentTile(unitView);
     }
 
     /// <summary>Looks for a worthwhile tile to improve</summary>
     /// <returns>Null if no tile to work was found</returns>
-    private TileClass? FindTileToWork(MapUnitView unitView, IReadOnlySet<TileView> tilesToAvoid)
+    private TileClass? FindTileToWork(MapUnitView unitView, IReadOnlySet<TileView> tilesToAvoid, AutomationCache cache)
     {
         var unit = unitView.Unwrap();
         var currentTile = unit.GetTile();
 
         if (IsAutomationWorkableTile(currentTile, tilesToAvoid, currentTile, unitView)
             && GetBasePriority(currentTile, unitView) >= 3
-            && (currentTile.IsPillaged() || currentTile.HasFalloutEquivalent() || TileHasWorkToDo(currentTile, unitView)))
+            && (currentTile.IsPillaged() || currentTile.HasFalloutEquivalent() || TileHasWorkToDo(currentTile, unitView, cache)))
         {
             return currentTile;
         }
@@ -218,10 +220,10 @@ public partial class WorkerAutomation(CivilizationClass civInfo, int cachedForTu
             foreach (var tileInGroup in tilePriorityGroup.OrderBy(it => unit.GetTile().AerialDistanceTo(it)))
             {
                 // These are the expensive calculations (tileCanBeImproved, canReach), so we only apply these filters after everything else it done.
-                if (!TileHasWorkToDo(tileInGroup, unitView)) continue;
+                if (!TileHasWorkToDo(tileInGroup, unitView, cache)) continue;
                 if (unit.GetTile() == tileInGroup) return unit.GetTile();
                 if (!unit.Movement.CanReach(tileInGroup)) continue;
-                if (bestTile == null || GetFullPriority(tileInGroup, unitView) > GetFullPriority(bestTile, unitView))
+                if (bestTile == null || GetFullPriority(tileInGroup, unitView, cache) > GetFullPriority(bestTile, unitView, cache))
                     bestTile = tileInGroup;
             }
             if (bestTile != null)

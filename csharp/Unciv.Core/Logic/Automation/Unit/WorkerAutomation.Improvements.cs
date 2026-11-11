@@ -1,3 +1,4 @@
+using Unciv.Logic.Automation.Civilization;
 using Unciv.Logic.Map.MapUnit.Actions;
 using Unciv.Logic.Map.Tiles;
 using Unciv.Models;
@@ -105,7 +106,7 @@ public partial class WorkerAutomation
     }
 
     /// <summary>Calculates the priority building the improvement on the tile</summary>
-    private float GetImprovementPriority(TileClass tile, MapUnitView unitView)
+    private float GetImprovementPriority(TileClass tile, MapUnitView unitView, AutomationCache cache)
     {
         var unit = unitView.Unwrap();
         GetBasePriority(tile, unitView);
@@ -117,7 +118,7 @@ public partial class WorkerAutomation
             rank.BestImprovement = null;
             rank.RepairImprovment = false;
 
-            var bestImprovement = ChooseImprovement(unitView, tile);
+            var bestImprovement = ChooseImprovement(unitView, tile, cache);
             if (bestImprovement != null)
             {
                 rank.BestImprovement = bestImprovement;
@@ -126,7 +127,7 @@ public partial class WorkerAutomation
                     ? bestImprovement.GetTurnsToBuild(unit.Civ, unit) - tile.TurnsToImprovement
                     : 0;
 
-                rank.ImprovementPriority = GetImprovementRanking(tile, unitView, rank.BestImprovement) + timeSpentPriority;
+                rank.ImprovementPriority = GetImprovementRanking(tile, unitView, rank.BestImprovement, cache) + timeSpentPriority;
             }
 
             if (tile.TileImprovement != null && tile.IsPillaged() && tile.OwningCity != null)
@@ -152,19 +153,19 @@ public partial class WorkerAutomation
     }
 
     /// <summary>Calculates the full priority of the tile</summary>
-    private float GetFullPriority(TileClass tile, MapUnitView unitView) =>
-        GetBasePriority(tile, unitView) + GetImprovementPriority(tile, unitView);
+    private float GetFullPriority(TileClass tile, MapUnitView unitView, AutomationCache cache) =>
+        GetBasePriority(tile, unitView) + GetImprovementPriority(tile, unitView, cache);
 
-    private bool TileHasWorkToDo(TileClass tile, MapUnitView unitView)
+    private bool TileHasWorkToDo(TileClass tile, MapUnitView unitView, AutomationCache cache)
     {
-        if (GetImprovementPriority(tile, unitView) <= 0) return false;
+        if (GetImprovementPriority(tile, unitView, cache) <= 0) return false;
         if (!(tileRankings[tile].BestImprovement != null || tileRankings[tile].RepairImprovment == true))
             throw new InvalidOperationException("There was an improvementPriority > 0 and nothing to do");
         return true;
     }
 
     /// <summary>Determine the improvement appropriate to a given tile and worker. Returns null if none is worth it</summary>
-    private TileImprovement? ChooseImprovement(MapUnitView unitView, TileClass tile, IEnumerable<TileImprovement>? ignoreImprovements = null)
+    private TileImprovement? ChooseImprovement(MapUnitView unitView, TileClass tile, AutomationCache cache, IEnumerable<TileImprovement>? ignoreImprovements = null)
     {
         ignoreImprovements ??= NoIgnoredImprovements;
         var unit = unitView.Unwrap();
@@ -183,7 +184,7 @@ public partial class WorkerAutomation
             if (!ignoreImprovements.Contains(value)
                 && (value.UniqueTo == null || unit.Civ.MatchesFilter(value.UniqueTo, gameContext))
                 && unit.CanBuildImprovement(value, tile)
-                && tile.ImprovementFunctions.CanBuildImprovement(value, gameContext)
+                && CanBuildImprovementCached(tile, value, gameContext, cache)
                 // Properly exclude removing forest and jungle tiles from potentialTileImprovements.
                 && !(settings.StopAutomatedWorkersRemoveVegetation
                      && tile.TerrainHasUnique(UniqueType.Vegetation)
@@ -199,7 +200,7 @@ public partial class WorkerAutomation
         var currentTileStats = tile.Stats.GetTileStats(tile.GetCity(), CivInfo);
         var bestBuildableImprovement = MaxByOrNull(
             potentialTileImprovements.Values
-                .Select(it => new RankedImprovement(it, GetImprovementRanking(tile, unitView, it, currentTileStats, ignoreWithPotential)))
+                .Select(it => new RankedImprovement(it, GetImprovementRanking(tile, unitView, it, cache, currentTileStats, ignoreWithPotential)))
                 .Where(it => it.Rank > 0f),
             it => it.Rank)?.Improvement;
 
@@ -235,7 +236,7 @@ public partial class WorkerAutomation
                     .Select(it => potentialTileImprovements.GetValueOrDefault(it))
                     .OfType<TileImprovement>()
                     .Where(it => potentialTileImprovements.ContainsKey(it.Name) || it == currentImprovement),
-                it => GetImprovementRanking(tile, unitView, it, null, ignoreWithPotential));
+                it => GetImprovementRanking(tile, unitView, it, cache, null, ignoreWithPotential));
         }
 
         // After gathering all the data, we conduct the hierarchy in one place
@@ -257,8 +258,8 @@ public partial class WorkerAutomation
         if (bestBuildableImprovement == null) return null;
 
         if (tile.Improvement != null
-            && GetImprovementRanking(tile, unitView, tile.TileImprovement.NotNull(), null, ignoreWithPotential)
-            > GetImprovementRanking(tile, unitView, bestBuildableImprovement, null, ignoreWithPotential))
+            && GetImprovementRanking(tile, unitView, tile.TileImprovement.NotNull(), cache, null, ignoreWithPotential)
+            > GetImprovementRanking(tile, unitView, bestBuildableImprovement, cache, null, ignoreWithPotential))
         {
             return null; // What we have is better, even if it's pillaged we should repair it
         }
@@ -272,12 +273,30 @@ public partial class WorkerAutomation
         return bestBuildableImprovement;
     }
 
+    /// <summary>
+    /// T406: <c>tile.ImprovementFunctions.CanBuildImprovement</c> with the <c>GetImprovementBuildingProblems</c> result memoised per
+    /// (tile, improvement) in <see cref="AutomationCache"/>. Safe because <see cref="ChooseImprovement"/> is already memoised per tile
+    /// through the <c>tileRankings</c> field, so the <c>gameContext</c> (and its unit) is the same on every call for a given tile within
+    /// the turn; the cached problems are therefore stable for the whole turn.
+    /// </summary>
+    private static bool CanBuildImprovementCached(TileClass tile, TileImprovement improvement, GameContext gameContext, AutomationCache cache)
+    {
+        var key = (tile, improvement.Name);
+        if (!cache.WorkerImprovementBuildingProblems.TryGetValue(key, out var problems))
+        {
+            problems = tile.ImprovementFunctions.GetImprovementBuildingProblems(improvement, gameContext).ToHashSet();
+            cache.WorkerImprovementBuildingProblems[key] = problems;
+        }
+        return problems.Count == 0;
+    }
+
     private sealed record RankedImprovement(TileImprovement Improvement, float Rank);
 
     private float GetImprovementRanking(
         TileClass tile,
         MapUnitView unitView,
         TileImprovement improvement,
+        AutomationCache cache,
         Stats? currentTileStats = null,
         IEnumerable<TileImprovement>? ignoreImprovements = null)
     {
@@ -305,6 +324,11 @@ public partial class WorkerAutomation
         {
             return 0f;
         }
+
+        // T406: the ranking of a non-removal improvement is a pure function of the civ, tile and improvement
+        // (ignoreImprovements and currentTileStats never change it), so it is memoised per (tile, improvement).
+        var memoisedRanking = GetMemoisedImprovementRanking(tile, improvement, cache);
+        if (memoisedRanking != null) return memoisedRanking.Value;
 
         var stats = tile.Stats.GetStatDiffForImprovement(improvement, CivInfo, tile.GetCity(), currentTileStats);
 
@@ -335,7 +359,7 @@ public partial class WorkerAutomation
                     newTile.RemoveTerrainFeature(removedFeature);
                 if (removalImprovement != null)
                     newTile.RemoveImprovement();
-                var wantedFinalImprovement = ChooseImprovement(unitView, newTile, ignoreImprovements);
+                var wantedFinalImprovement = ChooseImprovement(unitView, newTile, cache, ignoreImprovements);
                 if (wantedFinalImprovement != null)
                 {
                     var statDiff = newTile.Stats.GetStatDiffForImprovement(wantedFinalImprovement, CivInfo, newTile.GetCity());
@@ -384,7 +408,27 @@ public partial class WorkerAutomation
             // the old fort building logic was found to be detrimental (PR #14309), but let's keep the forts we got around for a bit
             value /= 2;
         }
+        MemoiseImprovementRanking(tile, improvement, cache, value);
         return value;
+    }
+
+    /// <summary>
+    /// T406: reads <see cref="AutomationCache.WorkerImprovementRankings"/> for a non-removal improvement. Returns null when the
+    /// ranking must be computed fresh: removal improvements recurse with a caller-dependent <c>ignoreImprovements</c>, so they are
+    /// never memoised. Road plans and the out-of-territory shortcut return before this is reached.
+    /// </summary>
+    private static float? GetMemoisedImprovementRanking(TileClass tile, TileImprovement improvement, AutomationCache cache)
+    {
+        if (improvement.Name.StartsWith(Constants.Remove, StringComparison.Ordinal)) return null;
+        var key = (tile, improvement.Name);
+        return cache.WorkerImprovementRankings.TryGetValue(key, out var cached) ? cached : null;
+    }
+
+    /// <summary>T406: stores the ranking of a non-removal improvement in <see cref="AutomationCache.WorkerImprovementRankings"/>.</summary>
+    private static void MemoiseImprovementRanking(TileClass tile, TileImprovement improvement, AutomationCache cache, float value)
+    {
+        if (improvement.Name.StartsWith(Constants.Remove, StringComparison.Ordinal)) return;
+        cache.WorkerImprovementRankings[(tile, improvement.Name)] = value;
     }
 
     /// <summary>

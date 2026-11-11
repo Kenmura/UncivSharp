@@ -58,7 +58,7 @@ public static class CivilianUnitAutomation
 
         if (unit.HasUniqueToBuildImprovements())
         {
-            mapUnit.Civ.GetWorkerAutomation().AutomateWorkerAction(unit, dangerousTiles);
+            mapUnit.Civ.GetWorkerAutomation().AutomateWorkerAction(unit, dangerousTiles, cache);
             return;
         }
 

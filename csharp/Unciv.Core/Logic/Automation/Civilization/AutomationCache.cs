@@ -1,3 +1,4 @@
+using Unciv.Logic.Map.Tiles;
 using Unciv.View;
 
 namespace Unciv.Logic.Automation.Civilization;
@@ -33,4 +34,21 @@ public class AutomationCache
     /// Like <see cref="DistanceToClosestEnemyTiles"/>, entries are only valid for this civ's turn: the cache is recreated each turn.
     /// </summary>
     public Dictionary<(TileView Tile, int UnitId), HashSet<TileView>> DangerousTiles { get; } = [];
+
+    /// <summary>
+    /// T406: caches <c>WorkerAutomation.GetImprovementRanking</c> per (tile, improvement name) so the ranking of one improvement
+    /// on one tile is computed once per turn. Keyed by the logic <see cref="Tile"/> (reference identity: the same tile object is
+    /// used for the whole turn, and <see cref="Tile.Clone"/> results are distinct and deliberately not shared). Only the
+    /// non-road, non-removal results are cached, because those are a pure function of the civ, tile and improvement; road plans
+    /// and the recursive removal branch are not.
+    /// Like the other entries, entries are only valid for this civ's turn: the cache is recreated each turn.
+    /// </summary>
+    public Dictionary<(Tile Tile, string Improvement), float> WorkerImprovementRankings { get; } = [];
+
+    /// <summary>
+    /// T406: caches the improvement-building problems computed by <c>ImprovementFunctions.GetImprovementBuildingProblems</c> for
+    /// <c>WorkerAutomation.ChooseImprovement</c>, keyed by (tile, improvement name). Like the other entries, entries are only valid
+    /// for this civ's turn: the cache is recreated each turn.
+    /// </summary>
+    public Dictionary<(Tile Tile, string Improvement), HashSet<ImprovementBuildingProblem>> WorkerImprovementBuildingProblems { get; } = [];
 }
