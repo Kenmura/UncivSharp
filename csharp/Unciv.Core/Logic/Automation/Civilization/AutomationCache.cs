@@ -26,4 +26,11 @@ public class AutomationCache
     }
 
     public Dictionary<TileView, ClosestEnemyTileData> DistanceToClosestEnemyTiles { get; } = [];
+
+    /// <summary>
+    /// T409: caches the per-unit dangerous-tile set computed by <c>UnitAutomation.GetDangerousTiles</c>, keyed by the
+    /// unit's current tile and its id (so a moved unit or a different unit on the same tile gets a fresh entry).
+    /// Like <see cref="DistanceToClosestEnemyTiles"/>, entries are only valid for this civ's turn: the cache is recreated each turn.
+    /// </summary>
+    public Dictionary<(TileView Tile, int UnitId), HashSet<TileView>> DangerousTiles { get; } = [];
 }

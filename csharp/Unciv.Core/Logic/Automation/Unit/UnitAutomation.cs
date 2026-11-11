@@ -107,7 +107,7 @@ public static partial class UnitAutomation
         if (unitView.IsCivilian())
         {
             using (TurnProbe.Measure("Unit.Civilian"))
-                CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView), cache);
+                CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView, cache), cache);
             return true;
         }
 
@@ -127,7 +127,7 @@ public static partial class UnitAutomation
             && !unit.Civ.IsAtWar())
         {
             using (TurnProbe.Measure("Unit.CivilianAbilities"))
-                CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView), cache);
+                CivilianUnitAutomation.AutomateCivilianUnit(unitView, GetDangerousTiles(unitView, cache), cache);
             return true;
         }
 
@@ -338,7 +338,24 @@ public static partial class UnitAutomation
         return healthRequiredPerTurn <= unitView.HealingAmountForTile(unitTile);
     }
 
-    private static HashSet<TileView> GetDangerousTiles(MapUnitView unitView)
+    /// <summary>
+    /// T409: the per-unit dangerous-tile set, cached on the <see cref="AutomationCache"/> (key: unit tile + unit id,
+    /// invalidated like the other entries, i.e. by the per-turn cache object). The local scan below differs from
+    /// <see cref="ThreatManager.GetDangerousTiles"/> (attack range is <c>(maxMovement - 1) + range</c>, and every visible
+    /// enemy unit counts, not only military ones), so this is a cache of the local computation, never a substitution.
+    /// </summary>
+    internal static HashSet<TileView> GetDangerousTiles(MapUnitView unitView, AutomationCache cache)
+    {
+        var key = (unitView.GetTile(), unitView.Id);
+        if (cache.DangerousTiles.TryGetValue(key, out var cached))
+            return cached;
+
+        var dangerousTiles = GetDangerousTilesCore(unitView);
+        cache.DangerousTiles[key] = dangerousTiles;
+        return dangerousTiles;
+    }
+
+    private static HashSet<TileView> GetDangerousTilesCore(MapUnitView unitView)
     {
         var civ = unitView.Civ();
         var nearbyEnemyUnits = unitView.GetTile().GetExploredTilesInDistance(3)
