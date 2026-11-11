@@ -370,6 +370,53 @@ public class UnitMovementTests
         Assert.NotSame(w.TileAt(0, 0), reached);
     }
 
+    // ---- T408: the distance-to-tiles buffer is reused across GetShortestPath frontier expansions
+
+    [Fact]
+    public void PathsToTilesWithinTurn_RecyclesParentTileObjectsAcrossFills()
+    {
+        var w = NewWorld();
+        var tileA = w.TileAt(1, 1);
+        var tileB = w.TileAt(2, 2);
+
+        var buffer = new PathsToTilesWithinTurn();
+        buffer.SetParent(tileA, tileA, 0f);
+        buffer.SetParent(tileB, tileA, 1f);
+        var firstObjects = new HashSet<UnitMovement.ParentTileAndTotalMovement> { buffer[tileA], buffer[tileB] };
+
+        buffer.ClearAndRecycle();
+        Assert.Empty(buffer);
+
+        buffer.SetParent(tileA, tileA, 0f);
+        buffer.SetParent(tileB, tileA, 2f);
+        Assert.Contains(buffer[tileA], firstObjects); // recycled rather than freshly allocated
+        Assert.Contains(buffer[tileB], firstObjects);
+        Assert.Equal(0f, buffer[tileA].TotalMovement);
+        Assert.Equal(2f, buffer[tileB].TotalMovement);
+        Assert.Same(tileA, buffer[tileA].Tile);
+        Assert.Same(tileB, buffer[tileB].Tile);
+        Assert.Equal([tileA, tileB], buffer.Keys.ToList()); // insertion order preserved across the recycle
+    }
+
+    [Fact]
+    public void GetShortestPath_IsDeterministicAcrossRepeatedSearches()
+    {
+        var w = NewWorld();
+        Explore(w);
+        var unit = w.Unit("Warrior", "Land", 0, 0);
+        var far = w.TileAt(4, 4);
+        var near = w.TileAt(2, 2);
+
+        var farPath = unit.Movement.GetShortestPath(far);
+        var nearPath = unit.Movement.GetShortestPath(near);
+        var farPathAgain = unit.Movement.GetShortestPath(far);
+
+        Assert.Equal(farPath, farPathAgain); // the reused buffer does not leak state between searches
+        Assert.NotEmpty(nearPath);
+        Assert.Same(far, farPath[^1]);
+        Assert.Same(near, nearPath[^1]);
+    }
+
     [Fact]
     public void GetTileToMoveToThisTurn_ThrowsWhenUnreachable()
     {

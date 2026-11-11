@@ -52,11 +52,20 @@ public class UnitMovement
         roadPathing = new KotlinLazy<IUnitPathingMap>(() => PathingMaps.NotNull().CreateRoadPathingMap(unit.Civ, unit.CurrentTile));
     }
 
-    public class ParentTileAndTotalMovement(Tile tile, Tile parentTile, float totalMovement)
+    // T408: the fields are settable only within Unciv.Core so that PathsToTilesWithinTurn can recycle the objects across the
+    // frontier expansions of one GetShortestPath search. External callers still only read them.
+    public class ParentTileAndTotalMovement
     {
-        public Tile Tile { get; } = tile;
-        public Tile ParentTile { get; } = parentTile;
-        public float TotalMovement { get; } = totalMovement;
+        public Tile Tile { get; internal set; }
+        public Tile ParentTile { get; internal set; }
+        public float TotalMovement { get; internal set; }
+
+        public ParentTileAndTotalMovement(Tile tile, Tile parentTile, float totalMovement)
+        {
+            Tile = tile;
+            ParentTile = parentTile;
+            TotalMovement = totalMovement;
+        }
     }
 
     public bool IsUnknownTileWeShouldAssumeToBePassable(Tile tile) => !Unit.Civ.HasExplored(tile);
@@ -114,17 +123,38 @@ public class UnitMovement
         if (PathingMaps != null)
             return SelectPathingMap(considerZoneOfControl, includeOtherEscortUnit).GetMovementToTilesAtPosition();
         var distanceToTiles = new PathsToTilesWithinTurn();
+        FillMovementToTilesAtPosition(distanceToTiles, position, unitMovement, considerZoneOfControl,
+            tilesToIgnoreBitset, canPassThroughCache, movementCostCache, includeOtherEscortUnit);
+        return distanceToTiles;
+    }
 
+    /// <summary>
+    /// The breadth-first search behind <see cref="GetMovementToTilesAtPositionCore"/>, filling an existing
+    /// <paramref name="distanceToTiles"/>. Used directly by <see cref="GetShortestPathCore"/> (T408) so a single buffer
+    /// (and its <see cref="ParentTileAndTotalMovement"/> objects) can be cleared and reused across frontier expansions
+    /// instead of allocating one <see cref="PathsToTilesWithinTurn"/> per frontier tile. The caller has already routed
+    /// the A* branch, so this is the plain BFS only.
+    /// </summary>
+    private void FillMovementToTilesAtPosition(
+        PathsToTilesWithinTurn distanceToTiles,
+        HexCoord position,
+        float unitMovement,
+        bool considerZoneOfControl,
+        BitArray? tilesToIgnoreBitset,
+        List<bool?> canPassThroughCache,
+        Dictionary<int, float> movementCostCache,
+        bool includeOtherEscortUnit)
+    {
         var currentUnitTile = Unit.CurrentTile;
         // This is for performance, because this is called all the time
         var unitTile = position == currentUnitTile.Position ? currentUnitTile : currentUnitTile.TileMap[position];
-        distanceToTiles[unitTile] = new ParentTileAndTotalMovement(unitTile, unitTile, 0f);
+        distanceToTiles.SetParent(unitTile, unitTile, 0f);
 
         // If I can't move my only option is to stay...
-        if (unitMovement == 0f || Unit.Cache.CannotMove) return distanceToTiles;
+        if (unitMovement == 0f || Unit.Cache.CannotMove) return;
         // If our escort can't move, ditto
         if (includeOtherEscortUnit && Unit.IsEscorting()
-            && Unit.GetOtherEscortUnit()?.CurrentMovement == 0f) return distanceToTiles;
+            && Unit.GetOtherEscortUnit()?.CurrentMovement == 0f) return;
 
         // Loop-invariant across the whole search: escort state and the usable movement cap never change
         // during one call, but were recomputed on every edge relaxation below.
@@ -174,15 +204,13 @@ public class UnitMovement
                         // In Civ V, you can always travel between adjacent tiles, even if you don't technically
                         // have enough movement points - it simply depletes what you have
 
-                        distanceToTiles[neighbor] = new ParentTileAndTotalMovement(neighbor, tileToCheck, totalDistanceToTile);
+                        distanceToTiles.SetParent(neighbor, tileToCheck, totalDistanceToTile);
                     }
                 }
             }
 
             tilesToCheck = updatedTiles;
         }
-
-        return distanceToTiles;
     }
 
     /// <summary>Kotlin <c>BitSet.get</c>: bits beyond the size are false.</summary>
@@ -247,6 +275,11 @@ public class UnitMovement
         var movementCostCache = new Dictionary<int, float>();
         var canMoveToCache = new Dictionary<Tile, bool>();
 
+        // T408: one distance-to-tiles buffer (and its ParentTileAndTotalMovement objects) reused across the distance>1 frontier
+        // expansions of this search, instead of allocating a fresh PathsToTilesWithinTurn per frontier tile. The visited bitset
+        // already scopes each expansion, so a single cleared-and-refilled buffer is equivalent to a fresh one.
+        var reusableDistanceToTiles = new PathsToTilesWithinTurn();
+
         while (true)
         {
             newTilesToCheck.Clear();
@@ -260,15 +293,8 @@ public class UnitMovement
 
             foreach (var tileToCheck in tilesByPreference)
             {
-                var distanceToTilesThisTurn = distance == 1
-                    ? GetDistanceToTiles(true, passThroughCacheNew, movementCostCache) // check cache
-                    : GetMovementToTilesAtPosition(
-                        tileToCheck.Position,
-                        unitMaxMovement,
-                        false,
-                        visitedTilesBitset,
-                        passThroughCacheNew,
-                        movementCostCache);
+                var distanceToTilesThisTurn = ExpandFrontierTile(tileToCheck, distance, unitMaxMovement,
+                    visitedTilesBitset, passThroughCacheNew, movementCostCache, reusableDistanceToTiles);
                 foreach (var reachableTile in distanceToTilesThisTurn.Keys)
                 {
                     // Avoid damaging terrain on first pass
@@ -317,6 +343,29 @@ public class UnitMovement
 
             distance++;
         }
+    }
+
+    /// <summary>
+    /// The tiles reachable from <paramref name="tileToCheck"/> within one turn. Turn 1 reuses the cached
+    /// <see cref="GetDistanceToTiles"/> (remaining movement); later turns expand the frontier into the reused
+    /// <paramref name="reusableDistanceToTiles"/> buffer (T408) with the full <paramref name="unitMaxMovement"/>.
+    /// </summary>
+    private PathsToTilesWithinTurn ExpandFrontierTile(
+        Tile tileToCheck,
+        int distance,
+        float unitMaxMovement,
+        BitArray visitedTilesBitset,
+        List<bool?> passThroughCacheNew,
+        Dictionary<int, float> movementCostCache,
+        PathsToTilesWithinTurn reusableDistanceToTiles)
+    {
+        if (distance == 1)
+            return GetDistanceToTiles(true, passThroughCacheNew, movementCostCache); // check cache
+        reusableDistanceToTiles.ClearAndRecycle();
+        using (TurnProbe.Measure("Path.MovementToTiles"))
+            FillMovementToTilesAtPosition(reusableDistanceToTiles, tileToCheck.Position, unitMaxMovement,
+                false, visitedTilesBitset, passThroughCacheNew, movementCostCache, includeOtherEscortUnit: true);
+        return reusableDistanceToTiles;
     }
 
     private static List<Tile> BuildPathFromParents(Tile destination, Tile tileToCheck, Tile currentTile, Dictionary<Tile, Tile?> movementTreeParents)
