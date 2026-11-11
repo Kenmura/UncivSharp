@@ -5,6 +5,7 @@ using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Ui;
 using Unciv.Harness;
+using Unciv.Models.Translations;
 using Unciv.Queries.Empire;
 using Unciv.Queries.Victory;
 using Unciv.Utils;
@@ -36,7 +37,21 @@ public sealed class OverviewScenario : Scenario
     private static bool TypedAndInside(DataTable data, Control screen) => data.Cell(0, 1).HorizontalAlignment == HorizontalAlignment.Right && data.Cell(0, 0).HorizontalAlignment == HorizontalAlignment.Left
         && data.GetGlobalRect().Position.X >= 0 && data.GetGlobalRect().End.X <= screen.GetViewportRect().Size.X;
 
-    public override IReadOnlyList<ScenarioStep> Build(Control host, GameSession session)
+    /// <summary>T344: each per-turn yield chip on the stats page carries its source breakdown as its tooltip; a stored amount does not.</summary>
+    private static ScenarioStep StatsTooltipStep(GameScreen screen, IGameSession session) => new AssertQuery(
+        "T344: each per-turn yield chip on the stats page carries its source breakdown as its tooltip, and a stored amount does not", () =>
+        {
+            var overview = session.QueryAsync(new EmpireOverviewQuery()).GetAwaiter().GetResult().NotNull();
+            var chips = screen.Overview.StatChips();
+            string? Chip(string stat) => chips.FirstOrDefault(it => it.Stat == stat)?.TooltipText;
+            return overview.StatSources.Count > 0
+                && Chip("Science") == TooltipModel.ToPlain(TooltipModel.StatBreakdown("Science", overview.StatSources, overview.SciencePerTurn), text => text.Tr())
+                && Chip("Culture") == TooltipModel.ToPlain(TooltipModel.StatBreakdown("Culture", overview.StatSources, overview.CulturePerTurn), text => text.Tr())
+                && Chip("Faith") == TooltipModel.ToPlain(TooltipModel.StatBreakdown("Faith", overview.StatSources, overview.FaithPerTurn), text => text.Tr())
+                && Chip("Science").NotNull().Contains("Total", StringComparison.Ordinal)
+                // Gold appears twice: the stored amount has no breakdown, the per-turn one does
+                && chips.Any(it => it.Stat == "Gold" && it.TooltipText.Length == 0) && chips.Any(it => it.Stat == "Gold" && it.TooltipText.Length > 0);
+        });    public override IReadOnlyList<ScenarioStep> Build(Control host, GameSession session)
     {
         var game = session.Game;
         var human = game.GetCivilization(ScenarioGame.HumanA);
@@ -72,7 +87,7 @@ public sealed class OverviewScenario : Scenario
                     && cards is { Columns: 2 } && cards.GetChildCount() == 4 && cards.GetChildren().OfType<Control>().All(it => it.Size.X > 0 && it.GetGlobalRect().End.X <= screen.GetViewportRect().Size.X);
             }),
             new Capture("stats", "Stats: the empire's per-turn numbers, score breakdown and known civilizations"),
-
+            StatsTooltipStep(screen, recording),
             new Click(() => Tab(OverviewModel.Cities)),
             new WaitFrames(2),
             new AssertQuery("the cities table lists exactly the viewer's cities, capital first, with the puppet marked", () =>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using Unciv.Commands.Empire;
 using Unciv.Net.Visibility;
+using Unciv.Queries.Cities;
 using Unciv.Queries.Empire;
 using Unciv.Queries.Victory;
 using Unciv.Utils;
@@ -19,8 +20,9 @@ public sealed record OverviewTable(IReadOnlyList<OverviewColumn> Columns, IReadO
     public int Count => Rows.Count;
 }
 
-/// <summary>C074: one labelled value of a stats card; <see cref="Stat"/> names the stat icon to show (gold, science, culture, faith, happiness) or is empty. <see cref="Indent"/> marks a breakdown line.</summary>
-public sealed record StatsEntry(string Label, string Value, string Stat = "", bool Indent = false);
+/// <summary>C074: one labelled value of a stats card; <see cref="Stat"/> names the stat icon to show (gold, science, culture, faith, happiness) or is empty. <see cref="Indent"/> marks a breakdown line.
+/// T344: <see cref="Sources"/> and <see cref="StatValue"/> carry a per-turn yield's itemised sources (the same shape the HUD and city screen use) so the card can show the breakdown as the tooltip; they are null for stored amounts and counts.</summary>
+public sealed record StatsEntry(string Label, string Value, string Stat = "", bool Indent = false, IReadOnlyList<StatSource>? Sources = null, float? StatValue = null);
 
 /// <summary>C074: a card of the stats page: a title and its entries.</summary>
 public sealed record StatsCard(string Title, IReadOnlyList<StatsEntry> Entries);
@@ -63,7 +65,7 @@ public static class OverviewModel
 
     /// <summary>
     /// C074: the stats page as cards (Empire, Economy, Progress, Score): one entry per number of the engine's overview, the score breakdown as indented entries of the Score card.
-    /// Values are worded only; the per-turn numbers carry their sign.
+    /// Values are worded only; the per-turn numbers carry their sign. T344: a per-turn yield also carries its itemised sources, so the card can explain it on hover.
     /// </summary>
     public static IReadOnlyList<StatsCard> StatsCards(EmpireOverviewResult overview)
     {
@@ -72,11 +74,18 @@ public static class OverviewModel
         return
         [
             new("Empire", [new("Civilization", overview.CivName), new("Turn", N(overview.Turn)), new("Cities", N(overview.Cities)), new("Units", N(overview.Units))]),
-            new("Economy", [new("Gold", N(overview.Gold), "Gold"), new("Gold per turn", Signed(overview.GoldPerTurn), "Gold"), new("Happiness", N(overview.Happiness), "Happiness")]),
+            new("Economy",
+            [
+                new("Gold", N(overview.Gold), "Gold"),
+                new("Gold per turn", Signed(overview.GoldPerTurn), "Gold", Sources: overview.StatSources, StatValue: overview.GoldPerTurn),
+                new("Happiness", N(overview.Happiness), "Happiness"),
+            ]),
             new("Progress",
             [
-                new("Science per turn", Signed(overview.SciencePerTurn), "Science"), new("Culture per turn", Signed(overview.CulturePerTurn), "Culture"),
-                new("Faith per turn", Signed(overview.FaithPerTurn), "Faith"), new("Technologies researched", N(overview.TechsResearched)), new("Policies adopted", N(overview.PoliciesAdopted)),
+                new("Science per turn", Signed(overview.SciencePerTurn), "Science", Sources: overview.StatSources, StatValue: overview.SciencePerTurn),
+                new("Culture per turn", Signed(overview.CulturePerTurn), "Culture", Sources: overview.StatSources, StatValue: overview.CulturePerTurn),
+                new("Faith per turn", Signed(overview.FaithPerTurn), "Faith", Sources: overview.StatSources, StatValue: overview.FaithPerTurn),
+                new("Technologies researched", N(overview.TechsResearched)), new("Policies adopted", N(overview.PoliciesAdopted)),
             ]),
             new("Score", score),
         ];

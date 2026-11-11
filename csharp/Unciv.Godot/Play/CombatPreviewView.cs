@@ -56,6 +56,11 @@ public partial class CombatPreviewView : PanelContainer
     /// <summary>How many fighter columns the card shows (0 to 2).</summary>
     public int FighterCount => fighters.GetChildren().OfType<VBoxContainer>().Count();
 
+    /// <summary>T344: the strength label's tooltip (the combat-strength formula) of the attacker (true) or defender (false) column, null when there is no such column.</summary>
+    public string? StrengthTooltip(bool attacker) =>
+        fighters.GetChildren().OfType<VBoxContainer>().FirstOrDefault(it => it.Name == (attacker ? "Attacker" : "Defender"))?
+        .GetChildren().OfType<Label>().FirstOrDefault(it => it.ThemeTypeVariation == UiVariants.LabelDisplay)?.TooltipText;
+
     public event Action? ConfirmRequested;
 
     public event Action? CancelRequested;
@@ -105,7 +110,10 @@ public partial class CombatPreviewView : PanelContainer
         var align = attacker ? HorizontalAlignment.Left : HorizontalAlignment.Right;
         box.AddChild(new Label { Text = fighter.Name.TrText(), ThemeTypeVariation = UiVariants.LabelBodyStrong, HorizontalAlignment = align, ClipText = true });
         box.AddChild(new Label { Text = fighter.Civ.TrText(), ThemeTypeVariation = UiVariants.LabelSmall, HorizontalAlignment = align, ClipText = true });
-        box.AddChild(new Label { Text = Int(fighter.Strength), ThemeTypeVariation = UiVariants.LabelDisplay, HorizontalAlignment = align });
+        var strength = new Label { Text = Int(fighter.Strength), ThemeTypeVariation = UiVariants.LabelDisplay, HorizontalAlignment = align };
+        // T344: the strength number's tooltip is the formula: base strength, each listed modifier, then the engine's final figure.
+        strength.TooltipText = TooltipModel.ToPlain(TooltipModel.CombatStrength(fighter.BaseStrength, fighter.Strength, fighter.Modifiers), text => text.Tr());
+        box.AddChild(strength);
         if (theme != null)
         {
             string range = fighter.HealthMin == fighter.HealthMax ? Int(fighter.HealthMax) : $"{Int(fighter.HealthMin)}-{Int(fighter.HealthMax)}";

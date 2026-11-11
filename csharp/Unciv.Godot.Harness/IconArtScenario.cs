@@ -44,7 +44,7 @@ public sealed class IconArtScenario : Scenario
         var uiTheme = screen.SharedTheme.NotNull();
         hud.HoldBanner = true;
         var bar = new EmpireTopBarResult(12, -3500, 214, 7f, 11f, 3f, 2f, 9, 0, 40, 200,
-            Resources.Select((name, i) => new TopBarResource(name, "Strategic", 3 + i)).ToList());
+            Resources.Select((name, i) => new TopBarResource(name, "Strategic", 3 + i)).ToList(), []);
         PanelContainer? gallery = null;
 
         void Show()

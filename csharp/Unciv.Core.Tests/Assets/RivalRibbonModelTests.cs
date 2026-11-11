@@ -10,7 +10,7 @@ public class RivalRibbonModelTests
         new(name, cityState, defeated, war, rankings.ToDictionary(it => it.Key, it => it.Value));
 
     private static EmpireOverviewResult Overview(params OverviewCiv[] known) =>
-        new(1, "Babylon", 0, 0f, 0f, 0f, 0f, 0, 1, 1, 0, 0, 0, new Dictionary<string, double>(), new Dictionary<string, int>(), known);
+        new(1, "Babylon", 0, 0f, 0f, 0f, 0f, 0, 1, 1, 0, 0, 0, new Dictionary<string, double>(), new Dictionary<string, int>(), known, []);
 
     private static readonly (string, int)[] Everything = [("Technologies", 7), ("Culture", 120), ("Gold", 345), ("Force", 88), ("Score", 5)];
 

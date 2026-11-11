@@ -207,6 +207,15 @@ public sealed class UnitOrdersScenario : Scenario
                         && screen.CombatPreview.ConfirmEnabled && screen.CombatPreview.ConfirmText == "Attack" && session.LastSeq == seqBefore
                         && enemy.Health == enemyHealthBefore && query.DamageToDefenderMax > 0;
                 }),
+                new AssertQuery("T344: each strength number's tooltip is its combat-strength formula (base strength, the listed modifiers, the final figure)", () =>
+                {
+                    var query = localHost.QueryAsync(new AttackPreviewQuery(enemyTile.x, enemyTile.y, warrior.Id)).GetAwaiter().GetResult().NotNull();
+                    var card = UnitOrdersModel.Combat(query).Card.NotNull();
+                    return card.Attacker != null && card.Defender != null
+                        && screen.CombatPreview.StrengthTooltip(true) == TooltipModel.ToPlain(TooltipModel.CombatStrength(card.Attacker.BaseStrength, card.Attacker.Strength, card.Attacker.Modifiers), text => text.Tr())
+                        && screen.CombatPreview.StrengthTooltip(false) == TooltipModel.ToPlain(TooltipModel.CombatStrength(card.Defender.BaseStrength, card.Defender.Strength, card.Defender.Modifiers), text => text.Tr())
+                        && screen.CombatPreview.StrengthTooltip(true).NotNull().Contains("Final strength", StringComparison.Ordinal);
+                }),
                 new Capture("attack-preview", "Combat preview: fighters, strengths, damage ranges; Attack and Cancel"),
                 new Press("Attack"),
                 new WaitFrames(1),

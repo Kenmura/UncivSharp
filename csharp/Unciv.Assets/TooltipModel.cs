@@ -121,6 +121,19 @@ public static class TooltipModel
     }
 
     /// <summary>
+    /// T344: the combat-strength formula of one fighter: the base strength, each modifier the engine listed, and its final strength (the number the battle card shows).
+    /// The final strength is the engine's own figure, so a factor the engine does not itemise cannot make the tooltip disagree with the card.
+    /// </summary>
+    public static IReadOnlyList<TipLine> CombatStrength(int baseStrength, int finalStrength, IReadOnlyList<string> modifiers)
+    {
+        var lines = new List<TipLine> { new("Combat strength", Kind: TipKind.Heading) };
+        lines.Add(new TipLine($"Base strength: {Number(baseStrength)}"));
+        foreach (var modifier in modifiers) lines.Add(new TipLine(modifier, Kind: TipKind.Source));
+        lines.Add(new TipLine($"Final strength: {Number(finalStrength)}"));
+        return lines;
+    }
+
+    /// <summary>
     /// The sources of a stat, one line each, then the total of the sources. Only sources that contribute to <paramref name="stat"/> are listed; the total is the sum of the listed values,
     /// so it equals the engine's figure whenever the engine's sources add up to it (a tile or city yield). C056: a caller that has the engine's own figure passes it as
     /// <paramref name="total"/> and that is shown instead of the sum, so a bonus the sources do not itemise cannot make the tooltip disagree with the screen.

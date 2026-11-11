@@ -1,5 +1,6 @@
 using Unciv.Assets;
 using Unciv.Net.Visibility;
+using Unciv.Queries.Cities;
 using Unciv.Queries.Empire;
 using Unciv.Queries.Victory;
 
@@ -97,16 +98,25 @@ public class OverviewModelTests
     public void StatsCardsWordTheEnginesNumbersAndBreakdown()
     {
         var overview = new EmpireOverviewResult(12, "Babylon", 120, 3.5f, 4f, -1f, 0f, 8, 2, 5, 7, 1, 90,
-            new Dictionary<string, double> { ["Cities"] = 20, ["Population"] = 12.5 }, new Dictionary<string, int>(), []);
+            new Dictionary<string, double> { ["Cities"] = 20, ["Population"] = 12.5 }, new Dictionary<string, int>(), [],
+            [new StatSource("Library", [new StatAmount("Science", 4f)]), new StatSource("Population", [new StatAmount("Gold", 3.5f)])]);
         var cards = OverviewModel.StatsCards(overview);
         Assert.Equal(["Empire", "Economy", "Progress", "Score"], cards.Select(it => it.Title));
         Assert.Equal([("Civilization", "Babylon"), ("Turn", "12"), ("Cities", "2"), ("Units", "5")], cards[0].Entries.Select(it => (it.Label, it.Value)));
         Assert.Contains(new StatsEntry("Gold", "120", "Gold"), cards[1].Entries);
-        Assert.Contains(new StatsEntry("Gold per turn", "+3.5", "Gold"), cards[1].Entries);
-        Assert.Contains(new StatsEntry("Culture per turn", "-1", "Culture"), cards[2].Entries);
+        Assert.Contains(cards[1].Entries, it => it.Label == "Gold per turn" && it.Value == "+3.5" && it.Stat == "Gold");
+        Assert.Contains(cards[2].Entries, it => it.Label == "Culture per turn" && it.Value == "-1" && it.Stat == "Culture");
         Assert.Contains(new StatsEntry("Technologies researched", "7"), cards[2].Entries);
         Assert.Equal(new StatsEntry("Score", "90"), cards[3].Entries[0]);
         Assert.Equal([new StatsEntry("Cities", "20", Indent: true), new StatsEntry("Population", "12.5", Indent: true)], cards[3].Entries.Skip(1));
+        // T344: the per-turn yields carry their itemised sources; a stored amount (Gold) and a count do not
+        Assert.Equal(4f, cards[2].Entries[0].StatValue);
+        Assert.Equal(["Library", "Population"], cards[2].Entries[0].Sources!.Select(it => it.Source));
+        Assert.Equal(3.5f, cards[1].Entries[1].StatValue);
+        Assert.NotNull(cards[1].Entries[1].Sources);
+        Assert.Null(cards[1].Entries[0].Sources);
+        Assert.Null(cards[1].Entries[2].Sources);
+        Assert.Null(cards[2].Entries[3].Sources);
     }
 
     [Fact]
@@ -116,7 +126,7 @@ public class OverviewModelTests
         Assert.Equal([false, true, false, false, true, false], cities.Columns.Select(it => it.Numeric));
         var units = OverviewModel.UnitTable(Snapshot([], [Unit(1, "Warrior")]));
         Assert.Equal([false, false, true, true, false], units.Columns.Select(it => it.Numeric));
-        Assert.Equal([false, false, true], OverviewModel.ResourceTable(new EmpireTopBarResult(1, 0, 0, 0f, 0f, 0f, 0f, 0, 0, 0, 0, [])).Columns.Select(it => it.Numeric));
+        Assert.Equal([false, false, true], OverviewModel.ResourceTable(new EmpireTopBarResult(1, 0, 0, 0f, 0f, 0f, 0f, 0, 0, 0, 0, [], [])).Columns.Select(it => it.Numeric));
         Assert.Equal([true, false, true], OverviewModel.RankingTables([new RankingColumn("Score", "Score", [])])[0].Table.Columns.Select(it => it.Numeric));
         // every numeric column of the typed tables sorts by value: its cells parse as numbers
         Assert.All(cities.Rows.Concat(units.Rows).SelectMany(row => row.Cells.Where((_, index) => (row.Cells.Count == 6 ? cities : units).Columns[index].Numeric)),
@@ -132,7 +142,7 @@ public class OverviewModelTests
             new OverviewCiv("Sparta", true, false, false, new Dictionary<string, int>()),
             new OverviewCiv("Troy", false, true, false, new Dictionary<string, int>()),
             new OverviewCiv("Ur", false, false, false, new Dictionary<string, int>()),
-        ]);
+        ], []);
         var table = OverviewModel.KnownCivs(overview);
         Assert.Equal(["Rome", "Major", "At war", "44"], table.Rows[0].Cells);
         Assert.Equal(["Sparta", "City-state", "Peace", "-"], table.Rows[1].Cells);
@@ -144,9 +154,9 @@ public class OverviewModelTests
     [Fact]
     public void ResourceTableIsTheEnginesListInItsOrder()
     {
-        var table = OverviewModel.ResourceTable(new EmpireTopBarResult(1, 0, 0, 0f, 0f, 0f, 0f, 0, 0, 0, 0, [new TopBarResource("Iron", "Strategic", 4), new TopBarResource("Silk", "Luxury", 1)]));
+        var table = OverviewModel.ResourceTable(new EmpireTopBarResult(1, 0, 0, 0f, 0f, 0f, 0f, 0, 0, 0, 0, [new TopBarResource("Iron", "Strategic", 4), new TopBarResource("Silk", "Luxury", 1)], []));
         Assert.Equal([["Iron", "Strategic", "4"], ["Silk", "Luxury", "1"]], table.Rows.Select(it => it.Cells.ToArray()));
-        Assert.Equal(0, OverviewModel.ResourceTable(new EmpireTopBarResult(1, 0, 0, 0f, 0f, 0f, 0f, 0, 0, 0, 0, [])).Count);
+        Assert.Equal(0, OverviewModel.ResourceTable(new EmpireTopBarResult(1, 0, 0, 0f, 0f, 0f, 0f, 0, 0, 0, 0, [], [])).Count);
     }
 
     [Fact]

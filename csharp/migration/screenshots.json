@@ -2163,5 +2163,8 @@
         "caption": "The old host when the two machines meet: the verified claim fences it at the newer epoch, its own player is told stale-epoch, and the screen says another host took over and to leave and join that game with the same key."
       }
     ]
+  },
+  "T344": {
+    "none": "The new tooltips are hover-only native TooltipText (the top bar's per-turn yield source breakdown and the combat card's strength formula), which the headless harness cannot render as a visible tip (its tooltip delay is forced unreachable); the tooltips scenario and the unit-orders scenario assert them through the TooltipText accessors, and no default capture changed."
   }
 }

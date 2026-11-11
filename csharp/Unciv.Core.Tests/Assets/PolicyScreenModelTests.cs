@@ -32,7 +32,7 @@ public class PolicyScreenModelTests
     [Fact]
     public void GoldenAgeLineShowsTurnsLeftOrStoredHappiness()
     {
-        var running = new EmpireTopBarResult(0, 0, 0, 0f, 0f, 0f, 0f, 1, 4, 10, 100, []);
+        var running = new EmpireTopBarResult(0, 0, 0, 0f, 0f, 0f, 0f, 1, 4, 10, 100, [], []);
         Assert.Equal("Golden Age: 4 turns left", PolicyScreenModel.GoldenAgeLine(running));
         Assert.Equal("Golden Age: 1 turns left", PolicyScreenModel.GoldenAgeLine(running with { GoldenAgeTurnsLeft = 1 }));
         Assert.Equal("Golden Age: 10 / 100 happiness stored", PolicyScreenModel.GoldenAgeLine(running with { GoldenAgeTurnsLeft = 0 }));

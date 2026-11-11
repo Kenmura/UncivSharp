@@ -2,6 +2,7 @@ using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
+using Unciv.Models.Translations;
 using Unciv.Queries.Empire;
 using Unciv.GodotClient.Localization;
 
@@ -109,6 +110,9 @@ public partial class HudView : Control
 
     /// <summary>The text of one top bar entry by its <see cref="HudStat.Id"/>, null when the bar has no such entry.</summary>
     public string? StatText(string id) => stats.FirstOrDefault(it => it.Id == id)?.Text;
+
+    /// <summary>T344: the tooltip of one top bar entry by its <see cref="HudStat.Id"/> (the per-turn yields carry their source breakdown), null when the bar has no such entry.</summary>
+    public string? StatTooltip(string id) => entries.TryGetValue(id, out var control) ? control.TooltipText : null;
 
     /// <summary>The top bar's controls by stat id (the harness checks them for overlap and clipping).</summary>
     public IReadOnlyDictionary<string, Control> Entries => entries;
@@ -246,6 +250,9 @@ public partial class HudView : Control
             case IconLabel label: label.Text = stat.Text; break;
             case Label label: label.Text = stat.Text; break;
         }
-        item.TooltipText = stat.Tooltip.TrText();
+        // T344: a per-turn yield's tooltip is its source breakdown (the same words the city screen uses); anything else is the plain label.
+        item.TooltipText = stat.Sources == null
+            ? stat.Tooltip.TrText()
+            : TooltipModel.ToPlain(TooltipModel.StatBreakdown(stat.Id, stat.Sources, stat.StatValue), text => text.Tr());
     }
 }

@@ -125,6 +125,9 @@ public partial class OverviewScreen : PanelContainer
     /// <summary>The tables of a page as drawn (the ranking tab has one per column); empty when the page shows a notice instead.</summary>
     public IReadOnlyList<OverviewTable> Tables(string tab) => tables.TryGetValue(tab, out var list) ? list : [];
 
+    /// <summary>T344: the stat chips of the stats page, so the harness can check a per-turn yield's tooltip is its source breakdown.</summary>
+    public IReadOnlyList<StatChip> StatChips() => pages[OverviewModel.Stats].FindChildren("*", "", true, false).OfType<StatChip>().ToList();
+
     /// <summary>The <see cref="DataTable"/> controls of a page, in the order of <see cref="Tables"/> (a table without rows shows an empty state instead and has no control).</summary>
     public IReadOnlyList<DataTable> DataTables(string tab) => dataTables.TryGetValue(tab, out var list) ? list : [];
 
@@ -270,7 +273,13 @@ public partial class OverviewScreen : PanelContainer
                 };
                 if (entry.Indent) row.AddChild(new Control { CustomMinimumSize = new Vector2(theme.Px(UiTokens.S3), 0f) });
                 row.AddChild(label);
-                if (entry.Stat.Length > 0) row.AddChild(new StatChip(theme, entry.Stat, entry.Value));
+                if (entry.Stat.Length > 0)
+                {
+                    var chip = new StatChip(theme, entry.Stat, entry.Value);
+                    // T344: a per-turn yield's tooltip is its source breakdown (the same words the HUD and city screen use).
+                    if (entry.Sources != null) chip.TooltipText = TooltipModel.ToPlain(TooltipModel.StatBreakdown(entry.Stat, entry.Sources, entry.StatValue), text => text.Tr());
+                    row.AddChild(chip);
+                }
                 else row.AddChild(new Label { Text = entry.Value, ThemeTypeVariation = UiVariants.LabelNumber, HorizontalAlignment = HorizontalAlignment.Right });
                 box.AddChild(row);
             }

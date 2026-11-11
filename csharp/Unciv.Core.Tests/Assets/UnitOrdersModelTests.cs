@@ -405,6 +405,16 @@ public class UnitOrdersModelTests
     }
 
     [Fact]
+    public void CombatCardCarriesBaseAndFinalStrengthForTheFormula()
+    {
+        var fighter = new CombatantPreview("Bomber", "Rome", false, false, 55, 120, 10, 17, [new StrengthModifier("Flanked", -10)]);
+        var sweep = new AttackPreviewResult("airsweep", true, null, new TilePos(1, 1), null, fighter, null, 0, 0, 0, 0, false, false, 0);
+        var card = UnitOrdersModel.Combat(sweep).Card!;
+        Assert.Equal((10, 17), (card.Attacker!.BaseStrength, card.Attacker.Strength));
+        Assert.Equal(["-10% Flanked"], card.Attacker.Modifiers);
+    }
+
+    [Fact]
     public void CombatCardForCaptureKeepsHealthAndAirSweepHasOneFighter()
     {
         var capture = UnitOrdersModel.Combat(Battle(0, 0, 0, 0, outcome: "capture")).Card!;

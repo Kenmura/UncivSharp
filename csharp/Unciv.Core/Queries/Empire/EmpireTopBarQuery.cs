@@ -1,4 +1,5 @@
 using Unciv.Models.Ruleset.Tile;
+using Unciv.Queries.Cities;
 using Unciv.View;
 
 namespace Unciv.Queries.Empire;
@@ -6,9 +7,11 @@ namespace Unciv.Queries.Empire;
 // Name, Amount: a luxury or strategic resource the civ currently has (bonus resources are not listed), summed over all origins; never zero
 public sealed record TopBarResource(string Name, string Type, int Amount);
 
-// GoldenAgeTurnsLeft: 0 when no golden age is running. GoldenAgeStored, GoldenAgeNeeded: happiness stored towards the next golden age and what it costs
+// GoldenAgeTurnsLeft: 0 when no golden age is running. GoldenAgeStored, GoldenAgeNeeded: happiness stored towards the next golden age and what it costs.
+// StatSources: the per-turn yields itemised by source (the same shape as the city screen's stat breakdown), so the top bar can explain each yield on hover.
 public sealed record EmpireTopBarResult(int Turn, int Year, int Gold, float GoldPerTurn, float SciencePerTurn, float CulturePerTurn, float FaithPerTurn,
-    int Happiness, int GoldenAgeTurnsLeft, int GoldenAgeStored, int GoldenAgeNeeded, IReadOnlyList<TopBarResource> Resources);
+    int Happiness, int GoldenAgeTurnsLeft, int GoldenAgeStored, int GoldenAgeNeeded, IReadOnlyList<TopBarResource> Resources,
+    IReadOnlyList<StatSource> StatSources);
 
 // C011: the numbers of the world screen's top bar (the Kotlin TopBar / StatsTable), as the viewer's own civ shows them. Empire.Overview has the
 // per-turn stats too, but the bar also needs the year, the golden age and the resource list, and asks for them every time the snapshot changes.
@@ -32,8 +35,12 @@ public sealed record EmpireTopBarQuery : IQuery<EmpireTopBarResult>
             .ThenBy(it => it.Resource.Name, StringComparer.Ordinal)
             .Select(it => new TopBarResource(it.Resource.Name, it.Resource.ResourceType.ToString(), it.Amount))
             .ToList();
+        // T344: where each per-turn yield comes from, as the engine itemised it (the StatMap is insertion-ordered, so the wire order is stable).
+        var statSources = civ.Stats.GetStatMapForNextTurn()
+            .Select(it => new StatSource(it.Key, CityQueryHelpers.StatList(it.Value)))
+            .ToList();
         return new EmpireTopBarResult(view.GetTurn(), civ.GameInfo.GetYear(0), civView.Gold, stats.Gold, stats.Science, stats.Culture, stats.Faith,
             civView.GetHappiness(), golden.IsGoldenAge() ? golden.TurnsLeftForCurrentGoldenAge : 0, golden.StoredHappiness,
-            golden.HappinessRequiredForNextGoldenAge(), resources);
+            golden.HappinessRequiredForNextGoldenAge(), resources, statSources);
     }
 }

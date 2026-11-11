@@ -1,6 +1,7 @@
 using Unciv.Assets;
 using Unciv.Logic;
 using Unciv.Net.Visibility;
+using Unciv.Queries.Cities;
 using Unciv.Queries.Empire;
 
 namespace Unciv.Core.Tests.Assets;
@@ -9,7 +10,8 @@ public class HudModelTests
 {
     private static EmpireTopBarResult Bar(int gold = 120, float gpt = 4.5f, int golden = 0, params TopBarResource[] resources) =>
         new(Turn: 12, Year: -3200, Gold: gold, GoldPerTurn: gpt, SciencePerTurn: 7.4f, CulturePerTurn: 2f, FaithPerTurn: -0.5f, Happiness: 9,
-            GoldenAgeTurnsLeft: golden, GoldenAgeStored: 30, GoldenAgeNeeded: 500, Resources: resources);
+            GoldenAgeTurnsLeft: golden, GoldenAgeStored: 30, GoldenAgeNeeded: 500, Resources: resources,
+            StatSources: [new StatSource("Population", [new StatAmount("Science", 3f)]), new StatSource("Library", [new StatAmount("Science", 4.4f)])]);
 
     private static PendingDecisionsResult Pending(params (DecisionKind Kind, bool Blocking)[] decisions) =>
         new(decisions.Select((it, i) => new PendingDecisionEntry(it.Kind.ToString(), "", "cmd", it.Blocking, -1, null)).ToList());
@@ -34,6 +36,19 @@ public class HudModelTests
 
     [Fact]
     public void ActiveGoldenAgeShowsTurnsLeft() => Assert.Equal("Golden Age 8", HudModel.TopBar(Bar(golden: 8))[5].Text);
+
+    [Fact]
+    public void YieldStatsCarryTheirSourceBreakdown()
+    {
+        var stats = HudModel.TopBar(Bar());
+        var science = stats.Single(it => it.Id == "Science");
+        Assert.NotNull(science.Sources);
+        Assert.Equal(7.4f, science.StatValue);
+        Assert.Equal(["Population", "Library"], science.Sources.Select(it => it.Source));
+        Assert.Equal(4.5f, stats.Single(it => it.Id == "Gold").StatValue);
+        // the entries that are not per-turn yields carry no breakdown
+        Assert.All(["Happiness", "GoldenAge", "Turn"], id => Assert.Null(stats.Single(it => it.Id == id).Sources));
+    }
 
     [Fact]
     public void NegativeGoldChangeAndZeroAreSigned()

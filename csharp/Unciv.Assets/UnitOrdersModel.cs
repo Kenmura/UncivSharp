@@ -43,7 +43,7 @@ public sealed record MenuEntry(MenuEntryKind Kind, string Label, bool Enabled, U
     string Key = "", AssetKey? IconKey = null, bool Primary = false);
 
 /// <summary>One side of the battle card (C068). <see cref="HealthMin"/>..<see cref="HealthMax"/> is the health left after the fight (equal to <see cref="Health"/> when it takes no damage).</summary>
-public sealed record FighterCard(string Name, string Civ, int Strength, int Health, int MaxHealth, int HealthMin, int HealthMax, IReadOnlyList<string> Modifiers);
+public sealed record FighterCard(string Name, string Civ, int Strength, int BaseStrength, int Health, int MaxHealth, int HealthMin, int HealthMax, IReadOnlyList<string> Modifiers);
 
 /// <summary>The structured battle card: the two fighters (either may be absent: an air sweep has one, a nuke none) and the outcome lines under them.</summary>
 public sealed record CombatCard(FighterCard? Attacker, FighterCard? Defender, IReadOnlyList<string> Outcome);
@@ -211,7 +211,7 @@ public static class UnitOrdersModel
     }
 
     private static FighterCard Fighter(CombatantPreview fighter, int minDamage, int maxDamage) =>
-        new(fighter.Name, fighter.Civ, fighter.FinalStrength, fighter.Health, fighter.MaxHealth,
+        new(fighter.Name, fighter.Civ, fighter.FinalStrength, fighter.BaseStrength, fighter.Health, fighter.MaxHealth,
             Math.Max(0, fighter.Health - maxDamage), Math.Max(0, fighter.Health - minDamage),
             fighter.Modifiers.Select(it => $"{(it.Percent >= 0 ? "+" : "-")}{Int(Math.Abs(it.Percent))}% {it.Key}").ToList());
 

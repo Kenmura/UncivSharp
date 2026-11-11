@@ -2,12 +2,17 @@ using System.Globalization;
 using Unciv.Logic;
 using Unciv.Models.StatTypes;
 using Unciv.Net.Visibility;
+using Unciv.Queries.Cities;
 using Unciv.Queries.Empire;
 
 namespace Unciv.Assets;
 
-/// <summary>One entry of the top bar: <see cref="Id"/> is stable (for tests and node names), <see cref="Icon"/> may be null (turn and year have none).</summary>
-public sealed record HudStat(string Id, AssetKey? Icon, string Text, string Tooltip);
+/// <summary>
+/// One entry of the top bar: <see cref="Id"/> is stable (for tests and node names), <see cref="Icon"/> may be null (turn and year have none).
+/// T344: <see cref="Sources"/> and <see cref="StatValue"/> carry the per-turn yield's itemised sources (the same shape the city screen uses) so the view can show
+/// the breakdown as the tooltip; they are null for the entries that are not yields (happiness, golden age, resources, turn).
+/// </summary>
+public sealed record HudStat(string Id, AssetKey? Icon, string Text, string Tooltip, IReadOnlyList<StatSource>? Sources = null, float? StatValue = null);
 
 public enum HudActionKind
 {
@@ -54,11 +59,11 @@ public static class HudModel
     {
         var stats = new List<HudStat>
         {
-            new("Gold", StatKey(Stat.Gold), $"{Int(bar.Gold)} ({Signed(bar.GoldPerTurn)})", "Gold, and its change next turn"),
-            new("Science", StatKey(Stat.Science), Signed(bar.SciencePerTurn), "Science per turn"),
-            new("Culture", StatKey(Stat.Culture), Signed(bar.CulturePerTurn), "Culture per turn"),
+            new("Gold", StatKey(Stat.Gold), $"{Int(bar.Gold)} ({Signed(bar.GoldPerTurn)})", "Gold, and its change next turn", bar.StatSources, bar.GoldPerTurn),
+            new("Science", StatKey(Stat.Science), Signed(bar.SciencePerTurn), "Science per turn", bar.StatSources, bar.SciencePerTurn),
+            new("Culture", StatKey(Stat.Culture), Signed(bar.CulturePerTurn), "Culture per turn", bar.StatSources, bar.CulturePerTurn),
             new("Happiness", StatKey(Stat.Happiness), Int(bar.Happiness), "Happiness"),
-            new("Faith", StatKey(Stat.Faith), Signed(bar.FaithPerTurn), "Faith per turn"),
+            new("Faith", StatKey(Stat.Faith), Signed(bar.FaithPerTurn), "Faith per turn", bar.StatSources, bar.FaithPerTurn),
             GoldenAge(bar),
         };
         foreach (var resource in bar.Resources)

@@ -5,6 +5,7 @@ using Unciv.GodotClient.Play;
 using Unciv.Commands;
 using Unciv.Harness;
 using Unciv.Models.Translations;
+using Unciv.Queries.Empire;
 using Unciv.Queries.Tiles;
 using Unciv.UI.ObjectDescriptions;
 using Unciv.UI.Screens.Civilopedia;
@@ -91,6 +92,8 @@ public sealed class TooltipsScenario : Scenario
             new WaitFrames(3),
             new AssertQuery("over the HUD the map tip goes away", () => screen.HoveredTile == null && !screen.Tooltips.IsShowing && screen.HoverTip.Length == 0),
 
+            TopBarTooltipStep(screen, recording),
+
             new Act("open the capital's city screen", () => screen.OpenCityScreen(recording.Snapshot.Cities.First(it => it.Own?.Id == capital.Id))),
             new WaitFrames(6),
             new AssertQuery("each stat of the city has the shared breakdown as its tooltip: sources then the engine's total", () =>
@@ -155,6 +158,20 @@ public sealed class TooltipsScenario : Scenario
             .. ButtonAndSearchSteps(host, screen, session, ruleset, human, () => logged, Centre, ExpectedPage),
         ];
     }
+
+    /// <summary>T344: the top bar's per-turn yields carry their source breakdown as the tooltip, and the non-yield entries keep their plain label.</summary>
+    private static ScenarioStep TopBarTooltipStep(GameScreen screen, IGameSession session) => new AssertQuery(
+        "T344: the top bar's per-turn yields carry their source breakdown as the tooltip, and the rest keep their plain label", () =>
+        {
+            var bar = session.QueryAsync(new EmpireTopBarQuery()).GetAwaiter().GetResult().NotNull();
+            return bar.StatSources.Count > 0
+                && screen.Hud.StatTooltip("Science") == TooltipModel.ToPlain(TooltipModel.StatBreakdown("Science", bar.StatSources, bar.SciencePerTurn), text => text.Tr())
+                && screen.Hud.StatTooltip("Gold") == TooltipModel.ToPlain(TooltipModel.StatBreakdown("Gold", bar.StatSources, bar.GoldPerTurn), text => text.Tr())
+                && screen.Hud.StatTooltip("Culture") == TooltipModel.ToPlain(TooltipModel.StatBreakdown("Culture", bar.StatSources, bar.CulturePerTurn), text => text.Tr())
+                && screen.Hud.StatTooltip("Faith") == TooltipModel.ToPlain(TooltipModel.StatBreakdown("Faith", bar.StatSources, bar.FaithPerTurn), text => text.Tr())
+                && screen.Hud.StatTooltip("Science").NotNull().Contains("Total", StringComparison.Ordinal)
+                && screen.Hud.StatTooltip("Happiness") == "Happiness".Tr() && screen.Hud.StatTooltip("Turn") == "Turn and year".Tr();
+        });
 
     /// <summary>C076: the Archer's page on the Civilopedia frame (sidebar, header card, links, no dashes).</summary>
     private static bool ArcherPageIsFramed(GameScreen screen, Unciv.Models.Ruleset.Ruleset ruleset)

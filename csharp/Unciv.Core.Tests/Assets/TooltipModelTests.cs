@@ -187,6 +187,16 @@ public class TooltipModelTests
     }
 
     [Fact]
+    public void CombatStrength_IsTheFormulaBaseModifiersFinal()
+    {
+        var lines = TooltipModel.CombatStrength(8, 9, ["+25% Fortified", "-10% Flanked"]);
+        Assert.Equal(["Combat strength", "Base strength: 8", "+25% Fortified", "-10% Flanked", "Final strength: 9"], Texts(lines));
+        Assert.Equal(TipKind.Heading, lines[0].Kind);
+        Assert.Equal([TipKind.Body, TipKind.Source, TipKind.Source, TipKind.Body], lines.Skip(1).Select(it => it.Kind));
+        Assert.Equal(["Combat strength", "Base strength: 8", "Final strength: 8"], Texts(TooltipModel.CombatStrength(8, 8, [])));
+    }
+
+    [Fact]
     public void StatBreakdown_ListsContributingSourcesAndTheirSum()
     {
         StatSource[] sources =
