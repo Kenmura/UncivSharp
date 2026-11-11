@@ -148,7 +148,7 @@ public sealed class UnitOrdersScenario : Scenario
             [
                 new AssertQuery("the warrior is selected and its panel names it with its combat strength and moves", () =>
                     screen.SelectedUnitId == warrior.Id && screen.Panel.Visible && screen.Panel.TitleText == "Warrior"
-                    && screen.Panel.StatsText.Contains("Combat 6", StringComparison.Ordinal) && screen.Panel.StatsText.Contains("Moves 2/2", StringComparison.Ordinal)),
+                    && screen.Panel.StatsText.Contains("Combat " + warrior.BaseUnit.Strength, StringComparison.Ordinal) && screen.Panel.StatsText.Contains("Moves 2/2", StringComparison.Ordinal)),
                 new AssertQuery("the warrior's menu equals the unit-actions query, with Disband last", () => MenuEqualsQuery(warrior.Id) && screen.Panel.Entries[^1].Kind == MenuEntryKind.Disband),
                 new AssertQuery("the reachable overlay equals the reachable query and the attack overlay is the enemy's tile", () =>
                     OverlaysEqualQueries(warrior.Id) && screen.AttackOverlay.Tiles.SequenceEqual([enemyTile]) && screen.ReachableOverlay.Tiles.Count > 0),

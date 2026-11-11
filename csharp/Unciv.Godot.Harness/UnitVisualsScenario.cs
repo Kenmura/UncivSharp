@@ -30,7 +30,7 @@ public sealed class UnitVisualsScenario : Scenario
 
     public override IReadOnlyList<string> Checklist =>
     [
-        "Do you see more figures for stronger units (1 for Warrior, 2 for Longswordsman, 3 for Infantry, 4 for Tank), and one for civilians, ships and the plane?",
+        "Do you see more figures for stronger units (one for a Warrior, four for a Tank), and one for civilians, ships and the plane?",
         "Can you tell the unit types apart by silhouette (infantry with shield, archer with bow, rider, siege barrel, ship with sail, plane with wings)?",
         "Are the health bar, the status marks (fortified, sleeping, automated, promotion) and the civ colour legible at game camera distance?",
     ];
@@ -125,7 +125,7 @@ public sealed class UnitVisualsScenario : Scenario
     {
         var ruleset = session.Game.Ruleset;
         var registry = AssetRegistry.ForRuleset(ruleset);
-        // C084: the session is Vanilla; the roster's Gods & Kings units (Pictish Warrior, Cataphract...) are built from that ruleset
+        // C084/T363: the session plays Brave New World; the Gods & Kings ruleset is only a fallback for a roster unit the session lacks
         var gods = RulesetCache.Get("Civ V - Gods & Kings") ?? ruleset;
         RulesetClass Of(string unit) => ruleset.Units.ContainsKey(unit) ? ruleset : gods;
         var colours = new Dictionary<string, Rgb> { [Rome] = PlaceholderPalette.AttackTint, [Egypt] = PlaceholderPalette.ReachableTint };
@@ -191,10 +191,10 @@ public sealed class UnitVisualsScenario : Scenario
         [
             new WaitFrames(3),
             new AssertQuery("every unit stands on its own tile of the gallery", () => nodes.Count == Slots.Length && nodes.Select(it => (it.Unit.X, it.Unit.Y)).Distinct().Count() == Slots.Length),
-            new AssertQuery("figures: civilians, ships and the plane are one; Warrior 1, Longswordsman 2, Infantry 3, Tank 4", () =>
-                new[] { "Settler", "Worker", "Trireme", "Destroyer", "Fighter", "Warrior", "Horseman", "Archer" }.All(n => Node(n).FigureCount == 1)
-                && Node("Longswordsman").FigureCount == 2 && Node("Musketman").FigureCount == 2 && Node("Catapult").FigureCount == 2
-                && Node("Infantry").FigureCount == 3 && Node("Cannon").FigureCount == 3 && Node("Tank").FigureCount == 4),
+            new AssertQuery("figures: civilians, ships and the plane are one; Warrior 1, Horseman 2, Infantry 4, Tank 4 (Brave New World strengths)", () =>
+                new[] { "Settler", "Worker", "Trireme", "Destroyer", "Fighter", "Warrior", "Archer", "Catapult" }.All(n => Node(n).FigureCount == 1)
+                && Node("Horseman").FigureCount == 2 && Node("Longswordsman").FigureCount == 2 && Node("Musketman").FigureCount == 2
+                && Node("Infantry").FigureCount == 4 && Node("Cannon").FigureCount == 2 && Node("Tank").FigureCount == 4),
             new AssertQuery("the figure nodes equal the figure count, from the tier rule, for every unit", () =>
                 nodes.All(n => Figures(n) == n.FigureCount && n.FigureCount == UnitVisuals.FigureCount(Of(n.Unit.Name).Units[n.Unit.Name], Of(n.Unit.Name)))),
             new AssertQuery("a generated group has one initials billboard whatever its size; a model file carries none (its art identifies it)", () => nodes.All(n => Glyphs(n) == (IsModel(n) || IsRigidModel(n) ? 0 : 1))),

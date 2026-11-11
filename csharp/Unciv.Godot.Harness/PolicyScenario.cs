@@ -69,7 +69,7 @@ public sealed class PolicyScenario : Scenario
             new AssertQuery("the button opened the policy screen with the engine's branches, in its order", () =>
                 screen.IsPolicyScreenVisible && screen.Policies.Branches.Select(it => it.Name).SequenceEqual(Tree().Branches.Select(it => it.Name))
                 && screen.Policies.Branches[0].Name == "Tradition" && screen.Policies.Branches[0].Title == "Tradition (Ancient era)"),
-            new AssertQuery("every policy on screen is in the engine's state, and pickable exactly when the engine allows it", () => CellsEqualTree() && screen.Policies.Branches.Count == 10),
+            new AssertQuery("every policy on screen is in the engine's state, and pickable exactly when the engine allows it", () => CellsEqualTree() && screen.Policies.Branches.Count == Tree().Branches.Count),
             new AssertQuery("the culture line is the engine's numbers, and the golden-age line the top bar's", () =>
                 screen.Policies.HeaderText.StartsWith($"Culture: {Tree().StoredCulture} / {Tree().CultureNeededForNextPolicy}", StringComparison.Ordinal)
                 && screen.Policies.GoldenAgeText.StartsWith("Golden Age:", StringComparison.Ordinal)),
@@ -115,22 +115,23 @@ public sealed class PolicyScenario : Scenario
             new AssertQuery("a policy whose prerequisite is missing cannot be adopted and names it", () =>
                 screen.Policies.Selected is { Name: "Landed Elite", State: "Locked", Pickable: false } && screen.Policies.AdoptButton.Disabled
                 && screen.Policies.DetailText.Contains("Needs Legalism first", StringComparison.Ordinal) && Entry("Landed Elite").LockedReason == "requires:Legalism"),
+            Show("Oligarchy"),
+            new Click(() => At("Oligarchy")),
+            new Press("Adopt Oligarchy"),
+            new WaitFrames(3),
+            new AssertQuery("Oligarchy adopted; it unlocked Legalism, while Landed Elite and Monarchy still wait for Legalism", () =>
+                human.Policies.IsAdopted("Oligarchy") && Entry("Legalism").State == "Adoptable"
+                && Entry("Landed Elite").State == "Locked" && Entry("Monarchy").State == "Locked" && CellsEqualTree()),
+            new Capture("adopted", "Tradition and Oligarchy adopted (gold); Legalism is now open, Landed Elite and Monarchy still wait for it; later branches are dimmed"),
+
             Show("Legalism"),
             new Click(() => At("Legalism")),
-            new Press("Adopt Legalism"),
-            new WaitFrames(3),
-            new AssertQuery("Legalism adopted; it unlocked Landed Elite and Monarchy (the engine says adoptable)", () =>
-                human.Policies.IsAdopted("Legalism") && Entry("Landed Elite").State == "Adoptable" && Entry("Monarchy").State == "Adoptable" && CellsEqualTree()),
-            new Capture("adopted", "Tradition and Legalism adopted (gold); Landed Elite and Monarchy are now open; later branches are dimmed"),
-
-            Show("Landed Elite"),
-            new Click(() => At("Landed Elite")),
             new WaitFrames(2),
             new AssertQuery("with the culture spent, an open policy is shown but cannot be adopted, and says what it costs", () =>
-                !Tree().CanAdopt && Entry("Landed Elite").State == "Adoptable" && screen.Policies.Selected is { Name: "Landed Elite", Pickable: false }
+                !Tree().CanAdopt && Entry("Legalism").State == "Adoptable" && screen.Policies.Selected is { Name: "Legalism", Pickable: false }
                 && screen.Policies.AdoptButton.Disabled && screen.Policies.DetailText.Contains("Needs", StringComparison.Ordinal) && screen.Policies.DetailText.Contains("culture", StringComparison.Ordinal)
                 && CellsEqualTree()),
-            new Capture("short", "Not enough culture: Landed Elite is open but Adopt is disabled and the hint gives the price"),
+            new Capture("short", "Not enough culture: Legalism is open but Adopt is disabled and the hint gives the price"),
             new Act("remember the log", () => logged = session.Log.Count),
             new Click(() => Centre(screen.Policies.AdoptButton)),
             new AssertQuery("pressing the disabled Adopt button sent nothing", () => session.Log.Count == logged),
@@ -138,10 +139,10 @@ public sealed class PolicyScenario : Scenario
             new Act("widen the window to 1280x720", () => host.GetWindow().Size = new Vector2I(1280, 720)),
             new WaitFrames(4),
             new AssertQuery("the screen survived the rebuild for the new breakpoint: branch cards in a scrolled grid (no tabs), same selection, every cell still a node", () =>
-                screen.IsPolicyScreenVisible && !screen.Policies.IsTabbed && screen.Policies.Selected is { Name: "Landed Elite" } && screen.Policies.BranchCards.Count == 10
+                screen.IsPolicyScreenVisible && !screen.Policies.IsTabbed && screen.Policies.Selected is { Name: "Legalism" } && screen.Policies.BranchCards.Count == screen.Policies.Branches.Count
                 && screen.Policies.BranchCards.Values.All(it => it.IsInsideTree()) && CellsEqualTree()
-                && screen.Policies.AdoptButton.IsInsideTree() && screen.Policies.AdoptButton.Text == "Adopt Landed Elite"),
-            new Capture("wide", "1280x720: the branch cards flow in one scrolled grid (here one per row) beside a wider detail panel; Tradition and Legalism adopted (tinted, lit connectors), Landed Elite selected (bright ring), Adopt disabled"),
+                && screen.Policies.AdoptButton.IsInsideTree() && screen.Policies.AdoptButton.Text == "Adopt Legalism"),
+            new Capture("wide", "1280x720: the branch cards flow in one scrolled grid (here one per row) beside a wider detail panel; Tradition and Oligarchy adopted (tinted, lit connectors), Legalism selected (bright ring), Adopt disabled"),
             new PressKey(Key.Escape),
             new WaitFrames(2),
             new AssertQuery("Escape closes the screen and, with no pick pending, sends nothing", () => !screen.IsPolicyScreenVisible && session.Log.Count == logged),
@@ -152,7 +153,7 @@ public sealed class PolicyScenario : Scenario
     private static IEnumerable<ScenarioStep> OpenLayoutAsserts(GameScreen screen) =>
     [
             new AssertQuery("at the compact breakpoint one branch is shown at a time behind tabs, one tab per branch", () =>
-                screen.Policies.IsTabbed && screen.Policies.BranchCards.Count == 10 && screen.Policies.BranchCards["Tradition"].IsVisibleInTree() && !screen.Policies.BranchCards["Liberty"].IsVisibleInTree()),
+                screen.Policies.IsTabbed && screen.Policies.BranchCards.Count == screen.Policies.Branches.Count && screen.Policies.BranchCards["Tradition"].IsVisibleInTree() && !screen.Policies.BranchCards["Liberty"].IsVisibleInTree()),
             new AssertQuery("no node label clips: each node's content fits its width and height, the name is ellipsized when long and the full name is in the tooltip", () =>
                 screen.Policies.Branches.SelectMany(it => it.Cells).All(it => screen.Policies.PolicyButton(it.Name) is PolicyNodeCard card
                     ? card.Content.GetCombinedMinimumSize().X <= card.Size.X + 0.5f && card.Content.GetCombinedMinimumSize().Y <= card.Size.Y + 0.5f && card.NameLabel.TextOverrunBehavior == TextServer.OverrunBehavior.TrimEllipsis && card.TooltipText.Contains(it.Name, StringComparison.Ordinal)

@@ -87,10 +87,10 @@ public sealed class SetupScenario : Scenario
             .. GermanSteps(host, manager, () => Screen()),
 
             new Press("Rules"),
+            // T363: deliberate Vanilla coverage: the default is Brave New World, so choosing Vanilla proves a non-default ruleset still starts.
             new Click(() => Centre(() => Screen().ChoiceButton("Base ruleset", "Civ V - Vanilla"))),
             new AssertQuery("the base ruleset is Vanilla", () => Screen().Form.BaseRuleset == "Civ V - Vanilla"),
             new Capture("rules", "Rules tab: Vanilla chosen as the base ruleset, no mods installed"),
-
             new Press("Players"),
             new Press("Fewer players"),
             new Press("Fewer players"),

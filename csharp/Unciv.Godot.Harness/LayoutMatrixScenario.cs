@@ -422,7 +422,7 @@ public sealed class LayoutMatrixScenario : Scenario
         steps.Add(new Act("back", () => M().Pop()));
         steps.Add(new Act("open the lobby", () =>
         {
-            var lobbySettings = new LobbySettings { GameName = "Friday night", Ruleset = "Civ V - Vanilla", Difficulty = "King", MaxMajorCivs = 4, CityStateCount = 0, AiFill = true, Map = new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny } };
+            var lobbySettings = new LobbySettings { GameName = "Friday night", Ruleset = BrowseScenario.BraveNewWorld, Difficulty = "King", MaxMajorCivs = 4, CityStateCount = 0, AiFill = true, Map = new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny } };
             var lobby = at.Lobby = new ServerLobby(lobbySettings, hostFingerprint: Fingerprint, hostName: "Host");
             var (client, hostEnd) = InMemoryTransport.CreatePair();
             _ = lobby.AttachConnectionAsync(hostEnd);
@@ -466,7 +466,7 @@ public sealed class LayoutMatrixScenario : Scenario
                     BrowseScenario.Game("22AA-33BBCC", BrowseScenario.FriendKey, "Weekly league", "Bob", 2, 6),
                     BrowseScenario.Game("66GG-77HHJJ", BrowseScenario.FarKey, "From the future", "Dave", 1, 4, proto: Unciv.Net.ProtocolVersion.Current + 1),
                 ], 0, false, 42)),
-            Context = () => new BrowseContext(Unciv.Net.ProtocolVersion.Current, [BrowseScenario.Vanilla], [], (_, _) => "hash", _ => false),
+            Context = () => new BrowseContext(Unciv.Net.ProtocolVersion.Current, [BrowseScenario.BraveNewWorld], [], (_, _) => "hash", _ => false),
         }))));
         steps.Add(new WaitUntil("the list is shown", () => M().Top is BrowseScreen { Status: BrowseStatus.Ready }, 600));
         steps.Add(new Act("pick the first game", () => ((BrowseScreen)M().Top.NotNull()).RowButton(0)?.EmitSignal(BaseButton.SignalName.Pressed)));

@@ -135,7 +135,7 @@ public sealed class HostScreenScenario : Scenario
                 ..ClickChoice("Speed", "Epic"),
                 new Press("Fewer civs"),
                 new Press("Rules"),
-                ..ClickChoice("Base ruleset", "Civ V - Vanilla"),
+                ..ClickChoice("Base ruleset", "Civ V - Brave New World"),
                 new Press("Map"),
                 ..ClickChoice("Size", "Tiny"),
                 new Act("type the seed", () => Type(screen.SeedField, "7")),
@@ -156,7 +156,7 @@ public sealed class HostScreenScenario : Scenario
                 new AssertQuery("the settings reached the form and build the lobby settings", () =>
                 {
                     var s = screen.Form.Build(5000).Settings;
-                    return s is { GameName: "Friday night", Difficulty: "King", Speed: "Epic", MaxMajorCivs: 3, Ruleset: "Civ V - Vanilla", TurnTimerSeconds: 300, DynamicTurnTimer: true, TurnTimerMinSeconds: 60, Password: "hunter2", AiFill: true }
+                    return s is { GameName: "Friday night", Difficulty: "King", Speed: "Epic", MaxMajorCivs: 3, Ruleset: "Civ V - Brave New World", TurnTimerSeconds: 300, DynamicTurnTimer: true, TurnTimerMinSeconds: 60, Password: "hunter2", AiFill: true }
                         && s.Map.MapSize.Name == "Tiny" && s.Map.Seed == 7 && screen.Form.Port == Port && screen.InviteAddress == Wan;
                 }),
                 new AssertQuery("the network tab explains the port forward and names the chosen address", () =>
@@ -193,7 +193,7 @@ public sealed class HostScreenScenario : Scenario
                 }),
                 new AssertQuery("the slot table says which one is you", () => screen.SlotLines.Count == 3 && screen.SlotLines[0] == "1. Host (you, the host)" && screen.SlotLines[1] == "2. Open"),
                 new AssertQuery("the lobby runs with the settings from the form", () =>
-                    Lobby() is { GameName: "Friday night", Difficulty: "King", Speed: "Epic", MaxMajorCivs: 3, TurnTimerSeconds: 300, Ruleset: "Civ V - Vanilla" }
+                    Lobby() is { GameName: "Friday night", Difficulty: "King", Speed: "Epic", MaxMajorCivs: 3, TurnTimerSeconds: 300, Ruleset: "Civ V - Brave New World" }
                     && screen.Session.NotNull().Lobby.NotNull().Lobby.Admission.RequiresPassword),
                 new AssertQuery("the invite parses back to the chosen address, the port and the host key", () => InvitePointsAt(Wan) && Parsed().Token == null),
                 new WaitFrames(6),
@@ -277,7 +277,7 @@ public sealed class HostScreenScenario : Scenario
         var setup = new GameSetupInfo(
             new GameParameters
             {
-                BaseRuleset = "Civ V - Vanilla",
+                BaseRuleset = "Civ V - Brave New World",
                 NumberOfCityStates = 0,
                 VictoryTypes = ["Domination"],
                 Players = [new("Babylon", PlayerType.Human), new("Greece", PlayerType.Human), new("Rome", PlayerType.AI)],

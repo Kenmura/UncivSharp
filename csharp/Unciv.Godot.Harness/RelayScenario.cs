@@ -20,7 +20,7 @@ public sealed class RelayScenario : Scenario
 {
     private static readonly string Fingerprint = HostKey.Fingerprint([1, 2, 3, 4]);
     private static readonly string RelayPin = HostKey.Fingerprint([7, 7, 7, 7]);
-    private const string Vanilla = "Civ V - Vanilla";
+    private const string BraveNewWorld = "Civ V - Brave New World";
 
     public override string Name => "relay";
 
@@ -58,7 +58,7 @@ public sealed class RelayScenario : Scenario
             options.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
             root.AddChild(options);
             var form = NewGameForm.FromRulesetCache();
-            if (form.SetBaseRuleset(Vanilla) is { } problem) throw new InvalidOperationException(problem);
+            if (form.SetBaseRuleset(BraveNewWorld) is { } problem) throw new InvalidOperationException(problem);
             accepted.Url = "unciv-relay://relay.example.org";
             join = new JoinScreen(theme, new JoinScreenEnvironment
             {

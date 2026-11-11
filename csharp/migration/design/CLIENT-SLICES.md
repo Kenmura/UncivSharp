@@ -59,7 +59,7 @@ No art exists; none may be copied from Firaxis/Civ 5. Approach: **AssetRegistry 
 
 ## Verification tooling (C008)
 
-`Unciv.Godot.Harness/tools/run-scenario.sh <name>` runs a **scenario**: a C# class with a seeded `GameSession` (fixed seed, Vanilla ruleset, Tiny map, 2 civs + 1 AI,
+`Unciv.Godot.Harness/tools/run-scenario.sh <name>` runs a **scenario**: a C# class with a seeded `GameSession` (fixed seed, Brave New World, the default ruleset, Tiny map, 2 civs + 1 AI,
 fixed camera) and an ordered script: `Click(tile)`, `Key(...)`, `Press("Button name")`, `WaitFrames(n)`, `AssertQuery(...)`, `Capture("step")`. Rules:
 - Each `Capture` writes `out/<scenario>/<step>.png` and compares to `golden/<scenario>/<step>.png` (GoldenComparer, existing tolerances); `--update-golden` as in C000.
 - Each scenario ends with a **state assertion** from the query API (unit position, turn number, production queue contents), not just pixels.

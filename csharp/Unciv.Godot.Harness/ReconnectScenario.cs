@@ -6,6 +6,7 @@ using Unciv.Commands;
 using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Ui;
+using Unciv.Harness;
 using Unciv.Logic;
 using Unciv.Logic.Civilization;
 using Unciv.Logic.Map;
@@ -44,7 +45,7 @@ public sealed class ReconnectScenario : Scenario
 
     private sealed class Flow
     {
-        private const string Vanilla = "Civ V - Vanilla";
+        private const string BraveNewWorld = "Civ V - Brave New World";
         private const long Clock = 5_000L;
 
         private readonly UiTheme theme;
@@ -74,7 +75,7 @@ public sealed class ReconnectScenario : Scenario
             host.AddChild(new ColorRect { Color = new Color(0.12f, 0.14f, 0.2f), AnchorRight = 1, AnchorBottom = 1 });
             root = new Control { AnchorRight = 1, AnchorBottom = 1 };
             host.AddChild(root);
-            ruleset = RulesetCache.GetVanillaRuleset();
+            ruleset = ScenarioGame.LoadBraveNewWorld();
         }
 
         private static Vector2 Centre(Func<Control?> find) => find()?.GetGlobalRect().GetCenter() ?? Vector2.Zero;
@@ -82,7 +83,7 @@ public sealed class ReconnectScenario : Scenario
         private GameSetupInfo Setup() => new(
             new GameParameters
             {
-                BaseRuleset = Vanilla,
+                BaseRuleset = BraveNewWorld,
                 NumberOfCityStates = 0,
                 VictoryTypes = ruleset.Victories.Keys.ToList(),
                 Players = [new("Babylon", PlayerType.Human), new("Greece", PlayerType.Human), new("Rome", PlayerType.AI)],

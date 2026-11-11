@@ -25,7 +25,7 @@ public sealed class JoinScenario : Scenario
 {
     private static readonly string Fingerprint = HostKey.Fingerprint([1, 2, 3, 4]);
     private static readonly string OtherFingerprint = HostKey.Fingerprint([9, 9, 9, 9]);
-    private const string Vanilla = "Civ V - Vanilla";
+    private const string BraveNewWorld = "Civ V - Brave New World";
     private const string Address = "192.168.1.20:47821";
 
     public override string Name => "join";
@@ -64,11 +64,11 @@ public sealed class JoinScenario : Scenario
             root = new Control { AnchorRight = 1, AnchorBottom = 1 };
             host.AddChild(root);
             var nations = NewGameForm.FromRulesetCache();
-            if (nations.SetBaseRuleset(Vanilla) is { } problem) throw new InvalidOperationException(problem);
+            if (nations.SetBaseRuleset(BraveNewWorld) is { } problem) throw new InvalidOperationException(problem);
             var settings = new LobbySettings
             {
                 GameName = "Friday night",
-                Ruleset = Vanilla,
+                Ruleset = BraveNewWorld,
                 MaxMajorCivs = 4,
                 CityStateCount = 0,
                 Password = "swordfish",

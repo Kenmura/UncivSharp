@@ -28,7 +28,7 @@ namespace Unciv.GodotHarness;
 /// </summary>
 public sealed class RelaySessionScenario : Scenario
 {
-    private const string Vanilla = "Civ V - Vanilla";
+    private const string BraveNewWorld = "Civ V - Brave New World";
 
     public override string Name => "relay-session";
 
@@ -73,7 +73,7 @@ public sealed class RelaySessionScenario : Scenario
             host.AddChild(new ColorRect { Color = new Color(0.12f, 0.14f, 0.2f), AnchorRight = 1, AnchorBottom = 1 });
             root = new Control { AnchorRight = 1, AnchorBottom = 1 };
             host.AddChild(root);
-            if (nations.SetBaseRuleset(Vanilla) is { } problem) throw new InvalidOperationException(problem);
+            if (nations.SetBaseRuleset(BraveNewWorld) is { } problem) throw new InvalidOperationException(problem);
             StartRelay();
             hostScreen = new HostScreen(theme, new HostSettingsForm(NewGameForm.FromRulesetCache()), new HostScreenEnvironment
             {
@@ -93,7 +93,7 @@ public sealed class RelaySessionScenario : Scenario
             {
                 Identity = friendIdentity,
                 DisplayName = "Friend",
-                RulesetHash = () => new LobbySettings { Ruleset = Vanilla }.ComputeRulesetHash(),
+                RulesetHash = () => new LobbySettings { Ruleset = BraveNewWorld }.ComputeRulesetHash(),
                 KnownHosts = known,
                 PersistKnownHosts = _ => { },
                 Relay = () => endpoint,
@@ -186,7 +186,7 @@ public sealed class RelaySessionScenario : Scenario
             new AssertQuery("the relay is listening on loopback and the host screen was given it", () => relay is { TunnelPort: > 0 } && endpoint is { Host: "127.0.0.1", Fingerprint: not null } && hostScreen.Visible),
             new Act("a small game and a free port", () =>
             {
-                hostScreen.Form.Game.SetBaseRuleset(Vanilla);
+                hostScreen.Form.Game.SetBaseRuleset(BraveNewWorld);
                 Type(hostScreen.NameField, "Through the relay");
                 Type(hostScreen.SeedField, "3");
                 Type(hostScreen.PortField, hostPort.ToString(System.Globalization.CultureInfo.InvariantCulture));

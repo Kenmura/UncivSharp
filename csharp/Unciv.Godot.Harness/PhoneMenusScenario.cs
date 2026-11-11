@@ -25,7 +25,7 @@ public sealed class PhoneMenusScenario : Scenario
 {
     private const float Dpi = 400f;
     private static readonly string Fingerprint = HostKey.Fingerprint([1, 2, 3, 4]);
-    private const string Vanilla = "Civ V - Vanilla";
+    private const string BraveNewWorld = "Civ V - Brave New World";
 
     public override string Name => "phone-menus";
 
@@ -55,7 +55,7 @@ public sealed class PhoneMenusScenario : Scenario
 
         // the lobby: a host seated in a one-player lobby through the in-memory transport
         var nations = NewGameForm.FromRulesetCache();
-        var lobbySettings = new LobbySettings { GameName = "Friday night", Ruleset = Vanilla, Difficulty = "King", MaxMajorCivs = 4, CityStateCount = 0, AiFill = true, Map = new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny } };
+        var lobbySettings = new LobbySettings { GameName = "Friday night", Ruleset = BraveNewWorld, Difficulty = "King", MaxMajorCivs = 4, CityStateCount = 0, AiFill = true, Map = new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny } };
         var lobby = new ServerLobby(lobbySettings, hostFingerprint: Fingerprint, hostName: "Host");
         var (client, hostEnd) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(hostEnd);

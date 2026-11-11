@@ -11,7 +11,7 @@ using Unciv.Models;
 namespace Unciv.GodotHarness;
 
 /// <summary>
-/// C054: the floating tutorial task card on the real game screen, from the Gods &amp; Kings Events with Floating presentation. The first available task shows under the
+/// C054: the floating tutorial task card on the real game screen, from the Brave New World Events with Floating presentation. The first available task shows under the
 /// top bar ("Move a unit!"); a click folds it to a "?" button and the button opens it again; doing what it asks (here: reporting the move, founding the city, opening the
 /// city screen) moves on to the next task the engine finds available; with Show tutorials off the card is gone. The settings file lives in the harness temp directory.
 /// </summary>

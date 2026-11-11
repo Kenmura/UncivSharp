@@ -348,8 +348,11 @@ public partial class PolicyScreen : PanelContainer
     private PanelContainer Card(PolicyBranchView view)
     {
         bool compact = uiTheme.Breakpoint == UiBreakpoint.Compact; // smaller nodes: most of a four-column branch fits next to the detail panel at 640x480, the rest scrolls
-        int w = uiTheme.Px(compact ? CompactNodeWidth : NodeWidth), h = uiTheme.Px(compact ? CompactNodeHeight : NodeHeight);
-        int gx = uiTheme.Px(compact ? CompactGapX : GapX), gy = uiTheme.Px(compact ? CompactGapY : GapY);
+        // T363: an ideology branch has seven columns; at a 4K window its wide card plus the detail panel is wider than the content cap, so
+        // use the compact node size for those wide branches (the other branches stay at the normal size).
+        bool dense = compact || view.Columns > 5;
+        int w = uiTheme.Px(dense ? CompactNodeWidth : NodeWidth), h = uiTheme.Px(dense ? CompactNodeHeight : NodeHeight);
+        int gx = uiTheme.Px(dense ? CompactGapX : GapX), gy = uiTheme.Px(dense ? CompactGapY : GapY);
         var card = new PanelContainer { Name = "Branch_" + view.Name, ThemeTypeVariation = UiVariants.PanelCard, SizeFlagsVertical = Control.SizeFlags.ShrinkBegin };
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));

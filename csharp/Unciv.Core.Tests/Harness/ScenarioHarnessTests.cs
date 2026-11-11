@@ -251,7 +251,7 @@ public sealed class ScenarioHarnessTests : IDisposable
     }
 
     [Fact]
-    public void DecisionsGamePlaysGnkWithEveryPickerPendingAndReplaysEqual()
+    public void DecisionsGamePlaysBraveNewWorldWithEveryPickerPendingAndReplaysEqual()
     {
         var session = ScenarioGame.Create(decisions: true);
         var human = session.Game.GetCivilization(ScenarioGame.HumanA);
@@ -297,7 +297,7 @@ public sealed class ScenarioHarnessTests : IDisposable
         var session = ScenarioGame.Create(religion: ScenarioGame.ReligionFoundEnhance);
         var game = session.Game;
         var human = game.GetCivilization(ScenarioGame.HumanA);
-        Assert.Equal("Civ V - Gods & Kings", game.GameParameters.BaseRuleset);
+        Assert.Equal("Civ V - Brave New World", game.GameParameters.BaseRuleset);
         Assert.True(game.IsEspionageEnabled());
         Assert.Equal(2, human.Cities.Count);
         Assert.Equal(ReligionState.Pantheon, human.ReligionManager.ReligionState);

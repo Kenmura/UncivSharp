@@ -19,7 +19,7 @@ namespace Unciv.GodotHarness;
 /// </summary>
 public sealed class BrowseScenario : Scenario
 {
-    internal const string Vanilla = "Civ V - Vanilla";
+    internal const string BraveNewWorld = "Civ V - Brave New World";
     internal static readonly string StrangerKey = HostKey.Fingerprint([1, 2, 3, 4]);
     internal static readonly string FriendKey = HostKey.Fingerprint([5, 6, 7, 8]);
     internal static readonly string FarKey = HostKey.Fingerprint([9, 9, 9, 9]);
@@ -38,7 +38,7 @@ public sealed class BrowseScenario : Scenario
     public override IReadOnlyList<ScenarioStep> Build(Control host, GameSession session) => new Flow(host, session).Steps();
 
     internal static ListedGame Game(string room, string key, string name, string hostName, int players, int slots, string[]? mods = null, bool password = false, int proto = ProtocolVersion.Current, long age = 90) =>
-        new(room, "00", key, new ListingInfo(1, name, hostName, players, slots, 2, Vanilla, "hash", mods ?? [], "Quick", "Continents, Small", password, "simultaneous", false, "4.18", proto), age);
+        new(room, "00", key, new ListingInfo(1, name, hostName, players, slots, 2, BraveNewWorld, "hash", mods ?? [], "Quick", "Continents, Small", password, "simultaneous", false, "4.18", proto), age);
 
     private sealed class Flow
     {
@@ -76,7 +76,7 @@ public sealed class BrowseScenario : Scenario
                     var kept = result.Games.Where(query.Accepts).ToList();
                     return result with { Games = kept, Dropped = result.Dropped + (result.Games.Count - kept.Count) };
                 },
-                Context = () => new BrowseContext(ProtocolVersion.Current, [Vanilla], [], (_, _) => "hash", fingerprint => fingerprint == FriendKey),
+                Context = () => new BrowseContext(ProtocolVersion.Current, [BraveNewWorld], [], (_, _) => "hash", fingerprint => fingerprint == FriendKey),
             };
             screen = new BrowseScreen(theme, environment);
             screen.OptionsRequested += () => optionsAsked++;

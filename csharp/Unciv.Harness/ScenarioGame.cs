@@ -15,9 +15,10 @@ using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 namespace Unciv.Harness;
 
 /// <summary>
-/// The fixed game every client scenario starts from (C008): Vanilla ruleset, Tiny map, two human civs (Babylon moves first) and
-/// one AI civ, each human with a city, all from fixed seeds. The Godot scenario runner and the headless replay both build their
-/// session here, so "same seed + same commands" is a statement about exactly one factory. Engine-only; no Godot types.
+/// The fixed game every client scenario starts from (C008): Brave New World (the default ruleset, T363; the vote-result scene deliberately
+/// stays on Vanilla for the United Nations), Tiny map, two human civs (Babylon moves first) and one AI civ, each human with a city, all from
+/// fixed seeds. The Godot scenario runner and the headless replay both build their session here, so "same seed + same commands" is a
+/// statement about exactly one factory. Engine-only; no Godot types.
 /// </summary>
 public static class ScenarioGame
 {
@@ -43,13 +44,32 @@ public static class ScenarioGame
     private const int LateGameCities = 8;
     private const int LateGameUnits = 20;
 
-    /// <summary>Loads the Vanilla ruleset into <see cref="RulesetCache"/> (from the repository's jsons, no mods) unless it is already there.</summary>
+    /// <summary>
+    /// Loads the base rulesets into <see cref="RulesetCache"/> (from the repository's jsons, no mods) unless they are already there.
+    /// </summary>
+    private static void LoadBaseRulesets()
+    {
+        var jsons = FindJsonsPath();
+        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+    }
+
+    /// <summary>
+    /// Loads the Vanilla ruleset into <see cref="RulesetCache"/> (from the repository's jsons, no mods) unless it is already there.
+    /// Deliberate Vanilla coverage (T363): the asset, pedia, tooltip and production tests call this to exercise the oldest ruleset,
+    /// which is no longer the scenario default.
+    /// </summary>
     public static RulesetClass LoadVanilla()
     {
         if (RulesetCache.ContainsKey(BaseRuleset.Civ_V_Vanilla.FullName())) return RulesetCache.GetVanillaRuleset();
-        var jsons = FindJsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        LoadBaseRulesets();
         return RulesetCache.GetVanillaRuleset();
+    }
+
+    /// <summary>T363: the scenario default ruleset, Brave New World, as a clone so a scenario can mutate it (e.g. AudioScenario adds a unique).</summary>
+    public static RulesetClass LoadBraveNewWorld()
+    {
+        if (!RulesetCache.ContainsKey(BaseRuleset.Civ_V_BNW.FullName())) LoadBaseRulesets();
+        return RulesetCache.Get(BaseRuleset.Civ_V_BNW.FullName()).NotNull().Clone();
     }
 
     public static string FindJsonsPath()
@@ -72,9 +92,10 @@ public static class ScenarioGame
         espionage |= religion == ReligionFoundEnhance;
         diplomacy |= alerts | trade | espionage | proposals | voteResult;
         solo |= skirmish | diplomacy | policies | victory | defeat | decisions | crowd | lateGame | religion > 0 | tutorialTasks;
-        var vanilla = LoadVanilla();
-        // C038: religion needs Gods & Kings (Vanilla has no beliefs); C054: so do the tutorial task Events; every other scenario plays Vanilla
-        var ruleset = decisions || religion > 0 || tutorialTasks ? RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName()).NotNull().Clone() : vanilla;
+        // T363: scenarios play the default ruleset, Brave New World (it also has the beliefs C038 and the tutorial Events C054 need).
+        // Deliberate Vanilla coverage: C053's vote-result scene is about the United Nations, whose OneTimeTriggerVoting building only the
+        // Vanilla/GnK jsons define (BNW's World Congress is founded by a tech unique), so keep that scenario on Vanilla.
+        var ruleset = voteResult ? LoadVanilla() : LoadBraveNewWorld();
         var game = GameStarter.StartNewGame(
             new GameSetupInfo(
                 new GameParameters
@@ -372,7 +393,7 @@ public static class ScenarioGame
     }
 
     /// <summary>
-    /// C052: on top of the espionage game (G&amp;K, so there are beliefs): Babylon has a pantheon and a second city, a Great Prophet stands in each city (found a religion with
+    /// C052: on top of the espionage game (Brave New World, so there are beliefs): Babylon has a pantheon and a second city, a Great Prophet stands in each city (found a religion with
     /// one, enhance it with the other), the World Congress votes now (as when the United Nations was built and the countdown ran out), and two notifications open pickers: the
     /// warrior (30 experience) can be promoted, and a spy report opens the move-spies picker. Set up directly on the state, so a headless replay builds the same game.
     /// </summary>
@@ -398,7 +419,7 @@ public static class ScenarioGame
     }
 
     /// <summary>
-    /// C052: Babylon (solo, G&amp;K) has founded a religion (a pantheon, then a Great Prophet used in the capital, a founder and a follower belief) and has one free follower belief
+    /// C052: Babylon (solo, Brave New World) has founded a religion (a pantheon, then a Great Prophet used in the capital, a founder and a follower belief) and has one free follower belief
     /// to choose, as after a one-time free belief: the engine asks to reform the religion. The founding goes through the real commands on a throwaway session (its log is not
     /// the scenario's), so a headless replay builds the same game.
     /// </summary>

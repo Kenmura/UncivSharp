@@ -269,15 +269,15 @@
       },
       {
         "golden": "policy/adopted.png",
-        "caption": "Tradition and Legalism adopted (accent-tinted, lit connectors); Legalism is selected and its detail shows 'Adopted' with a disabled button."
+        "caption": "Tradition and Oligarchy adopted (accent-tinted, lit connectors); Oligarchy is selected and its detail shows 'Adopted' with a disabled button."
       },
       {
         "golden": "policy/short.png",
-        "caption": "Not enough culture (15 / 40): Landed Elite is open but Adopt is disabled and the hint gives the price."
+        "caption": "Not enough culture (15 / 40): Legalism is open but Adopt is disabled and the hint gives the price."
       },
       {
         "golden": "policy/wide.png",
-        "caption": "1280x720: branch cards flow in one scrolled grid (one per row here) beside a wider detail panel; Landed Elite selected, Adopt disabled, Tradition's connectors lit."
+        "caption": "1280x720: branch cards flow in one scrolled grid (one per row here) beside a wider detail panel; Legalism selected, Adopt disabled, Tradition's connectors lit."
       }
     ]
   },
@@ -1538,7 +1538,7 @@
       },
       {
         "golden": "setup/rules.png",
-        "caption": "Rules tab inside the frame: Vanilla chosen as the base ruleset with the section headers as overlines."
+        "caption": "Rules tab inside the frame: Vanilla chosen as the base ruleset (a deliberate non-default choice, kept to prove a Vanilla game still starts) with the section headers as overlines."
       }
     ]
   },

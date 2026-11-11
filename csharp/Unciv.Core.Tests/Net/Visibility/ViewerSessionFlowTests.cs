@@ -15,6 +15,10 @@ public sealed class ViewerSessionFlowTests
 {
     private const int Turns = 30;
 
+    // T363: with ScenarioGame.MapSeed, Brave New World's AI finds Babylon by turn 20, so this test's "AI-only"
+    // assumption (the viewer never meets Rome) no longer holds. Play the same solo game on a seed where they stay apart.
+    private const int UnmetAiMapSeed = 1;
+
     private static bool IsAiOnly(GameEvent e) =>
         e is ResearchCompleted { CivId: ScenarioGame.Ai } or PolicyAdopted { CivId: ScenarioGame.Ai } or AlertAdded { CivId: ScenarioGame.Ai }
             or UnitMoved { CivId: ScenarioGame.Ai };
@@ -22,7 +26,7 @@ public sealed class ViewerSessionFlowTests
     // What the engine itself produced for the same commands, unfiltered: proves the AI really emits events the viewer must not get.
     private static List<GameEvent> RawEventsOfTurns()
     {
-        var session = ScenarioGame.Create(solo: true);
+        var session = ScenarioGame.Create(solo: true, mapSeed: UnmetAiMapSeed);
         var raw = new List<GameEvent>();
         for (int i = 0; i < Turns; i++)
         {
@@ -41,7 +45,7 @@ public sealed class ViewerSessionFlowTests
         Assert.Contains(raw, IsAiOnly); // the test is only meaningful if the engine does emit them
 
         var published = new List<GameEvent>();
-        var session = ScenarioGame.Create(solo: true);
+        var session = ScenarioGame.Create(solo: true, mapSeed: UnmetAiMapSeed);
         long clock = ScenarioGame.FixedClockMillis;
         var flow = new ViewerSessionFlow(session, ScenarioGame.HumanA, () => clock++, (_, events) => published.AddRange(events));
         var outcomeEvents = new List<GameEvent>();

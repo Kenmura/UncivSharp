@@ -22,7 +22,7 @@ namespace Unciv.GodotHarness;
 public sealed class LobbyScenario : Scenario
 {
     private static readonly string Fingerprint = HostKey.Fingerprint([1, 2, 3, 4]);
-    private const string Vanilla = "Civ V - Vanilla";
+    private const string BraveNewWorld = "Civ V - Brave New World";
 
     public override string Name => "lobby";
 
@@ -60,11 +60,11 @@ public sealed class LobbyScenario : Scenario
             host.AddChild(new ColorRect { Color = new Color(0.12f, 0.14f, 0.2f), AnchorRight = 1, AnchorBottom = 1 });
             root = new Control { AnchorRight = 1, AnchorBottom = 1 };
             host.AddChild(root);
-            if (nations.SetBaseRuleset(Vanilla) is { } problem) throw new InvalidOperationException(problem);
+            if (nations.SetBaseRuleset(BraveNewWorld) is { } problem) throw new InvalidOperationException(problem);
             settings = new LobbySettings
             {
                 GameName = "Friday night",
-                Ruleset = Vanilla,
+                Ruleset = BraveNewWorld,
                 Difficulty = "King",
                 Speed = "Epic",
                 MaxMajorCivs = 4,
@@ -124,7 +124,7 @@ public sealed class LobbyScenario : Scenario
             new AssertQuery("the slot table equals the lobby's state", () =>
                 Host().SlotLines.SequenceEqual(Expected()) && Host().SlotLines[0] == "1. Host (you, the host)" && Host().SlotLines[3] == "4. Open"),
             new AssertQuery("the settings are shown read-only", () =>
-                Host().SettingsLines.Contains("Ruleset: Civ V - Vanilla") && Host().SettingsLines.Contains("Difficulty: King") && Host().SettingsLines.Contains("Turns: Simultaneous, timer: 5 min")),
+                Host().SettingsLines.Contains("Ruleset: Civ V - Brave New World") && Host().SettingsLines.Contains("Difficulty: King") && Host().SettingsLines.Contains("Turns: Simultaneous, timer: 5 min")),
             new AssertQuery("Start waits for everybody and says so", () =>
                 Host().StartButton.Disabled && Host().StartReason == "Waiting for Host, Friend A, Friend B to be ready."),
             new Capture("waiting", "Host's lobby: three people seated, one open slot, nobody ready; Start is off and says who it waits for. Settings are read-only on the right."),

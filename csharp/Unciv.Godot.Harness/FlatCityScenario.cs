@@ -76,6 +76,7 @@ public sealed class FlatCityScenario : Scenario
                 var city = human.Cities[0];
                 Do(new DebugAddTechnology { Tech = "The Wheel" });
                 Do(new DebugAddTechnology { Tech = "Trapping" });
+                Do(new DebugAddTechnology { Tech = "Guilds" }); // T363: BNW's Trading post needs Guilds
                 Do(new SetResearchQueue { Techs = ["Pottery"] });
                 Do(new QueueConstruction { CityId = city.Id, Name = "Worker" });
                 Do(new PurchaseConstruction { CityId = city.Id, Name = "Worker" });

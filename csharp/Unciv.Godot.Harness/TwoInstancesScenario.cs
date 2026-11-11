@@ -73,7 +73,7 @@ public sealed class TwoInstancesScenario : Scenario
             var settings = new LobbySettings
             {
                 GameName = "Two windows",
-                Ruleset = "Civ V - Vanilla",
+                Ruleset = "Civ V - Brave New World",
                 MaxMajorCivs = 3,
                 CityStateCount = 0,
                 Map = new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny },

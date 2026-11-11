@@ -88,7 +88,7 @@ Unciv.Godot.Harness/tools/review-sheet.sh [name ...]
 ```
 
 A scenario (`Scenario` subclass registered in `ScenarioCatalog`, name listed in `scenarios.txt`) builds its UI over the seeded
-`ScenarioGame.Create()` session (Vanilla, Tiny map, two humans + one AI, fixed seeds) and returns a script of `Click`, `PressKey`,
+`ScenarioGame.Create()` session (Brave New World, the default ruleset, Tiny map, two humans + one AI, fixed seeds) and returns a script of `Click`, `PressKey`,
 `Press("Button text")`, `WaitFrames`, `AssertQuery` (engine state, asserted before pixels) and `Capture` (PNG compared with
 `golden/<scenario>/<step>.png`). All state changes must go through `GameSession.Submit`; at the end the state hash must equal the hash of a
 headless replay of the recorded command log (`ScenarioReplay`, plain C#, tested in `Unciv.Core.Tests/Harness`). `--expect-golden-failure`

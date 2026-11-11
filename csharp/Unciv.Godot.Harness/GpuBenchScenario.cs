@@ -323,14 +323,14 @@ public sealed partial class GpuBenchScenario : Scenario
     /// <summary>A Large (by default) map with the human and ten AI civs: every civ founds its capital, the human gets a spread of further cities and units, and the human knows the whole map.</summary>
     private static GameInfo BuildGame(string sizeName, out Logic.Civilization.Civilization human, out int cityCount, out int unitCount)
     {
-        var vanilla = ScenarioGame.LoadVanilla();
+        var ruleset = ScenarioGame.LoadBraveNewWorld();
         var size = sizeName switch { "Medium" => MapSize.Medium, "Huge" => MapSize.Huge, _ => MapSize.Large };
         var players = new List<Player> { new Player(ScenarioGame.HumanA, PlayerType.Human), new Player(ScenarioGame.Ai) };
-        players.AddRange(vanilla.Nations.Values.Where(it => it.IsMajorCiv && it.Name != ScenarioGame.HumanA && it.Name != ScenarioGame.Ai).Select(it => it.Name).Order(StringComparer.Ordinal)
+        players.AddRange(ruleset.Nations.Values.Where(it => it.IsMajorCiv && it.Name != ScenarioGame.HumanA && it.Name != ScenarioGame.Ai).Select(it => it.Name).Order(StringComparer.Ordinal)
             .Take(ScenarioGame.CrowdAiCount - 1).Select(it => new Player(it)));
         var game = GameStarter.StartNewGame(
             new GameSetupInfo(
-                new GameParameters { BaseRuleset = vanilla.Name, NumberOfCityStates = 4, VictoryTypes = vanilla.Victories.Keys.ToList(), Players = players },
+                new GameParameters { BaseRuleset = ruleset.Name, NumberOfCityStates = 4, VictoryTypes = ruleset.Victories.Keys.ToList(), Players = players },
                 new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = ScenarioGame.MapSeed, MapSize = size }),
             ScenarioGame.GameSeed, ScenarioGame.FixedClockMillis);
         cityCount = 0;

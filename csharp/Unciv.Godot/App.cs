@@ -35,7 +35,7 @@ public partial class App : Node
     private SaveController menuSaves = null!; // JUSTIFY: C015 assigned in _Ready before any use
     private MainMenu menu = null!; // JUSTIFY: C015 assigned in _Ready before any use
 
-    private Unciv.Models.Ruleset.Ruleset vanilla = null!; // JUSTIFY: C026 assigned in _Ready before any use
+    private Unciv.Models.Ruleset.Ruleset baseRuleset = null!; // JUSTIFY: C026 assigned in _Ready before any use
 
     public override void _Ready()
     {
@@ -46,8 +46,9 @@ public partial class App : Node
             return;
         }
         GetWindow().Title = UserProfile.WindowTitle(UserPaths.Profile);
-        vanilla = RulesetLocator.LoadVanilla();
-        theme = new UiTheme(AssetRegistry.ForRuleset(vanilla));
+        // T363: the menu theme and sounds use the default game ruleset (Brave New World), not a Vanilla pin.
+        baseRuleset = RulesetLocator.LoadDefault();
+        theme = new UiTheme(AssetRegistry.ForRuleset(baseRuleset));
         settings = new ClientSettingsService(new ClientSettingsStore(UserPaths.Settings));
         if (GraphicsRuntime.StartupCheck(settings)) return; // C097: restarting into the renderer the graphics setting wants; nothing else is built in this process
         localization = Loc.Init(settings, GetWindow());
@@ -58,7 +59,7 @@ public partial class App : Node
             ClientSettingsApplier.Apply(changed, GetWindow(), applied);
             applied = changed;
         };
-        sounds = new SoundPlayer(AssetRegistry.ForRuleset(vanilla, OptionsModel.RegistryPack(settings.Current.AssetPack)));
+        sounds = new SoundPlayer(AssetRegistry.ForRuleset(baseRuleset, OptionsModel.RegistryPack(settings.Current.AssetPack)));
         AddChild(sounds);
         GetTree().NodeAdded += node =>
         {
@@ -277,7 +278,7 @@ public partial class App : Node
 
     private void OpenOptions()
     {
-        var options = new OptionsScreen(settings, theme, localization, null, vanilla, new RelaySettingsStore(() => RelaySettings.Load(UserPaths.Relay, UserPaths.RelayDefault), relay => relay.Save(UserPaths.Relay)));
+        var options = new OptionsScreen(settings, theme, localization, null, baseRuleset, new RelaySettingsStore(() => RelaySettings.Load(UserPaths.Relay, UserPaths.RelayDefault), relay => relay.Save(UserPaths.Relay)));
         options.CloseRequested += () => screens.Pop();
         screens.Push(options);
     }

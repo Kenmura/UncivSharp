@@ -486,17 +486,17 @@ Scenario `policy`.
 
 *Tradition selected (bright ring): its effects on the right with the Adopt Tradition button directly under the name; nothing is adopted until it is pressed.* (`policy/selected.png`)
 
-![Tradition and Legalism adopted (accent-tinted, lit connectors); Legalism is selected and its detail shows 'Adopted' with a disabled button.](../Unciv.Godot.Harness/golden/policy/adopted.png)
+![Tradition and Oligarchy adopted (accent-tinted, lit connectors); Oligarchy is selected and its detail shows 'Adopted' with a disabled button.](../Unciv.Godot.Harness/golden/policy/adopted.png)
 
-*Tradition and Legalism adopted (accent-tinted, lit connectors); Legalism is selected and its detail shows 'Adopted' with a disabled button.* (`policy/adopted.png`)
+*Tradition and Oligarchy adopted (accent-tinted, lit connectors); Oligarchy is selected and its detail shows 'Adopted' with a disabled button.* (`policy/adopted.png`)
 
-![Not enough culture (15 / 40): Landed Elite is open but Adopt is disabled and the hint gives the price.](../Unciv.Godot.Harness/golden/policy/short.png)
+![Not enough culture (15 / 40): Legalism is open but Adopt is disabled and the hint gives the price.](../Unciv.Godot.Harness/golden/policy/short.png)
 
-*Not enough culture (15 / 40): Landed Elite is open but Adopt is disabled and the hint gives the price.* (`policy/short.png`)
+*Not enough culture (15 / 40): Legalism is open but Adopt is disabled and the hint gives the price.* (`policy/short.png`)
 
-![1280x720: branch cards flow in one scrolled grid (one per row here) beside a wider detail panel; Landed Elite selected, Adopt disabled, Tradition's connectors lit.](../Unciv.Godot.Harness/golden/policy/wide.png)
+![1280x720: branch cards flow in one scrolled grid (one per row here) beside a wider detail panel; Legalism selected, Adopt disabled, Tradition's connectors lit.](../Unciv.Godot.Harness/golden/policy/wide.png)
 
-*1280x720: branch cards flow in one scrolled grid (one per row here) beside a wider detail panel; Landed Elite selected, Adopt disabled, Tradition's connectors lit.* (`policy/wide.png`)
+*1280x720: branch cards flow in one scrolled grid (one per row here) beside a wider detail panel; Legalism selected, Adopt disabled, Tradition's connectors lit.* (`policy/wide.png`)
 
 ## C021 Diplomacy screen
 
@@ -1356,9 +1356,9 @@ Scenario `setup`.
 
 *New game screen at the defaults: Steppers for players and city-states, four Random slots with a Human/AI chip, the detail card of the selected nation, the emblem grid (Random selected) and the summary line above Back and the gold Start game.* (`setup/defaults.png`)
 
-![Rules tab inside the frame: Vanilla chosen as the base ruleset with the section headers as overlines.](../Unciv.Godot.Harness/golden/setup/rules.png)
+![Rules tab inside the frame: Vanilla chosen as the base ruleset (a deliberate non-default choice, kept to prove a Vanilla game still starts) with the section headers as overlines.](../Unciv.Godot.Harness/golden/setup/rules.png)
 
-*Rules tab inside the frame: Vanilla chosen as the base ruleset with the section headers as overlines.* (`setup/rules.png`)
+*Rules tab inside the frame: Vanilla chosen as the base ruleset (a deliberate non-default choice, kept to prove a Vanilla game still starts) with the section headers as overlines.* (`setup/rules.png`)
 
 ## C076 Civilopedia and tooltip content
 
