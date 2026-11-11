@@ -128,12 +128,15 @@ public sealed class HudScenario : Scenario
             new AssertQuery("the top bar follows the engine on the new turn", BarEqualsEngine),
             new AssertQuery("the new turn's units are due again: Next unit", () => hud.ActionText == "Next unit"),
             new Capture("next-turn", "Next turn: banner for the new turn, top bar updated, units due again"),
+            LayoutChecks.StatusClear("at 640x480 the next-turn status line is fully readable and clear of the unit panel and next-action dock", screen),
             new Act("widen the window to 1280x720", () => host.GetWindow().Size = new Vector2I(1280, 720)),
             new WaitFrames(4),
             new AssertQuery("the layout follows: at 1280x720 the breakpoint is Regular, still no overlap, minimap 200x140", () =>
                 Report(Layout()) && Report(screen.World.MinimapSize == new Vector2(200f, 140f) && screen.Minimap.Size == new Vector2(200f, 140f) ? "" : $"minimap {screen.World.MinimapSize} {screen.Minimap.Size} {screen.Theme?.DefaultFontSize}")),
             new Capture("wide", "1280x720: top bar, research and policy pills, nav strip, minimap and next-action dock; same structure as at 640x480"),
+            LayoutChecks.StatusClear("at 1280x720 the status line followed the resize and is clear of the bottom controls", screen),
             .. LayoutChecks.Widths(host, "HUD", () => screen, null, "1920x1080: the same HUD at full HD, every element in its own place and the middle of the map free", () => Report(Layout())),
+            LayoutChecks.StatusClear("at 640x480 again the status line is clear of the rebuilt next-action dock", screen),
             .. LocaleSteps.GameScreenIn(host, "German", "de", "German at 640x480: the longer words of the bar and the buttons fit without clipping or overlap", localHost, game.Ruleset, it => it, it => it.Hud.HoldBanner = true, it => Report(LayoutOf(it))),
             .. LocaleSteps.GameScreenIn(host, "Russian", "ru", "Russian at 640x480: Cyrillic text on the buttons, every element in its own place", localHost, game.Ruleset, it => it, it => it.Hud.HoldBanner = true, it => Report(LayoutOf(it))),
         ]);

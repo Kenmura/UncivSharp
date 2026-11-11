@@ -48,6 +48,9 @@ public partial class GameScreen : Control
     private string statusText = "";
     private int statusFrames;
     private const int StatusFrames = 240; // frames, not seconds: captures must not depend on machine speed
+    private Vector2 statusLaidOutForSize; // T363: the geometry the status line was last placed against, so a late HUD layout can trigger another pass
+    private Rect2 statusLaidOutForUnitPanel;
+    private Rect2 statusLaidOutForDock;
     private int bannerTurn = -1;
     private int rivalsTurn = -1;
     private int rivalsRequest;
@@ -2401,6 +2404,7 @@ public partial class GameScreen : Control
     {
         if (pings.Count > 0) AdvancePings((float)delta);
         if (statusFrames > 0 && --statusFrames == 0) statusPanel.Visible = false;
+        else if (statusPanel.Visible && StatusLayoutStale()) LayoutStatus(); // T363: the HUD's rebuilt containers may only get their rect in a later frame
         // the countdowns move with the clock, not with snapshots
         if (session is not ITurnRoster || TurnBar.Data == null) return;
         var now = NowMs();
@@ -2859,14 +2863,33 @@ public partial class GameScreen : Control
         if (oneLine.X > available + 0.5f)
         {
             statusLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-            statusLabel.CustomMinimumSize = new Vector2(available - padding.X, 0f);
+            float wrapWidth = available - padding.X;
+            statusLabel.CustomMinimumSize = new Vector2(wrapWidth, 0f);
+            statusLabel.Size = new Vector2(wrapWidth, 0f); // reshape at the wrap width now: GetLineCount otherwise still reports the previous width's wrap
             statusPanel.Size = new Vector2(available, 0f);
             float textHeight = Math.Max(1, statusLabel.GetLineCount()) * (float)Math.Max(1, statusLabel.GetLineHeight());
-            statusLabel.Size = new Vector2(available - padding.X, textHeight);
-            height = textHeight + padding.Y;
+            statusLabel.Size = new Vector2(wrapWidth, textHeight);
+            // the panel clamps its size to its own minimum, so take the height from it: a line-spacing pixel per line would otherwise sit below the bottom margin
+            height = Math.Max(textHeight + padding.Y, statusPanel.GetCombinedMinimumSize().Y);
         }
         statusPanel.Size = new Vector2(width, height);
         float x = left + Math.Max(0f, (right - left - width) / 2f);
         statusPanel.Position = new Vector2(x, bottom - height);
+        statusLaidOutForSize = Size;
+        statusLaidOutForUnitPanel = unitPanel;
+        statusLaidOutForDock = dockRect;
+    }
+
+    /// <summary>
+    /// T363: whether the controls the status line must stay clear of moved since it was last placed. The HUD container is rebuilt when the window crosses a breakpoint,
+    /// and its dock reports size 0 (or its old rectangle) until the rebuilt containers sort, so a layout in that frame put the line under it; the line is laid out again
+    /// on the first frame the dock's real rectangle is known.
+    /// </summary>
+    private bool StatusLayoutStale()
+    {
+        var unitPanel = Panel.Visible && Panel.Size.X > 0f ? Panel.GetGlobalRect() : default;
+        var dock = Hud.Dock;
+        var dockRect = dock.IsVisibleInTree() && dock.Size.X > 0f ? dock.GetGlobalRect() : default;
+        return Size != statusLaidOutForSize || unitPanel != statusLaidOutForUnitPanel || dockRect != statusLaidOutForDock;
     }
 }
