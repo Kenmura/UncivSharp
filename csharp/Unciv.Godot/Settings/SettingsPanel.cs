@@ -88,6 +88,8 @@ public partial class SettingsPanel : HBoxContainer
     private readonly Dictionary<HotkeyAction, Button> keyButtons = [];
     private readonly Label messageLabel = new() { Name = "OptionsMessage", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly HSlider volume = new() { Name = "VolumeSlider", MinValue = 0, MaxValue = 1, Step = 0.05 };
+    private readonly HSlider musicVolume = new() { Name = "MusicVolumeSlider", MinValue = 0, MaxValue = 1, Step = 0.05 };
+    private readonly HSlider effectsVolume = new() { Name = "EffectsVolumeSlider", MinValue = 0, MaxValue = 1, Step = 0.05 };
     private readonly HSlider scroll = new() { Name = "ScrollSpeedSlider", MinValue = OptionsModel.MinScrollSpeed, MaxValue = OptionsModel.MaxScrollSpeed, Step = 0.25 };
     private readonly HSlider autoPlayTurns = new() { Name = "AutoPlayTurnsSlider", MinValue = AutoPlaySettings.MinTurns, MaxValue = AutoPlaySettings.MaxTurnsLimit, Step = 1 };
     private readonly OptionButton windowMode = new() { Name = "WindowModePicker" };
@@ -385,7 +387,11 @@ public partial class SettingsPanel : HBoxContainer
     private void BuildSound()
     {
         var page = AddPage("Sound");
-        AddSlider(page, "Sound volume", volume, (s, v) => s with { SoundVolume = v }, s => s.SoundVolume, v => ((int)Math.Round(v * 100, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) + "%");
+        string FormatPercent(double v) => ((int)Math.Round(v * 100, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) + "%";
+        AddSlider(page, "Sound volume", volume, (s, v) => s with { SoundVolume = v }, s => s.SoundVolume, FormatPercent);
+        AddSlider(page, "Music volume", musicVolume, (s, v) => s with { MusicVolume = v }, s => s.MusicVolume, FormatPercent);
+        AddSlider(page, "Effects volume", effectsVolume, (s, v) => s with { EffectsVolume = v }, s => s.EffectsVolume, FormatPercent);
+        AddToggle(page, "Mute when unfocused", s => s.MuteOnFocusLoss, (s, v) => s with { MuteOnFocusLoss = v });
     }
 
     private void BuildKeys()

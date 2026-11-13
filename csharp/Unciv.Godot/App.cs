@@ -54,13 +54,18 @@ public partial class App : Node
         localization = Loc.Init(settings, GetWindow());
         ClientSettingsApplier.Apply(settings.Current, GetWindow(), theme: theme);
         var applied = settings.Current;
+        sounds = new SoundPlayer(AssetRegistry.ForRuleset(baseRuleset, OptionsModel.RegistryPack(settings.Current.AssetPack)));
+        sounds.ApplyVolumes(settings.Current.EffectsVolume, settings.Current.MusicVolume);
+        AddChild(sounds);
         settings.Changed += changed =>
         {
             ClientSettingsApplier.Apply(changed, GetWindow(), applied, theme);
+            sounds.ApplyVolumes(changed.EffectsVolume, changed.MusicVolume);
+            if (!changed.MuteOnFocusLoss) sounds.SetFocusMuted(false);
+            if (!string.Equals(changed.AssetPack, applied.AssetPack, StringComparison.Ordinal))
+                sounds.SetRegistry(AssetRegistry.ForRuleset(baseRuleset, OptionsModel.RegistryPack(changed.AssetPack)));
             applied = changed;
         };
-        sounds = new SoundPlayer(AssetRegistry.ForRuleset(baseRuleset, OptionsModel.RegistryPack(settings.Current.AssetPack)));
-        AddChild(sounds);
         GetTree().NodeAdded += node =>
         {
             if (node is BaseButton button) button.Pressed += () => sounds.Play(UncivSound.Click);
@@ -84,6 +89,7 @@ public partial class App : Node
     // The menu is rebuilt each time (leaving a game frees the screen stack, menu included); the same save controller serves every menu.
     private void ShowMenu(bool first)
     {
+        sounds.PlayMusic(MusicMood.Menu);
         activeSaves = null;
         activeSession = null;
         menu = new MainMenu(theme, UserPaths.Profile);
@@ -290,7 +296,7 @@ public partial class App : Node
     {
         var registry = AssetRegistry.ForRuleset(session.Ruleset, OptionsModel.RegistryPack(settings.Current.AssetPack));
         var root = new Control { Name = "Play", MouseFilter = Control.MouseFilterEnum.Ignore };
-        var screen = new GameScreen { Name = "GameScreen", PlaySound = sounds.PlaySound };
+        var screen = new GameScreen { Name = "GameScreen", PlaySound = sounds.PlaySound, MusicMoodChanged = mood => sounds.PlayMusic(mood) };
         screen.Presenter.Enabled = true;
         screen.TaskCardEnabled = true;
         root.AddChild(screen);
@@ -363,6 +369,11 @@ public partial class App : Node
     {
         if (what == NotificationApplicationPaused) _ = activeSaves?.AutosaveNowAsync();
         else if (what == NotificationApplicationResumed && activeSession != null) _ = activeSession.ResyncAsync();
+        if (sounds == null || settings == null) return;
+        if (what == NotificationApplicationFocusOut)
+            sounds.SetFocusMuted(settings.Current.MuteOnFocusLoss);
+        else if (what == NotificationApplicationFocusIn)
+            sounds.SetFocusMuted(false);
     }
 
     private SaveController? activeSaves;

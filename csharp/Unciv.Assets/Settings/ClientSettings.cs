@@ -42,6 +42,18 @@ public sealed record ClientSettings
     [JsonPropertyName("soundVolume")]
     public float SoundVolume { get; init; } = 0.7f;
 
+    /// <summary>T353: music track volume, 0 (silent) to 1.</summary>
+    [JsonPropertyName("musicVolume")]
+    public float MusicVolume { get; init; } = 0.5f;
+
+    /// <summary>T353: UI and combat sound effects volume, 0 (silent) to 1.</summary>
+    [JsonPropertyName("effectsVolume")]
+    public float EffectsVolume { get; init; } = 0.8f;
+
+    /// <summary>T353: mute all audio when the game window loses focus.</summary>
+    [JsonPropertyName("muteOnFocusLoss")]
+    public bool MuteOnFocusLoss { get; init; } = true;
+
     /// <summary>C028: one of <see cref="OptionsModel.WindowModes"/>.</summary>
     [JsonPropertyName("windowMode")]
     public string WindowMode { get; init; } = OptionsModel.WindowModes[0];
@@ -132,6 +144,8 @@ public sealed record ClientSettings
             TextScale = AccessibilityModel.ClampTextScale(TextScale),
             ColorblindMode = AccessibilityModel.ParseColorblindMode(ColorblindMode).ToString(),
             SoundVolume = float.IsFinite(SoundVolume) ? Math.Clamp(SoundVolume, 0f, 1f) : Default.SoundVolume,
+            MusicVolume = float.IsFinite(MusicVolume) ? Math.Clamp(MusicVolume, 0f, 1f) : Default.MusicVolume,
+            EffectsVolume = float.IsFinite(EffectsVolume) ? Math.Clamp(EffectsVolume, 0f, 1f) : Default.EffectsVolume,
             WindowMode = OptionsModel.WindowModes.Contains(WindowMode) ? WindowMode : Default.WindowMode,
             ScrollSpeed = float.IsFinite(ScrollSpeed) ? Math.Clamp(ScrollSpeed, OptionsModel.MinScrollSpeed, OptionsModel.MaxScrollSpeed) : Default.ScrollSpeed,
             GraphicsLevel = GraphicsModel.Parse(GraphicsLevel).ToString(),

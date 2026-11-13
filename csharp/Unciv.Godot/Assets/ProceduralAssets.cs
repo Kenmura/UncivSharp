@@ -27,6 +27,22 @@ public static class ProceduralAssets
         Data = ProceduralSounds.Pcm(key.Name),
     };
 
+    /// <summary>T353: generated looping music track of a <c>music/&lt;name&gt;</c> key as a 16-bit mono stream.</summary>
+    public static AudioStreamWav Music(AssetKey key)
+    {
+        var pcm = ProceduralMusic.Pcm(key.Name);
+        return new AudioStreamWav
+        {
+            Format = AudioStreamWav.FormatEnum.Format16Bits,
+            MixRate = ProceduralMusic.SampleRate,
+            Stereo = false,
+            LoopMode = AudioStreamWav.LoopModeEnum.Forward,
+            LoopBegin = 0,
+            LoopEnd = pcm.Length / 2,
+            Data = pcm,
+        };
+    }
+
     public static ArrayMesh ToMesh(MeshData data)
     {
         var positions = new Vector3[data.VertexCount];

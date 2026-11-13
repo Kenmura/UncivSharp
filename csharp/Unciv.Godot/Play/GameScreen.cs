@@ -1425,6 +1425,19 @@ public partial class GameScreen : Control
         extraGroupIds = SelectedUnitId == null ? [] : [.. extraGroupIds.Where(it => unitNodes.TryGetValue(it, out var member) && member.IsOwn)];
         ApplySelectionScale();
         Run(RefreshSelection());
+        UpdateAudioForSnapshot();
+    }
+
+    private int lastSoundTurn = -1;
+
+    private void UpdateAudioForSnapshot()
+    {
+        if (lastSoundTurn >= 0 && snapshot.Turn > lastSoundTurn)
+            PlaySound?.Invoke("chimes");
+        lastSoundTurn = snapshot.Turn;
+        bool atWar = snapshot.Diplomacy.Any(it => it.AtWar &&
+            (string.Equals(it.A, session.ViewerCivId, StringComparison.Ordinal) || string.Equals(it.B, session.ViewerCivId, StringComparison.Ordinal)));
+        MusicMoodChanged?.Invoke(ProceduralMusic.MoodForState(inGame: true, atWar: atWar, gameOver: GameOver.Visible));
     }
 
     /// <summary>T379: how many times <see cref="Refresh"/> rebuilt the whole screen (a run that skips animations must not do it every turn, see <see cref="AutoPlayModel.RefreshesAfter"/>).</summary>
@@ -2509,6 +2522,9 @@ public partial class GameScreen : Control
 
     /// <summary>C057: where the engine's sound cues are played (the app's sound player); null in scenarios that do not care, which then play nothing.</summary>
     public Action<string>? PlaySound { get; set; }
+
+    /// <summary>T353: notified when the game state's music mood changes (peace, tension, victory).</summary>
+    public Action<MusicMood>? MusicMoodChanged { get; set; }
 
     /// <summary>Plays the sounds the batch asks of this viewer; a missing sound device never throws into the event stream.</summary>
     public void PlayCues(IReadOnlyList<GameEvent> events)

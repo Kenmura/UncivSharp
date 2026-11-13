@@ -47,6 +47,9 @@ public sealed class AssetRegistry
     /// <summary>The stream of a sound (override <c>sound/&lt;name&gt;.ogg</c> or the generated tones), null for <see cref="UncivSound.Silent"/>.</summary>
     public AudioStream? Sound(UncivSound sound) => ProceduralSounds.KeyFor(sound) is { } key ? Get<AudioStream>(key) : null;
 
+    /// <summary>T353: the stream of a music track (override/pack <c>music/&lt;name&gt;.{ogg,wav}</c> or generated track).</summary>
+    public AudioStream? Music(string trackName) => string.IsNullOrWhiteSpace(trackName) ? null : Get<AudioStream>(ProceduralMusic.KeyFor(trackName));
+
     private static T? LoadFile<T>(string path, bool lightenDark = false) where T : class
     {
         var loaded = GodotAssetFiles.Load(path);
@@ -89,6 +92,7 @@ public sealed class AssetRegistry
             AssetKind.StyleBox => key.Name == "button" ? ProceduralAssets.Button() : ProceduralAssets.Panel(),
             AssetKind.Font => FontChain.Default,
             AssetKind.Sound => ProceduralAssets.Sound(key),
+            AssetKind.Music => ProceduralAssets.Music(key),
             _ => null,
         };
         return made as T ?? throw new ArgumentException($"{key} is a {AssetKinds.Of(key)} asset and cannot be obtained as {typeof(T).Name}");

@@ -32,7 +32,21 @@ public sealed class GodotAssetFiles : IAssetFiles
     {
         if (relativePath.EndsWith(".glb", StringComparison.OrdinalIgnoreCase) && !ResourceLoader.Exists(Root + relativePath)) return LoadModel(relativePath);
         if (IsImage(relativePath) && !ResourceLoader.Exists(Root + relativePath)) return LoadImage(relativePath);
+        if (IsAudio(relativePath) && !ResourceLoader.Exists(Root + relativePath)) return LoadAudio(relativePath);
         return ResourceLoader.Exists(Root + relativePath) ? ResourceLoader.Load(Root + relativePath) : null;
+    }
+
+    private static bool IsAudio(string path) =>
+        path.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".wav", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>T353: an un-imported <c>.ogg</c> or <c>.wav</c> sound/music file from an override or pack.</summary>
+    private static AudioStream? LoadAudio(string relativePath)
+    {
+        var source = Godot.FileAccess.FileExists(Root + relativePath) ? Root + relativePath : ExternalPath(relativePath);
+        if (source == null) return null;
+        if (relativePath.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase))
+            return AudioStreamOggVorbis.LoadFromFile(source);
+        return AudioStreamWav.LoadFromFile(source);
     }
 
     // main thread only; a failed load stays cached as null (the placeholder is used, one warning), and a loaded scene lives for the whole run
