@@ -3,7 +3,7 @@
 
 Run with `python3 -I gen_ruleset.py` (stdlib only). Input: `../data/*.tsv`, the Gods & Kings JSON of this repository
 and the hand-maintained `overrides.json` next to this script. Output: every JSON file of
-`android/assets/jsons/Civ V - Brave New World/` and the report `../data/derived/gen_ruleset_report.txt`.
+`csharp/data/jsons/Civ V - Brave New World/` and the report `../data/derived/gen_ruleset_report.txt`.
 
     python3 -I gen_ruleset.py            write the ruleset and the report
     python3 -I gen_ruleset.py --check    exit 1 when the files on disk differ from what would be generated
@@ -27,11 +27,11 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 SPEC = HERE.parent
 DATA = SPEC / "data"
-REPO = HERE.parents[3]
-GK_DIR = REPO / "android" / "assets" / "jsons" / "Civ V - Gods & Kings"
-OUT_DIR = REPO / "android" / "assets" / "jsons" / "Civ V - Brave New World"
+CSHARP = HERE.parents[2]
+GK_DIR = CSHARP / "data" / "jsons" / "Civ V - Gods & Kings"
+OUT_DIR = CSHARP / "data" / "jsons" / "Civ V - Brave New World"
 REPORT = DATA / "derived" / "gen_ruleset_report.txt"
-MOD_CONSTANTS_CS = REPO / "csharp" / "Unciv.Core" / "Models" / "ModConstants.cs"
+MOD_CONSTANTS_CS = CSHARP / "Unciv.Core" / "Models" / "ModConstants.cs"
 OVERRIDES = HERE / "overrides.json"
 
 # Section 3.3: BNW names that differ from the Unciv G&K names. The map goes BNW -> Unciv, or Unciv -> BNW (RENAMES).

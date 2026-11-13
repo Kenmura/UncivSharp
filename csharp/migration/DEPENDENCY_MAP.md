@@ -77,7 +77,7 @@ flowchart TD
   class T305 waiting
   class T325 waiting
   class T330 waiting
-  class T416 prog
+  class T416 review
   class T417 waiting
   class T418 waiting
   class T419 waiting
@@ -158,7 +158,7 @@ xychart-beta
 | T414 | **Ready to start** | none | 0 | UX polish: consolidate Setup/Host/Lobby/Options/Saves flows, strip duplicate chrome, and replace blank voids with EmptyState and icons |
 | T415 | **Ready to start** | none | 0 | UX polish: unify Espionage flows, prune vestigial Diplomacy/Trade/Pedia/Tutorial chrome, add Decision icons, and fix compact DataTables |
 | T330 | Available (waiting on ) | none | 3 | GitHub Actions does not run for csharp-migration or csharp-v tags: diagnose (account, billing, rename to Kenmura/UncivSharp, settings), restore CI, then re-run the tag workflow |
-| T416 | In-Progress [Antigravity] | none | 3 | Clean cutover prerequisite: move android/assets/jsons into csharp/data/jsons and decouple all runtime, test, and packaging paths |
+| T416 | Needs-Review [Antigravity] | none | 3 | Clean cutover prerequisite: move android/assets/jsons into csharp/data/jsons and decouple all runtime, test, and packaging paths |
 | T278 | Available (waiting on ) | T260, T276 | 2 | Android on-device verification: TLS join, lifecycle reconnect, frame time and APK size on a mid-range phone |
 | T305 | Available (waiting on ) | T280 | 2 | Verify the Android APK job of the release workflow on a hosted runner (first tag push) |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 1 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |

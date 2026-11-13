@@ -186,7 +186,7 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void EveryShippedTranslationNeedsOnlyScriptsTheChainCovers()
     {
-        string translations = Path.Combine(FindUp("data"), "jsons", "translations");
+        string translations = FindTranslationsDirectory();
         var l = new ClientLocalization(translations, new Translations());
         Assert.True(l.Languages.Count >= 40);
         foreach (var language in l.Languages)
@@ -195,13 +195,14 @@ public class LocalizationTests : IDisposable
         Assert.Contains(TextScript.Devanagari, l.ScriptsOf("Hindi"));
     }
 
-    private static string FindUp(string name)
+    private static string FindTranslationsDirectory()
     {
         for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
         {
-            if (Directory.Exists(Path.Combine(d.FullName, name))) return Path.Combine(d.FullName, name);
+            string candidate = Path.Combine(d.FullName, "data", "jsons", "translations");
+            if (Directory.Exists(candidate)) return candidate;
         }
-        throw new DirectoryNotFoundException(name);
+        throw new DirectoryNotFoundException("data/jsons/translations");
     }
 
     private static string RepoFile(string relative)

@@ -115,9 +115,9 @@ Unciv.Godot/tools/smoke-export.sh                  # copies build/linux outside 
 ```
 
 `package.sh` builds, runs `--export-release` with the presets in `Unciv.Godot/export_presets.cfg` (Linux, Windows; **macOS is not
-a preset yet**: it needs a Mac host for signing/notarisation), then copies `android/assets/jsons` (rulesets and `translations/`) to
+a preset yet**: it needs a Mac host for signing/notarisation), then copies `csharp/data/jsons` (rulesets and `translations/`) to
 `<build>/data/jsons`, plus `LICENSE` and `THIRD_PARTY_NOTICES.md`. `RulesetLocator` looks for `data/jsons` beside the executable first and
-falls back to the checkout's `android/assets/jsons` when run from the editor (`ContentLocator`). Godot's .NET export requires a solution file
+falls back to the checkout's `csharp/data/jsons` when run from the editor (`ContentLocator`). Godot's .NET export requires a solution file
 beside `project.godot`; the script generates a throw-away, git-ignored `Unciv.Godot.sln`. Template version = editor version (`4.7.2-stable`),
 pinned in `setup-godot.sh` and `install-export-templates.sh`; a unit test keeps the two equal.
 

@@ -20,7 +20,7 @@ cp "$CACHE/Civ5DebugDatabase.db" "$CACHE/Localization-Merged.db" /some/scratch/ 
 python3 -I extract.py /some/scratch/Civ5DebugDatabase.db /some/scratch/Localization-Merged.db ../data
 python3 -I schemadiff.py "$CIV" > ../data/derived/schema_gk_to_bnw.txt
 python3 -I defdiff.py "$CIV/Assets/DLC/Expansion/Gameplay/XML/GlobalDefines.xml|..." "$CIV/Assets/DLC/Expansion2/Gameplay/XML/GlobalDefines.xml|..."
-python3 -I objdiff.py /some/scratch/Civ5DebugDatabase.db /some/scratch/Localization-Merged.db "<repo>/android/assets/jsons/Civ V - Gods & Kings"
+python3 -I objdiff.py /some/scratch/Civ5DebugDatabase.db /some/scratch/Localization-Merged.db "<repo>/csharp/data/jsons/Civ V - Gods & Kings"
 ```
 
 `defdiff.py` takes `|`-separated lists of XML files. The run behind `defines_gk_to_bnw.tsv` used `GlobalDefines.xml`,
