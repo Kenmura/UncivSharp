@@ -149,7 +149,7 @@ xychart-beta
 | T353 | **Ready to start** | none | 0 | Sound and music: effects and a soundtrack from CC0 or original sources (no Civ 5 audio) |
 | T362 | **Ready to start** | T334 | 0 | Two real client processes host and join on the real GPU (manual two-profile smoke) |
 | T400 | **Ready to start** | none | 0 | Pictorial icons for the Brave New World objects still on the generic category pictogram (about 130 buildings, units, policies, promotions, resources) |
-| T275 | Needs-Review [DeepSeek-T275] | T274, C034, C035 | 0 | Host migration 5/5: client UI and docs (backup-host picker, trust notice, standby status, rollback and host-changed notices, superseded-host screen) |
+| T275 | In-Review [Antigravity] | T274, C034, C035 | 0 | Host migration 5/5: client UI and docs (backup-host picker, trust notice, standby status, rollback and host-changed notices, superseded-host screen) |
 | T290 | Blocked | T271 | 0 | Real-device frame-time pass: Windows, macOS, Android phone |
 | T306 | Available (waiting on T278) | C099, T278 | 0 | Android shell on-device checks for C099: back button, safe-area insets, orientation, lifecycle autosave, keyboard scroll, permissions |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
