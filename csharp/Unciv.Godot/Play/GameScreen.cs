@@ -1447,9 +1447,15 @@ public partial class GameScreen : Control
 
     private string OwnerCueFor(string owner)
     {
-        bool atWar = snapshot.Diplomacy.Any(it => string.Equals(it.CivId, owner, StringComparison.Ordinal) && it.Status == Unciv.Net.Visibility.DiplomacyStatus.War);
-        bool allied = snapshot.Diplomacy.Any(it => string.Equals(it.CivId, owner, StringComparison.Ordinal) && it.DefensivePact);
-        bool barb = session.Ruleset.Nations.TryGetValue(owner, out var nation) && nation.IsBarbarian();
+        var dip = snapshot.Diplomacy.FirstOrDefault(it =>
+            (string.Equals(it.A, session.ViewerCivId, StringComparison.Ordinal) && string.Equals(it.B, owner, StringComparison.Ordinal)) ||
+            (string.Equals(it.B, session.ViewerCivId, StringComparison.Ordinal) && string.Equals(it.A, owner, StringComparison.Ordinal)));
+        bool atWar = dip?.AtWar == true;
+        bool allied = dip?.Status is { } status &&
+            (string.Equals(status, "Ally", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(status, "Protector", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(status, "DefensivePact", StringComparison.OrdinalIgnoreCase));
+        bool barb = session.Ruleset.Nations.TryGetValue(owner, out var nation) && nation.IsBarbarian;
         return AccessibilityModel.OwnerCue(owner, session.ViewerCivId, atWar, allied, barb);
     }
 

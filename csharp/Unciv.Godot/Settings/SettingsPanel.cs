@@ -299,7 +299,7 @@ public partial class SettingsPanel : HBoxContainer
             if (!refreshing) service.Update(s => s with { UiScale = v / 100f });
         };
         AddRow(page, "UI scale", scaleStepper);
-        textScaleStepper = new Stepper(theme, (int)MathF.Round(AccessibilityModel.MinTextScale * 100f), (int)MathF.Round(AccessibilityModel.MaxTextScale * 100f), 100, (int)MathF.Round(AccessibilityModel.TextScaleStep * 100f), "Smaller text", "Bigger text", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "TextScaleStepper" };
+        textScaleStepper = new Stepper(theme, (int)MathF.Round(AccessibilityModel.MinTextScale * 100f, MidpointRounding.AwayFromZero), (int)MathF.Round(AccessibilityModel.MaxTextScale * 100f, MidpointRounding.AwayFromZero), 100, (int)MathF.Round(AccessibilityModel.TextScaleStep * 100f, MidpointRounding.AwayFromZero), "Smaller text", "Bigger text", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "TextScaleStepper" };
         textScaleStepper.Changed += v =>
         {
             if (refreshing) return;
