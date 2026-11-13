@@ -870,7 +870,7 @@ public sealed class ClientSession : IAsyncDisposable
         if (electionDisabled || !everJoined || gameId == null) return false;
         if (redirectIsElection && !redirectAnnounced) return true;
         if (redirect != null || (!gameStarted && Game.Snapshot == null)) return false;
-        return Successor?.Successor != null && (IsSuccessorSelf() || options.ConnectEndpoint != null);
+        return Successor?.Successor is { } successor && (IsSuccessorSelf() || CanDial(successor));
     }
 
     private HostLossInfo BuildLossInfo(SuccessorInfo info, bool forced) => new(
@@ -937,7 +937,7 @@ public sealed class ClientSession : IAsyncDisposable
         redirectPrepared = true;
         redirectAnnounced = false;
         redirectConnector = connector;
-        hostAddress = info.Endpoints[0];
+        hostAddress = info.Endpoints.Count > 0 ? info.Endpoints[0] : "";
         expectedFingerprint = info.Fingerprint;
         forceTakeOver = false;
     }
@@ -1029,17 +1029,27 @@ public sealed class ClientSession : IAsyncDisposable
     // (persisted before it is sent: one candidate per epoch); one that already is the host answers with a Welcome, and the session follows it like a hand-off.
     private async Task VoteAsync(SuccessorInfo info, CancellationToken token)
     {
-        var connectEndpoint = options.ConnectEndpoint;
-        if (connectEndpoint == null || info.Endpoints.Count == 0) return;
+        if (!CanDial(info)) return;
         var epoch = connectionEpoch + 1;
         if (votedEpoch == epoch && !string.Equals(votedCandidate, info.KeyId, StringComparison.Ordinal)) return; // never a second candidate for the same epoch
-        var endpoint = info.Endpoints[voteRotation++ % info.Endpoints.Count];
+        IReadOnlyList<string> endpoints = options.ConnectEndpoint == null ? [] : info.Endpoints;
+        var route = options.ConnectRelay != null && options.ConfirmRelay != null ? RelayRoutes.Normalize(info.Relay) : null;
+        var slot = voteRotation++ % (endpoints.Count + (route == null ? 0 : 1));
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(token);
         limit.CancelAfter(options.HandshakeTimeout);
         ITransport? probe = null;
         try
         {
-            probe = await connectEndpoint(endpoint, limit.Token).ConfigureAwait(false);
+            if (slot < endpoints.Count)
+            {
+                probe = await options.ConnectEndpoint!(endpoints[slot], limit.Token).ConfigureAwait(false);
+            }
+            else
+            {
+                // T401: dialing the successor's relay room requires the player's agreement, and the dial timeout pauses while they are asked.
+                if (!await ConfirmRelayAsync(route!, limit).ConfigureAwait(false)) return;
+                probe = await options.ConnectRelay!(route!, info.Fingerprint, limit.Token).ConfigureAwait(false);
+            }
             await probe.SendAsync(ProtocolCodec.Encode(BuildHello()), limit.Token).ConfigureAwait(false);
             var frame = await probe.ReceiveAsync(limit.Token).ConfigureAwait(false);
             if (frame == null) return;
@@ -1126,13 +1136,19 @@ public sealed class ClientSession : IAsyncDisposable
         if (route == null) throw new InvalidOperationException("The successor announced nothing this session can dial");
         hostAddress = KnownHosts.RelayAddress(route.Relay, route.Room);
         // The relay was named by the successor (through the host): it is dialled only with the player's agreement, and the handshake clock stops while they are asked.
-        handshakeTimer?.CancelAfter(Timeout.InfiniteTimeSpan);
+        if (!await ConfirmRelayAsync(route, handshakeTimer).ConfigureAwait(false))
+            throw new Unciv.Server.Transport.RelayException(Unciv.Server.Transport.RelayCodes.Declined, "The relay the successor is reachable on was not agreed to.");
+        return await options.ConnectRelay!(route, successor.Fingerprint, token).ConfigureAwait(false);
+    }
+
+    private async Task<bool> ConfirmRelayAsync(RelayRoute route, CancellationTokenSource? timer)
+    {
+        timer?.CancelAfter(Timeout.InfiniteTimeSpan);
         bool agreed;
         try { agreed = await options.ConfirmRelay!(route).ConfigureAwait(false); }
         catch (Exception e) when (e is not OperationCanceledException) { agreed = false; }
-        handshakeTimer?.CancelAfter(options.HandshakeTimeout);
-        if (!agreed) throw new Unciv.Server.Transport.RelayException(Unciv.Server.Transport.RelayCodes.Declined, "The relay the successor is reachable on was not agreed to.");
-        return await options.ConnectRelay!(route, successor.Fingerprint, token).ConfigureAwait(false);
+        timer?.CancelAfter(options.HandshakeTimeout);
+        return agreed;
     }
 
     // T354: whether this session has a way to reach the successor it was told about: one of its announced addresses (ConnectEndpoint), or its relay room (ConnectRelay with the player's say-so, ConfirmRelay).

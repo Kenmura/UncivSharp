@@ -22,6 +22,7 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
     private readonly ElectionLimits limits = limits ?? new ElectionLimits();
     private ElectionTally? tally;
     private TcpTlsListener? listener;
+    private StandbyListener? relayStandby;
     private CancellationTokenSource? acceptStop;
     private Task? acceptLoop;
     private string? fingerprint;
@@ -127,8 +128,18 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
 
     private void StartListening(SuccessorInfo successor)
     {
-        if (listener != null) return;
-        if (successor.Endpoints.Count == 0) return; // a relay-only successor has no announced TCP port; voters cannot reach it (recorded in the ticket Notes)
+        if (listener != null || relayStandby != null) return;
+        if (successor.Endpoints.Count == 0)
+        {
+            // T401: a relay-only successor has no announced TCP port; serve ElectionChallenge/HostLossVote on connections
+            // yielded by the standby's RelayListener without detaching it (DetachRelay is only taken at promotion).
+            if (promotion.Listener is { Relay: not null } standby)
+            {
+                standby.SetElectionHandler(AdmitAsync);
+                relayStandby = standby;
+            }
+            return;
+        }
         var port = PortOfEndpoint(successor.Endpoints[0]);
         if (promotion.Listener != null)
         {
@@ -174,6 +185,8 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
 
     private async Task StopListeningAsync()
     {
+        if (Interlocked.Exchange(ref relayStandby, null) is { } standby)
+            standby.SetElectionHandler(null);
         var running = listener;
         listener = null;
         if (running == null) return;

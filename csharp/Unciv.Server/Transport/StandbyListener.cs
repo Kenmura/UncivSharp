@@ -21,6 +21,7 @@ public sealed class StandbyListener : IAsyncDisposable
     private readonly CancellationTokenSource stopped = new();
     private readonly CancellationTokenSource relayStopped;
     private RelayListener? relay;
+    private Func<ITransport, CancellationToken, Task>? electionHandler;
     private int connections;
     private Task? acceptLoop;
     private Task? relayLoop;
@@ -79,6 +80,12 @@ public sealed class StandbyListener : IAsyncDisposable
         try { relayStopped.Cancel(); } catch (ObjectDisposedException) { }
         return detached;
     }
+
+    /// <summary>
+    /// T401: while a crash election runs on a relay-only successor, routes incoming relay connections to <paramref name="handler"/>
+    /// without detaching the relay room. Cleared when the election ends without promotion.
+    /// </summary>
+    public void SetElectionHandler(Func<ITransport, CancellationToken, Task>? handler) => Volatile.Write(ref electionHandler, handler);
 
     private async Task RelayLoopAsync(RelayListener source, CancellationToken token)
     {
@@ -147,6 +154,11 @@ public sealed class StandbyListener : IAsyncDisposable
     {
         try
         {
+            if (Volatile.Read(ref electionHandler) is { } handler)
+            {
+                await handler(accepted, token).ConfigureAwait(false);
+                return;
+            }
             using var limit = CancellationTokenSource.CreateLinkedTokenSource(token);
             limit.CancelAfter(ConnectionLifetime);
             await using var transport = accepted;

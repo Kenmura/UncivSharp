@@ -6,6 +6,7 @@ using Unciv.Client.Net.Session;
 using Unciv.Client.Net.Transport;
 using Unciv.Commands.Log;
 using Unciv.Commands.Turn;
+using Unciv.Core.Tests.Relay;
 using Unciv.Logic;
 using Unciv.Logic.Civilization;
 using Unciv.Logic.Map;
@@ -14,6 +15,7 @@ using Unciv.Models.Ruleset;
 using Unciv.Net;
 using Unciv.Net.Identity;
 using Unciv.Net.Persistence;
+using Unciv.Net.Relay;
 using Unciv.Net.Standby;
 using Unciv.Net.Turns;
 using Unciv.Server;
@@ -651,6 +653,201 @@ public sealed class HostElectionTests : IDisposable
         taken.Start();
         var busyPort = ((System.Net.IPEndPoint)taken.LocalEndpoint).Port;
         Assert.Throws<HostingException>(() => new StandbyPromotion(dataRoot, greece, rig.SuccessorCert, new InProcessHostOptions { TickInterval = null }).TakeOverFromDisk(rig.Host.GameId, busyPort));
+    }
+
+    // ------------------------------------------------------------------ T401: relay-only successor in crash election
+
+    [Fact]
+    public async Task T401_RelayOnlySuccessor_WinsCrashElectionThroughItsRelayRoom_AndAdoptsTheRoomOnPromotion()
+    {
+        var relayRig = Track(await RelayRig.StartAsync(RelayMode.SelfSigned, o => o with { PublicNames = [RelayRig.PublicName, "127.0.0.1"] }));
+        var relayEndpoint = new RelayEndpoint("127.0.0.1", relayRig.Port, relayRig.PinnedFingerprint);
+        var listenerOptions = new RelayListenerOptions { MinBackoff = TimeSpan.FromMilliseconds(50), MaxBackoff = TimeSpan.FromMilliseconds(200) };
+        var hostRelaySettings = new RelaySettings { Url = relayEndpoint.ToString() };
+        var voterRelaySettings = new RelaySettings { Url = relayEndpoint.ToString() };
+
+        var successorCert = NewCertificate();
+        var successorFp = HostCertificate.GetFingerprint(successorCert);
+        var host = StartHost("t401-relay", successorFp, withAi: false);
+        host.Host.Standby.Prober = new TlsEndpointProber(hostRelaySettings.Agreed);
+        host.Listen(NewCertificate(), 0);
+        var hostPlayer = await host.ConnectHostPlayerAsync();
+        _ = Task.Run(async () =>
+        {
+            try { while (await hostPlayer.ReceiveAsync(CancellationToken.None) != null) { } }
+            catch (Exception e) when (e is InvalidOperationException or IOException or ObjectDisposedException) { }
+        });
+
+        var hostOptions = new InProcessHostOptions { TickInterval = null, Store = new StoreOptions { SnapshotEveryTurns = 2 } };
+        var promotion = new StandbyPromotion(Path.Combine(root, "t401-greece"), greece, successorCert, hostOptions);
+        var election = Track(new SuccessorElection(promotion, successorCert, clock));
+        var relay = new RelayListener(relayEndpoint, successorCert, host.GameId, listenerOptions);
+        var standby = Track(new StandbyListener(successorCert, null, relay: relay));
+        promotion.Listener = standby;
+        standby.Start();
+        using (var roomWait = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            await relay.WaitForRoomAsync(roomWait.Token);
+        var route = RelayRoutes.Of(relayEndpoint, relay.Room!);
+
+        var successorSession = Track(new ClientSession(
+            token => TcpTlsClientTransport.ConnectAsync("127.0.0.1", host.Port!.Value, cancellationToken: token),
+            new ClientSessionOptions
+            {
+                Identity = greece,
+                DisplayName = "Friend",
+                RulesetHash = "",
+                ExpectedFingerprint = host.Fingerprint,
+                HostAddress = $"127.0.0.1:{host.Port}",
+                KnownHosts = new KnownHosts(),
+                GameId = host.GameId,
+                StandbyRoot = Path.Combine(root, "t401-greece"),
+                ReconnectDelay = (_, _) => Task.Delay(30),
+                ElectionPoll = TimeSpan.FromMilliseconds(30),
+                KeepAliveInterval = Timeout.InfiniteTimeSpan,
+                HostSilenceTimeout = Timeout.InfiniteTimeSpan,
+                Clock = clock,
+                OnHandoff = (handoff, token) => promotion.Handler(handoff, token),
+                OnHostLost = (info, token) => election.Handler(info, token),
+            }));
+        var successorTap = Track(new EventTap(successorSession));
+        Assert.True((await successorSession.JoinAsync()).Joined);
+
+        var voterSession = Track(new ClientSession(
+            token => TcpTlsClientTransport.ConnectAsync("127.0.0.1", host.Port!.Value, cancellationToken: token),
+            new ClientSessionOptions
+            {
+                Identity = rome,
+                DisplayName = "Third",
+                RulesetHash = "",
+                ExpectedFingerprint = host.Fingerprint,
+                HostAddress = $"127.0.0.1:{host.Port}",
+                KnownHosts = new KnownHosts(),
+                GameId = host.GameId,
+                ReconnectDelay = (_, _) => Task.Delay(30),
+                ElectionPoll = TimeSpan.FromMilliseconds(30),
+                KeepAliveInterval = Timeout.InfiniteTimeSpan,
+                HostSilenceTimeout = Timeout.InfiniteTimeSpan,
+                Clock = clock,
+                ConfirmRelay = r => voterRelaySettings.ConfirmAsync(r, _ => Task.FromResult(true)),
+                ConnectRelay = voterRelaySettings.ConnectAsync,
+            }));
+        var voterTap = Track(new EventTap(voterSession));
+        Assert.True((await voterSession.JoinAsync()).Joined);
+
+        // Designate and accept as relay-only (no TCP endpoints).
+        Assert.Null(await host.Host.DesignateBackupAsync("Greece", babylon.PlayerKey));
+        await successorTap.WaitAsync<StandbyOffered>();
+        await successorSession.AcceptStandbyAsync([], 0, successorFp, route);
+        await WaitUntilAsync(() => string.Equals(host.Host.Standby.State, StandbyStates.Ready, StringComparison.Ordinal), "relay standby never became ready");
+        await WaitUntilAsync(() => voterSession.Successor?.Successor?.Relay != null, "voter never received relay successor");
+
+        await PlayTurnsAsync(host, 1);
+        var (seq, hash) = await StateAsync(host);
+        await WaitUntilAsync(() => successorSession.StandbyHaveSeq >= seq, "standby copy never caught up");
+
+        // Kill the host; the relay-only successor serves ElectionChallenge/HostLossVote on its standby RelayListener, reaches quorum, and adopts the room.
+        await host.KillAsync();
+        await WaitUntilAsync(() => successorSession.State != ClientSessionState.InGame && voterSession.State != ClientSessionState.InGame, "clients never noticed the kill");
+        await AdvanceAsync(25);
+        var vote = await voterTap.WaitAsync<VoteCast>(it => it.Epoch == 1);
+        Assert.True(vote.Accepted);
+        await voterTap.WaitAsync<HostChanged>(it => it.Epoch == 1);
+        await successorTap.WaitAsync<HostChanged>(it => it.Epoch == 1);
+
+        Assert.Null(standby.Relay); // detached only at promotion
+        var promoted = promotion.Host!;
+        Assert.Equal((seq, hash), await StateAsync(promoted));
+        await PlayTurnsAsync(promoted, 1);
+    }
+
+    [Fact]
+    public async Task T401_RelayOnlySuccessor_HostReturnsDuringElection_ResumesAnsweringStandbyProbes()
+    {
+        var relayRig = Track(await RelayRig.StartAsync(RelayMode.SelfSigned, o => o with { PublicNames = [RelayRig.PublicName, "127.0.0.1"] }));
+        var relayEndpoint = new RelayEndpoint("127.0.0.1", relayRig.Port, relayRig.PinnedFingerprint);
+        var listenerOptions = new RelayListenerOptions { MinBackoff = TimeSpan.FromMilliseconds(50), MaxBackoff = TimeSpan.FromMilliseconds(200) };
+        var proberSettings = new RelaySettings { Url = relayEndpoint.ToString() };
+
+        var successorCert = NewCertificate();
+        var successorFp = HostCertificate.GetFingerprint(successorCert);
+        var promotion = new StandbyPromotion(Path.Combine(root, "t401-back"), greece, successorCert, new InProcessHostOptions { TickInterval = null });
+        var election = Track(new SuccessorElection(promotion, successorCert, clock));
+        var relay = new RelayListener(relayEndpoint, successorCert, "game-back", listenerOptions);
+        var standby = Track(new StandbyListener(successorCert, null, relay: relay));
+        promotion.Listener = standby;
+        standby.Start();
+        using (var roomWait = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            await relay.WaitForRoomAsync(roomWait.Token);
+        var route = RelayRoutes.Of(relayEndpoint, relay.Room!);
+
+        IReadOnlyList<SuccessorSeat> roster =
+        [
+            new() { KeyId = babylon.PlayerKey, Connected = true, IsHost = true },
+            new() { KeyId = greece.PlayerKey, Connected = true },
+            new() { KeyId = rome.PlayerKey, Connected = true },
+        ];
+        var successorInfo = new SuccessorInfo { KeyId = greece.PlayerKey, Endpoints = [], Fingerprint = successorFp, Relay = route };
+        using var cancel = new CancellationTokenSource();
+        var running = election.Handler(new HostLossInfo("game-back", 0, successorInfo, roster, true, 0, false), cancel.Token);
+        await WaitUntilAsync(() => election.Tally != null, "the relay election never started");
+        Assert.NotNull(standby.Relay); // still attached while election runs
+        await cancel.CancelAsync();
+        Assert.Null(await running);
+
+        Assert.NotNull(standby.Relay); // never detached
+        var probed = await new TlsEndpointProber(proberSettings.Agreed).PresentedFingerprintViaRelayAsync(route, successorFp, TimeSpan.FromSeconds(10), CancellationToken.None);
+        Assert.True(HostKey.Matches(probed, successorFp));
+    }
+
+    [Fact]
+    public async Task T401_RelayOnlySuccessor_VoterDecliningRelay_NeverDialsIt()
+    {
+        var successorCert = NewCertificate();
+        var successorFp = HostCertificate.GetFingerprint(successorCert);
+        var declinedRoute = new RelayRoute { Relay = "127.0.0.1:47830", Room = "K7QF-3MXP4A" };
+        var host = StartHost("t401-decline", successorFp, withAi: false);
+        host.Host.Standby.Prober = new FakeProber { RelayAnswer = _ => successorFp };
+        var hostPlayer = await host.ConnectHostPlayerAsync();
+        _ = Task.Run(async () =>
+        {
+            try { while (await hostPlayer.ReceiveAsync(CancellationToken.None) != null) { } }
+            catch (Exception e) when (e is InvalidOperationException or IOException or ObjectDisposedException) { }
+        });
+
+        var successor = await JoinAsync(host, greece, "Friend", tcp: false, Path.Combine(root, "t401-decline-succ"), successorCert);
+        var dialed = 0;
+        var asked = 0;
+        var voter = Track(new ClientSession(
+            _ => Task.FromResult<ITransport>(host.ConnectLoopback()),
+            new ClientSessionOptions
+            {
+                Identity = rome,
+                DisplayName = "Third",
+                RulesetHash = "",
+                AllowUnpinnedHost = true,
+                HostAddress = "memory",
+                GameId = host.GameId,
+                ReconnectDelay = (_, _) => Task.Delay(30),
+                ElectionPoll = TimeSpan.FromMilliseconds(30),
+                KeepAliveInterval = Timeout.InfiniteTimeSpan,
+                HostSilenceTimeout = Timeout.InfiniteTimeSpan,
+                Clock = clock,
+                ConfirmRelay = _ => { Interlocked.Increment(ref asked); return Task.FromResult(false); },
+                ConnectRelay = (_, _, _) => { Interlocked.Increment(ref dialed); return Task.FromException<ITransport>(new IOException("should not dial")); },
+            }));
+        Assert.True((await voter.JoinAsync()).Joined);
+
+        Assert.Null(await host.Host.DesignateBackupAsync("Greece", babylon.PlayerKey));
+        await successor.Tap.WaitAsync<StandbyOffered>();
+        await successor.Session.AcceptStandbyAsync([], 0, successorFp, declinedRoute);
+        await WaitUntilAsync(() => string.Equals(host.Host.Standby.State, StandbyStates.Ready, StringComparison.Ordinal), "standby never became ready");
+        await WaitUntilAsync(() => voter.Successor?.Successor?.Relay != null, "voter never received relay successor");
+
+        await host.KillAsync();
+        await WaitUntilAsync(() => voter.State != ClientSessionState.InGame, "voter never noticed kill");
+        await AdvanceAsync(25);
+        await WaitUntilAsync(() => Volatile.Read(ref asked) > 0, "voter never asked ConfirmRelay");
+        Assert.Equal(0, Volatile.Read(ref dialed));
     }
 
     private static void CopyDirectory(string source, string target)
