@@ -122,7 +122,7 @@ public sealed class UnitModelContractTests
     public void EveryHumanoidAndMountedUnitHasAModel()
     {
         RulesetCache.Clear();
-        var jsons = Path.Combine(ClientFolder, "..", "..", "android", "assets", "jsons");
+        var jsons = Path.Combine(ClientFolder, "..", "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         try
         {
@@ -201,7 +201,7 @@ public sealed class UnitModelContractTests
     public void RigidModelsHaveNoClipsAndArmourExposesItsTurret()
     {
         RulesetCache.Clear();
-        var jsons = Path.Combine(ClientFolder, "..", "..", "android", "assets", "jsons");
+        var jsons = Path.Combine(ClientFolder, "..", "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         try
         {

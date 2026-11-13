@@ -26,10 +26,10 @@ public sealed class WorldPropsTests : IDisposable
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
         {
-            var candidate = Path.Combine(dir.FullName, "android", "assets", "jsons");
+            var candidate = Path.Combine(dir.FullName, "data", "jsons");
             if (Directory.Exists(candidate)) return candidate;
         }
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     private static TileDto Tile(string terrain = "Grassland", string[]? features = null, string? wonder = null, string? resource = null, string? improvement = null, bool? pillaged = null, bool visible = true) => new()

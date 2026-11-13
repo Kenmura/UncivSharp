@@ -19,16 +19,17 @@ public sealed class ContentLocatorTests
     public void BundledCopyBeatsACheckoutAboveTheProject()
     {
         var bundled = ContentLocator.BundledJsons("/repo/exports/linux");
-        var checkout = Path.Combine("/repo", "android", "assets", "jsons");
+        var checkout = Path.Combine("/repo", "csharp", "data", "jsons");
         Assert.Equal(bundled, ContentLocator.FindJsons("/repo/exports/linux", "/repo/exports/linux", Exists(bundled, checkout)));
     }
 
     [Fact]
     public void FallsBackToTheNearestCheckoutAncestor()
     {
-        var near = Path.Combine("/repo", "csharp", "android", "assets", "jsons");
-        var far = Path.Combine("/repo", "android", "assets", "jsons");
+        var near = Path.Combine("/repo", "csharp", "Unciv.Godot", "data", "jsons");
+        var far = Path.Combine("/repo", "csharp", "data", "jsons");
         Assert.Equal(far, ContentLocator.FindJsons("/godot", "/repo/csharp/Unciv.Godot/", Exists(far)));
+        Assert.Equal(far, ContentLocator.FindJsons("/godot", "/repo", Exists(far)));
         Assert.Equal(near, ContentLocator.FindJsons("/godot", "/repo/csharp/Unciv.Godot", Exists(near, far)));
     }
 

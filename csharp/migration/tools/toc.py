@@ -5,8 +5,8 @@
     python3 -I tools/toc.py --check    exit 1 listing docs whose TOC is missing or stale
 
 The block sits right under the first `# title` between `<!-- toc -->` and `<!-- /toc -->`, and lists the `##` and `###` headings
-(only `##` when that would exceed MAX_ENTRIES). Links use GitHub's heading anchors. Skipped: the per-ticket files in backlog/, skill
-files (SKILL.md, they carry front matter and are loaded as instructions) and AGENTS.md/CLAUDE.md (loaded into every agent's context).
+(only `##` when that would exceed MAX_ENTRIES). Links use GitHub's heading anchors. Skipped: the per-ticket files in backlog/, game
+data under `data/jsons/`, skill files (SKILL.md, they carry front matter and are loaded as instructions) and AGENTS.md/CLAUDE.md (loaded into every agent's context).
 `screenshots.py` and `ticket.py` (DEPENDENCY_MAP.md) generate their pages with `add_toc` so a regeneration keeps the block.
 """
 import re
@@ -69,7 +69,7 @@ def add_toc(text):
 
 def docs():
     out = subprocess.run(["git", "ls-files", "--", "*.md"], cwd=CSHARP, capture_output=True, text=True, check=True).stdout.split("\n")
-    return [CSHARP / p for p in out if p and Path(p).name not in SKIP_NAMES and "migration/backlog/" not in p]
+    return [CSHARP / p for p in out if p and Path(p).name not in SKIP_NAMES and "migration/backlog/" not in p and not p.startswith("data/jsons/")]
 
 
 def main(argv):

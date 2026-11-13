@@ -44,10 +44,10 @@ public sealed class UncivFilesTests : IDisposable
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
         {
-            var candidate = Path.Combine(dir.FullName, "android", "assets", "jsons");
+            var candidate = Path.Combine(dir.FullName, "data", "jsons");
             if (Directory.Exists(candidate)) return candidate;
         }
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     private sealed class MemFile(MemFile? parent, string name, Func<long> clock) : IUncivFileHandle

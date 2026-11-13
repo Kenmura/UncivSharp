@@ -22,8 +22,8 @@ public sealed class PendingDecisionsTests : IDisposable
     {
         RulesetCache.Clear();
         var root = new DirectoryInfo(AppContext.BaseDirectory);
-        while (!Directory.Exists(Path.Combine(root.FullName, "android", "assets", "jsons"))) root = root.Parent!;
-        var jsons = Path.Combine(root.FullName, "android", "assets", "jsons");
+        while (!Directory.Exists(Path.Combine(root.FullName, "data", "jsons"))) root = root.Parent!;
+        var jsons = Path.Combine(root.FullName, "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         ruleset = RulesetCache.GetVanillaRuleset();
         game = GameStarter.StartNewGame(

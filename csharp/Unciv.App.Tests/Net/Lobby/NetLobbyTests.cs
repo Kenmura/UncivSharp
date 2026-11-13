@@ -17,7 +17,7 @@ public sealed class NetLobbyTests : IDisposable
 {
     public NetLobbyTests()
     {
-        var jsons = Path.Combine(RepoRoot(), "android", "assets", "jsons");
+        var jsons = Path.Combine(RepoRoot(), "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
@@ -26,8 +26,8 @@ public sealed class NetLobbyTests : IDisposable
     private static string RepoRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, "android", "assets", "jsons"))) return dir.FullName;
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+            if (Directory.Exists(Path.Combine(dir.FullName, "data", "jsons"))) return dir.FullName;
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     /// <summary>

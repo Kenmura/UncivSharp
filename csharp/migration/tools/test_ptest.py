@@ -70,7 +70,7 @@ class Affected(unittest.TestCase):
 
     def test_a_non_cs_change_means_everything(self):
         self.assertIsNone(ptest.affected_classes(["Unciv.Core/Unciv.Core.csproj"])[0])
-        self.assertIsNone(ptest.affected_classes(["../android/assets/jsons/Buildings.json"])[0])
+        self.assertIsNone(ptest.affected_classes(["data/jsons/Buildings.json"])[0])
 
     def test_classes_are_assigned_to_the_project_whose_folder_declares_them(self):
         (self.root / "Unciv.App.Tests" / "Server").mkdir(parents=True)

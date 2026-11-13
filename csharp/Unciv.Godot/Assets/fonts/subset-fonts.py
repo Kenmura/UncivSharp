@@ -4,7 +4,7 @@
 The full collection is ~19 MB per weight; the game only needs the characters its shipped translations use, so this keeps those (plus CJK
 punctuation and full-width forms). Run again after adding or updating CJK translations; the l10n-sheet scenario fails on any missing glyph.
 
-  python3 subset-fonts.py /path/to/NotoSansCJK-Regular.ttc <repo>/android/assets/jsons/translations   (needs: pip install fonttools brotli)
+  python3 subset-fonts.py /path/to/NotoSansCJK-Regular.ttc <repo>/csharp/data/jsons/translations   (needs: pip install fonttools brotli)
 
 Source of the collection: https://github.com/notofonts/noto-cjk (SIL OFL 1.1, see OFL.txt). The SC face (index 2) is used for every CJK language.
 """

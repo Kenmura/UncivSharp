@@ -43,7 +43,7 @@ public sealed record ServerOptions
           --relay-fingerprint FP  Pin the relay's own certificate (a self-signed standalone relay prints this as RELAY-FINGERPRINT); the same as ?fp= in the URL.
           --list              List this game in the relay's public lobby directory (needs --relay). Without it the game is reachable only by invite or room code.
           --list-name NAME    The name shown in the directory (3 to 40 characters; default the lobby's game name). Needs --list.
-          --jsons DIR         The rulesets folder (default: data/jsons next to the executable, else android/assets/jsons above the current folder).
+          --jsons DIR         The rulesets folder (default: data/jsons next to the executable, else csharp/data/jsons above the current folder).
           --mods-dir DIR      A folder of mods to offer.
           --parallel-views N  Build the per-player views of a round on up to N tasks (2 to 64; 0, 1 or absent: off, the default). Frames are byte-identical either way; it only pays on a host with spare cores and several players.
           --no-incremental-views  Rebuild every player's view from scratch after every command instead of reusing the unchanged fogged tiles (the default is incremental, which produces byte-identical frames).

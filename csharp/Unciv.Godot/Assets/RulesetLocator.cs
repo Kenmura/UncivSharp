@@ -7,7 +7,7 @@ namespace Unciv.GodotClient.Assets;
 
 /// <summary>
 /// Loads the rulesets: Vanilla, Gods and Kings and Brave New World from the jsons found by <see cref="ContentLocator"/> (bundled next to an exported build (or extracted from the pck, <see cref="ContentRoot"/>), or the checkout's
-/// <c>android/assets/jsons</c>), plus every local mod in the per-user mods folder (<see cref="UserPaths.Mods"/>, C042).
+/// <c>csharp/data/jsons</c>), plus every local mod in the per-user mods folder (<see cref="UserPaths.Mods"/>, C042).
 /// </summary>
 public static class RulesetLocator
 {
@@ -26,19 +26,19 @@ public static class RulesetLocator
     {
         var exeDir = ContentRoot.Directory ?? System.IO.Path.GetDirectoryName(OS.GetExecutablePath()) ?? "";
         var dir = ContentLocator.FindJsons(exeDir, ProjectSettings.GlobalizePath("res://"), System.IO.Directory.Exists)
-            ?? throw new System.IO.DirectoryNotFoundException($"No ruleset jsons: expected {ContentLocator.BundledJsons(exeDir)} or android/assets/jsons above the project");
+            ?? throw new System.IO.DirectoryNotFoundException($"No ruleset jsons: expected {ContentLocator.BundledJsons(exeDir)} or csharp/data/jsons above the project");
         return new DirectoryRulesetFileSource(dir, UserPaths.Mods);
     }
 }
 
-/// <summary>C025: finds the game's translation files (<c>jsons/translations</c>) in the same place <see cref="RulesetLocator"/> finds the jsons: bundled next to an exported build, else the checkout's <c>android/assets/jsons</c>.</summary>
+/// <summary>C025: finds the game's translation files (<c>jsons/translations</c>) in the same place <see cref="RulesetLocator"/> finds the jsons: bundled next to an exported build, else the checkout's <c>csharp/data/jsons</c>.</summary>
 public static class TranslationLocator
 {
     public static string Directory()
     {
         var exeDir = ContentRoot.Directory ?? System.IO.Path.GetDirectoryName(OS.GetExecutablePath()) ?? "";
         var jsons = ContentLocator.FindJsons(exeDir, ProjectSettings.GlobalizePath("res://"), System.IO.Directory.Exists)
-            ?? throw new System.IO.DirectoryNotFoundException($"No translation files: expected {ContentLocator.BundledJsons(exeDir)}/translations or android/assets/jsons/translations above the project");
+            ?? throw new System.IO.DirectoryNotFoundException($"No translation files: expected {ContentLocator.BundledJsons(exeDir)}/translations or csharp/data/jsons/translations above the project");
         return System.IO.Path.Combine(jsons, "translations");
     }
 }

@@ -29,10 +29,10 @@ internal sealed class ValidatorTestRuleset
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
         {
-            string candidate = Path.Combine(dir.FullName, "android", "assets", "jsons");
+            string candidate = Path.Combine(dir.FullName, "data", "jsons");
             if (Directory.Exists(candidate)) return candidate;
         }
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     private T Create<T>(Unciv.Utils.LinkedHashMap<string, T> collection, T obj, string[] uniques) where T : IRulesetObject

@@ -488,14 +488,14 @@ def main(argv):
         if cli:
             out = stage / "cli"
             run("publish Unciv.Cli", in_container(f"cd {shlex.quote(str(CSHARP))} && {DOTNET} publish Unciv.Cli -c Release -r {RID} --self-contained true -o {shlex.quote(str(out))}"))
-            shutil.copytree(CSHARP.parent / "android" / "assets" / "jsons", out / "data" / "jsons")
+            shutil.copytree(CSHARP / "data" / "jsons", out / "data" / "jsons")
             smoke_cli(out)
             built.append("cli")
             for rid in SERVER_RIDS:
                 out = stage / f"server-{rid}"
                 try:
                     run(f"publish Unciv.Server ({rid})", in_container(f"cd {shlex.quote(str(CSHARP))} && {DOTNET} publish Unciv.Server -c Release -r {rid} --self-contained true -o {shlex.quote(str(out))}"))
-                    shutil.copytree(CSHARP.parent / "android" / "assets" / "jsons", out / "data" / "jsons")
+                    shutil.copytree(CSHARP / "data" / "jsons", out / "data" / "jsons")
                     shutil.copy2(CSHARP / "Unciv.Server" / "README.md", out / "README.md")
                     if rid == "linux-x64":
                         smoke_server(out)

@@ -368,10 +368,12 @@ public static class ServerRunner
         foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
             for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
             {
-                var candidate = Path.Combine(dir.FullName, "android", "assets", "jsons");
+                var candidate = Path.Combine(dir.FullName, "data", "jsons");
                 if (Directory.Exists(candidate)) return candidate;
+                var repoCandidate = Path.Combine(dir.FullName, "csharp", "data", "jsons");
+                if (Directory.Exists(repoCandidate)) return repoCandidate;
             }
-        throw new ServerUsageException("android/assets/jsons not found; pass --jsons DIR");
+        throw new ServerUsageException("csharp/data/jsons not found; pass --jsons DIR");
     }
 
     private static X509Certificate2 LoadCertificate(string dataDir)

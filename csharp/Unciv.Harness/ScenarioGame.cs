@@ -76,10 +76,12 @@ public static class ScenarioGame
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
         {
-            var candidate = Path.Combine(dir.FullName, "android", "assets", "jsons");
+            var candidate = Path.Combine(dir.FullName, "data", "jsons");
             if (Directory.Exists(candidate)) return candidate;
+            var repoCandidate = Path.Combine(dir.FullName, "csharp", "data", "jsons");
+            if (Directory.Exists(repoCandidate)) return repoCandidate;
         }
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+        throw new DirectoryNotFoundException("csharp/data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     /// <summary>

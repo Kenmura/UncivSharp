@@ -17,7 +17,7 @@ public sealed class TextPlaceholderGuardTests : IDisposable
     public TextPlaceholderGuardTests()
     {
         RulesetCache.Clear();
-        var jsons = Path.Combine(Path.GetDirectoryName(ClientFolder)!, "..", "android", "assets", "jsons");
+        var jsons = Path.Combine(Path.GetDirectoryName(ClientFolder)!, "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 

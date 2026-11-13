@@ -107,7 +107,7 @@ def _pack(project, kind, rids, archive_name, rid, publish_dir, out_dir, jsons, l
     if rid not in rids:
         raise SystemExit(f"unknown runtime id {rid} ({', '.join(rids)})")
     publish_dir = Path(publish_dir)
-    jsons = (Path(jsons) if jsons else REPO / "android" / "assets" / "jsons") if kind != "relay" else None
+    jsons = (Path(jsons) if jsons else CSHARP / "data" / "jsons") if kind != "relay" else None
     license_file = Path(license_file) if license_file else REPO / "LICENSE"
     exe = f"{project}.exe" if rid.startswith("win-") else project
     if not (publish_dir / exe).is_file():

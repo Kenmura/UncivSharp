@@ -54,7 +54,7 @@ public static class CliRunner
           bench [--scenario small|medium|all] [--turns N] [--repeat N] [--json FILE|-] [--host-turns K] [--recipients R] [--no-probe] [--golden FILE]
                 Profile end-turn time on fixed-seed generated games (see 'bench --help'); not part of the tests.
         new/record also take [--ruleset NAME] [--mods A,B] [--map FILE] (a saved map; not with record); every command takes [--mods-dir DIR] (the folder of mods, needed by --mods
-        and by saves/logs that use mods) and [--jsons DIR]: the android/assets/jsons folder (default: data/jsons next to the executable in a release build, else searched upwards from the working directory).
+        and by saves/logs that use mods) and [--jsons DIR]: the data/jsons folder (default: data/jsons next to the executable in a release build, else csharp/data/jsons searched upwards from the working directory).
         exit codes: 0 ok, 1 failure while running, 2 bad command line.
         """;
 
@@ -131,10 +131,12 @@ public static class CliRunner
         foreach (var start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
             for (var dir = new DirectoryInfo(start); dir != null; dir = dir.Parent)
             {
-                var candidate = Path.Combine(dir.FullName, "android", "assets", "jsons");
+                var candidate = Path.Combine(dir.FullName, "data", "jsons");
                 if (Directory.Exists(candidate)) return candidate;
+                var repoCandidate = Path.Combine(dir.FullName, "csharp", "data", "jsons");
+                if (Directory.Exists(repoCandidate)) return repoCandidate;
             }
-        throw new UsageException("android/assets/jsons not found; pass --jsons DIR");
+        throw new UsageException("csharp/data/jsons not found; pass --jsons DIR");
     }
 
     private static T ChooseOf<T>(string option, string? text, string defaultName, IEnumerable<T> choices, Func<T, string> name)

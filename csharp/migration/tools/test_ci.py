@@ -106,7 +106,7 @@ class WorkflowShape(unittest.TestCase):
         for trigger in ("push", "pull_request"):
             block = re.search(rf"^  {trigger}:\n(.*?)(?=^  \S|^\S)", self.text, re.S | re.M).group(1)
             paths = re.findall(r"^\s+- '([^']+)'", block, re.M)
-            self.assertEqual(paths, ["csharp/**", "android/assets/jsons/**", ".github/workflows/csharp.yml"], trigger)
+            self.assertEqual(paths, ["csharp/**", ".github/workflows/csharp.yml"], trigger)
 
     def test_triggers_are_exactly_push_to_the_integration_branch_pull_request_schedule_dispatch(self):
         on = re.search(r"^on:\n(.*?)(?=^\S)", self.text, re.S | re.M).group(1)

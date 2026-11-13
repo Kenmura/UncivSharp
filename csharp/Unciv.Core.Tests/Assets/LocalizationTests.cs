@@ -186,7 +186,7 @@ public class LocalizationTests : IDisposable
     [Fact]
     public void EveryShippedTranslationNeedsOnlyScriptsTheChainCovers()
     {
-        string translations = Path.Combine(FindUp("android"), "assets", "jsons", "translations");
+        string translations = Path.Combine(FindUp("data"), "jsons", "translations");
         var l = new ClientLocalization(translations, new Translations());
         Assert.True(l.Languages.Count >= 40);
         foreach (var language in l.Languages)

@@ -304,7 +304,7 @@ def output_dir(project):
 
 def private_copy(index, project):
     """Coverlet rewrites the assemblies it instruments IN PLACE (and restores them afterwards), so concurrent coverage shards
-    must not share the output folder. The copy stays under csharp/ because tests find android/assets/jsons by walking up
+    must not share the output folder. The copy stays under csharp/ because tests find csharp/data/jsons by walking up
     from AppContext.BaseDirectory. T314: the folder also carries this run's workspace, never a fixed `.coverage/bin/shardN`."""
     dest = os.path.join(run_workspace(), "bin", "shard%d" % index)
     shutil.rmtree(dest, ignore_errors=True)

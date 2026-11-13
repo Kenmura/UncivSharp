@@ -33,7 +33,7 @@ public sealed class ModSyncTests : IDisposable
 
     public ModSyncTests()
     {
-        jsons = Path.Combine(RepoRoot(), "android", "assets", "jsons");
+        jsons = Path.Combine(RepoRoot(), "data", "jsons");
         hostMods = Path.Combine(root, "host-mods");
         clientMods = Path.Combine(root, "client-mods");
         Directory.CreateDirectory(clientMods);
@@ -55,8 +55,8 @@ public sealed class ModSyncTests : IDisposable
     private static string RepoRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, "android", "assets", "jsons"))) return dir.FullName;
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+            if (Directory.Exists(Path.Combine(dir.FullName, "data", "jsons"))) return dir.FullName;
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     private static LobbySettings Settings(string? password = null) => new() { Mods = ["TestMod"], Password = password };

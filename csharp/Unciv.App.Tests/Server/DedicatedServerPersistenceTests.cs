@@ -27,7 +27,7 @@ public sealed partial class DedicatedServerTests
         Map = new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny },
     };
 
-    private static string RulesetsFolder => Path.Combine(RepoRoot(), "android", "assets", "jsons");
+    private static string RulesetsFolder => Path.Combine(RepoRoot(), "data", "jsons");
 
     [Fact]
     public void Parse_GameIdAndPasswordFile()

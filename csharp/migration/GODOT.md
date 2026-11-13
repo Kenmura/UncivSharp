@@ -222,8 +222,8 @@ APK fails this mode. Re-running rebuilds the archives.
 
 ## CI (T169)
 
-**The workflow lives at `.github/workflows/csharp.yml`** (T239). It is separate from the Kotlin/Gradle workflows and runs only for changes under `csharp/**`, `android/assets/jsons/**`
-(the rulesets the engine reads) or the workflow itself, on pushes to `csharp-migration` and on pull requests; plus a weekly schedule for the soak.
+**The workflow lives at `.github/workflows/csharp.yml`** (T239). It is separate from the Kotlin/Gradle workflows and runs only for changes under `csharp/**`
+(including `csharp/data/jsons/**`, the rulesets the engine reads) or the workflow itself, on pushes to `csharp-migration` and on pull requests; plus a weekly schedule for the soak.
 `permissions: contents: read`, no secrets, no `pull_request_target`, nothing published, every action pinned by commit SHA. The only uploads are 7-day workflow artifacts: the failed scenario renders (T255) and the Android debug APKs plus the emulator smoke output (T277).
 
 | Job | Runs | What |

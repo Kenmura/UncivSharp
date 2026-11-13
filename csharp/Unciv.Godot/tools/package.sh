@@ -105,7 +105,7 @@ else
 fi
 if ! compgen -G "$root/data_*" >/dev/null && ! compgen -G "$out/Unciv.app/Contents/Resources/data_*" >/dev/null; then echo "export produced no .NET assemblies folder (data_*): see the Godot errors above" >&2; exit 1; fi
 mkdir -p "$root/data"
-cp -r "$repo/android/assets/jsons" "$root/data/jsons"
+cp -r "$project/../data/jsons" "$root/data/jsons"
 # C025: fonts for non-Latin languages are read from disk (FontChain), so they ship next to the executable, with their licence.
 mkdir -p "$root/Assets"
 cp -r "$project/Assets/fonts" "$root/Assets/fonts"

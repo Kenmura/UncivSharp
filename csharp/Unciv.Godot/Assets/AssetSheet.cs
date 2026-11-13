@@ -9,7 +9,7 @@ namespace Unciv.GodotClient.Assets;
 /// C007 verification scene (scenario <c>asset-sheet</c>). Loads the Vanilla ruleset, asks the registry for every key the client can derive from it,
 /// then lays out a labelled swatch sheet (every land/water terrain tile, one block per unit type, the stat and a few other icons, the theme's button and panel),
 /// captures the viewport to <c>--out=DIR/asset-sheet.png</c> and exits 0 only when every key resolved, every procedural source was used (no stray override files),
-/// and the frame is not blank. Arguments after <c>--</c>: <c>--out=DIR</c>, <c>--jsons=DIR</c> (default: <c>android/assets/jsons</c> found above the project).
+/// and the frame is not blank. Arguments after <c>--</c>: <c>--out=DIR</c>, <c>--jsons=DIR</c> (default: <c>csharp/data/jsons</c> found above the project).
 /// </summary>
 public partial class AssetSheet : Node3D
 {
@@ -51,10 +51,15 @@ public partial class AssetSheet : Node3D
         var dir = jsonsDir;
         for (var d = ProjectSettings.GlobalizePath("res://"); dir == null && !string.IsNullOrEmpty(d); d = System.IO.Path.GetDirectoryName(d.TrimEnd('/')) ?? "")
         {
-            var candidate = System.IO.Path.Combine(d, "android", "assets", "jsons");
+            var candidate = System.IO.Path.Combine(d, "data", "jsons");
             if (System.IO.Directory.Exists(candidate)) dir = candidate;
+            else
+            {
+                var repoCandidate = System.IO.Path.Combine(d, "csharp", "data", "jsons");
+                if (System.IO.Directory.Exists(repoCandidate)) dir = repoCandidate;
+            }
         }
-        if (dir == null) throw new System.IO.DirectoryNotFoundException("android/assets/jsons not found; pass --jsons=DIR");
+        if (dir == null) throw new System.IO.DirectoryNotFoundException("csharp/data/jsons not found; pass --jsons=DIR");
         RulesetCache.Clear();
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(dir, System.IO.Path.Combine(dir, "no mods here")), noMods: true);
         // T363: deliberate Vanilla coverage, not a default choice. The sheet proves every key of the oldest (smallest) ruleset resolves;

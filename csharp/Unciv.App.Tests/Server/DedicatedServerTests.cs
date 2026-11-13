@@ -22,7 +22,7 @@ public sealed partial class DedicatedServerTests : IDisposable
 
     public DedicatedServerTests()
     {
-        var jsons = Path.Combine(RepoRoot(), "android", "assets", "jsons");
+        var jsons = Path.Combine(RepoRoot(), "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
@@ -35,8 +35,8 @@ public sealed partial class DedicatedServerTests : IDisposable
     private static string RepoRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, "android", "assets", "jsons"))) return dir.FullName;
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+            if (Directory.Exists(Path.Combine(dir.FullName, "data", "jsons"))) return dir.FullName;
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     /// <summary>A writer that hands its lines to a waiter, so the test reacts to the server's stdout instead of sleeping.</summary>
@@ -195,7 +195,7 @@ public sealed partial class DedicatedServerTests : IDisposable
     [Fact]
     public async Task Run_RulesetFolders_AreFoundOrRefused()
     {
-        var jsons = Path.Combine(RepoRoot(), "android", "assets", "jsons");
+        var jsons = Path.Combine(RepoRoot(), "data", "jsons");
         foreach (var args in new[] { new[] { "--jsons", jsons }, [] }) // explicit folder, then the search upward from the working folder
         {
             RulesetCache.Clear();

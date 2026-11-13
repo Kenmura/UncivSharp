@@ -139,7 +139,7 @@ def source_key():
     """Hash of the CONTENT of every file that can change a coverage result: engine and test sources, project files, test data
     under csharp/ (not migration/, which holds tickets and tooling) and the rulesets the tests read."""
     h = hashlib.sha256()
-    names = [n for n in git("ls-files", "-co", "--exclude-standard", "--", ".", "../android/assets/jsons") if n]
+    names = [n for n in git("ls-files", "-co", "--exclude-standard", "--", ".") if n]
     for n in sorted(set(names)):
         if n.startswith("migration/") or not n.endswith(KEY_SUFFIXES):
             continue

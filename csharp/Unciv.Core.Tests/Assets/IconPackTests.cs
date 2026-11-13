@@ -15,7 +15,7 @@ public sealed class IconPackTests : IDisposable
     public IconPackTests()
     {
         RulesetCache.Clear();
-        var jsons = Path.Combine(Path.GetDirectoryName(PackRoot)!, "..", "android", "assets", "jsons");
+        var jsons = Path.Combine(Path.GetDirectoryName(PackRoot)!, "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         ruleset = RulesetCache.GetVanillaRuleset();
     }

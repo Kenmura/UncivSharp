@@ -1,5 +1,5 @@
-# CI for the C# migration (csharp/). Separate from the Kotlin/Gradle workflows, which it does not touch: it only runs when csharp/**, the rulesets
-# the engine reads (android/assets/jsons/**) or this file change. Mirrors the local "Green gate" of csharp/migration/PROTOCOL.md.
+# CI for the C# migration (csharp/). Separate from the Kotlin/Gradle workflows, which it does not touch: it only runs when csharp/**
+# (including csharp/data/jsons/**) or this file change. Mirrors the local "Green gate" of csharp/migration/PROTOCOL.md.
 # Read-only: no secrets, nothing is published (release builds stay local, see csharp/Unciv.Godot/GODOT.md).
 name: C# build and test
 
@@ -8,12 +8,10 @@ on:
     branches: [csharp-migration]
     paths:
       - 'csharp/**'
-      - 'android/assets/jsons/**'
       - '.github/workflows/csharp.yml'
   pull_request:
     paths:
       - 'csharp/**'
-      - 'android/assets/jsons/**'
       - '.github/workflows/csharp.yml'
   schedule:
     - cron: '17 3 * * 1'   # Mondays 03:17 UTC: the long soak (path filters do not apply to schedules)

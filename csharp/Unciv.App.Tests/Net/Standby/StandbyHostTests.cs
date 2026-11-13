@@ -81,7 +81,7 @@ public sealed class LobbyStandbyTests : IDisposable
 
     public LobbyStandbyTests()
     {
-        var jsons = Path.Combine(RepoRoot(), "android", "assets", "jsons");
+        var jsons = Path.Combine(RepoRoot(), "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
@@ -90,8 +90,8 @@ public sealed class LobbyStandbyTests : IDisposable
     private static string RepoRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, "android", "assets", "jsons"))) return dir.FullName;
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+            if (Directory.Exists(Path.Combine(dir.FullName, "data", "jsons"))) return dir.FullName;
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     private static async Task<(Wire Wire, Welcome Welcome)> JoinAsync(LobbyHost lobby, ClientIdentity identity, string name)
@@ -322,7 +322,7 @@ public sealed class GameStandbyTests : IDisposable
 
     public GameStandbyTests()
     {
-        var jsons = Path.Combine(RepoRoot(), "android", "assets", "jsons");
+        var jsons = Path.Combine(RepoRoot(), "data", "jsons");
         RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         ruleset = RulesetCache.GetVanillaRuleset();
     }
@@ -338,8 +338,8 @@ public sealed class GameStandbyTests : IDisposable
     private static string RepoRoot()
     {
         for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
-            if (Directory.Exists(Path.Combine(dir.FullName, "android", "assets", "jsons"))) return dir.FullName;
-        throw new DirectoryNotFoundException("android/assets/jsons not found above " + AppContext.BaseDirectory);
+            if (Directory.Exists(Path.Combine(dir.FullName, "data", "jsons"))) return dir.FullName;
+        throw new DirectoryNotFoundException("data/jsons not found above " + AppContext.BaseDirectory);
     }
 
     private InProcessHost StartHost(string name, FakeProber prober)

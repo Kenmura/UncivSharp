@@ -13,13 +13,13 @@ import zipfile
 from pathlib import Path
 
 project = Path(__file__).resolve().parent.parent
-repo = project.parent.parent
+csharp = project.parent
 out = Path(sys.argv[1]) if len(sys.argv) > 1 else project / "Content" / "unciv-content.zip"
 
 SKIP_NAMES = {"subset-fonts.py", ".gdignore", ".DS_Store"}
 SKIP_SUFFIXES = {".import", ".uid"}
 SOURCES = [
-    (repo / "android" / "assets" / "jsons", "data/jsons"),
+    (csharp / "data" / "jsons", "data/jsons"),
     (project / "Packs" / "unciv", "Packs/unciv"),
     (project / "Packs" / "units", "Packs/units"),
     (project / "Assets" / "fonts", "Assets/fonts"),

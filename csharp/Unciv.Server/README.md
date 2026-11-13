@@ -23,7 +23,7 @@ There are no accounts, no web UI and no remote admin console.
 - **Release archive.** `Unciv-server-linux-x64.tar.gz` or `Unciv-server-win-x64.zip` from the GitHub release (check them against `SHA256SUMS`; in a local release the Windows folder may be absent if its build failed, which only warns). Each unpacks to one folder
   `Unciv-server-<rid>/` with the executable, the bundled .NET runtime (nothing to install), `data/jsons` (the rulesets, found next to the executable), `LICENSE` and this guide as `README.md`.
 - **Local release build.** `python3 -I migration/tools/release.py T###` writes `csharp-releases/<ticket>-<sha>/server-linux-x64/` and `server-win-x64/` (in the main checkout).
-- **From source.** `dotnet publish Unciv.Server -c Release -r linux-x64 --self-contained true -o out` (or `-r win-x64`), then copy `android/assets/jsons` to `out/data/jsons`,
+- **From source.** `dotnet publish Unciv.Server -c Release -r linux-x64 --self-contained true -o out` (or `-r win-x64`), then copy `csharp/data/jsons` to `out/data/jsons`,
   or pass `--jsons DIR`. `dotnet run --project Unciv.Server -- --help` also works from a checkout.
 - **Status.** The Linux build is smoke-tested in CI (`--help`, start, `LISTENING` line, SIGTERM, exit 0). The **Windows build is UNVERIFIED**: it is published and archived but has never been run.
 
