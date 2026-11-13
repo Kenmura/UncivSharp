@@ -11,35 +11,36 @@ namespace Unciv.GodotClient.Assets;
 /// </summary>
 public static class ThemeBuilder
 {
-    public static Theme Build(float scale = 1f, bool compact = false)
+    public static Theme Build(float scale = 1f, bool compact = false, float textScale = 1f)
     {
         var theme = new Theme();
-        Populate(theme, scale, compact);
+        Populate(theme, scale, compact, textScale: textScale);
         return theme;
     }
 
-    /// <summary>Replaces everything in <paramref name="theme"/> by the tokens at <paramref name="scale"/>; <paramref name="compact"/> picks the tighter padding and control heights of the Compact breakpoint; <paramref name="minTargetPx"/> (C096, touch builds: 48 dp in these pixels, 0 otherwise) is a floor for every control height.</summary>
-    public static void Populate(Theme theme, float scale, bool compact, int minTargetPx = 0)
+    /// <summary>Replaces everything in <paramref name="theme"/> by the tokens at <paramref name="scale"/>; <paramref name="compact"/> picks the tighter padding and control heights of the Compact breakpoint; <paramref name="minTargetPx"/> (C096, touch builds: 48 dp in these pixels, 0 otherwise) is a floor for every control height; <paramref name="textScale"/> (T352) scales font sizes independently.</summary>
+    public static void Populate(Theme theme, float scale, bool compact, int minTargetPx = 0, float textScale = 1f)
     {
         theme.Clear();
-        var m = new Metrics(scale, compact, minTargetPx);
+        var m = new Metrics(scale, compact, minTargetPx, textScale);
         theme.DefaultFont = FontChain.Default;
-        theme.DefaultFontSize = m.Px(UiTokens.FontSize);
+        theme.DefaultFontSize = m.FontPx(UiTokens.FontSize);
         AddPanels(theme, m);
         AddButtons(theme, m);
         AddLabels(theme, m);
         AddControls(theme, m);
     }
 
-    private readonly record struct Metrics(float Scale, bool Compact, int MinTarget = 0)
+    private readonly record struct Metrics(float Scale, bool Compact, int MinTarget = 0, float TextScale = 1f)
     {
         public int Px(int unscaled) => UiTokens.Scaled(unscaled, Scale);
+        public int FontPx(int unscaled) => UiTokens.Scaled(unscaled, Scale * TextScale);
         public int Border(int unscaled) => UiTokens.ScaledAtLeastOne(unscaled, Scale);
         public int PanelPad => Px(Compact ? UiTokens.S2 : UiTokens.S3);
         public int ControlHeight => Math.Max(Px(Compact ? UiTokens.CompactControlMinHeight : UiTokens.ControlMinHeight), MinTarget);
 
         /// <summary>Vertical padding that brings a one-line control of the body font up to <see cref="ControlHeight"/>.</summary>
-        public int ButtonPadY => Math.Max(Px(UiTokens.S1), (ControlHeight - (int)MathF.Ceiling(FontChain.Default.GetHeight(Px(UiTokens.FontSize))) + 1) / 2);
+        public int ButtonPadY => Math.Max(Px(UiTokens.S1), (ControlHeight - (int)MathF.Ceiling(FontChain.Default.GetHeight(FontPx(UiTokens.FontSize))) + 1) / 2);
     }
 
     private static Color C(Rgb rgb) => ProceduralAssets.ToColor(rgb);
@@ -278,7 +279,7 @@ public static class ThemeBuilder
         {
             theme.SetTypeVariation(variation, "Label");
             theme.SetFont("font", variation, FontChain.For(style));
-            theme.SetFontSize("font_size", variation, m.Px(style.Size));
+            theme.SetFontSize("font_size", variation, m.FontPx(style.Size));
             theme.SetColor("font_color", variation, C(colour));
         }
         Style(UiVariants.LabelDisplay, UiTokens.Display, UiTokens.TextPrimary);
@@ -300,7 +301,7 @@ public static class ThemeBuilder
     {
         // text fields: an inset well, the accent ring when focused
         int fieldPadX = m.Px(UiTokens.S2);
-        int fieldPadY = Math.Max(m.Px(UiTokens.S1), (m.ControlHeight - (int)MathF.Ceiling(FontChain.Default.GetHeight(m.Px(UiTokens.FontSize))) + 1) / 2);
+        int fieldPadY = Math.Max(m.Px(UiTokens.S1), (m.ControlHeight - (int)MathF.Ceiling(FontChain.Default.GetHeight(m.FontPx(UiTokens.FontSize))) + 1) / 2);
         theme.SetStylebox("normal", "LineEdit", Make(m, new Box { Fill = C(UiTokens.Inset), Border = C(UiTokens.BorderSubtle), PadX = fieldPadX, PadY = fieldPadY }));
         theme.SetStylebox("read_only", "LineEdit", Make(m, new Box { Fill = C(UiTokens.Surface1), Border = C(UiTokens.BorderSubtle), PadX = fieldPadX, PadY = fieldPadY }));
         theme.SetStylebox("focus", "LineEdit", Make(m, new Box { Fill = C(UiTokens.Inset), Border = C(UiTokens.Accent), BorderWidth = UiTokens.RingWidth, PadX = fieldPadX, PadY = fieldPadY }));
@@ -334,7 +335,7 @@ public static class ThemeBuilder
             theme.SetStylebox("background", name, track);
             theme.SetStylebox("fill", name, Make(m, new Box { Fill = C(UiTokens.Accent), Border = C(UiTokens.Accent), Radius = height / 2, BorderWidth = 0 }));
             theme.SetColor("font_color", name, C(UiTokens.TextPrimary));
-            theme.SetFontSize("font_size", name, m.Px(UiTokens.Overline.Size));
+            theme.SetFontSize("font_size", name, m.FontPx(UiTokens.Overline.Size));
         }
 
         var line = new StyleBoxLine { Color = C(UiTokens.BorderSubtle), Thickness = m.Border(UiTokens.BorderWidth) };

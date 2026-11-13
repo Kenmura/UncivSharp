@@ -18,6 +18,7 @@ public sealed class UiTheme
     private readonly bool overridden;
     private float userScale = 1f;
     private float autoScale = 1f;
+    private float textScale = 1f;
     private Viewport? bound;
     private int minTarget;
 
@@ -42,6 +43,20 @@ public sealed class UiTheme
 
     /// <summary>The user's setting alone (<see cref="MinScale"/> to <see cref="MaxScale"/>).</summary>
     public float UserScale => userScale;
+
+    /// <summary>T352: independent text scale multiplier (<see cref="Settings.AccessibilityModel.MinTextScale"/> to <see cref="Settings.AccessibilityModel.MaxTextScale"/>).</summary>
+    public float TextScale => textScale;
+
+    /// <summary>T352: sets the independent text scale and rebuilds the live theme across all screens.</summary>
+    public void SetTextScale(float scale)
+    {
+        float clamped = Settings.AccessibilityModel.ClampTextScale(scale);
+        if (Math.Abs(clamped - textScale) < 0.001f) return;
+        textScale = clamped;
+        Rebuild();
+        ScaleChanged?.Invoke();
+        LayoutChanged?.Invoke();
+    }
 
     /// <summary>The size class of the bound viewport at the effective scale; <see cref="UiBreakpoint.Regular"/> while none is bound.</summary>
     public UiBreakpoint Breakpoint { get; private set; } = UiBreakpoint.Regular;
@@ -108,8 +123,8 @@ public sealed class UiTheme
 
     private void Rebuild()
     {
-        if (overridden) Theme.DefaultFontSize = baseTheme.DefaultFontSize > 0 ? Px(baseTheme.DefaultFontSize) : -1;
-        else ThemeBuilder.Populate(Theme, Scale, Breakpoint == UiBreakpoint.Compact, minTarget);
+        if (overridden) Theme.DefaultFontSize = baseTheme.DefaultFontSize > 0 ? FontPx(baseTheme.DefaultFontSize) : -1;
+        else ThemeBuilder.Populate(Theme, Scale, Breakpoint == UiBreakpoint.Compact, minTarget, textScale);
     }
 
     /// <summary>
@@ -137,6 +152,9 @@ public sealed class UiTheme
 
     /// <summary>A size in unscaled pixels at the current UI scale, rounded half away from zero.</summary>
     public int Px(int unscaled) => UiTokens.Scaled(unscaled, Scale);
+
+    /// <summary>T352: a font size in unscaled pixels at the current UI scale times <see cref="TextScale"/>.</summary>
+    public int FontPx(int unscaled) => UiTokens.Scaled(unscaled, Scale * textScale);
 
     /// <summary>T333: a full-screen frame's content cap in screen pixels, at the live scale and never above <see cref="UiTokens.MaxContentPixels"/>.</summary>
     public int ContentWidth => UiTokens.ContentCapPx(Scale);

@@ -30,6 +30,14 @@ public sealed record ClientSettings
     [JsonPropertyName("uiScale")]
     public float UiScale { get; init; } = 1f;
 
+    /// <summary>T352: independent text scale multiplier (<see cref="AccessibilityModel.MinTextScale"/> to <see cref="AccessibilityModel.MaxTextScale"/>) that reaches every screen.</summary>
+    [JsonPropertyName("textScale")]
+    public float TextScale { get; init; } = 1f;
+
+    /// <summary>T352: colourblind-safe palette &amp; non-colour owner/state cues (<see cref="AccessibilityModel.Modes"/>).</summary>
+    [JsonPropertyName("colorblindMode")]
+    public string ColorblindMode { get; init; } = nameof(Settings.ColorblindMode.Off);
+
     /// <summary>C028: master volume, 0 (silent) to 1.</summary>
     [JsonPropertyName("soundVolume")]
     public float SoundVolume { get; init; } = 0.7f;
@@ -121,6 +129,8 @@ public sealed record ClientSettings
             Language = string.IsNullOrWhiteSpace(Language) ? Default.Language : Language,
             KeyBindings = Hotkeys.Sanitize(KeyBindings),
             UiScale = float.IsFinite(UiScale) ? Math.Clamp(UiScale, 0.5f, 4f) : Default.UiScale,
+            TextScale = AccessibilityModel.ClampTextScale(TextScale),
+            ColorblindMode = AccessibilityModel.ParseColorblindMode(ColorblindMode).ToString(),
             SoundVolume = float.IsFinite(SoundVolume) ? Math.Clamp(SoundVolume, 0f, 1f) : Default.SoundVolume,
             WindowMode = OptionsModel.WindowModes.Contains(WindowMode) ? WindowMode : Default.WindowMode,
             ScrollSpeed = float.IsFinite(ScrollSpeed) ? Math.Clamp(ScrollSpeed, OptionsModel.MinScrollSpeed, OptionsModel.MaxScrollSpeed) : Default.ScrollSpeed,

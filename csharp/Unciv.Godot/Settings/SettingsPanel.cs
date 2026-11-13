@@ -93,6 +93,7 @@ public partial class SettingsPanel : HBoxContainer
     private readonly OptionButton windowMode = new() { Name = "WindowModePicker" };
     private readonly OptionButton autoPlayAnimations = new() { Name = "AutoPlayAnimationsPicker" };
     private readonly OptionButton graphicsPicker = new() { Name = "GraphicsQualityPicker" };
+    private readonly OptionButton colorblindPicker = new() { Name = "ColorblindModePicker" };
     private readonly Label graphicsNote = new() { Name = "GraphicsNote", AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
     private readonly Button graphicsRestart = new() { Name = "GraphicsRestartButton", Visible = false, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
     private readonly OptionButton packPicker = new() { Name = "AssetPackPicker" };
@@ -103,6 +104,7 @@ public partial class SettingsPanel : HBoxContainer
     private DataTable? keyTable;
     private Button? tutorialsButton;
     private Stepper scaleStepper = null!; // JUSTIFY: C075 assigned by BuildDisplay, which the constructor runs
+    private Stepper textScaleStepper = null!; // JUSTIFY: T352 assigned by BuildDisplay, which the constructor runs
     private ScrollContainer? currentPage;
     private bool refreshing;
 
@@ -165,6 +167,12 @@ public partial class SettingsPanel : HBoxContainer
 
     /// <summary>The UI scale stepper (percent).</summary>
     public Stepper ScaleStepper => scaleStepper;
+
+    /// <summary>T352: the independent text scale stepper (percent).</summary>
+    public Stepper TextScaleStepper => textScaleStepper;
+
+    /// <summary>T352: the colourblind mode picker.</summary>
+    public OptionButton ColorblindModePicker => colorblindPicker;
 
     /// <summary>The Tutorials expander, its list and the number of tutorials listed (for scenarios and tests).</summary>
     public Button? TutorialsButton => tutorialsButton;
@@ -291,6 +299,21 @@ public partial class SettingsPanel : HBoxContainer
             if (!refreshing) service.Update(s => s with { UiScale = v / 100f });
         };
         AddRow(page, "UI scale", scaleStepper);
+        textScaleStepper = new Stepper(theme, (int)MathF.Round(AccessibilityModel.MinTextScale * 100f), (int)MathF.Round(AccessibilityModel.MaxTextScale * 100f), 100, (int)MathF.Round(AccessibilityModel.TextScaleStep * 100f), "Smaller text", "Bigger text", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "TextScaleStepper" };
+        textScaleStepper.Changed += v =>
+        {
+            if (refreshing) return;
+            float next = v / 100f;
+            theme.SetTextScale(next);
+            service.Update(s => s with { TextScale = next });
+        };
+        AddRow(page, "Text scale", textScaleStepper);
+        foreach (var mode in AccessibilityModel.Modes) colorblindPicker.AddItem(AccessibilityModel.Label(mode).Tr());
+        colorblindPicker.ItemSelected += index =>
+        {
+            if (!refreshing) service.Update(s => s with { ColorblindMode = AccessibilityModel.Modes[(int)index].ToString() });
+        };
+        AddRow(page, "Colourblind mode", colorblindPicker);
         foreach (var mode in OptionsModel.WindowModes) windowMode.AddItem(mode.Tr());
         windowMode.ItemSelected += index =>
         {
@@ -319,6 +342,14 @@ public partial class SettingsPanel : HBoxContainer
         };
         refreshers.Add(() => graphicsRestart.Text = "Restart to apply".Tr());
         page.AddChild(graphicsRestart);
+        page.AddChild(Heading(AccessibilityModel.HelpTitle));
+        foreach (var line in AccessibilityModel.HelpLines)
+        {
+            var help = new Label { Name = "AccessibilityHelp", AutowrapMode = TextServer.AutowrapMode.WordSmart, ThemeTypeVariation = UiVariants.LabelSecondary };
+            string raw = line;
+            refreshers.Add(() => help.Text = raw.Tr());
+            page.AddChild(help);
+        }
     }
 
     private void BuildGameplay()
@@ -544,6 +575,8 @@ public partial class SettingsPanel : HBoxContainer
         var s = service.Current;
         nameLabel.Text = $"{"Player".Tr()}: {s.PlayerName}";
         scaleStepper.Value = (int)MathF.Round(s.UiScale * 100f, MidpointRounding.AwayFromZero);
+        textScaleStepper.Value = (int)MathF.Round(s.TextScale * 100f, MidpointRounding.AwayFromZero);
+        colorblindPicker.Select((int)AccessibilityModel.ParseColorblindMode(s.ColorblindMode));
         windowMode.Select(Math.Max(0, IndexOf(OptionsModel.WindowModes, s.WindowMode)));
         packPicker.Select(Math.Max(0, IndexOf(packNames, s.AssetPack)));
         autoPlayAnimations.Select((int)s.AutoPlay.AnimationMode);

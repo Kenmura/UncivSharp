@@ -93,7 +93,7 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T313 T330 T332 T353 T362 T400
-- in progress: T352
+- in review: T352
 - blocked: T290 T355 T357 T394 T404
 
 ## Remaining tickets over time
@@ -150,7 +150,7 @@ xychart-beta
 | T306 | Available (waiting on T278) | C099, T278 | 0 | Android shell on-device checks for C099: back button, safe-area insets, orientation, lifecycle autosave, keyboard scroll, permissions |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
 | T347 | Available (waiting on T278) | T278 | 0 | Share the invite code from Android with the system share sheet |
-| T352 | In-Progress [Antigravity] | none | 0 | Accessibility: colourblind-safe team colours and unit/tile cues, font size scaling, keyboard-only play |
+| T352 | Needs-Review [Antigravity] | none | 0 | Accessibility: colourblind-safe team colours and unit/tile cues, font size scaling, keyboard-only play |
 | T355 | Blocked | T338 | 0 | Verify nested TLS and the relay path on Windows, macOS and Android (manual, UNVERIFIED until run) |
 | T357 | Blocked | T337, T338 | 0 | WebSocket gateway so the web export can join and host through the relay (optional) |
 | T394 | Blocked | T356 | 0 | Owner-run independent verification of the civsharp relay (CONNECTIVITY.md rows R2-R4, R7-R9, R13) and record results |

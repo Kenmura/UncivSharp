@@ -162,8 +162,8 @@ public partial class UnitNode : Node3D
     /// <summary>The health bar as drawn, null while the unit is unhurt.</summary>
     public HealthBarSpec? HealthBar { get; private set; }
 
-    /// <summary>Builds figures, health bar and status marks. <paramref name="baseUnit"/> is null for a unit the ruleset does not know (one figure); <paramref name="civ"/> is the owner's colour (0..1 channels) or null.</summary>
-    public void Build(AssetRegistry assets, RulesetClass ruleset, BaseUnit? baseUnit, (float R, float G, float B)? civ)
+    /// <summary>Builds figures, health bar and status marks. <paramref name="baseUnit"/> is null for a unit the ruleset does not know (one figure); <paramref name="civ"/> is the owner's colour (0..1 channels) or null; <paramref name="accessibilityCue"/> (T352) is a non-colour owner/state badge.</summary>
+    public void Build(AssetRegistry assets, RulesetClass ruleset, BaseUnit? baseUnit, (float R, float G, float B)? civ, string? accessibilityCue = null)
     {
         FigureCount = baseUnit == null ? 1 : UnitVisuals.FigureCount(baseUnit, ruleset);
         var key = AssetKey.Of(RulesetAssetKeys.Unit, Unit.Name);
@@ -222,6 +222,22 @@ public partial class UnitNode : Node3D
                 NoDepthTest = true,
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
                 Position = new Vector3((i - (StatusIcons.Count - 1) / 2f) * IconSpacing, IconHeight, 0f),
+            });
+        }
+        if (!string.IsNullOrEmpty(accessibilityCue))
+        {
+            AddChild(new Label3D
+            {
+                Name = "AccessibilityCue",
+                Text = accessibilityCue,
+                PixelSize = 0.009f,
+                FontSize = 36,
+                OutlineSize = 10,
+                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+                NoDepthTest = true,
+                Shaded = false,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Position = new Vector3(0f, IconHeight + 0.25f, 0f),
             });
         }
     }

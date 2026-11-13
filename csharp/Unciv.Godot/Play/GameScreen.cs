@@ -617,6 +617,12 @@ public partial class GameScreen : Control
         Map.ShowResources = settings.ShowResources;
         ApplyGraphics(settings);
         Overlays.ShowYields = settings.ShowYields;
+        var nextMode = AccessibilityModel.ParseColorblindMode(settings.ColorblindMode);
+        if (nextMode != colorblindMode)
+        {
+            colorblindMode = nextMode;
+            if (session != null && snapshot != null) Refresh();
+        }
         Hud.ShowAutoPlayButton(settings.AutoPlay.ShowButton);
         if (!settings.AutoPlay.ShowButton)
         {
@@ -635,6 +641,10 @@ public partial class GameScreen : Control
     }
 
     private IReadOnlyDictionary<string, string> hotkeys = new Dictionary<string, string>();
+    private ColorblindMode colorblindMode = ColorblindMode.Off;
+
+    /// <summary>T352: the tile currently targeted by the keyboard map cursor (Shift+Arrows to step, Enter to select/order).</summary>
+    public HexCoord? CursorTile { get; private set; }
 
     /// <summary>C028: runs the action a hotkey text is bound to (true when it was one of the game screen's actions and ran). Ignored while a full screen (city, diplomacy, tech, policies, overview, game over) or an alert covers the map.</summary>
     public bool TryHotkey(string keyText)
@@ -760,7 +770,46 @@ public partial class GameScreen : Control
     public override void _UnhandledKeyInput(InputEvent @event)
     {
         if (@event is InputEventKey { Pressed: true, Echo: false, Keycode: Key.Escape } && IsVisibleInTree() && TryEscape()) GetViewport().SetInputAsHandled();
+        if (@event is InputEventKey { Pressed: true, Echo: false } cursorKey && TryCursorKey(cursorKey)) { GetViewport().SetInputAsHandled(); return; }
         if (@event is InputEventKey { Pressed: true, Echo: false } key && HotkeyInput.TextOf(key) is { } text && TryHotkey(text)) GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>T352: keyboard map cursor navigation (Shift+Arrows) and tile activation (Enter/Space when no UI control has focus).</summary>
+    private bool TryCursorKey(InputEventKey key)
+    {
+        if (!IsVisibleInTree() || session == null || snapshot == null || IsEndingTurn) return false;
+        if (GetViewport()?.GuiGetFocusOwner() is Control focused && focused is LineEdit or TextEdit) return false;
+        if (Tutorials.Visible || Pedia.Visible || GameMenu.Visible || ConsolePopup.Visible || City.Visible || Diplomacy.Visible || Tech.Visible || Policies.Visible || Overview.Visible || GameOver.Visible) return false;
+        if (key.ShiftPressed)
+        {
+            var step = key.Keycode switch
+            {
+                Key.Up => (0, 1),
+                Key.Down => (0, -1),
+                Key.Left => (-1, 0),
+                Key.Right => (1, 0),
+                _ => (0, 0),
+            };
+            if (step != (0, 0)) return StepMapCursor(step.Item1, step.Item2);
+        }
+        if (key.Keycode is Key.Enter or Key.KpEnter && GetViewport()?.GuiGetFocusOwner() == null && CursorTile is { } cursor)
+        {
+            OnTileClicked(cursor);
+            return true;
+        }
+        return false;
+    }
+
+    public bool StepMapCursor(int dx, int dy)
+    {
+        if (session == null || snapshot == null || snapshot.Tiles.Count == 0) return false;
+        var current = CursorTile ?? Map.Selected ?? (snapshot.Cities.FirstOrDefault(it => it.Owner == session.ViewerCivId) is { } cap ? new HexCoord(cap.X, cap.Y) : new HexCoord(snapshot.Tiles[0].X, snapshot.Tiles[0].Y));
+        var next = AccessibilityModel.StepCursor(current, dx, dy);
+        if (Map.TileNodeAt(next) == null) return false;
+        CursorTile = next;
+        Map.Select(next);
+        Map.FocusOn(MapLayout.TileTop(next.X, next.Y));
+        return true;
     }
 
     /// <summary>
@@ -1364,7 +1413,7 @@ public partial class GameScreen : Control
         Layout();
         if (ownerMemory.Remember(snapshot.Tiles)) SaveOwnerMemory();
         Overlays.UiScale = ui?.Scale ?? 1f;
-        Overlays.Rebuild(assets, session.Ruleset, Map, snapshot.Tiles, snapshot.Cities, OwnerColour, ownerMemory, OwnerInnerColour);
+        Overlays.Rebuild(assets, session.Ruleset, Map, snapshot.Tiles, snapshot.Cities, OwnerColour, ownerMemory, OwnerInnerColour, colorblindMode == ColorblindMode.Off ? null : OwnerCueFor);
         RefreshMarkers();
         if (OpenCity != null) ShowCity(snapshot.Cities.FirstOrDefault(it => it.X == OpenCity.X && it.Y == OpenCity.Y));
         RebuildUnits();
@@ -1384,9 +1433,25 @@ public partial class GameScreen : Control
     /// <summary>T379: turns of the running AutoPlay were played since the map was last redrawn.</summary>
     private bool autoPlayStale;
 
-    private Rgb? OwnerInnerColour(string owner) => session.Ruleset.Nations.TryGetValue(owner, out var nation) ? ToRgb(nation.GetInnerColor()) : null;
+    private Rgb? OwnerInnerColour(string owner)
+    {
+        if (!session.Ruleset.Nations.TryGetValue(owner, out var nation)) return null;
+        return AccessibilityModel.RemapCivColour(colorblindMode, owner, ToRgb(nation.GetOuterColor()), ToRgb(nation.GetInnerColor())).Inner;
+    }
 
-    private Rgb? OwnerColour(string owner) => session.Ruleset.Nations.TryGetValue(owner, out var nation) ? ToRgb(nation.GetOuterColor()) : null;
+    private Rgb? OwnerColour(string owner)
+    {
+        if (!session.Ruleset.Nations.TryGetValue(owner, out var nation)) return null;
+        return AccessibilityModel.RemapCivColour(colorblindMode, owner, ToRgb(nation.GetOuterColor()), ToRgb(nation.GetInnerColor())).Outer;
+    }
+
+    private string OwnerCueFor(string owner)
+    {
+        bool atWar = snapshot.Diplomacy.Any(it => string.Equals(it.CivId, owner, StringComparison.Ordinal) && it.Status == Unciv.Net.Visibility.DiplomacyStatus.War);
+        bool allied = snapshot.Diplomacy.Any(it => string.Equals(it.CivId, owner, StringComparison.Ordinal) && it.DefensivePact);
+        bool barb = session.Ruleset.Nations.TryGetValue(owner, out var nation) && nation.IsBarbarian();
+        return AccessibilityModel.OwnerCue(owner, session.ViewerCivId, atWar, allied, barb);
+    }
 
     private static Rgb ToRgb(Unciv.Models.EngineColor colour) =>
         new((byte)Math.Round(colour.R * 255f, MidpointRounding.AwayFromZero), (byte)Math.Round(colour.G * 255f, MidpointRounding.AwayFromZero), (byte)Math.Round(colour.B * 255f, MidpointRounding.AwayFromZero));
@@ -1401,10 +1466,11 @@ public partial class GameScreen : Control
             var coord = new HexCoord(unit.X, unit.Y);
             int index = stack.GetValueOrDefault(coord);
             stack[coord] = index + 1;
-            var colour = session.Ruleset.Nations.TryGetValue(unit.Owner, out var nation) ? nation.GetOuterColor() : null;
+            var colour = OwnerColour(unit.Owner);
+            var cue = colorblindMode == ColorblindMode.Off ? null : $"{OwnerCueFor(unit.Owner)} {AccessibilityModel.UnitStateCue(unit)}".Trim();
             var node = new UnitNode { Name = $"Unit_{unit.Id}", Unit = unit };
             node.Place(UnitPosition(coord, index));
-            node.Build(assets, session.Ruleset, session.Ruleset.Units.GetValueOrDefault(unit.Name), colour == null ? null : (colour.R, colour.G, colour.B));
+            node.Build(assets, session.Ruleset, session.Ruleset.Units.GetValueOrDefault(unit.Name), colour is { } c ? (c.R / 255f, c.G / 255f, c.B / 255f) : null, cue);
             unitLayer.AddChild(node);
             unitNodes[unit.Id] = node;
         }

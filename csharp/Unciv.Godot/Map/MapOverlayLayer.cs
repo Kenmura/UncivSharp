@@ -129,7 +129,7 @@ public partial class MapOverlayLayer : Node3D
     private readonly Dictionary<HexCoord, IReadOnlyList<YieldChip>> yieldChips = [];
 
     /// <summary>Replaces everything drawn. <paramref name="colourOf"/> gives a civ's own colour (borders, city blocks, banner outlines), null for an unknown civ.</summary>
-    public void Rebuild(AssetRegistry assets, Ruleset ruleset, MapView map, IReadOnlyList<TileDto> tiles, IReadOnlyList<CityDto> cityRows, Func<string, Rgb?> colourOf, TileOwnerMemory? owners = null, Func<string, Rgb?>? innerColourOf = null)
+    public void Rebuild(AssetRegistry assets, Ruleset ruleset, MapView map, IReadOnlyList<TileDto> tiles, IReadOnlyList<CityDto> cityRows, Func<string, Rgb?> colourOf, TileOwnerMemory? owners = null, Func<string, Rgb?>? innerColourOf = null, Func<string, string>? ownerCueOf = null)
     {
         foreach (var child in GetChildren())
         {
@@ -202,7 +202,7 @@ public partial class MapOverlayLayer : Node3D
         foreach (var city in cityRows)
         {
             var visible = byCoord.TryGetValue(new HexCoord(city.X, city.Y), out var cityTile) && cityTile.Visible;
-            var node = CityNodeFor(assets, city, TopOf(city.X, city.Y), colourOf(city.Owner), visible);
+            var node = CityNodeFor(assets, city, TopOf(city.X, city.Y), colourOf(city.Owner), visible, ownerCueOf?.Invoke(city.Owner));
             AddChild(node);
             cities[new HexCoord(city.X, city.Y)] = node;
         }
@@ -305,7 +305,7 @@ public partial class MapOverlayLayer : Node3D
         return model;
     }
 
-    private static CityNode CityNodeFor(AssetRegistry assets, CityDto city, float top, Rgb? ownerColour, bool visible)
+    private static CityNode CityNodeFor(AssetRegistry assets, CityDto city, float top, Rgb? ownerColour, bool visible, string? ownerCue = null)
     {
         var civ = ProceduralAssets.ToColor(ownerColour ?? PlaceholderPalette.Light);
         var tier = CitySpecs.TierForPopulation(city.Population);
@@ -330,10 +330,12 @@ public partial class MapOverlayLayer : Node3D
             MaterialOverride = new StandardMaterial3D { AlbedoColor = civ, Roughness = 1f },
             Position = new Vector3(0.16f, flagHeight - 0.1f, 0f),
         });
+        var bannerSpec = MapOverlays.Banner(city);
+        var title = string.IsNullOrEmpty(ownerCue) ? bannerSpec.Title : ownerCue + " " + bannerSpec.Title;
         var banner = new Label3D
         {
             Name = "Banner",
-            Text = string.Join("\n", [MapOverlays.Banner(city).Title, .. MapOverlays.Banner(city).Details]),
+            Text = string.Join("\n", [title, .. bannerSpec.Details]),
             PixelSize = BannerPixelSize,
             FontSize = 40,
             OutlineSize = 10,
