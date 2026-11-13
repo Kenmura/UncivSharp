@@ -112,11 +112,11 @@ Generated from the git history of `backlog/` (times are UTC; each point is the b
 %%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#0969da, #cf222e, #d29922"}}}}%%
 xychart-beta
     title "Remaining tickets"
-    x-axis ["Oct 24 00:00", "Oct 26 00:00", "Oct 28 00:00", "Oct 30 00:00", "Nov 01 00:00", "Nov 03 00:00", "Nov 05 00:00", "Nov 07 00:00", "Nov 09 00:00", "Nov 11 00:00", "Nov 13 00:00"]
+    x-axis ["Oct 24 00:00", "Oct 26 00:00", "Oct 28 00:00", "Oct 30 00:00", "Nov 01 00:00", "Nov 03 00:00", "Nov 05 00:00", "Nov 07 00:00", "Nov 09 00:00", "Nov 11 00:00", "Nov 13 00:00", "Nov 15 00:00"]
     y-axis "Tickets" 0 --> 40
-    line [5, 39, 9, 14, 37, 32, 32, 26, 26, 20, 12]
-    line [0, 0, 1, 1, 1, 5, 5, 5, 5, 5, 5]
-    line [1, 6, 2, 5, 5, 4, 4, 0, 0, 2, 4]
+    line [5, 39, 9, 14, 37, 32, 32, 26, 26, 20, 12, 12]
+    line [0, 0, 1, 1, 1, 5, 5, 5, 5, 5, 5, 5]
+    line [1, 6, 2, 5, 5, 4, 4, 0, 0, 2, 4, 4]
 ```
 
 ## Progress and scope over time
@@ -130,10 +130,10 @@ xychart-beta
 %%{init: {"themeVariables": {"xyChart": {"plotColorPalette": "#1a7f37, #8c959f"}}}}%%
 xychart-beta
     title "Done vs total scope"
-    x-axis ["Oct 24 00:00", "Oct 26 00:00", "Oct 28 00:00", "Oct 30 00:00", "Nov 01 00:00", "Nov 03 00:00", "Nov 05 00:00", "Nov 07 00:00", "Nov 09 00:00", "Nov 11 00:00", "Nov 13 00:00"]
+    x-axis ["Oct 24 00:00", "Oct 26 00:00", "Oct 28 00:00", "Oct 30 00:00", "Nov 01 00:00", "Nov 03 00:00", "Nov 05 00:00", "Nov 07 00:00", "Nov 09 00:00", "Nov 11 00:00", "Nov 13 00:00", "Nov 15 00:00"]
     y-axis "Tickets" 0 --> 555
-    line [0, 246, 297, 413, 488, 503, 503, 514, 514, 522, 529]
-    line [6, 291, 309, 433, 531, 544, 544, 545, 545, 549, 550]
+    line [0, 246, 297, 413, 488, 503, 503, 514, 514, 522, 529, 529]
+    line [6, 291, 309, 433, 531, 544, 544, 545, 545, 549, 550, 550]
 ```
 
 ## Incomplete tickets
