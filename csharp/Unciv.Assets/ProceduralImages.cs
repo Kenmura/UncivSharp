@@ -74,7 +74,10 @@ public static class ProceduralImages
             IconShape.Ring => (30, IconSize / 2),
             _ => (42, IconSize / 2),
         };
-        Pictograms.Draw(data, IconSize, Pictograms.KindFor(key.Category), box, IconSize / 2, centreY);
+        if (ObjectPictograms.PiecesFor(key) is { } objectPieces)
+            Pictograms.DrawPieces(data, IconSize, objectPieces, box, IconSize / 2, centreY);
+        else
+            Pictograms.Draw(data, IconSize, Pictograms.KindFor(key.Category), box, IconSize / 2, centreY);
         return new PixelImage(IconSize, IconSize, data);
     }
 

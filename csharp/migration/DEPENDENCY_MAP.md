@@ -91,7 +91,7 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T313 T330 T332 T362
-- in progress: T400
+- in review: T400
 - blocked: T290 T355 T357 T394 T404
 
 ## Remaining tickets over time
@@ -149,5 +149,5 @@ xychart-beta
 | T355 | Blocked | T338 | 0 | Verify nested TLS and the relay path on Windows, macOS and Android (manual, UNVERIFIED until run) |
 | T357 | Blocked | T337, T338 | 0 | WebSocket gateway so the web export can join and host through the relay (optional) |
 | T394 | Blocked | T356 | 0 | Owner-run independent verification of the civsharp relay (CONNECTIVITY.md rows R2-R4, R7-R9, R13) and record results |
-| T400 | In-Progress [Antigravity] | none | 0 | Pictorial icons for the Brave New World objects still on the generic category pictogram (about 130 buildings, units, policies, promotions, resources) |
+| T400 | Needs-Review [Antigravity] | none | 0 | Pictorial icons for the Brave New World objects still on the generic category pictogram (about 130 buildings, units, policies, promotions, resources) |
 | T404 | Blocked | T301 | 0 | T301 follow-up: window maximize/resize on Wayland-native, Windows, macOS and with UiScale != 1 in the real app |

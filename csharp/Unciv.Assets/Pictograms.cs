@@ -26,13 +26,13 @@ public static class Pictograms
     }
 
     /// <summary>A light (the glyph colour) or dark (outline colour, for details) polygon in a 0..100 box, or a circle when <see cref="Radius"/> is above 0 (centre in the first two coordinates).</summary>
-    private readonly record struct Piece(bool Dark, int[] Pts, int Radius = 0);
+    internal readonly record struct Piece(bool Dark, int[] Pts, int Radius = 0);
 
-    private static Piece L(params int[] pts) => new(false, pts);
+    internal static Piece L(params int[] pts) => new(false, pts);
 
-    private static Piece D(params int[] pts) => new(true, pts);
+    internal static Piece D(params int[] pts) => new(true, pts);
 
-    private static Piece Disc(bool dark, int x, int y, int r) => new(dark, [x, y], r);
+    internal static Piece Disc(bool dark, int x, int y, int r) => new(dark, [x, y], r);
 
     private static readonly Dictionary<Kind, Piece[]> Shapes = new()
     {
@@ -75,9 +75,12 @@ public static class Pictograms
     /// Paints <paramref name="kind"/> into the square RGBA buffer, centred at (<paramref name="centreX"/>, <paramref name="centreY"/>) pixels and <paramref name="box"/> pixels wide:
     /// glyph in <see cref="PlaceholderPalette.IconGlyph"/>, details in <see cref="PlaceholderPalette.IconOutline"/>, anti-aliased over what is already there.
     /// </summary>
-    public static void Draw(byte[] rgba, int size, Kind kind, int box, int centreX, int centreY)
+    public static void Draw(byte[] rgba, int size, Kind kind, int box, int centreX, int centreY) =>
+        DrawPieces(rgba, size, Shapes[kind], box, centreX, centreY);
+
+    internal static void DrawPieces(byte[] rgba, int size, IReadOnlyList<Piece> rawPieces, int box, int centreX, int centreY)
     {
-        var pieces = Shapes[kind].Select(p => ToQuarterPixels(p, box, centreX, centreY)).ToArray();
+        var pieces = rawPieces.Select(p => ToQuarterPixels(p, box, centreX, centreY)).ToArray();
         var light = PlaceholderPalette.IconGlyph;
         var dark = PlaceholderPalette.IconOutline;
         var from = Math.Max(0, centreY - box / 2 - 1);

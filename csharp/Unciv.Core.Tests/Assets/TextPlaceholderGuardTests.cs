@@ -42,36 +42,50 @@ public sealed class TextPlaceholderGuardTests : IDisposable
         public string? ReadText(string relativePath) => Exists(relativePath) ? File.ReadAllText(Full(relativePath)) : null;
     }
 
-    /// <summary>Objects without pack art (see EXCLUDED in import-unciv-icons.py for the unlicensed ones; Bison and Cocoa have no icon in Unciv at all): they get the category pictogram.</summary>
-    private static readonly Dictionary<string, string[]> PictogramOnly = new()
-    {
-        [RulesetAssetKeys.ResourceIcon] = ["Bison", "Cocoa"],
-        [RulesetAssetKeys.ImprovementIcon] = ["Remove Forest", "Remove Jungle", "Remove Railroad", "Remove Road"],
-        [RulesetAssetKeys.BuildingIcon] = ["Bomb Shelter", "Heroic Epic", "Satrap's Court"],
-        [RulesetAssetKeys.UnitIcon] = ["Anti-Aircraft Gun", "Nuclear Submarine", "Persian Immortal"],
-        [RulesetAssetKeys.PromotionIcon] = ["Armor Plating I", "Armor Plating II", "Armor Plating III", "Devout", "Flight Deck I", "Flight Deck II", "Flight Deck III", "Unable to pillage tiles", "[Persian Immortal] ability"],
-        [RulesetAssetKeys.TechIcon] = [],
-        [RulesetAssetKeys.PolicyIcon] = [],
-    };
+    private static readonly HashSet<string> IconCategories =
+    [
+        RulesetAssetKeys.ResourceIcon,
+        RulesetAssetKeys.ImprovementIcon,
+        RulesetAssetKeys.BuildingIcon,
+        RulesetAssetKeys.UnitIcon,
+        RulesetAssetKeys.PromotionIcon,
+        RulesetAssetKeys.TechIcon,
+        RulesetAssetKeys.PolicyIcon,
+    ];
 
     private static IEnumerable<AssetKey> BaseKeys(RulesetClass ruleset) => RulesetAssetKeys.KeysFor(ruleset)
-        .Where(k => !k.IsDefault && PictogramOnly.ContainsKey(k.Category));
+        .Where(k => !k.IsDefault && IconCategories.Contains(k.Category));
 
     [Theory]
     [InlineData(BaseRuleset.Civ_V_Vanilla)]
     [InlineData(BaseRuleset.Civ_V_GnK)]
-    public void EveryBaseRulesetObjectHasPackArtOrIsOnTheNamedList(BaseRuleset baseRuleset)
+    [InlineData(BaseRuleset.Civ_V_BNW)]
+    public void EveryBaseRulesetObjectHasPackArtOrPerObjectPictogram(BaseRuleset baseRuleset)
     {
         var ruleset = RulesetCache.Get(baseRuleset.FullName())!;
         var resolver = new AssetResolver(new DiskFiles(), RulesetAssetKeys.FallbacksFor(ruleset), basePack: AssetResolver.BundledPack);
         var unresolved = BaseKeys(ruleset).Where(k => resolver.Resolve(k).Source != AssetSourceKind.Pack).ToList();
-        foreach (var group in unresolved.GroupBy(k => k.Category))
-        {
-            var allowed = PictogramOnly[group.Key].Select(n => n.Replace('/', '_')).ToHashSet();
-            var surprises = group.Select(k => k.Name).Where(n => !allowed.Contains(n)).Order().ToList();
-            Assert.True(surprises.Count == 0, $"{group.Key}: no pack art for {string.Join(", ", surprises)}");
-        }
+        var missing = unresolved.Where(k => !ObjectPictograms.Has(k)).Select(k => k.ToString()).Order().ToList();
+        Assert.True(missing.Count == 0, $"Objects without pack art or per-object pictogram: {string.Join(", ", missing)}");
         Assert.Empty(resolver.Diagnostics);
+    }
+
+    [Fact]
+    public void EveryPerObjectPictogramRendersInsideItsBoxAndDiffersFromCategoryDefault()
+    {
+        foreach (var key in ObjectPictograms.AllKeys)
+        {
+            var data = new byte[64 * 64 * 4];
+            ObjectPictograms.Draw(data, 64, key, 40, 32, 32);
+            var inked = Enumerable.Range(0, 64 * 64).Where(p => data[p * 4 + 3] != 0).ToList();
+            Assert.InRange(inked.Count, 120, 40 * 40);
+            Assert.All(inked, p => Assert.InRange(p % 64, 11, 52));
+            Assert.All(inked, p => Assert.InRange(p / 64, 11, 52));
+
+            var categoryData = new byte[64 * 64 * 4];
+            Pictograms.Draw(categoryData, 64, Pictograms.KindFor(key.Category), 40, 32, 32);
+            Assert.NotEqual(categoryData, data);
+        }
     }
 
     [Fact]
