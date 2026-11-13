@@ -153,7 +153,7 @@ xychart-beta
 | T306 | Available (waiting on T278) | C099, T278 | 0 | Android shell on-device checks for C099: back button, safe-area insets, orientation, lifecycle autosave, keyboard scroll, permissions |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 0 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
 | T347 | Available (waiting on T278) | T278 | 0 | Share the invite code from Android with the system share sheet |
-| T348 | Needs-Review [DeepSeek-T348] | none | 0 | Lobby comforts: chat, kick and ban, rejoin by name |
+| T348 | In-Review [Antigravity] | none | 0 | Lobby comforts: chat, kick and ban, rejoin by name |
 | T355 | Blocked | T338 | 0 | Verify nested TLS and the relay path on Windows, macOS and Android (manual, UNVERIFIED until run) |
 | T357 | Blocked | T337, T338 | 0 | WebSocket gateway so the web export can join and host through the relay (optional) |
 | T394 | Blocked | T356 | 0 | Owner-run independent verification of the civsharp relay (CONNECTIVITY.md rows R2-R4, R7-R9, R13) and record results |
