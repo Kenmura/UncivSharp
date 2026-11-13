@@ -160,4 +160,4 @@ xychart-beta
 | T394 | Blocked | T356 | 0 | Owner-run independent verification of the civsharp relay (CONNECTIVITY.md rows R2-R4, R7-R9, R13) and record results |
 | T401 | In-Progress [DeepSeek-T401] | T274 | 0 | Host migration: crash election for a relay-only successor (voters reach the successor through its relay room) |
 | T404 | Blocked | T301 | 0 | T301 follow-up: window maximize/resize on Wayland-native, Windows, macOS and with UiScale != 1 in the real app |
-| T408 | Needs-Review [DeepSeek-T408] | none | 0 | Reuse the distance-to-tiles buffer across GetShortestPath frontier expansions (T351 profile) |
+| T408 | In-Review [Antigravity] | none | 0 | Reuse the distance-to-tiles buffer across GetShortestPath frontier expansions (T351 profile) |
