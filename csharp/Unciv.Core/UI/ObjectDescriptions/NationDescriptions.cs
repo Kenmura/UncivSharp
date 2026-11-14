@@ -1,11 +1,11 @@
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Translations;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 using Unciv.Utils;
 using NationObject = Unciv.Models.Ruleset.Nation.Nation;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/NationDescriptions.kt: Nation.getNationCivilopediaTextLines and its helpers
 // (Personality.getShortDescription is Personality.ToString, the two Personality Civilopedia members are in PersonalityDescriptions.cs).

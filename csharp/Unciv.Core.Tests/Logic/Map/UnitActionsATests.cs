@@ -11,7 +11,7 @@ using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
 using Unciv.Models.Translations;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 using MapUnitClass = Unciv.Logic.Map.MapUnits.MapUnit;

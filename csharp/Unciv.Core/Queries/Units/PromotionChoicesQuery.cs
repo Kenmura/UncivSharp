@@ -1,5 +1,5 @@
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.ObjectDescriptions;
+using Unciv.Presentation.Descriptions;
 using Unciv.View;
 
 namespace Unciv.Queries.Units;

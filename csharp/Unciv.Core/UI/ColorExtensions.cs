@@ -1,6 +1,6 @@
 using Unciv.Models;
 
-namespace Unciv.UI.Components.Extensions;
+namespace Unciv.Presentation.Components.Extensions;
 
 // core/src/com/unciv/ui/components/extensions/Scene2dExtensions.kt (colorFromRGB only; colorFromHex was not requested)
 public static class ColorExtensions

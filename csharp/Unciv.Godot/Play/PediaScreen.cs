@@ -5,7 +5,7 @@ using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Translations;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 
 namespace Unciv.GodotClient.Play;
 

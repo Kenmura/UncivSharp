@@ -3,10 +3,10 @@ using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
 using Unciv.Models.Translations;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 using Unciv.Utils;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/ImprovementDescriptions.kt
 

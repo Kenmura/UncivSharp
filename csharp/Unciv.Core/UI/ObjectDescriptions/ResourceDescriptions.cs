@@ -2,9 +2,9 @@ using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/ResourceDescriptions.kt
 

@@ -326,7 +326,7 @@ public class EmpireQueryTests
         var origin = new HexCoord(0, 0);
         player.Notifications.Clear();
         player.AddNotification("All", [new CityAction(origin), new MapUnitAction(origin, 7), new PromoteUnitAction("Warrior", origin, 8),
-            new MayaLongCountAction(), new CivilopediaAction("Wonder/Pyramids"), new OverviewAction(Unciv.UI.Screens.OverviewScreen.EmpireOverviewCategories.Stats, "x"),
+            new MayaLongCountAction(), new CivilopediaAction("Wonder/Pyramids"), new OverviewAction(Unciv.Presentation.Overview.EmpireOverviewCategories.Stats, "x"),
             new PolicyAction("Tradition"), new EspionageAction(), new LinkAction("https://example.org"), new ReligionAction("Faith"),
             new CityAction(new HexCoord(5, 5))], Notification.NotificationCategory.General);
         var actions = Ask(new NotificationsQuery()).Notifications.Single().Actions;
@@ -397,7 +397,7 @@ public class EmpireQueryTests
         Assert.Equal(1, overview.Cities);
         Assert.Equal(player.Gold, overview.Gold);
         Assert.Equal(enemy.CivName, Assert.Single(overview.KnownCivs).CivName);
-        Assert.Equal(Enum.GetValues<Unciv.UI.Screens.VictoryScreen.RankingType>().Length, overview.Rankings.Count);
+        Assert.Equal(Enum.GetValues<Unciv.Presentation.Victory.RankingType>().Length, overview.Rankings.Count);
         Assert.True(overview.KnownCivs[0].AtWar);
         Assert.NotEmpty(overview.KnownCivs[0].Rankings);
 

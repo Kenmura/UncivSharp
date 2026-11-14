@@ -1,62 +1,35 @@
-using System.Globalization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Unciv.Core.Tests.Policy;
 
-// T121: coupling ratchet. Counts the distinct `Unciv.*` namespaces a file depends on (`using` directives plus fully
-// qualified references in code, minus the file's own namespace). A file over MaxNamespaces must be listed in
-// CouplingRatchetBaseline.txt and may never depend on more namespaces than recorded; humans LOWER the numbers (or delete
-// the line once the file is at or under the limit). Never raise a number to make a new violation pass.
-// Set COUPLING_RATCHET_DUMP=<path> to write a fresh baseline candidate from the current tree.
-// Baseline line format:  `path|count`.
-// Also enforces layering: Unciv.Core must not reference Godot or the harness assemblies, and `Unciv.UI.*` namespaces
-// may only be used when they are an engine-owned leaf package listed in AllowedUiNamespaces (the Kotlin UI types that
-// the engine genuinely needs: stat chars, ranking types, ...). A new UI namespace needs a policy ticket.
+// T121/T423: coupling ratchet. Counts the distinct `Unciv.*` namespaces a file depends on (`using` directives plus fully
+// qualified references in code, minus the file's own namespace). Every file in Unciv.Core must stay at or below MaxNamespaces = 12.
+// Also enforces layering: Unciv.Core must not reference Godot, harness assemblies, or any `Unciv.UI.*` namespace.
 public class CouplingRatchetTests
 {
     private const int MaxNamespaces = 12;
     private const string Core = "Unciv.Core";
 
-    // Engine-owned Unciv.UI.* packages that exist in Unciv.Core today (no libGDX dependency).
-    private static readonly HashSet<string> AllowedUiNamespaces = new(StringComparer.Ordinal)
-    {
-        "Unciv.UI.Components",
-        "Unciv.UI.Components.Extensions",
-        "Unciv.UI.ObjectDescriptions",
-        "Unciv.UI.Screens.Civilopedia",
-        "Unciv.UI.Screens.MapEditorScreen",
-        "Unciv.UI.Screens.OverviewScreen",
-        "Unciv.UI.Screens.VictoryScreen",
-    };
-
     [Fact]
-    public void FilesStayWithinNamespaceLimitOrTheirShrinkOnlyBaseline()
+    public void FilesStayWithinNamespaceLimit()
     {
         var root = FindRoot();
-        var baseline = LoadBaseline(root);
         var current = Measure(root).ToDictionary(kv => kv.Key, kv => kv.Value.Count, StringComparer.Ordinal);
-        MaybeDump(current);
 
         var problems = new List<string>();
         foreach (var (key, count) in current.OrderBy(k => k.Key, StringComparer.Ordinal))
         {
-            if (baseline.TryGetValue(key, out var cap))
-            {
-                if (count > cap) problems.Add($"{key} now depends on {count} Unciv namespaces (baseline {cap}): decouple it, do not raise the baseline");
-            }
-            else if (count > MaxNamespaces)
-                problems.Add($"{key} depends on {count} Unciv namespaces (limit {MaxNamespaces}): decouple it, or (only for a faithful port of a giant Kotlin unit) add it to CouplingRatchetBaseline.txt");
+            if (count > MaxNamespaces)
+                problems.Add($"{key} depends on {count} Unciv namespaces (limit {MaxNamespaces}): decouple it");
         }
-        foreach (var key in baseline.Keys.Where(k => !current.ContainsKey(k)).Order(StringComparer.Ordinal))
-            problems.Add($"{key} is in CouplingRatchetBaseline.txt but no longer exists: remove the entry");
 
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
     }
 
     [Fact]
-    public void CoreDoesNotReferenceGodotHarnessOrUnlistedUiNamespaces()
+    public void CoreDoesNotReferenceGodotHarnessOrUiNamespaces()
     {
         var root = FindRoot();
         var problems = new List<string>();
@@ -68,8 +41,8 @@ public class CouplingRatchetTests
                     || ns == "Unciv.Harness" || ns.StartsWith("Unciv.Harness.", StringComparison.Ordinal)
                     || ns == "Unciv.Godot" || ns.StartsWith("Unciv.Godot.", StringComparison.Ordinal))
                     problems.Add($"{file} references {ns}: Unciv.Core must not depend on Godot or harness code");
-                else if ((ns == "Unciv.UI" || ns.StartsWith("Unciv.UI.", StringComparison.Ordinal)) && !AllowedUiNamespaces.Contains(ns))
-                    problems.Add($"{file} references {ns}: not an engine-owned UI leaf package (AllowedUiNamespaces)");
+                else if (ns == "Unciv.UI" || ns.StartsWith("Unciv.UI.", StringComparison.Ordinal))
+                    problems.Add($"{file} references {ns}: Unciv.Core must not depend on UI namespaces");
             }
         }
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
@@ -159,28 +132,6 @@ public class CouplingRatchetTests
             result[Path.GetRelativePath(root, file).Replace('\\', '/')] = Scan(File.ReadAllText(file));
         }
         return result;
-    }
-
-    private static Dictionary<string, int> LoadBaseline(string root)
-    {
-        var path = Path.Combine(root, "Unciv.Core.Tests", "Policy", "CouplingRatchetBaseline.txt");
-        var result = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var raw in File.ReadAllLines(path))
-        {
-            var line = raw.Trim();
-            if (line.Length == 0 || line.StartsWith('#')) continue;
-            var bar = line.LastIndexOf('|');
-            Assert.True(bar > 0, $"Bad baseline line: {raw}");
-            result[line[..bar]] = int.Parse(line[(bar + 1)..].Split('#')[0].Trim(), CultureInfo.InvariantCulture);
-        }
-        return result;
-    }
-
-    private static void MaybeDump(Dictionary<string, int> current)
-    {
-        var dump = Environment.GetEnvironmentVariable("COUPLING_RATCHET_DUMP");
-        if (string.IsNullOrEmpty(dump)) return;
-        File.WriteAllLines(dump, current.Where(kv => kv.Value > MaxNamespaces).OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key}|{kv.Value}"));
     }
 
     private static string FindRoot()

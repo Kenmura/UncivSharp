@@ -1,7 +1,7 @@
 using Unciv.Models.Metadata;
 using Unciv.Utils;
 
-namespace Unciv.UI.Screens.VictoryScreen;
+namespace Unciv.Presentation.Victory;
 
 // core/src/com/unciv/ui/screens/victoryscreen/RankingType.kt
 // Stripped: getImage (libGDX Image). The icon names it picked are listed in IconName for a future client.

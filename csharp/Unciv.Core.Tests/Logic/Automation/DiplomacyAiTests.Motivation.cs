@@ -30,8 +30,8 @@ public static partial class DiplomacyAiTests
             // Base motivation -15 (neutral personality), score ratio 38/38 -> 0, production 4/4 -> 0, distance 8 -> no distance modifier,
             // T is a neighbour below Friend so there is no "No other threats". Land path found: -3 + 3 = 0.
             var w = ArmedWorld();
-            Assert.Equal(82, w.A.GetStatForRanking(Unciv.UI.Screens.VictoryScreen.RankingType.Force));
-            Assert.Equal(28, w.B.GetStatForRanking(Unciv.UI.Screens.VictoryScreen.RankingType.Force));
+            Assert.Equal(82, w.A.GetStatForRanking(Unciv.Presentation.Victory.RankingType.Force));
+            Assert.Equal(28, w.B.GetStatForRanking(Unciv.Presentation.Victory.RankingType.Force));
             Assert.Equal(11f, new CityCombatant(w.CityA).GetCityStrength());
             Assert.Equal(-13f, Baseline(w));
         }

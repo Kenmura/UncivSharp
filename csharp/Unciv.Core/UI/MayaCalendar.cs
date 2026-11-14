@@ -2,7 +2,7 @@ using System.Globalization;
 using Unciv.Logic.Civilization;
 using Unciv.Utils;
 
-namespace Unciv.UI.Components;
+namespace Unciv.Presentation.Components;
 
 // core/src/com/unciv/ui/components/MayaCalendar.kt
 // Stripped: openPopup (Popup/BaseScreen). startTurnForMaya (T070): NextTurnAutomation.chooseGreatPerson is the INextTurnAutomation hook

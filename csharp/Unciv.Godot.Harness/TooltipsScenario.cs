@@ -7,8 +7,8 @@ using Unciv.Harness;
 using Unciv.Models.Translations;
 using Unciv.Queries.Empire;
 using Unciv.Queries.Tiles;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Descriptions;
+using Unciv.Presentation.Civilopedia;
 using Unciv.Utils;
 
 namespace Unciv.GodotHarness;

@@ -1,7 +1,7 @@
 using System.Globalization;
+using Unciv.Presentation.Victory;
 using Unciv.Queries.Empire;
 using Unciv.Queries.Victory;
-using Unciv.UI.Screens.VictoryScreen;
 
 namespace Unciv.Assets;
 

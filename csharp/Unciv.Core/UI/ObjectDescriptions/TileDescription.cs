@@ -1,12 +1,12 @@
 using Unciv.Logic.Map.Tiles;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Translations;
-using Unciv.UI.Components;
-using Unciv.UI.Components.Extensions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Components;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/TileDescription.kt
 

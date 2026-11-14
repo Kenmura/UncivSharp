@@ -1,7 +1,7 @@
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using CityClass = Unciv.Logic.City.City;
 using TileImprovementObject = Unciv.Models.Ruleset.Tile.TileImprovement;

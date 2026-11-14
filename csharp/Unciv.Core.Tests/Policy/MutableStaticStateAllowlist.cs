@@ -24,7 +24,7 @@ internal static class MutableStaticStateAllowlist
         ["Unciv.Utils.TurnProbe.Observer"] = "JUSTIFY: T261 [ThreadStatic] backing field of TurnProbe.Current (per thread, so parallel tests do not see each other's observer).",
         ["Unciv.Models.Translations.TranslationCache.CachedLangData"] = "JUSTIFY: memo of parsed translation file, derived from immutable files.",
         ["Unciv.Models.Translations.Translations.Current"] = "JUSTIFY: host-installed current translations instance.",
-        ["Unciv.UI.Screens.Civilopedia.FormattedLine.NameMapCacheInstance"] = "JUSTIFY: memo cache for civilopedia name lookup.",
+        ["Unciv.Presentation.Civilopedia.FormattedLine.NameMapCacheInstance"] = "JUSTIFY: memo cache for civilopedia name lookup.",
         ["Unciv.Utils.Log.Backend"] = "JUSTIFY: process-wide logging configuration installed/changed by the host; isolated in non-parallel collection TranslationState.",
         ["Unciv.Utils.Log.DisableLogsFrom"] = "JUSTIFY: process-wide logging configuration installed/changed by the host; isolated in non-parallel collection TranslationState.",
         ["Unciv.Utils.Log.EnableLogsFrom"] = "JUSTIFY: process-wide logging configuration installed/changed by the host; isolated in non-parallel collection TranslationState.",

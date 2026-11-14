@@ -1,6 +1,6 @@
 using Unciv.Logic.Civilization;
 using Unciv.Models.Ruleset.Tech;
-using Unciv.UI.ObjectDescriptions;
+using Unciv.Presentation.Descriptions;
 using Unciv.Utils;
 using Unciv.View;
 

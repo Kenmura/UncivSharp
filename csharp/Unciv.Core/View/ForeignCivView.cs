@@ -4,7 +4,7 @@ using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Nation;
 using Unciv.Models.Ruleset.Tech;
 using Unciv.Models.Ruleset.Tile;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.Utils;
 using CivilizationClass = Unciv.Logic.Civilization.Civilization;
 

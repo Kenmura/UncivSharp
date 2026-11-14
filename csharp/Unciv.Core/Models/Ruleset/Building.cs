@@ -6,9 +6,9 @@ using Unciv.Logic.City;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Components.Extensions;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Components.Extensions;
+using Unciv.Presentation.Descriptions;
 using Unciv.Utils;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 

@@ -3,7 +3,7 @@ using Unciv.Logic.City;
 using Unciv.Logic.Civilization.Diplomacy;
 using Unciv.Logic.Map;
 using Unciv.Models;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 using CityClass = Unciv.Logic.City.City;
 using CivilizationClass = Unciv.Logic.Civilization.Civilization;
 

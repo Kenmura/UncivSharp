@@ -6,7 +6,7 @@ using Unciv.Models;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unit;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 using CivilizationObject = Unciv.Logic.Civilization.Civilization;

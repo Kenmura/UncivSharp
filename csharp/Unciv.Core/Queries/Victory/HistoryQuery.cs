@@ -1,4 +1,4 @@
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.View;
 
 namespace Unciv.Queries.Victory;

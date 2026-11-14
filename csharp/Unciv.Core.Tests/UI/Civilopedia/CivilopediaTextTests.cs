@@ -3,8 +3,8 @@ using Unciv.Models;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unit;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Descriptions;
 using BuildingObject = Unciv.Models.Ruleset.Building;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 

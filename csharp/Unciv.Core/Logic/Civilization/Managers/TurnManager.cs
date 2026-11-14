@@ -6,7 +6,7 @@ using Unciv.Logic.Map.Tiles;
 using Unciv.Logic.Tourism;
 using Unciv.Logic.Trade.Routes;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 using NotificationCategory = Unciv.Logic.Civilization.Notification.NotificationCategory;

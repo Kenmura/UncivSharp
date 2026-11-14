@@ -4,7 +4,7 @@ using Unciv.Logic.Trade;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Translations;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using Level = Unciv.Logic.Civilization.Diplomacy.RelationshipLevel;
 using Modifier = Unciv.Logic.Civilization.Diplomacy.DiplomaticModifiers;

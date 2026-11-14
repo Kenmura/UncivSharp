@@ -1,4 +1,4 @@
-namespace Unciv.UI.Components;
+namespace Unciv.Presentation.Components;
 
 // core/src/com/unciv/ui/components/fonts/Fonts.kt
 // Only the stat symbols that ruleset object descriptions embed in their text; the font loading itself is client code.

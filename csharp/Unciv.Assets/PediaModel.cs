@@ -4,7 +4,7 @@ using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
 using Unciv.Models.Translations;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 
 namespace Unciv.Assets;
 

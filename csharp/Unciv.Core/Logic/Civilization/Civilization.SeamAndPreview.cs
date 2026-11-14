@@ -13,7 +13,7 @@ using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 
 namespace Unciv.Logic.Civilization;
 
-public partial class Civilization
+public partial class Civilization : IConstructionCivilization, IGameProgressCivilization, ILocalUniqueCacheCivilization
 {
     #region Seam members (IGameContextCivilization, IConstructionCivilization, IGameProgressCivilization, ILocalUniqueCacheCivilization)
     IGameContextGameInfo? IGameContextCivilization.GameInfo => gameInfo;

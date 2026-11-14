@@ -3,7 +3,7 @@ using System.Text.Json;
 using Unciv.Json;
 using Unciv.Logic.Map;
 using Unciv.Logic.Map.MapUnits;
-using Unciv.UI.Screens.OverviewScreen;
+using Unciv.Presentation.Overview;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 

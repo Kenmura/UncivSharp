@@ -3,7 +3,7 @@ using Unciv.Models.Metadata;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Validation;
-using Unciv.UI.Screens.MapEditorScreen;
+using Unciv.Presentation.MapEditor;
 using Unciv.Utils;
 
 namespace Unciv.Queries.Setup;

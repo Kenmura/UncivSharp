@@ -1,6 +1,6 @@
 using Unciv.Logic.Civilization.Transients;
 using Unciv.Logic.Trade;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using NotificationCategory = Unciv.Logic.Civilization.Notification.NotificationCategory;
 using TradeObject = Unciv.Logic.Trade.Trade;

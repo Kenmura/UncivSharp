@@ -7,7 +7,7 @@ using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 

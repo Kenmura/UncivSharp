@@ -4,7 +4,7 @@ using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tech;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.Utils;
 using Unciv.View;
 using CityObject = Unciv.Logic.City.City;

@@ -258,8 +258,8 @@ public class TradeEvaluationTests
         Assert.Equal(0, evaluation.EvaluatePeaceCostForThem(a, b));
         for (var i = 0; i < 6; i++) game.AddUnit("Warrior", b, game.GetTile(3, i));
         b.ResetMilitaryMightCache();
-        var ours = a.GetStatForRanking(Unciv.UI.Screens.VictoryScreen.RankingType.Force);
-        var theirs = b.GetStatForRanking(Unciv.UI.Screens.VictoryScreen.RankingType.Force);
+        var ours = a.GetStatForRanking(Unciv.Presentation.Victory.RankingType.Force);
+        var theirs = b.GetStatForRanking(Unciv.Presentation.Victory.RankingType.Force);
         Assert.True(theirs > ours * 1.5f);
         // weaker side: -(min(toInt(adv * (adv / ours) / (inflation * 2)), maxGoldTradeOffer))
         var adv = theirs - ours;

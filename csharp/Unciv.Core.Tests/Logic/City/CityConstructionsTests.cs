@@ -296,7 +296,7 @@ public class CityConstructionsTests
         w.City.CityStats.CurrentCityStats = new Stats(production: 10f);
         Queue(w, "Pyramids");
         Assert.Equal("Wonder/Pyramids", w.Constructions.GetProductionMarkup(w.Ruleset).Link);
-        Assert.Equal("{Pyramids} - 10" + Unciv.UI.Components.Fonts.Turn, w.Constructions.GetProductionMarkup(w.Ruleset).Text);
+        Assert.Equal("{Pyramids} - 10" + Unciv.Presentation.Components.Fonts.Turn, w.Constructions.GetProductionMarkup(w.Ruleset).Text);
         Queue(w, "Monument");
         Assert.Equal("Building/Monument", w.Constructions.GetProductionMarkup(w.Ruleset).Link);
         Queue(w, "Warrior");

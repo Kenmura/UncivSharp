@@ -4,7 +4,7 @@ using Unciv.Logic.Trade;
 using Unciv.Models;
 using Unciv.Models.Ruleset.Nation;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.Utils;
 using Unciv.View;
 using CivilizationClass = Unciv.Logic.Civilization.Civilization;

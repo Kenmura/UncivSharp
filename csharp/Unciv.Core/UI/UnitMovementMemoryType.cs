@@ -1,4 +1,4 @@
-namespace Unciv.UI.Components;
+namespace Unciv.Presentation.Components;
 
 // core/src/com/unciv/ui/components/MapArrowType.kt
 // Only UnitMovementMemoryType (part of GameInfo serialization) is engine data. The MapArrowType marker interface,

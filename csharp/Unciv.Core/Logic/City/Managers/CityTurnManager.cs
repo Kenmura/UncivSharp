@@ -3,7 +3,7 @@ using Unciv.Logic.Civilization.Transients;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Screens.OverviewScreen;
+using Unciv.Presentation.Overview;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 using NotificationCategory = Unciv.Logic.Civilization.Notification.NotificationCategory;

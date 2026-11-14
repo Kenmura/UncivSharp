@@ -2,9 +2,9 @@ using Unciv.Logic.Map.Tiles;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tech;
 using Unciv.Models.Ruleset.Tile;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // The parts of TileView, CivView, CityView, and MapUnitView that TileDescription reads. Kept as interfaces so that the description
 // text can be tested without a game (the tests fake them); the view classes implement them.

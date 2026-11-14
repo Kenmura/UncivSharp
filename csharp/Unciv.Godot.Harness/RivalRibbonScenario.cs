@@ -6,7 +6,7 @@ using Unciv.Harness;
 using Unciv.Queries.Empire;
 using Unciv.Assets;
 using Unciv.Queries.Victory;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.Utils;
 
 namespace Unciv.GodotHarness;

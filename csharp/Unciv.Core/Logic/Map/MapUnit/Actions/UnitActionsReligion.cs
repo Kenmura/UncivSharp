@@ -5,7 +5,7 @@ using Unciv.Logic.Map.Tiles;
 using Unciv.Models;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 using MapUnitClass = Unciv.Logic.Map.MapUnits.MapUnit;

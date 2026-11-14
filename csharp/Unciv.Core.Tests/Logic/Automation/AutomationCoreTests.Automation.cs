@@ -4,7 +4,7 @@ using Unciv.Logic.City;
 using Unciv.Models;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.View;
 using AutomationObject = Unciv.Logic.Automation.Automation;
 using CivilizationObject = Unciv.Logic.Civilization.Civilization;

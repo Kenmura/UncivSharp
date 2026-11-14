@@ -5,7 +5,7 @@ using Unciv.Logic.Map;
 using Unciv.Logic.Map.MapUnits;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 using NotificationCategory = Unciv.Logic.Civilization.Notification.NotificationCategory;

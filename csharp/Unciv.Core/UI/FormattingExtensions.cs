@@ -3,7 +3,7 @@ using Unciv.Mathematics;
 using Unciv.Models.Translations;
 using Unciv.Utils;
 
-namespace Unciv.UI.Components.Extensions;
+namespace Unciv.Presentation.Components.Extensions;
 
 // core/src/com/unciv/ui/components/extensions/FormattingExtensions.kt and TimeExtensions.kt
 // Duration -> TimeSpan, Instant -> DateTimeOffset, java.util.Date -> DateTime (wall time, no zone conversion).

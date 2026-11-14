@@ -1,6 +1,6 @@
 using Unciv.Logic.Map;
 
-namespace Unciv.UI.Screens.MapEditorScreen;
+namespace Unciv.Presentation.MapEditor;
 
 // core/src/com/unciv/ui/screens/mapeditorscreen/MapGeneratorSteps.kt
 public enum MapGeneratorSteps

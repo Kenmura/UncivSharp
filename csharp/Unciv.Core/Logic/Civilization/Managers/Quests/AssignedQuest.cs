@@ -92,5 +92,5 @@ public class AssignedQuest : IsPartOfGameInfoSerialization
 
     /// <summary>Debug visualization only</summary>
     public override string ToString() => quest == null ? "(uninitialized)"
-        : string.Create(CultureInfo.InvariantCulture, $"{QuestName}({Quest.Type}, assigner={Assigner}, assignee={Assignee}, d1={Data1}, d2={Data2}, {UI.Components.Fonts.Turn}{AssignedOnTurn})");
+        : string.Create(CultureInfo.InvariantCulture, $"{QuestName}({Quest.Type}, assigner={Assigner}, assignee={Assignee}, d1={Data1}, d2={Data2}, {Unciv.Presentation.Components.Fonts.Turn}{AssignedOnTurn})");
 }

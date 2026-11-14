@@ -5,7 +5,7 @@ using Unciv.Logic.Civilization.Diplomacy;
 using Unciv.Logic.Map;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Translations;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using NotificationCategory = Unciv.Logic.Civilization.Notification.NotificationCategory;
 

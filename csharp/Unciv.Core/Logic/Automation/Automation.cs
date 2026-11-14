@@ -6,7 +6,7 @@ using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.Utils;
 using Unciv.View;
 using CityObject = Unciv.Logic.City.City;

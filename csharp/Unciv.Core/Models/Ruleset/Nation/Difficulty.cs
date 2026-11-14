@@ -1,7 +1,7 @@
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Components;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Components;
+using Unciv.Presentation.Descriptions;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 
 namespace Unciv.Models.Ruleset.Nation;

@@ -1,7 +1,7 @@
 using Unciv.Models.Ruleset;
 using Unciv.Models.StatTypes;
 
-namespace Unciv.UI.Screens.Civilopedia;
+namespace Unciv.Presentation.Civilopedia;
 
 // core/src/com/unciv/ui/screens/civilopediascreen/ICivilopediaText.kt and SimpleCivilopediaText.kt
 // Stripped, client rendering: renderCivilopediaText (MarkupRenderer builds a libGDX Table).

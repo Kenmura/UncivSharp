@@ -1,6 +1,6 @@
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 
 namespace Unciv.Models.Ruleset.Unit;

@@ -1,7 +1,7 @@
 using Unciv.Models.Ruleset.Nation;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/NationDescriptions.kt, only Personality.getCivilopediaTextHeaderImpl and Personality.getPersonalityCivilopediaTextLines
 // (the rest of the file belongs to the Nation descriptions).

@@ -4,9 +4,9 @@ using Unciv.Json;
 using Unciv.Logic;
 using Unciv.Logic.Civilization;
 using Unciv.Logic.Files;
+using Unciv.Presentation.Victory;
 using Unciv.Queries;
 using Unciv.Queries.Victory;
-using Unciv.UI.Screens.VictoryScreen;
 using Unciv.Utils;
 
 namespace Unciv.Core.Tests.Queries.Victory;

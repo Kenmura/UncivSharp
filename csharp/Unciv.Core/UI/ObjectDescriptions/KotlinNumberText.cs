@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // Kotlin string templates print numbers with Float.toString() / Float.toInt(), which differ from the C# defaults.
 

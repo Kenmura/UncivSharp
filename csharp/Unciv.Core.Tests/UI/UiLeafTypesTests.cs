@@ -2,11 +2,11 @@ using Unciv.Logic.Map;
 using Unciv.Mathematics;
 using Unciv.Models;
 using Unciv.Models.Metadata;
-using Unciv.UI.Components;
-using Unciv.UI.Components.Extensions;
-using Unciv.UI.Screens.MapEditorScreen;
-using Unciv.UI.Screens.OverviewScreen;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Components;
+using Unciv.Presentation.Components.Extensions;
+using Unciv.Presentation.MapEditor;
+using Unciv.Presentation.Overview;
+using Unciv.Presentation.Victory;
 
 namespace Unciv.Core.Tests.UI;
 

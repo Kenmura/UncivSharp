@@ -1,6 +1,6 @@
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Translations;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 
 namespace Unciv.Models.Ruleset;
 

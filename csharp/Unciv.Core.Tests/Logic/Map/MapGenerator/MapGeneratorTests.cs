@@ -5,7 +5,7 @@ using Unciv.Logic.Map;
 using Unciv.Models.Metadata;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tile;
-using Unciv.UI.Screens.MapEditorScreen;
+using Unciv.Presentation.MapEditor;
 using GeneratorClass = Unciv.Logic.Map.MapGenerator.MapGenerator;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 

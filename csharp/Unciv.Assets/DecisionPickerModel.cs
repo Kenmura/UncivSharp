@@ -5,9 +5,9 @@ using Unciv.Commands.Turn;
 using Unciv.Commands.Units;
 using Unciv.Logic;
 using Unciv.Models.Ruleset.Unique;
+using Unciv.Presentation.Descriptions;
 using Unciv.Queries.Empire;
 using Unciv.Queries.Units;
-using Unciv.UI.ObjectDescriptions;
 
 namespace Unciv.Assets;
 

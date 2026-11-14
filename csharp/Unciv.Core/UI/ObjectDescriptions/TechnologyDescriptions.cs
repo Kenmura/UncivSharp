@@ -5,11 +5,11 @@ using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
 using Unciv.Models.Translations;
-using Unciv.UI.Components;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Components;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/TechnologyDescriptions.kt
 // Not ported: getTechEnabledIcons, buildTechIconsIndex and TechIconsIndex (they build libGDX portrait Actors with ImageGetter for the TechPickerScreen: client code).

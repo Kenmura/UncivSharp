@@ -4,12 +4,12 @@ using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
 using Unciv.Models.StatTypes;
 using Unciv.Models.Translations;
-using Unciv.UI.Components;
-using Unciv.UI.Components.Extensions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Components;
+using Unciv.Presentation.Components.Extensions;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/BaseUnitDescriptions.kt (UnitType.getUnitTypeCivilopediaTextLines is in UnitTypeDescriptions.cs).
 // Not ported: `addPixelUnitImage` (reads the client's unitSet / pediaUnitArtSize settings and ImageGetter.imageExists: client concern, so the Civilopedia

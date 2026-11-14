@@ -1,9 +1,9 @@
 using Unciv.Assets;
 using Unciv.Harness;
+using Unciv.Presentation.Descriptions;
 using Unciv.Queries.Cities;
 using Unciv.Queries.Tiles;
 using Unciv.Queries.Units;
-using Unciv.UI.ObjectDescriptions;
 using Unciv.Utils;
 
 namespace Unciv.Core.Tests.Assets;

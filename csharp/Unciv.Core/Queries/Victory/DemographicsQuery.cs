@@ -1,5 +1,5 @@
 using Unciv.Logic.Civilization;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.Utils;
 using Unciv.View;
 

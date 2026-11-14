@@ -2,7 +2,7 @@ using Unciv.Logic.Civilization.Transients;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
 using Unciv.Models.Translations;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using Unciv.Utils;
 using MapUnitClass = Unciv.Logic.Map.MapUnits.MapUnit;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;

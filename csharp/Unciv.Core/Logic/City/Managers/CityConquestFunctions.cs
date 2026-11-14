@@ -4,7 +4,7 @@ using Unciv.Logic.Civilization.Transients;
 using Unciv.Logic.Map.MapUnits;
 using Unciv.Logic.Trade;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 using CivilizationObject = Unciv.Logic.Civilization.Civilization;

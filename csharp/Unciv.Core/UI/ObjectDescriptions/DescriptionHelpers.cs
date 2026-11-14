@@ -1,9 +1,9 @@
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Translations;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/DescriptionHelpers.kt
 // The Kotlin `leadingSeparator: (suspend SequenceScope<FormattedLine>.() -> Unit)?` (default: yield one empty line, null: no separator) is

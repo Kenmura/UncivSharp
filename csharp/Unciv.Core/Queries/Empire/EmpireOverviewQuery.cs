@@ -1,5 +1,5 @@
+using Unciv.Presentation.Victory;
 using Unciv.Queries.Cities;
-using Unciv.UI.Screens.VictoryScreen;
 using Unciv.View;
 
 namespace Unciv.Queries.Empire;

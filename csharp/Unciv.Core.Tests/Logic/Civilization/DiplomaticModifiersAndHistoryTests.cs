@@ -2,7 +2,7 @@ using System.Text.Json;
 using Unciv.Json;
 using Unciv.Logic.Civilization;
 using Unciv.Logic.Civilization.Diplomacy;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 
 namespace Unciv.Core.Tests.Logic.Diplomacy;
 

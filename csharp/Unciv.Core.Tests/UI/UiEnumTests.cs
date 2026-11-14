@@ -1,7 +1,7 @@
 using Unciv.Logic.Map;
 using Unciv.Models.Metadata;
-using Unciv.UI.Screens.MapEditorScreen;
-using Unciv.UI.Screens.OverviewScreen;
+using Unciv.Presentation.MapEditor;
+using Unciv.Presentation.Overview;
 
 namespace Unciv.Core.Tests.UI;
 

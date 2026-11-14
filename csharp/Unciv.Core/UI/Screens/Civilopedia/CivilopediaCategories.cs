@@ -2,7 +2,7 @@ using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
 
-namespace Unciv.UI.Screens.Civilopedia;
+namespace Unciv.Presentation.Civilopedia;
 
 // core/src/com/unciv/ui/screens/civilopediascreen/CivilopediaCategories.kt
 // Stripped, client concerns: getImage (CivilopediaImageGetters, libGDX Actor) and binding (KeyboardBinding). The Godot client maps a category to its image/key.

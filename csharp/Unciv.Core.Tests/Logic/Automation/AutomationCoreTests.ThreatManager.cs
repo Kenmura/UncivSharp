@@ -240,7 +240,7 @@ public static partial class AutomationCoreTests
             Assert.Contains(gameView.GetForeignCivView(neutralCiv), neighbors);
             Assert.DoesNotContain(CivView, neighbors);
 
-            Assert.Equal(enemyCiv.GetStatForRanking(Unciv.UI.Screens.VictoryScreen.RankingType.Force), ThreatManager.GetCombinedForceOfWarringCivs(CivView));
+            Assert.Equal(enemyCiv.GetStatForRanking(Unciv.Presentation.Victory.RankingType.Force), ThreatManager.GetCombinedForceOfWarringCivs(CivView));
         }
     }
 }

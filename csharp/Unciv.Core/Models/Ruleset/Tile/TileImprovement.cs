@@ -3,9 +3,9 @@ using Unciv.Logic.Map.MapUnits;
 using Unciv.Logic.Map.Tiles;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
-using Unciv.UI.Components.Extensions;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Components.Extensions;
+using Unciv.Presentation.Descriptions;
 using Unciv.Utils;
 
 namespace Unciv.Models.Ruleset.Tile;

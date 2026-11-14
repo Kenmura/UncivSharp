@@ -1,6 +1,6 @@
 using Unciv.Logic.Civilization.Diplomacy;
 using Unciv.Logic.Trade;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using Unciv.Utils;
 using Unciv.View;
 using CivilizationClass = Unciv.Logic.Civilization.Civilization;

@@ -8,9 +8,9 @@ using Unciv.Logic.Civilization;
 using Unciv.Logic.Files;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unique;
+using Unciv.Presentation.Civilopedia;
 using Unciv.Queries;
 using Unciv.Queries.Tutorial;
-using Unciv.UI.Screens.Civilopedia;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
 

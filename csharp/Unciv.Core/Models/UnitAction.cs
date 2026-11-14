@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using Unciv.Logic.Map.MapUnits;
 using Unciv.Models.Ruleset.Unit;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using Unciv.Utils;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 

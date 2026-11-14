@@ -1,8 +1,8 @@
 using Unciv.Json;
 using Unciv.Logic.Civilization;
 using Unciv.Logic.Map;
-using Unciv.UI.Screens.OverviewScreen;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Overview;
+using Unciv.Presentation.Victory;
 
 namespace Unciv.Core.Tests.Json;
 

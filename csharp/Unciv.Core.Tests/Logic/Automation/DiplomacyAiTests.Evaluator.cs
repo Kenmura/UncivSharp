@@ -1,7 +1,7 @@
 using Unciv.Logic.Automation.Civilization;
 using Unciv.Logic.Civilization.Diplomacy;
 using Unciv.Models.Ruleset.Nation;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 using CivilizationObject = Unciv.Logic.Civilization.Civilization;
 
 namespace Unciv.Core.Tests.Logic.Automation;

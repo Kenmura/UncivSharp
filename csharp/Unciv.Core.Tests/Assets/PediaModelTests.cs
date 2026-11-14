@@ -1,6 +1,6 @@
 using Unciv.Assets;
 using Unciv.Harness;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 using Unciv.Utils;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 

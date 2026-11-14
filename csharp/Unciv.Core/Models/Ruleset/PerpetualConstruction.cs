@@ -3,7 +3,7 @@ using Unciv.Logic.City;
 using Unciv.Logic.WorldCongress;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.StatTypes;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using Unciv.Utils;
 
 namespace Unciv.Models.Ruleset;

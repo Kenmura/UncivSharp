@@ -7,8 +7,8 @@ using Unciv.Models.Ruleset.Tech;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Descriptions;
 using NationObject = Unciv.Models.Ruleset.Nation.Nation;
 
 namespace Unciv.Core.Tests.UI.Civilopedia;

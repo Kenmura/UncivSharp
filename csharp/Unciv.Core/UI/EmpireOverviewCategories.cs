@@ -1,4 +1,4 @@
-namespace Unciv.UI.Screens.OverviewScreen;
+namespace Unciv.Presentation.Overview;
 
 // core/src/com/unciv/ui/screens/overviewscreen/EmpireOverviewCategories.kt
 // these belong to the client track. KeyCharAndCode(char) is reduced to the plain shortcut char.

@@ -3,7 +3,7 @@ using Unciv.Logic.Civilization;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tech;
 using Unciv.Models.Ruleset.Tile;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 using NationObject = Unciv.Models.Ruleset.Nation.Nation;
 
 namespace Unciv.Core.Tests.UI.Civilopedia;

@@ -1,9 +1,9 @@
 using Unciv.Logic;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Components;
-using Unciv.UI.Components.Extensions;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Components;
+using Unciv.Presentation.Components.Extensions;
+using Unciv.Presentation.Descriptions;
 
 namespace Unciv.Models.Ruleset.Tech;
 

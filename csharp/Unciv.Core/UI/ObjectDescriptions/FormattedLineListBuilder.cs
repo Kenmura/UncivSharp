@@ -1,9 +1,9 @@
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/FormattedLineListBuilder.kt
 // Kotlin's `add(text = defaults().text, ...)` default arguments are nullable parameters here: null means "take it from defaults()".

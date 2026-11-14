@@ -4,7 +4,7 @@ using Unciv.Logic.Civilization;
 using Unciv.Logic.Civilization.Managers;
 using Unciv.Logic.Trade;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using TradeObject = Unciv.Logic.Trade.Trade;
 
 namespace Unciv.Core.Tests.Logic;

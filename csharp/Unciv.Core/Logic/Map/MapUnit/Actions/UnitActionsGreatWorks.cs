@@ -6,7 +6,7 @@ using Unciv.Logic.Tourism;
 using Unciv.Models;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Translations;
-using Unciv.UI.Components;
+using Unciv.Presentation.Components;
 using Unciv.Utils;
 using CivilizationObject = Unciv.Logic.Civilization.Civilization;
 using MapUnitClass = Unciv.Logic.Map.MapUnits.MapUnit;

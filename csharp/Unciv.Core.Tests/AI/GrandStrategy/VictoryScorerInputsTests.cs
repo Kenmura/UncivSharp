@@ -2,7 +2,7 @@ using Unciv.AI.GrandStrategy.Scorers;
 using Unciv.Core.Tests.Support;
 using Unciv.Logic.Civilization;
 using Unciv.Logic.Map;
-using Unciv.UI.Screens.VictoryScreen;
+using Unciv.Presentation.Victory;
 
 namespace Unciv.Core.Tests.AI;
 

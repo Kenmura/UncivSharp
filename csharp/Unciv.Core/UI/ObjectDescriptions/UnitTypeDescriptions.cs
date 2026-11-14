@@ -1,7 +1,7 @@
 using Unciv.Models.Ruleset.Unit;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
 
-namespace Unciv.UI.ObjectDescriptions;
+namespace Unciv.Presentation.Descriptions;
 
 // core/src/com/unciv/ui/objectdescriptions/BaseUnitDescriptions.kt, only UnitType.getUnitTypeCivilopediaTextLines (the rest of the file belongs to the BaseUnit descriptions).
 

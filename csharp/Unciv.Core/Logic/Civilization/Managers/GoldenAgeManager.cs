@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using Unciv.Json;
 using Unciv.Models.Ruleset.Unique;
-using Unciv.UI.Components.Extensions;
+using Unciv.Presentation.Components.Extensions;
 using Unciv.Utils;
 using NotificationCategory = Unciv.Logic.Civilization.Notification.NotificationCategory;
 

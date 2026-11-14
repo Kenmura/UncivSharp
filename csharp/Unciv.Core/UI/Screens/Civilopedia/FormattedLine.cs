@@ -5,7 +5,7 @@ using Unciv.Models.Ruleset.Unique;
 using Unciv.Utils;
 using UniqueObject = Unciv.Models.Ruleset.Unique.Unique;
 
-namespace Unciv.UI.Screens.Civilopedia;
+namespace Unciv.Presentation.Civilopedia;
 
 // core/src/com/unciv/ui/screens/civilopediascreen/FormattedLine.kt
 // Plain data (Non-goals #7): the Godot client renders it. Stripped, client rendering: render/renderExtraImage/renderIcon, IconDisplay, align (libGDX Align),

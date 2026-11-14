@@ -1,8 +1,8 @@
 using Unciv.Logic;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Translations;
-using Unciv.UI.ObjectDescriptions;
-using Unciv.UI.Screens.Civilopedia;
+using Unciv.Presentation.Civilopedia;
+using Unciv.Presentation.Descriptions;
 
 namespace Unciv.Models.Ruleset;
 

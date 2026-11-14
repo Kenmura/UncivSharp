@@ -64,7 +64,7 @@ public sealed class GameInfoTurnTests
 
         Assert.True(human.StatsHistory.ContainsKey(0));
         Assert.True(ai.StatsHistory.ContainsKey(0));
-        Assert.Equal(Enum.GetValues<Unciv.UI.Screens.VictoryScreen.RankingType>().Length, human.StatsHistory[0].Count);
+        Assert.Equal(Enum.GetValues<Unciv.Presentation.Victory.RankingType>().Length, human.StatsHistory[0].Count);
         Assert.Equal(0, cityState.StatsHistory.Count);
     }
 
@@ -378,6 +378,6 @@ public sealed class GameInfoTurnTests
         Info.Turns = 7;
         human.StatsHistory.RecordRankingStats(human);
         Assert.True(human.StatsHistory.ContainsKey(7));
-        Assert.Equal(human.GetStatForRanking(Unciv.UI.Screens.VictoryScreen.RankingType.Population), human.StatsHistory[7][Unciv.UI.Screens.VictoryScreen.RankingType.Population]);
+        Assert.Equal(human.GetStatForRanking(Unciv.Presentation.Victory.RankingType.Population), human.StatsHistory[7][Unciv.Presentation.Victory.RankingType.Population]);
     }
 }

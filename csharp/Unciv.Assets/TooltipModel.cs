@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Text;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tile;
+using Unciv.Presentation.Descriptions;
 using Unciv.Queries.Cities;
 using Unciv.Queries.Tiles;
-using Unciv.UI.ObjectDescriptions;
 
 namespace Unciv.Assets;
 
