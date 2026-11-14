@@ -177,6 +177,16 @@ public static class BrowseModel
     public static string RelayLine(string name, string contact, int listed, long pingMillis) =>
         $"{name}{(contact.Length > 0 ? " - " + contact : "")} - {Number(listed)} {(listed == 1 ? "game" : "games")} listed - ping {Number(pingMillis)} ms";
 
+    /// <summary>T413: signal-strength bar count (0..4) derived from relay ping milliseconds.</summary>
+    public static int PingBars(long pingMillis) => pingMillis switch
+    {
+        < 0 => 0,
+        < 60 => 4,
+        < 120 => 3,
+        < 220 => 2,
+        _ => 1,
+    };
+
     /// <summary>The text of the host screen checkbox explanation, by whether it can be ticked.</summary>
     public static string ListingHelp(bool relaySet, bool relayReach) =>
         !relaySet ? "To list this game publicly, set a relay address in Options first."

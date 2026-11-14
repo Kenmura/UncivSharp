@@ -87,6 +87,14 @@ public class CityQueryTests
         Assert.NotEmpty(panel.StatSources);
         Assert.Equal(city.CityConstructions.CurrentConstructionName(), panel.CurrentConstruction);
         Assert.Null(panel.Garrison);
+
+        city.SetFlag(Unciv.Logic.City.CityFlags.Resistance, 3);
+        city.IsBeingRazed = true;
+        city.SetFlag(Unciv.Logic.City.CityFlags.WeLoveTheKing, 7);
+        city.DemandedResource = "Silk";
+        var statusPanel = AskPure(new CityPanelQuery(city.Id));
+        Assert.Equal((true, 3, true, true, 7, "Silk"), (statusPanel.IsInResistance, statusPanel.ResistanceTurns, statusPanel.IsBeingRazed,
+            statusPanel.RazingTurns >= 1, statusPanel.WeLoveTheKingTurns, statusPanel.DemandedResource));
     }
 
     [Fact]

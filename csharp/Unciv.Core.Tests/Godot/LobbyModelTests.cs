@@ -115,4 +115,16 @@ public sealed class LobbyModelTests
         Assert.Equal(PlaceholderPalette.TextDisabled, PlaceholderPalette.ForLobbyColour("Mauve"));
         Assert.Equal(PlaceholderPalette.TextDisabled, PlaceholderPalette.ForLobbyColour(null));
     }
+
+    [Fact]
+    public void ReadySummaryCountsHumanSlotsReadyOutOfTotalHumans()
+    {
+        var lobby = Lobby(true,
+            Slot(0, "Human", "Host", ready: true),
+            Slot(1, "Human", "Ann", ready: false),
+            Slot(2, "AI"),
+            Slot(3, "Open"));
+        var summary = LobbyModel.ReadySummary(lobby);
+        Assert.Equal((1, 2, "1/2 Ready"), (summary.Ready, summary.Total, summary.Text));
+    }
 }

@@ -31,7 +31,8 @@ public sealed record CityPanelResult(
     bool ManualSpecialists, string CityFocus, bool AvoidGrowth,
     IReadOnlyList<CityBuilding> Buildings, string? Garrison,
     string? MajorityReligion, IReadOnlyList<NamedAmount> Followers, IReadOnlyList<NamedAmount> ReligionPressures,
-    IReadOnlyList<NamedAmount> ResourceStockpiles);
+    IReadOnlyList<NamedAmount> ResourceStockpiles,
+    int ResistanceTurns = 0, int RazingTurns = 0, int WeLoveTheKingTurns = 0, string DemandedResource = "");
 
 // T196: everything the city screen shows in one record, built from the CityView accessors the screen uses. Worked tiles are
 // ordered by coordinates; counters are ordered by name; stats stay float, only what the engine rounds is an int.
@@ -65,6 +66,11 @@ public sealed record CityPanelQuery(string CityId) : IQuery<CityPanelResult>
         var buildings = city.GetBuiltBuildings()
             .Select(it => new CityBuilding(it.Name, city.GetGoldForSellingBuilding(it.Name))).ToList();
 
+        var cityModel = city.Unwrap();
+        int resistanceTurns = cityModel.IsInResistance() ? cityModel.GetFlag(Logic.City.CityFlags.Resistance) : 0;
+        int razePerTurn = cityModel.IsBeingRazed ? Math.Max(1, Logic.City.Managers.CityTurnManager.RazePopulationPerTurn(cityModel)) : 0;
+        int razingTurns = cityModel.IsBeingRazed ? Math.Max(1, (cityModel.Population.Population + razePerTurn - 1) / razePerTurn) : 0;
+        int wltkdTurns = cityModel.IsWeLoveTheKingDayActive() ? cityModel.GetFlag(Logic.City.CityFlags.WeLoveTheKing) : 0;
         var religion = city.GetMajorityReligion();
         return new CityPanelResult(CityId, city.Name, Units.UnitQueryHelpers.Pos(city.Location()), city.IsCapital(), city.IsPuppet(),
             city.IsBeingRazed(), city.IsInResistance(), growth, borders,
@@ -74,7 +80,8 @@ public sealed record CityPanelQuery(string CityId) : IQuery<CityPanelResult>
             city.ManualSpecialists, city.GetCityFocus().ToString(), city.AvoidGrowth,
             buildings, city.GetGarrison()?.Name,
             religion?.Name, CityQueryHelpers.Named(city.GetNumberOfFollowers()), CityQueryHelpers.Named(city.GetPressuresFromSurroundingCities()),
-            CityQueryHelpers.Named(city.GetResourceStockpiles()));
+            CityQueryHelpers.Named(city.GetResourceStockpiles()),
+            resistanceTurns, razingTurns, wltkdTurns, cityModel.DemandedResource);
     }
 
     private static QueueEntry DescribeQueueEntry(CityView city, string name, int index)

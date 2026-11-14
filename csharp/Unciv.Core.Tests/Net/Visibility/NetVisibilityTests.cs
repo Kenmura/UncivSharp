@@ -190,6 +190,7 @@ public sealed class NetVisibilityTests
         var plain = SnapshotFor(a).Units.Single(it => it.Id == unit.Id).Own!;
         Assert.False(plain.Automated);
         Assert.False(plain.CanBePromoted);
+        Assert.Equal(unit.Promotions.XpForNextPromotion(), plain.XpForNextPromotion);
 
         unit.Automated = true;
         unit.Promotions.XP = 1000;
@@ -197,6 +198,7 @@ public sealed class NetVisibilityTests
         Assert.True(busy.Automated);
         Assert.True(busy.CanBePromoted);
         Assert.Equal(unit.Promotions.CanBePromoted(), busy.CanBePromoted);
+        Assert.Equal(unit.Promotions.XpForNextPromotion(), busy.XpForNextPromotion);
     }
 
     [Fact]
@@ -485,7 +487,7 @@ public sealed class NetVisibilityTests
         [nameof(CityDto)] = "Name Owner X Y Population IsCapital IsPuppet IsBeingRazed Health MaxHealth VisibleBuildings Own",
         [nameof(OwnCityDto)] = "Id FoodStored CultureStored Buildings ConstructionQueue",
         [nameof(UnitDto)] = "Id Name Owner X Y HealthBucket IsEmbarked IsFortified Own",
-        [nameof(OwnUnitDto)] = "Health CurrentMovement Xp Action Promotions Automated CanBePromoted",
+        [nameof(OwnUnitDto)] = "Health CurrentMovement Xp Action Promotions Automated CanBePromoted XpForNextPromotion",
         [nameof(DiplomacyDto)] = "A B AtWar Status",
         [nameof(PendingTradeDto)] = "From To Offered Requested",
         [nameof(TradeOfferDto)] = "Name Type Amount Duration",

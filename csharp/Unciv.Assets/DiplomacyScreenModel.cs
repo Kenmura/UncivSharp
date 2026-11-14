@@ -45,6 +45,15 @@ public sealed record DiplomacyButton(string Id, DiplomacyActionKind Kind, string
     public bool Danger => NeedsConfirm;
 }
 
+/// <summary>T413: segmented City-State Influence meter geometry and thresholds.</summary>
+public sealed record InfluenceMeterSpec(float Influence, bool IsAlly, int FriendThreshold, int AllyThreshold, float Min, float Max,
+    float Fraction, float ZeroFraction, float FriendFraction, float AllyFraction);
+
+public enum DiplomacyChipTone { Positive, Negative, Neutral }
+
+/// <summary>T413: structured opinion modifier or diplomatic flag chip.</summary>
+public sealed record DiplomacyChipSpec(string Text, DiplomacyChipTone Tone, string Tooltip);
+
 /// <summary>
 /// C021: the diplomacy screen's content as plain data, Godot-free so it is unit-tested. It lists the civs the viewer has met (from the viewer's own snapshot, so a
 /// civ it has not met never appears), words the engine's panel, quest and action answers, and decides which command a button sends. It computes no game value and
@@ -107,6 +116,46 @@ public static class DiplomacyScreenModel
         foreach (var flag in panel.Flags) lines.Add($"{HumanizeKey(flag.Name)}: {Number(flag.Value)} turns");
         return lines;
     }
+
+    /// <summary>T413: City-State Influence meter parameters with Friend (30) and Ally (60) threshold fractions, or null for major civs.</summary>
+    public static InfluenceMeterSpec? InfluenceMeter(DiplomacyPanelResult panel)
+    {
+        if (!panel.IsCityState) return null;
+        float influence = panel.Influence ?? 0f;
+        const int friend = 30;
+        const int ally = 60;
+        const float min = -60f;
+        float max = Math.Max(90f, MathF.Ceiling(Math.Max(influence, ally) / 30f) * 30f);
+        float span = max - min;
+        float Pos(float value) => Math.Clamp((value - min) / span, 0f, 1f);
+        return new InfluenceMeterSpec(influence, panel.IsAlly, friend, ally, min, max, Pos(influence), Pos(0f), Pos(friend), Pos(ally));
+    }
+
+    /// <summary>T413: structured color-coded chips for opinion modifiers and active diplomatic flags.</summary>
+    public static IReadOnlyList<DiplomacyChipSpec> ModifierChips(DiplomacyPanelResult panel)
+    {
+        var chips = new List<DiplomacyChipSpec>();
+        foreach (var modifier in panel.Modifiers)
+        {
+            string text = $"{HumanizeKey(modifier.Name)}: {(modifier.Value >= 0f ? "+" : "")}{Number(modifier.Value)}";
+            var tone = modifier.Value > 0f ? DiplomacyChipTone.Positive : modifier.Value < 0f ? DiplomacyChipTone.Negative : DiplomacyChipTone.Neutral;
+            chips.Add(new DiplomacyChipSpec(text, tone, text));
+        }
+        foreach (var flag in panel.Flags)
+        {
+            string text = $"{HumanizeKey(flag.Name)}: {Number(flag.Value)}t";
+            string tooltip = $"{HumanizeKey(flag.Name)}: {Number(flag.Value)} turns";
+            chips.Add(new DiplomacyChipSpec(text, FlagTone(flag.Name), tooltip));
+        }
+        return chips;
+    }
+
+    private static DiplomacyChipTone FlagTone(string name) => name switch
+    {
+        "DeclarationOfFriendship" or "DefensivePact" or "ResearchAgreement" or "OpenBorders" or "RecentlyPledgedProtection" or "AngerFreeIntrusion" => DiplomacyChipTone.Positive,
+        "Denunciation" or "WaryOf" or "Bullied" or "RecentlyWithdrewProtection" or "DeclaredWarOnUs" or "AgreedToNotSettleNearUs" or "BorderConflict" => DiplomacyChipTone.Negative,
+        _ => DiplomacyChipTone.Neutral,
+    };
 
     /// <summary>Turns serialized diplomatic modifier/flag enum names into readable UI text.</summary>
     public static string HumanizeKey(string key) => key switch

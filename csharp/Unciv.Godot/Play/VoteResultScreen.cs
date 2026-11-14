@@ -1,3 +1,4 @@
+using System.Globalization;
 using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Localization;
@@ -17,6 +18,7 @@ public partial class VoteResultScreen : Modal
     private readonly DataTable table = new([new DataColumn("Votes", Numeric: true), new DataColumn("Civilization", MinWidth: 100), new DataColumn("Vote worth", MinWidth: 120), new DataColumn("Voted for", MinWidth: 190)]);
     private readonly ScrollContainer scroll = new() { Name = "VoteScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
     private readonly VBoxContainer content = new() { Name = "VoteContent" };
+    private readonly VBoxContainer thresholds = new() { Name = "VoteThresholds" };
     private readonly Label verdict = new() { Name = "VoteVerdict", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private Button continueButton = new() { Name = "VoteContinue" };
 
@@ -24,8 +26,10 @@ public partial class VoteResultScreen : Modal
     {
         Name = "VoteResult";
         table.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        thresholds.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         scroll.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        content.AddChild(thresholds);
         content.AddChild(table);
         scroll.AddChild(content);
     }
@@ -61,6 +65,7 @@ public partial class VoteResultScreen : Modal
             row.Weight.Tr() + (row.UnBuilding == null ? "" : "\n" + row.UnBuilding.Tr()),
             row.Target?.Tr() ?? row.Choice.Tr(),
         ]).ToList());
+        RebuildThresholds(view);
         foreach (var child in Body.GetChildren()) Body.RemoveChild(child);
         scroll.CustomMinimumSize = new Vector2(width, 0f);
         Body.AddChild(scroll);
@@ -75,5 +80,45 @@ public partial class VoteResultScreen : Modal
     {
         Current = null;
         Visible = false;
+    }
+
+    private void RebuildThresholds(VoteResultView view)
+    {
+        foreach (var child in thresholds.GetChildren())
+        {
+            thresholds.RemoveChild(child);
+            child.QueueFree();
+        }
+        var rows = VoteResultModel.ThresholdRows(view);
+        thresholds.Visible = rows.Count > 0;
+        if (rows.Count == 0) return;
+
+        thresholds.AddThemeConstantOverride("separation", Ui.Px(UiTokens.S1));
+        thresholds.AddChild(new Label
+        {
+            Text = $"World Leader threshold: {view.VotesNeeded.ToString(CultureInfo.InvariantCulture)} votes".TrText(),
+            ThemeTypeVariation = UiVariants.LabelSmall,
+        });
+        foreach (var entry in rows)
+        {
+            var line = new HBoxContainer();
+            line.AddThemeConstantOverride("separation", Ui.Px(UiTokens.S2));
+            line.AddChild(new Label
+            {
+                Text = entry.Civ.Tr(),
+                CustomMinimumSize = new Vector2(Ui.Px(90), 0f),
+                TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
+            });
+            var bar = new ThresholdBar(Ui);
+            bar.SetValues(entry.Votes, entry.VotesNeeded);
+            line.AddChild(bar);
+            line.AddChild(new Label
+            {
+                Text = $"{entry.Votes.ToString(CultureInfo.InvariantCulture)}/{entry.VotesNeeded.ToString(CultureInfo.InvariantCulture)}",
+                ThemeTypeVariation = UiVariants.LabelNumber,
+                HorizontalAlignment = HorizontalAlignment.Right,
+            });
+            thresholds.AddChild(line);
+        }
     }
 }

@@ -14,7 +14,8 @@ namespace Unciv.Assets;
 /// 0 when the ruleset does not know the unit, <see cref="Fraction"/> is the health as 0..1 (a foreign unit's is its quarter bucket) and <see cref="Xp"/>'s number is <see cref="XpValue"/> (-1 for a foreign unit).
 /// </summary>
 public sealed record UnitPanelInfo(string Title, string Strength, string Moves, string Health, string Xp, IReadOnlyList<string> Promotions, string Order,
-    int Combat = 0, int Ranged = 0, int Range = 0, float MovesLeft = 0f, int MovesMax = 0, double Fraction = 1.0, int XpValue = -1, bool IsOwn = true);
+    int Combat = 0, int Ranged = 0, int Range = 0, float MovesLeft = 0f, int MovesMax = 0, double Fraction = 1.0, int XpValue = -1, bool IsOwn = true,
+    int XpForNextPromotion = 0);
 
 /// <summary>Where an entry of the action menu comes from; the client sends a different command for each.</summary>
 public enum MenuEntryKind
@@ -88,7 +89,7 @@ public static class UnitOrdersModel
         string order = own?.Action is { Length: > 0 } action ? action : unit.IsFortified ? "Fortified" : "";
         return new UnitPanelInfo(unit.Name, strength, moves, health, xp, own?.Promotions ?? [], order,
             baseUnit?.Strength ?? 0, baseUnit?.RangedStrength ?? 0, baseUnit?.Range ?? 0, own?.CurrentMovement ?? 0f, baseUnit?.Movement ?? 0,
-            own == null ? unit.HealthBucket * 0.25 : Math.Clamp(own.Health / 100.0, 0.0, 1.0), own?.Xp ?? -1, own != null);
+            own == null ? unit.HealthBucket * 0.25 : Math.Clamp(own.Health / 100.0, 0.0, 1.0), own?.Xp ?? -1, own != null, own?.XpForNextPromotion ?? 0);
     }
 
     /// <summary>

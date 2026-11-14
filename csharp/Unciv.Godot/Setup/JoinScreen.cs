@@ -67,6 +67,7 @@ public partial class JoinScreen : Control
     private readonly VBoxContainer hostsBox = new() { Name = "KnownHosts" };
     private readonly Label hostsTitle = new() { Name = "KnownHostsTitle" };
     private readonly Label messageLabel = new() { Name = "JoinMessage", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly StatBar modProgressBar;
     private readonly VBoxContainer formPanel = new() { Name = "JoinForm" };
     private readonly VBoxContainer trustPanel = new() { Name = "TrustPanel", Visible = false };
     private readonly Label trustLabel = new() { Name = "TrustText", AutowrapMode = TextServer.AutowrapMode.WordSmart };
@@ -191,6 +192,8 @@ public partial class JoinScreen : Control
         noticeButtons.AddChild(BackupNoticeContinueButton);
         backupNoticePanel.AddChild(noticeButtons);
 
+        modProgressBar = new StatBar(theme, "Production", 0, 1) { Name = "ModDownloadProgress", Visible = false };
+        column.AddChild(modProgressBar);
         column.AddChild(messageLabel);
         FillHosts();
     }
@@ -327,8 +330,9 @@ public partial class JoinScreen : Control
         SetBusy(true, $"{"Connecting to".Tr()} {target.Address}...");
         attempt = new CancellationTokenSource();
         var cancellation = attempt.Token;
+        modProgressBar.Visible = false;
         var sync = env.ModFiles != null && env.ModsDirectory != null
-            ? new ModSyncService(env.ModFiles, env.ModsDirectory, plan => AskModsAsync(plan, cancellation))
+            ? new ModSyncService(env.ModFiles, env.ModsDirectory, plan => AskModsAsync(plan, cancellation), new Progress<ModSyncProgress>(ReportModProgress))
             : null;
         if (target.Relay is { } named)
         {
@@ -439,6 +443,7 @@ public partial class JoinScreen : Control
         attempt?.Dispose();
         attempt = null;
         SetBusy(false, "");
+        modProgressBar.Visible = false;
         FillHosts();
         messageLabel.Text = message.Tr();
     }
@@ -493,8 +498,28 @@ public partial class JoinScreen : Control
         var answer = modAnswer;
         modAnswer = null;
         ShowPanel(formPanel);
-        if (download) messageLabel.Text = "Downloading mods...".Tr();
+        if (download)
+        {
+            messageLabel.Text = "Downloading mods...".Tr();
+            modProgressBar.Visible = true;
+            modProgressBar.SetProgress(0, 1);
+        }
         answer?.TrySetResult(download);
+    }
+
+    private void ReportModProgress(ModSyncProgress progress)
+    {
+        void Apply()
+        {
+            if (!IsInstanceValid(this) || !busy) return;
+            modProgressBar.Visible = true;
+            double total = progress.TotalBytes > 0 ? progress.TotalBytes : Math.Max(1, progress.TotalFiles);
+            double done = progress.TotalBytes > 0 ? progress.CompletedBytes : progress.CompletedFiles;
+            modProgressBar.SetProgress(done, total);
+            messageLabel.Text = JoinModel.ModDownloadProgressText(progress.CompletedFiles, progress.TotalFiles, progress.CompletedBytes, progress.TotalBytes, progress.ModName);
+        }
+        if (context == null) Callable.From(Apply).CallDeferred();
+        else context.Post(static state => ((Action)state!)(), (Action)Apply);
     }
 
     // The session asks from its own thread; the answer waits for the player's button on the main thread.

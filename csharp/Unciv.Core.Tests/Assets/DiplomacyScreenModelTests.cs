@@ -309,4 +309,51 @@ public class DiplomacyScreenModelTests
         Assert.Contains("worker", hints[DiplomacyActionKind.TributeWorker], StringComparison.Ordinal);
         Assert.Contains("peace treaty", hints[DiplomacyActionKind.DeclareWar], StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void InfluenceMeterReturnsNullForMajorCivsAndScalesThresholdsForCityStates()
+    {
+        Assert.Null(DiplomacyScreenModel.InfluenceMeter(Panel(cityState: false)));
+
+        var neutral = DiplomacyScreenModel.InfluenceMeter(Panel(cityState: true, influence: 15f, ally: false))!;
+        Assert.Equal((15f, false, 30, 60, -60f, 90f), (neutral.Influence, neutral.IsAlly, neutral.FriendThreshold, neutral.AllyThreshold, neutral.Min, neutral.Max));
+        Assert.Equal(0.5f, neutral.Fraction, 3);
+        Assert.Equal(0.4f, neutral.ZeroFraction, 3);
+        Assert.Equal(0.6f, neutral.FriendFraction, 3);
+        Assert.Equal(0.8f, neutral.AllyFraction, 3);
+
+        var high = DiplomacyScreenModel.InfluenceMeter(Panel(cityState: true, influence: 100f, ally: true))!;
+        Assert.Equal(120f, high.Max);
+        Assert.True(high.IsAlly);
+        Assert.True(high.Fraction > high.AllyFraction);
+
+        var hostile = DiplomacyScreenModel.InfluenceMeter(Panel(cityState: true, influence: -100f))!;
+        Assert.Equal(0f, hostile.Fraction);
+    }
+
+    [Fact]
+    public void ModifierChipsColorCodeOpinionModifiersAndDiplomaticFlags()
+    {
+        var panel = Panel(
+            modifiers:
+            [
+                new DiplomacyValue("WondersBuilt", 10f),
+                new DiplomacyValue("Warmongering", -25f),
+                new DiplomacyValue("NeutralFactor", 0f),
+            ],
+            flags:
+            [
+                new DiplomacyValue("DeclarationOfFriendship", 20f),
+                new DiplomacyValue("Denunciation", 15f),
+                new DiplomacyValue("CustomFlag", 5f),
+            ]);
+        var chips = DiplomacyScreenModel.ModifierChips(panel);
+        Assert.Equal(6, chips.Count);
+        Assert.Equal([DiplomacyChipTone.Positive, DiplomacyChipTone.Negative, DiplomacyChipTone.Neutral,
+            DiplomacyChipTone.Positive, DiplomacyChipTone.Negative, DiplomacyChipTone.Neutral], chips.Select(it => it.Tone));
+        Assert.Equal("Wonders built: +10", chips[0].Text);
+        Assert.Equal("Warmongering: -25", chips[1].Text);
+        Assert.Equal("Declaration of friendship: 20t", chips[3].Text);
+        Assert.Equal("Declaration of friendship: 20 turns", chips[3].Tooltip);
+    }
 }

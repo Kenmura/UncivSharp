@@ -2117,6 +2117,7 @@ public partial class GameScreen : Control
         if (bar == null) return; // a refused query leaves the old bar
         var action = HudModel.NextAction(pending, snapshot.TurnStatus, session.ViewerCivId);
         Hud.Update(bar, action, HudModel.CanEndTurn(pending));
+        World.SetResearch(HudModel.CurrentResearch(bar));
         World.SetTechnologyAvailable(pending?.Decisions.Any(it => it.Kind == "Technology") == true);
         await RefreshRivals(bar.Turn, force: false);
         Layout();

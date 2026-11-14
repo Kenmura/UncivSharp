@@ -187,7 +187,13 @@ public partial class EspionageScreen : PanelContainer
             return box;
         }
         var table = new DataTable([new DataColumn("Spy"), new DataColumn("Spy rank", true), new DataColumn("Location"), new DataColumn("Action")], actions: true) { Name = "SpyData" };
-        table.SetRows(page.Spies.Select(it => (IReadOnlyList<string>)[it.Name, it.Rank, it.Location.TrText(), it.Action.TrText()]).ToList(), index =>
+        table.SetRows(page.Spies.Select(it => (IReadOnlyList<string>)
+        [
+            it.Name,
+            $"{EspionageModel.RankIcons(it.RankValue)} {it.Rank}",
+            it.Location.TrText(),
+            it.TurnsRemaining > 0 ? $"{it.Action.TrText()} ({it.TurnsRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture)}t)" : it.Action.TrText(),
+        ]).ToList(), index =>
         {
             var spy = page.Spies[index];
             var actions = new HBoxContainer { Name = $"SpyActions_{spy.Name}" };

@@ -10,7 +10,10 @@ namespace Unciv.Assets;
 public sealed record VoteResultRow(string Civ, string Received, string Weight, string? UnBuilding, string Choice, string? Target);
 
 /// <summary>What the screen shows: <see cref="Verdict"/> is the engine's winner text (translated with <c>Tr()</c>, it has its own braces).</summary>
-public sealed record VoteResultView(string Title, string Verdict, IReadOnlyList<VoteResultRow> Rows, string ContinueLabel);
+public sealed record VoteResultView(string Title, string Verdict, IReadOnlyList<VoteResultRow> Rows, string ContinueLabel, int VotesNeeded = 0);
+
+/// <summary>T413: one major civ's progress toward the World Leader vote threshold.</summary>
+public sealed record VoteThresholdRow(string Civ, int Votes, int VotesNeeded, bool MetThreshold);
 
 /// <summary>
 /// C053: the World Congress vote result (Kotlin <c>DiplomaticVoteResultScreen</c>) as plain data, Godot-free so it is unit-tested. Everything comes from the engine's
@@ -30,6 +33,32 @@ public static class VoteResultModel
             it.CivName == result.UnOwner ? result.UnBuilding : null,
             it.Abstained ? "Abstained" : "Voted for",
             it.Abstained ? null : it.VotedFor ?? DiplomaticVoteResultQuery.UnknownCiv)).ToList();
-        return new VoteResultView(Title, result.WinnerText, rows, "Continue");
+        return new VoteResultView(Title, result.WinnerText, rows, "Continue", result.VotesNeeded);
+    }
+
+    /// <summary>T413: major civs ordered by received votes descending against <see cref="DiplomaticVoteBreakdownResult.VotesNeeded"/>.</summary>
+    public static IReadOnlyList<VoteThresholdRow> ThresholdRows(DiplomaticVoteBreakdownResult? result)
+    {
+        if (result is not { Show: true } || result.VotesNeeded <= 0) return [];
+        return result.Rows
+            .Where(it => it.IsMajor)
+            .OrderByDescending(it => it.Votes)
+            .Select(it => new VoteThresholdRow(it.CivName, it.Votes, result.VotesNeeded, it.Votes >= result.VotesNeeded))
+            .ToList();
+    }
+
+    /// <summary>T413: computes threshold progress rows directly from the view shown by <see cref="VoteResultView"/>.</summary>
+    public static IReadOnlyList<VoteThresholdRow> ThresholdRows(VoteResultView? view)
+    {
+        if (view == null || view.VotesNeeded <= 0) return [];
+        return view.Rows
+            .Where(it => int.TryParse(it.Received, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out _))
+            .Select(it =>
+            {
+                int votes = int.Parse(it.Received, System.Globalization.CultureInfo.InvariantCulture);
+                return new VoteThresholdRow(it.Civ, votes, view.VotesNeeded, votes >= view.VotesNeeded);
+            })
+            .OrderByDescending(it => it.Votes)
+            .ToList();
     }
 }

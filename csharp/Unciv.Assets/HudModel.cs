@@ -12,7 +12,11 @@ namespace Unciv.Assets;
 /// T344: <see cref="Sources"/> and <see cref="StatValue"/> carry the per-turn yield's itemised sources (the same shape the city screen uses) so the view can show
 /// the breakdown as the tooltip; they are null for the entries that are not yields (happiness, golden age, resources, turn).
 /// </summary>
-public sealed record HudStat(string Id, AssetKey? Icon, string Text, string Tooltip, IReadOnlyList<StatSource>? Sources = null, float? StatValue = null);
+public sealed record HudStat(string Id, AssetKey? Icon, string Text, string Tooltip, IReadOnlyList<StatSource>? Sources = null, float? StatValue = null,
+    double? ProgressValue = null, double? ProgressMax = null, string? ProgressStat = null);
+
+/// <summary>T413: active research summary shown on the World HUD technology pill.</summary>
+public sealed record ResearchStatus(string TechName, int Progress, int Cost, int? Turns, double Fraction, string Caption);
 
 public enum HudActionKind
 {
@@ -73,8 +77,19 @@ public static class HudModel
     }
 
     private static HudStat GoldenAge(EmpireTopBarResult bar) => bar.GoldenAgeTurnsLeft > 0
-        ? new HudStat("GoldenAge", AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), $"Golden Age {Int(bar.GoldenAgeTurnsLeft)}", "Golden Age: turns left")
-        : new HudStat("GoldenAge", AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), $"{Int(bar.GoldenAgeStored)}/{Int(bar.GoldenAgeNeeded)}", "Happiness stored towards the next Golden Age");
+        ? new HudStat("GoldenAge", AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), $"Golden Age {Int(bar.GoldenAgeTurnsLeft)}", "Golden Age: turns left",
+            ProgressValue: 1, ProgressMax: 1, ProgressStat: "Gold")
+        : new HudStat("GoldenAge", AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), $"{Int(bar.GoldenAgeStored)}/{Int(bar.GoldenAgeNeeded)}", "Happiness stored towards the next Golden Age",
+            ProgressValue: bar.GoldenAgeStored, ProgressMax: Math.Max(1, bar.GoldenAgeNeeded), ProgressStat: "Gold");
+
+    /// <summary>T413: formats active research name, fraction and turns remaining from <see cref="EmpireTopBarResult"/>; null when nothing is queued.</summary>
+    public static ResearchStatus? CurrentResearch(EmpireTopBarResult bar)
+    {
+        if (string.IsNullOrEmpty(bar.CurrentTech) || bar.CurrentTechCost <= 0) return null;
+        double fraction = Math.Clamp((double)bar.CurrentTechProgress / bar.CurrentTechCost, 0.0, 1.0);
+        string caption = bar.CurrentTechTurns is { } turns ? $"{bar.CurrentTech} ({Int(turns)}t)" : bar.CurrentTech;
+        return new ResearchStatus(bar.CurrentTech, bar.CurrentTechProgress, bar.CurrentTechCost, bar.CurrentTechTurns, fraction, caption);
+    }
 
     private static AssetKey StatKey(Stat stat) => AssetKey.Of(RulesetAssetKeys.StatIcon, stat.ToString());
 

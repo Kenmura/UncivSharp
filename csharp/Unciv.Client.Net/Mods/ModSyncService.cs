@@ -34,6 +34,9 @@ public sealed class ModSyncException(string code, string message) : Exception(me
     public string Code { get; } = code;
 }
 
+/// <summary>T413: file and byte progress reported while downloading mods.</summary>
+public sealed record ModSyncProgress(int CompletedFiles, int TotalFiles, long CompletedBytes, long TotalBytes, string ModName);
+
 /// <summary>What a <see cref="Session.ClientSession"/> calls when the host answers a mismatched join with a manifest.</summary>
 public interface IModSyncHandler
 {
@@ -46,7 +49,8 @@ public interface IModSyncHandler
 /// the staged mod must load as a ruleset and rebuild to the manifest's checksum before it replaces anything, and a mod that was already installed is kept as <c>.sync-backup-NAME</c>.
 /// Nothing is executed: a ruleset is data read by the json loader. The caller shows <see cref="Plan"/> through <c>confirm</c> first: nothing is downloaded without a yes.
 /// </summary>
-public sealed class ModSyncService(IRulesetFileSource files, string modsDirectory, Func<ModSyncPlan, Task<bool>> confirm) : IModSyncHandler
+public sealed class ModSyncService(IRulesetFileSource files, string modsDirectory, Func<ModSyncPlan, Task<bool>> confirm,
+    IProgress<ModSyncProgress>? progress = null) : IModSyncHandler
 {
     private const string StagingPrefix = ".sync-staging-";
     private const string BackupPrefix = ".sync-backup-";
@@ -94,10 +98,23 @@ public sealed class ModSyncService(IRulesetFileSource files, string modsDirector
 
         Directory.CreateDirectory(modsDirectory);
         var staging = Path.Combine(modsDirectory, StagingPrefix + StagingSuffix());
+        var entries = needed.Select(it => manifest.Entries.First(e => e.Name == it.Name)).ToList();
+        int totalFiles = entries.Sum(it => it.Files.Count);
+        long totalBytes = entries.Sum(it => it.Files.Sum(f => f.Size));
+        int doneFiles = 0;
+        long doneBytes = 0;
         try
         {
-            foreach (var item in needed)
-                await StageAsync(manifest.Entries.First(it => it.Name == item.Name), staging, fetch, cancellationToken).ConfigureAwait(false);
+            foreach (var entry in entries)
+            {
+                progress?.Report(new ModSyncProgress(doneFiles, totalFiles, doneBytes, totalBytes, entry.Name));
+                await StageAsync(entry, staging, fetch, bytes =>
+                {
+                    doneFiles++;
+                    doneBytes += bytes;
+                    progress?.Report(new ModSyncProgress(doneFiles, totalFiles, doneBytes, totalBytes, entry.Name));
+                }, cancellationToken).ConfigureAwait(false);
+            }
             var installed = Swap(needed.Select(it => it.Name).ToList(), staging);
             return new ModSyncOutcome(null, manifest, installed);
         }
@@ -106,7 +123,7 @@ public sealed class ModSyncService(IRulesetFileSource files, string modsDirector
         finally { TryDelete(staging); }
     }
 
-    private async Task StageAsync(ModEntry entry, string staging, ModFileFetcher fetch, CancellationToken cancellationToken)
+    private async Task StageAsync(ModEntry entry, string staging, ModFileFetcher fetch, Action<long> onFileFetched, CancellationToken cancellationToken)
     {
         var modRoot = Path.Combine(staging, entry.Name);
         var jsons = Path.Combine(modRoot, "jsons");
@@ -119,6 +136,7 @@ public sealed class ModSyncService(IRulesetFileSource files, string modsDirector
             var target = Path.GetFullPath(Path.Combine(jsons, file.Path));
             if (!string.Equals(Path.GetDirectoryName(target), Path.GetFullPath(jsons), StringComparison.Ordinal)) throw new ModSyncException(ModSyncCodes.BadFile, "path escapes the staging folder");
             await File.WriteAllBytesAsync(target, bytes, cancellationToken).ConfigureAwait(false);
+            onFileFetched(file.Size);
         }
 
         // The staged copy must be exactly the manifest's mod, and must load as a ruleset, before it may replace anything.

@@ -2,10 +2,10 @@ using System.Globalization;
 using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Assets;
-using Unciv.GodotClient.Ui;
-using Unciv.Models.Translations;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Settings;
+using Unciv.GodotClient.Ui;
+using Unciv.Models.Translations;
 
 namespace Unciv.GodotClient.Play;
 
@@ -32,6 +32,7 @@ public partial class UnitPanelView : PanelContainer
     private readonly HBoxContainer chips = new() { Name = "Chips" };
     private readonly Button groupToggle = new() { Name = "GroupToggle", Text = "Group select".Tr(), ToggleMode = true, Visible = false, TooltipText = "While on, tapping a tile with your units adds them to the selection (Shift+click on a desktop)".Tr() };
     private readonly Control healthSlot = new() { Name = "HealthSlot" };
+    private readonly Control xpSlot = new() { Name = "XpSlot", Visible = false };
     private readonly VBoxContainer healthBox = new() { Name = "Health" };
     private readonly Label promotions = new() { Name = "Promotions", ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly GridContainer grid = new() { Name = "Menu", Columns = Columns };
@@ -66,7 +67,10 @@ public partial class UnitPanelView : PanelContainer
         header.AddChild(headerText);
         chips.AddThemeConstantOverride("separation", UiTokens.S3);
         healthSlot.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        xpSlot.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        healthBox.AddThemeConstantOverride("separation", 2);
         healthBox.AddChild(healthSlot);
+        healthBox.AddChild(xpSlot);
         grid.AddThemeConstantOverride("h_separation", UiTokens.S1);
         grid.AddThemeConstantOverride("v_separation", UiTokens.S1);
         confirmBox.AddChild(question);
@@ -280,6 +284,29 @@ public partial class UnitPanelView : PanelContainer
         bar.Fill();
         healthSlot.AddChild(bar);
         healthSlot.CustomMinimumSize = bar.GetCombinedMinimumSize();
+
+        foreach (var child in xpSlot.GetChildren())
+        {
+            xpSlot.RemoveChild(child);
+            child.QueueFree();
+        }
+        if (info.IsOwn && info.XpForNextPromotion > 0)
+        {
+            var xpBar = new StatBar(theme, "Culture", Math.Max(0, info.XpValue), info.XpForNextPromotion)
+            {
+                Name = "XpBar",
+                TooltipText = $"{Int(Math.Max(0, info.XpValue))}/{Int(info.XpForNextPromotion)} XP",
+            };
+            xpBar.Fill();
+            xpSlot.AddChild(xpBar);
+            xpSlot.CustomMinimumSize = xpBar.GetCombinedMinimumSize();
+            xpSlot.Visible = true;
+        }
+        else
+        {
+            xpSlot.Visible = false;
+            xpSlot.CustomMinimumSize = Vector2.Zero;
+        }
     }
 
     private void BuildMenu(IReadOnlyList<MenuEntry> menu)

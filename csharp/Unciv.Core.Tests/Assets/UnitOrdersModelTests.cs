@@ -368,9 +368,11 @@ public class UnitOrdersModelTests
     public void PanelCarriesTheStructuredNumbers()
     {
         var info = UnitOrdersModel.Panel(Unit(Own()), new BaseUnit { Name = "Archer", Strength = 5, RangedStrength = 6, Range = 2, Movement = 2 });
-        Assert.Equal((5, 6, 2, 1.5f, 2, 0.8, 12, true), (info.Combat, info.Ranged, info.Range, info.MovesLeft, info.MovesMax, info.Fraction, info.XpValue, info.IsOwn));
+        Assert.Equal((5, 6, 2, 1.5f, 2, 0.8, 12, 0, true), (info.Combat, info.Ranged, info.Range, info.MovesLeft, info.MovesMax, info.Fraction, info.XpValue, info.XpForNextPromotion, info.IsOwn));
+        var withXpThreshold = UnitOrdersModel.Panel(Unit(Own() with { XpForNextPromotion = 30 }), null);
+        Assert.Equal(30, withXpThreshold.XpForNextPromotion);
         var foreign = UnitOrdersModel.Panel(Unit(null), null);
-        Assert.Equal((0.75, -1, false), (foreign.Fraction, foreign.XpValue, foreign.IsOwn));
+        Assert.Equal((0.75, -1, 0, false), (foreign.Fraction, foreign.XpValue, foreign.XpForNextPromotion, foreign.IsOwn));
     }
 
     [Fact]

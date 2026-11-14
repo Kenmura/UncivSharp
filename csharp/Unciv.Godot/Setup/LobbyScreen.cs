@@ -31,6 +31,7 @@ public partial class LobbyScreen : Control
     private readonly string ownKey;
     private ScreenFrame frame = null!; // JUSTIFY: T318 assigned by Build, which every constructor runs
     private readonly VBoxContainer slotsBox = new() { Name = "Slots" };
+    private readonly Label readySummaryLabel = new() { Name = "ReadySummary", ThemeTypeVariation = UiVariants.LabelSmall, Visible = false };
     private readonly ScrollContainer bodyScroll = new() { Name = "LobbyScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
     private readonly VBoxContainer nationBox = new() { Name = "NationPicker", SizeFlagsHorizontal = SizeFlags.ExpandFill };
     private readonly ScrollContainer pickerScroll = new() { Name = "PickerScroll", Visible = false, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -199,14 +200,17 @@ public partial class LobbyScreen : Control
                     standbyOffered = true;
                     offerLabel.Text = HostMigrationModel.BackupHostOfferText();
                     offerBox.Visible = true;
+                    backupBox.Visible = true;
                     break;
                 case StandbyStatusChanged standby: // T275: where this player's own standby stands.
                     standbyStatusLabel.Text = HostMigrationModel.BackupHostStateText(standby.Status.State);
+                    standbyStatusLabel.Visible = standbyStatusLabel.Text.Length > 0;
                     break;
                 case StandbyRevoked: // T275: the designation ended.
                     standbyOffered = false;
                     offerBox.Visible = false;
                     standbyStatusLabel.Text = "";
+                    standbyStatusLabel.Visible = false;
                     break;
                 case SessionEnded over when !string.IsNullOrEmpty(over.Reason) && over.Reason != ClientCodes.SessionClosed:
                     End(LobbyModel.RefusalText(over.Reason));
@@ -254,7 +258,9 @@ public partial class LobbyScreen : Control
             FillBackupPicker(state);
         }
         // The block collapses when there is nothing to say, so a lobby without a backup host keeps its old layout.
-        backupBox.Visible = trustLabel.Visible || standbyStatusLabel.Text.Length > 0 || offerBox.Visible || backupPickerBox.GetChildCount() > 0;
+        standbyStatusLabel.Visible = standbyStatusLabel.Text.Length > 0;
+        backupPickerBox.Visible = backupPickerBox.GetChildCount() > 0;
+        backupBox.Visible = trustLabel.Visible || standbyStatusLabel.Visible || offerBox.Visible || backupPickerBox.Visible;
     }
 
     private void FillBackupPicker(LobbyState state)
@@ -298,6 +304,10 @@ public partial class LobbyScreen : Control
         bodyScroll.Resized += FitBody;
         theme.Fit(this, FitBody);
         slotsBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var slotsHeader = new HBoxContainer { Name = "SlotsHeader" };
+        slotsHeader.AddChild(new Label { Text = "Players".Tr(), ThemeTypeVariation = UiVariants.LabelOverline, SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        slotsHeader.AddChild(readySummaryLabel);
+        column.AddChild(slotsHeader);
         column.AddChild(slotsBox);
 
         // T275: the backup-host block (trust notice to everyone, the picker and standby status for the host) and the consent prompt for the chosen player.
@@ -399,6 +409,9 @@ public partial class LobbyScreen : Control
         aiButtons.Clear();
         openButtons.Clear();
         var own = Own(state);
+        var readySummary = LobbyModel.ReadySummary(state);
+        readySummaryLabel.Visible = readySummary.Total > 0;
+        readySummaryLabel.Text = readySummary.Text.TrText();
         foreach (var slot in state.Slots)
         {
             int index = slot.Slot;
@@ -408,7 +421,9 @@ public partial class LobbyScreen : Control
             slotLabels.Add(text);
             if (slot.Kind == "Human")
             {
-                line.AddChild(new Label { Text = (slot.Ready ? "Ready" : "Not ready").TrText() }.FitMin(theme, 72));
+                var readyBadge = new IconLabel(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, slot.Ready ? "Checkmark" : "Pause"), (slot.Ready ? "Ready" : "Not ready").TrText()).FitMin(theme, 84);
+                readyBadge.LabelNode.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(slot.Ready ? UiTokens.Success : UiTokens.TextMuted));
+                line.AddChild(readyBadge);
                 line.AddChild(NationLabel(slot));
                 line.AddChild(Swatch(slot.Color));
             }

@@ -67,7 +67,7 @@ public partial class TechNodeCard : Button
         if (!researched && node.Turns is { } turns) bottom.AddChild(Small(CityProductionModel.TurnsText(turns).TrText()));
         column.AddChild(bottom);
 
-        if (!researched && node.Progress > 0)
+        if (!researched && node.Cost > 0)
         {
             var bar = new StatBar(uiTheme, "Science", node.Progress, node.Cost) { MouseFilter = MouseFilterEnum.Ignore };
             IgnoreMouse(bar);
@@ -165,8 +165,12 @@ public partial class TechNodeCard : Button
 
     private TextureRect Glyph(AssetKey key, int size) => new()
     {
-        Texture = theme.Icon(key), CustomMinimumSize = new Vector2(theme.Px(size), theme.Px(size)), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = TextureFilterEnum.LinearWithMipmaps, MouseFilter = MouseFilterEnum.Ignore,
+        Texture = theme.Icon(key),
+        CustomMinimumSize = new Vector2(theme.Px(size), theme.Px(size)),
+        ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+        StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+        TextureFilter = TextureFilterEnum.LinearWithMipmaps,
+        MouseFilter = MouseFilterEnum.Ignore,
         SizeFlagsVertical = SizeFlags.ShrinkCenter,
     };
 

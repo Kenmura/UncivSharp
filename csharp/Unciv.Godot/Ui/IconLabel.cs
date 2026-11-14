@@ -35,6 +35,8 @@ public partial class IconLabel : HBoxContainer
 
     public AssetKey IconKey { get; }
 
+    public Label LabelNode => label;
+
     public string Text
     {
         get => label.Text;

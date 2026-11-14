@@ -16,7 +16,7 @@ public sealed record VoteRow(string CivName, bool IsMajor, int Votes, int Weight
 // UnBuilding, UnOwner: The United Nations (or the mod's equivalent) and its owner, only when the owner is the viewer or a civ the viewer has met
 // WinnerText: The engine's verdict (translatable, in braces per line), with civs the viewer has not met left unnamed
 // Rows: The viewer first, then the civs the viewer has met, in the order GameInfo.GetCivsSorted gives
-public sealed record DiplomaticVoteBreakdownResult(bool Show, string? UnBuilding, string? UnOwner, string WinnerText, IReadOnlyList<VoteRow> Rows);
+public sealed record DiplomaticVoteBreakdownResult(bool Show, string? UnBuilding, string? UnOwner, string WinnerText, IReadOnlyList<VoteRow> Rows, int VotesNeeded = 0);
 
 // C053: the World Congress result screen (DiplomaticVoteResultScreen). Kotlin lists every civ; here a civ the viewer has not met is not listed and is not
 // named as a vote target or as the winner, so unmet civs do not leak through the votes (vote counts for listed civs are as in Kotlin).
@@ -50,7 +50,8 @@ public sealed record DiplomaticVoteResultQuery : IQuery<DiplomaticVoteBreakdownR
             rows.Add(new VoteRow(other.CivName, other.IsMajorCiv(), other.IsMajorCiv() ? results[other.CivId] : 0, weight, abstained,
                 target, !abstained && target == null));
         }
-        return new DiplomaticVoteBreakdownResult(true, owner == null ? null : unBuilding, owner?.CivName, Anonymize(civ, winnerText), rows);
+        return new DiplomaticVoteBreakdownResult(true, owner == null ? null : unBuilding, owner?.CivName, Anonymize(civ, winnerText), rows,
+            civ.VictoryManager.VotesNeededForDiplomaticVictory());
     }
 
     private static string Anonymize(Civilization viewer, string text)

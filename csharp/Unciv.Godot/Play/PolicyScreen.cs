@@ -41,7 +41,11 @@ public partial class PolicyScreen : PanelContainer
     private Label message = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
     private Label status = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
     private Label goldenAgeLabel = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
+    private StatBar goldenAgeBar = null!; // JUSTIFY: T413 assigned by BuildFrame in the constructor
     private StatBar cultureBar = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
+    private int goldenAgeStored;
+    private int goldenAgeNeeded;
+    private int goldenAgeTurns;
     private LineEdit search = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
     private Control branchHost = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
     private VBoxContainer detail = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
@@ -224,7 +228,11 @@ public partial class PolicyScreen : PanelContainer
 
         search = new LineEdit
         {
-            Name = "PolicySearch", PlaceholderText = "Search".Tr(), ClearButtonEnabled = true, Text = searchText, CustomMinimumSize = new Vector2(uiTheme.Px(140), 0f),
+            Name = "PolicySearch",
+            PlaceholderText = "Search".Tr(),
+            ClearButtonEnabled = true,
+            Text = searchText,
+            CustomMinimumSize = new Vector2(uiTheme.Px(140), 0f),
             TooltipText = "Search policies by name or by what they do".Tr(),
         };
         search.TextChanged += text =>
@@ -277,8 +285,13 @@ public partial class PolicyScreen : PanelContainer
         status = new Label { Name = "Header", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2f, VerticalAlignment = VerticalAlignment.Center };
         row.AddChild(status);
         box.AddChild(row);
-        goldenAgeLabel = new Label { Name = "GoldenAge", ThemeTypeVariation = UiVariants.LabelSmall, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis };
-        box.AddChild(goldenAgeLabel);
+        var goldenRow = new HBoxContainer();
+        goldenRow.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
+        goldenAgeBar = new StatBar(uiTheme, "Gold", goldenAgeTurns > 0 ? 1 : goldenAgeStored, goldenAgeTurns > 0 ? 1 : goldenAgeNeeded) { Name = "GoldenAgeBar", CustomMinimumSize = new Vector2(uiTheme.Px(90), 0f), Visible = goldenAgeNeeded > 0 || goldenAgeTurns > 0 };
+        goldenRow.AddChild(goldenAgeBar);
+        goldenAgeLabel = new Label { Name = "GoldenAge", ThemeTypeVariation = UiVariants.LabelSmall, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        goldenRow.AddChild(goldenAgeLabel);
+        box.AddChild(goldenRow);
         return box;
     }
 
@@ -290,6 +303,9 @@ public partial class PolicyScreen : PanelContainer
         status.Text = string.Join(" · ", headerText.Split('\n').Skip(1));
         status.TooltipText = headerText;
         goldenAgeLabel.Text = goldenAgeText;
+        bool hasGolden = goldenAgeNeeded > 0 || goldenAgeTurns > 0;
+        goldenAgeBar.Visible = hasGolden;
+        if (hasGolden) goldenAgeBar.SetProgress(goldenAgeTurns > 0 ? 1 : goldenAgeStored, goldenAgeTurns > 0 ? 1 : goldenAgeNeeded);
     }
 
     private Label NewMessage() => new() { Name = "Message", ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = messageText };
@@ -315,6 +331,9 @@ public partial class PolicyScreen : PanelContainer
         Branches = PolicyScreenModel.Branches(tree, session.Ruleset);
         headerText = string.Join("\n", PolicyScreenModel.HeaderLines(tree)).TrText();
         goldenAgeText = bar == null ? "" : PolicyScreenModel.GoldenAgeLine(bar).TrText();
+        goldenAgeStored = bar?.GoldenAgeStored ?? 0;
+        goldenAgeNeeded = bar?.GoldenAgeNeeded ?? 0;
+        goldenAgeTurns = bar?.GoldenAgeTurnsLeft ?? 0;
         FillSummary();
         string? keep = selected?.Name;
         Build();
@@ -392,6 +411,10 @@ public partial class PolicyScreen : PanelContainer
         string era = view.Era.Length > 0 ? view.Era.TrText() + " · " : "";
         titles.AddChild(new Label { Name = "BranchProgress", Text = era + Int(view.Adopted) + " / " + Int(view.Total), ThemeTypeVariation = UiVariants.LabelSmall, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis });
         head.AddChild(titles);
+        int adoptedMembers = view.Members.Count(it => it.IsAdopted);
+        var pips = new PipStrip(uiTheme, pipWidth: 7, pipHeight: 7, gap: 3) { Name = "BranchPips" };
+        pips.SetPips(adoptedMembers, view.Members.Count);
+        head.AddChild(pips);
         box.AddChild(head);
         if (!view.IsOpen)
             box.AddChild(new Label { Name = "BranchHint", Text = view.Start.Hint.TrText(), ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(w, 0f) });
@@ -425,8 +448,14 @@ public partial class PolicyScreen : PanelContainer
         {
             var strip = new Button
             {
-                Name = view.Complete.Id, Text = view.Complete.Name.TrText(), TooltipText = view.Complete.Name.TrText() + "\n" + view.Complete.Hint.TrText(), ToggleMode = true, Alignment = HorizontalAlignment.Center,
-                ThemeTypeVariation = UiVariants.PolicyNode(view.Complete.State, view.Complete.Pickable), SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, ClipText = true,
+                Name = view.Complete.Id,
+                Text = view.Complete.Name.TrText(),
+                TooltipText = view.Complete.Name.TrText() + "\n" + view.Complete.Hint.TrText(),
+                ToggleMode = true,
+                Alignment = HorizontalAlignment.Center,
+                ThemeTypeVariation = UiVariants.PolicyNode(view.Complete.State, view.Complete.Pickable),
+                SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+                ClipText = true,
                 CustomMinimumSize = new Vector2(0f, Math.Max(uiTheme.Px(UiTokens.ControlMinHeight), uiTheme.MinTargetPx)), // T283: a finger target on touch
             };
             string completeName = view.Complete.Name;

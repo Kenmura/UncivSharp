@@ -6,7 +6,8 @@ using Unciv.Utils;
 namespace Unciv.Assets;
 
 /// <summary>One spy of the espionage screen. <see cref="CoupShort"/> is the coup button's text ("Coup 35%", "Call off"; <see cref="CoupLabel"/> is the whole sentence, shown as its tooltip). <see cref="CanMove"/> is true when the engine offers the spy any destination; <see cref="Coup"/> is null unless the engine allows a coup.</summary>
-public sealed record EspionageSpyRow(string Name, string Rank, string Location, string Action, bool Alive, bool CanMove, SetSpyCoup? Coup, string CoupLabel, string CoupShort = "");
+public sealed record EspionageSpyRow(string Name, string Rank, string Location, string Action, bool Alive, bool CanMove, SetSpyCoup? Coup, string CoupLabel, string CoupShort = "",
+    int RankValue = 1, int TurnsRemaining = 0, string ActionText = "");
 
 /// <summary>One place of the screen's location table. <see cref="CityId"/> is null for the hideout and for a city the engine offers no spy (a spy of the viewer merely sits there). <see cref="SpiesPresent"/> lists only the viewer's own spies.</summary>
 public sealed record EspionageLocationRow(string? CityId, string Name, string Civ, string SpiesPresent, bool IsHideout = false);
@@ -27,6 +28,13 @@ public static class EspionageModel
 {
     private static string N(int value) => value.ToString(CultureInfo.InvariantCulture);
 
+    /// <summary>T413: formats a spy action with its remaining turn countdown when > 0.</summary>
+    public static string FormatAction(string action, int turnsRemaining) =>
+        turnsRemaining > 0 ? $"{action} ({N(turnsRemaining)}t)" : action;
+
+    /// <summary>T413: star rank string ("★★★") capped cleanly between 1 and 3.</summary>
+    public static string RankIcons(int rank) => new('★', Math.Clamp(rank, 1, 3));
+
     public static EspionageSpec Build(SpyDestinationsResult result)
     {
         var spies = result.Spies.Select(spy =>
@@ -35,8 +43,11 @@ public static class EspionageModel
             string percent = spy.CoupChance is { } chance ? KotlinMath.RoundToInt(chance * 100f).ToString(CultureInfo.InvariantCulture) : "";
             string coupLabel = spy.CanDoCoup && spy.CoupChance != null ? staging ? "Call off the coup" : $"Stage a coup ({percent}% chance)" : "";
             string coupShort = coupLabel.Length == 0 ? "" : staging ? "Call off" : $"Coup {percent}%";
-            return new EspionageSpyRow(spy.Name, N(spy.Rank), spy.IsAlive ? spy.Location : "-", spy.IsAlive ? spy.Action : "Dead", spy.IsAlive,
-                spy.IsAlive && (spy.CanMoveToHideout || spy.Destinations.Count > 0), spy.CanDoCoup ? new SetSpyCoup { Spy = spy.Name, Stage = !staging } : null, coupLabel, coupShort);
+            string action = spy.IsAlive ? spy.Action : "Dead";
+            string actionText = FormatAction(action, spy.TurnsRemaining);
+            return new EspionageSpyRow(spy.Name, N(spy.Rank), spy.IsAlive ? spy.Location : "-", action, spy.IsAlive,
+                spy.IsAlive && (spy.CanMoveToHideout || spy.Destinations.Count > 0), spy.CanDoCoup ? new SetSpyCoup { Spy = spy.Name, Stage = !staging } : null, coupLabel, coupShort,
+                spy.Rank, spy.TurnsRemaining, actionText);
         }).ToList();
 
         // Cities the engine offers to any spy, plus the ones a spy of the viewer is in already (the engine never offers the spy's own city)

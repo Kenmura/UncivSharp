@@ -2,9 +2,9 @@ using Godot;
 using Unciv.Assets;
 using Unciv.Client.Net.Hosting;
 using Unciv.GodotClient.Assets;
-using Unciv.Models.Translations;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
+using Unciv.Models.Translations;
 using Unciv.Net.Relay;
 using Unciv.Server.Transport;
 
@@ -36,7 +36,8 @@ public partial class BrowseScreen : Control
     private readonly UiTheme theme;
     private readonly BrowseScreenEnvironment env;
     private readonly ScreenFrame frame;
-    private readonly Label relayLine = new() { Name = "RelayLine", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly Label relayLine = new() { Name = "RelayLine", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+    private readonly PingSignal pingSignal;
     private readonly VBoxContainer listBox = new() { Name = "GameList", SizeFlagsHorizontal = SizeFlags.ExpandFill };
     private readonly ScrollContainer listScroll = new() { Name = "GameScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
     private readonly Label detailLabel = new() { Name = "GameDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -69,7 +70,12 @@ public partial class BrowseScreen : Control
 
         column = new VBoxContainer { Name = "BrowseColumn", SizeFlagsVertical = SizeFlags.ExpandFill };
         column.FitConstant(theme, "separation", UiTokens.S2);
-        column.AddChild(relayLine);
+        pingSignal = new PingSignal(theme) { Name = "RelayPingSignal", Visible = false };
+        var relayRow = new HBoxContainer { Name = "RelayHeaderRow" };
+        relayRow.FitConstant(theme, "separation", UiTokens.S2);
+        relayRow.AddChild(pingSignal);
+        relayRow.AddChild(relayLine);
+        column.AddChild(relayRow);
 
         var toolbar = new HFlowContainer { Name = "BrowseToolbar" };
         toolbar.FitConstant(theme, "h_separation", UiTokens.S2);
@@ -279,6 +285,9 @@ public partial class BrowseScreen : Control
         if (result.Dropped > 0) line += $" - {result.Dropped.ToString(System.Globalization.CultureInfo.InvariantCulture)} {"hidden (failed the safety checks or the filters)".Tr()}";
         if (result.More) line += " - " + "more games exist: narrow the search".Tr();
         relayLine.Text = line;
+        int bars = BrowseModel.PingBars(result.PingMillis);
+        pingSignal.Visible = bars > 0;
+        pingSignal.SetBars(bars);
         FillList();
         int again = selectedRoom == null ? -1 : rows.FindIndex(it => it.Game.Room == selectedRoom && it.CanJoin);
         if (rows.Count == 0) ShowStatus(Query == new DirectoryQuery() ? BrowseStatus.Empty : BrowseStatus.NoMatch);
@@ -327,8 +336,16 @@ public partial class BrowseScreen : Control
         }
         state = null;
         RefreshButton.Disabled = status == BrowseStatus.Loading;
-        if (status == BrowseStatus.Loading) relayLine.Text = env.Relay()?.Key ?? "";
-        else if (status == BrowseStatus.NoRelay) relayLine.Text = "No relay set".Tr();
+        if (status == BrowseStatus.Loading)
+        {
+            relayLine.Text = env.Relay()?.Key ?? "";
+            pingSignal.Visible = false;
+        }
+        else if (status == BrowseStatus.NoRelay)
+        {
+            relayLine.Text = "No relay set".Tr();
+            pingSignal.Visible = false;
+        }
         if (list)
         {
             return;

@@ -220,4 +220,16 @@ public sealed class BrowseModelTests
         form.GameName = "A proper name";
         Assert.DoesNotContain(form.Problems(), it => it.Contains("publicly listed", StringComparison.Ordinal));
     }
+
+    [Theory]
+    [InlineData(-1, 0)]
+    [InlineData(0, 4)]
+    [InlineData(59, 4)]
+    [InlineData(60, 3)]
+    [InlineData(119, 3)]
+    [InlineData(120, 2)]
+    [InlineData(219, 2)]
+    [InlineData(220, 1)]
+    public void PingBarsMapLatencyToSignalStrength(long pingMs, int expectedBars) =>
+        Assert.Equal(expectedBars, BrowseModel.PingBars(pingMs));
 }

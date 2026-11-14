@@ -8,6 +8,9 @@ namespace Unciv.GodotClient.Setup;
 /// <summary>Whether the host may press Start, and when not, the sentence that says why.</summary>
 public sealed record StartCheck(bool CanStart, string Reason);
 
+/// <summary>T413: summary of how many human players are ready in the lobby.</summary>
+public sealed record LobbyReadySummary(int Ready, int Total, string Text);
+
 /// <summary>
 /// C035: what the lobby screen shows, with no UI in it: the one-line texts of the slot table, the read-only settings, the refusal wording and whether Start is allowed.
 /// It only reads the <see cref="LobbyState"/> the host sent, so a joiner and the host see the same words; the host's own checks (who is ready, how many players)
@@ -74,6 +77,14 @@ public static class LobbyModel
         int players = humans.Count + lobby.Slots.Count(it => it.Kind == "AI") + (Flag(lobby.Settings, "aiFill") ? lobby.Slots.Count(it => it.Kind == "Open") : 0);
         if (players < 2) return new StartCheck(false, "A game needs at least two players: turn on AI fill, add an AI slot or wait for a friend.");
         return new StartCheck(true, "Everybody is ready.");
+    }
+
+    /// <summary>T413: returns how many seated humans are marked ready ("X/Y Ready").</summary>
+    public static LobbyReadySummary ReadySummary(LobbyState lobby)
+    {
+        var humans = lobby.Slots.Where(it => it.Kind == "Human").ToList();
+        int ready = humans.Count(it => it.Ready);
+        return new LobbyReadySummary(ready, humans.Count, $"{ready.ToString(CultureInfo.InvariantCulture)}/{humans.Count.ToString(CultureInfo.InvariantCulture)} Ready");
     }
 
     /// <summary>What the player is told when the host would not let them in (or removed them). Never says more than the code does, plus the host's own reason for a kick or ban.</summary>

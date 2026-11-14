@@ -208,4 +208,28 @@ public class CityScreenModelTests
         Assert.Equal(("Food", (float)city.Growth.FoodStored, (float)city.Growth.FoodToNextPopulation, CityScreenModel.InfoLines(city)[0]), (food.Stat, food.Value, food.Max, food.Caption));
         Assert.Equal(("Culture", (float)city.Borders.CultureStored, (float)city.Borders.CultureToNextTile), (borders.Stat, borders.Value, borders.Max));
     }
+
+    [Fact]
+    public void StatusBadges_SurfaceResistanceRazingWltKdAndDemandedResource()
+    {
+        Assert.Empty(CityScreenModel.StatusBadges(Panel()));
+
+        var resistant = Panel(resistance: true) with { ResistanceTurns = 3 };
+        var razedZero = Panel(razed: true) with { RazingTurns = 0 };
+        Assert.Equal("Resistance (3t)", Assert.Single(CityScreenModel.StatusBadges(resistant)).Label);
+        Assert.Equal("Being razed", Assert.Single(CityScreenModel.StatusBadges(razedZero)).Label);
+
+        var combined = Panel(resistance: true, razed: true) with { ResistanceTurns = 0, RazingTurns = 4, WeLoveTheKingTurns = 12 };
+        var badges = CityScreenModel.StatusBadges(combined);
+        Assert.Equal(["In resistance", "Razing (4t)", "WLTKD (12t)"], badges.Select(it => it.Label));
+        Assert.Equal([CityScreenModel.CityStatusTone.Warning, CityScreenModel.CityStatusTone.Danger, CityScreenModel.CityStatusTone.Accent],
+            badges.Select(it => it.Tone));
+        Assert.Equal([AssetKey.Of(RulesetAssetKeys.UiIcon, "Blockade"), AssetKey.Of(RulesetAssetKeys.UiIcon, "Fire"),
+            AssetKey.Of(RulesetAssetKeys.StatIcon, "Happiness")], badges.Select(it => it.Icon));
+
+        var demanded = Panel() with { DemandedResource = "Silk" };
+        var demandBadge = Assert.Single(CityScreenModel.StatusBadges(demanded));
+        Assert.Equal(("Wants Silk", CityScreenModel.CityStatusTone.Warning, AssetKey.Of(RulesetAssetKeys.ResourceIcon, "Silk")),
+            (demandBadge.Label, demandBadge.Tone, demandBadge.Icon));
+    }
 }

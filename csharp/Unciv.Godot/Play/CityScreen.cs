@@ -2,12 +2,13 @@ using Godot;
 using Unciv.Assets;
 using Unciv.Commands;
 using Unciv.Commands.City;
+using Unciv.GodotClient.Assets;
+using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
 using Unciv.Logic.City;
+using Unciv.Models.Translations;
 using Unciv.Net.Visibility;
 using Unciv.Queries.Cities;
-using Unciv.Models.Translations;
-using Unciv.GodotClient.Localization;
 
 namespace Unciv.GodotClient.Play;
 
@@ -321,6 +322,7 @@ public partial class CityScreen : PanelContainer
             side.AddChild(new Label { Name = "PhoneInfo", Text = info.Text, ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart });
             side.AddChild(MeterColumns(panel));
         }
+        BuildStatusStrip(panel);
         var chips = new HFlowContainer { Name = "Stats" };
         chips.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S2));
         chips.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S1));
@@ -389,19 +391,111 @@ public partial class CityScreen : PanelContainer
         return row;
     }
 
+    private void BuildStatusStrip(CityPanelResult panel)
+    {
+        var badges = CityScreenModel.StatusBadges(panel);
+        if (badges.Count == 0) return;
+        var strip = new HFlowContainer { Name = "StatusBadges" };
+        strip.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S1));
+        strip.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S1));
+        foreach (var badge in badges)
+        {
+            var pill = new PanelContainer { Name = "Status_" + badge.Id, ThemeTypeVariation = UiVariants.PanelCard, TooltipText = badge.Tooltip.TrText() };
+            var tint = badge.Tone switch
+            {
+                CityScreenModel.CityStatusTone.Danger => UiTokens.DangerText,
+                CityScreenModel.CityStatusTone.Accent => UiTokens.AccentHi,
+                _ => UiTokens.Warning,
+            };
+            var chip = new IconLabel(theme, badge.Icon, badge.Label.TrText());
+            chip.LabelNode.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(tint));
+            pill.AddChild(chip);
+            strip.AddChild(pill);
+        }
+        side.AddChild(strip);
+    }
+
     private Control SpecialistLine(CityPanelResult panel, SpecialistRow row)
     {
+        var label = new Label { Text = $"{row.Name.TrText()} {row.Assigned}/{row.Max}", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+
+        var pipFill = ProceduralAssets.ToColor(UiTokens.Accent);
+        bool wrapPips = Phone && row.Max > 2;
+        Container pipRow = wrapPips
+            ? new HFlowContainer { Name = "SpecPips_" + row.Name, SizeFlagsHorizontal = SizeFlags.ExpandFill }
+            : new HBoxContainer { Name = "SpecPips_" + row.Name };
+        if (pipRow is HFlowContainer flow)
+        {
+            flow.AddThemeConstantOverride("h_separation", theme.Px(2));
+            flow.AddThemeConstantOverride("v_separation", theme.Px(2));
+        }
+        else
+        {
+            pipRow.AddThemeConstantOverride("separation", theme.Px(2));
+        }
+        Button? addBtn = null;
+        Button? removeBtn = null;
+        for (int i = 0; i < row.Max; i++)
+        {
+            bool filled = i < row.Assigned;
+            bool add = !filled;
+            var pip = new SpecialistPipButton(theme, filled, pipFill)
+            {
+                Name = $"SpecPip_{row.Name}_{i}",
+                Disabled = add ? !row.CanAdd : !row.CanRemove,
+                ThemeTypeVariation = UiVariants.ButtonChip,
+                TooltipText = (add ? $"Assign {row.Name}" : $"Remove {row.Name}").TrText(),
+            };
+            pip.Pressed += () => Fire(Send(CityScreenModel.SpecialistCommand(panel.CityId, row, add)));
+            pipRow.AddChild(pip);
+            if (filled) removeBtn = pip; // last filled pip removes
+            else addBtn ??= pip; // first hollow pip adds
+        }
+
+        // Preserve scenario handles SpecialistButton(name, add: true/false) across 0/N and N/N boundary states
+        specialistButtons[(row.Name, true)] = addBtn ?? new Button { Visible = false, Disabled = true };
+        specialistButtons[(row.Name, false)] = removeBtn ?? new Button { Visible = false, Disabled = true };
+
+        if (wrapPips)
+        {
+            var stack = new VBoxContainer { Name = "Specialist_" + row.Name, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            stack.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
+            stack.AddChild(label);
+            stack.AddChild(pipRow);
+            return stack;
+        }
         var line = new HBoxContainer { Name = "Specialist_" + row.Name };
         line.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
-        line.AddChild(new Label { Text = $"{row.Name.TrText()} {row.Assigned}/{row.Max}", SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        foreach (bool add in new[] { false, true })
-        {
-            var button = new Button { Name = (add ? "Add_" : "Remove_") + row.Name, Text = add ? "+" : "-", Disabled = add ? !row.CanAdd : !row.CanRemove, ThemeTypeVariation = UiVariants.ButtonChip };
-            button.Pressed += () => Fire(Send(CityScreenModel.SpecialistCommand(panel.CityId, row, add)));
-            specialistButtons[(row.Name, add)] = button;
-            line.AddChild(button);
-        }
+        line.AddChild(label);
+        line.AddChild(pipRow);
         return line;
+    }
+
+    private sealed partial class SpecialistPipButton : Button
+    {
+        private readonly UiTheme theme;
+        private readonly bool filled;
+        private readonly Color fill;
+
+        public SpecialistPipButton(UiTheme uiTheme, bool isFilled, Color fillColor)
+        {
+            theme = uiTheme;
+            filled = isFilled;
+            fill = fillColor;
+            int side = Math.Max(theme.Px(18), theme.MinTargetPx);
+            int width = theme.MinTargetPx > 0 ? Math.Max(theme.Px(24), theme.MinTargetPx * 2 / 3) : side;
+            CustomMinimumSize = new Vector2(width, side);
+        }
+
+        public override void _Draw()
+        {
+            float r = Math.Min(Math.Min(Size.X, Size.Y) * 0.34f, theme.Px(8));
+            var centre = Size / 2f;
+            float ringW = Math.Max(1.5f, theme.Px(1));
+            var tone = Disabled ? fill with { A = 0.45f } : fill;
+            if (filled) DrawCircle(centre, r, tone);
+            else DrawArc(centre, r, 0f, Mathf.Tau, 18, Disabled ? ProceduralAssets.ToColor(UiTokens.TextDisabled) : ProceduralAssets.ToColor(UiTokens.BorderStrong), ringW, antialiased: true);
+        }
     }
 
     private CityTileButton TileCell(CityPanelResult panel, CityTilesResult tiles, CityTileCell cell)

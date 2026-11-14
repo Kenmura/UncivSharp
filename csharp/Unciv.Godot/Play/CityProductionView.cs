@@ -3,11 +3,11 @@ using Unciv.Assets;
 using Unciv.Commands;
 using Unciv.Commands.City;
 using Unciv.GodotClient.Assets;
+using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Ruleset;
-using Unciv.Queries.Cities;
 using Unciv.Models.Translations;
-using Unciv.GodotClient.Localization;
+using Unciv.Queries.Cities;
 
 namespace Unciv.GodotClient.Play;
 
@@ -201,7 +201,7 @@ public partial class CityProductionView : HBoxContainer
         head.AddChild(texts);
         foreach (var option in row.Buy) head.AddChild(BuyChip($"QBuy_{row.Index}_{option.Stat}", option, row.Name, panel));
         line.AddChild(head);
-        if (row.Cost != null && row.WorkDone > 0) line.AddChild(new StatBar(theme, "Production", row.WorkDone, row.Cost.Value));
+        if (row.Cost != null && (row.Index == 0 || row.WorkDone > 0)) line.AddChild(new StatBar(theme, "Production", row.WorkDone, row.Cost.Value));
         var controls = new HFlowContainer();
         controls.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S1));
         controls.AddChild(MakeButton($"Top_{row.Index}", "Top", row.CanTop, "Move to the top", CityProductionModel.Reorder(panel.CityId, row, QueueMove.Top), UiVariants.ButtonGhost));
@@ -239,7 +239,10 @@ public partial class CityProductionView : HBoxContainer
 
     private Label Wrapped(string text, int width, string name = "") => new()
     {
-        Name = name.Length == 0 ? "Text" : name, Text = text.TrText(), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(theme.Px(width), 0f),
+        Name = name.Length == 0 ? "Text" : name,
+        Text = text.TrText(),
+        AutowrapMode = TextServer.AutowrapMode.WordSmart,
+        CustomMinimumSize = new Vector2(theme.Px(width), 0f),
     };
 
     private Button MakeButton(string name, string text, bool enabled, string tooltip, GameCommand command, string variation, Action? press = null)

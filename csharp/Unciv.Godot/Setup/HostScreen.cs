@@ -199,6 +199,7 @@ public partial class HostScreen : Control
     public override void _Process(double delta)
     {
         if (Session is not { } session) return;
+        if (RelayInviteField.Text != RelayInvite) SyncRelayInviteField();
         var signature = string.Join("|", session.Slots.Select(it => $"{it.Slot}:{it.Kind}:{it.PlayerName}:{it.Connected}"));
         var standbySignature = StandbyState() ?? "";
         if (signature == slotSignature && standbySignature == standbySignatureSeen) return;
@@ -492,9 +493,17 @@ public partial class HostScreen : Control
         InviteField.Text = session.Invite(InviteAddress);
         RelayInviteBox.Visible = session.Relay != null;
         RelayInUseLabel.Text = env.Relay() is { } inUse ? "Relay in use:".Tr() + " " + inUse.Key : "";
-        RelayInviteField.Text = RelayInvite;
+        SyncRelayInviteField();
         if (session.Relay is { Room: null }) _ = RefreshRelayInviteWhenReadyAsync(session);
         addressNote.Text = AddressNoteText(session.Port);
+    }
+
+    private void SyncRelayInviteField()
+    {
+        bool ready = RelayInvite.Length > 0;
+        RelayInviteField.Text = RelayInvite;
+        RelayInviteField.PlaceholderText = Session?.Relay != null && !ready ? "Allocating code...".Tr() : "";
+        CopyRelayInviteButton.Disabled = !ready;
     }
 
     // The room code arrives when the relay has answered, a moment after hosting starts.
@@ -505,7 +514,7 @@ public partial class HostScreen : Control
             await session.Relay!.WaitForRoomAsync(CancellationToken.None);
         }
         catch (OperationCanceledException) { return; }
-        if (IsInstanceValid(this) && Session == session) RelayInviteField.Text = RelayInvite;
+        if (IsInstanceValid(this) && Session == session) SyncRelayInviteField();
     }
 
     private ChoiceRow? FindAddressRow() => (Session != null ? hostingAddresses : networkPage).GetChildren().OfType<ChoiceRow>().FirstOrDefault(it => it.Name == "AddressRow");

@@ -227,6 +227,41 @@ public static class CityScreenModel
         return new ForeignCityText(city.Name, lines);
     }
 
+    public enum CityStatusTone { Warning, Danger, Accent }
+
+    /// <summary>T413: compact status indicator (resistance, razing, WLTKD celebration/demand) shown in the city screen header.</summary>
+    public sealed record CityStatusBadge(string Id, AssetKey Icon, string Label, CityStatusTone Tone, string Tooltip);
+
+    /// <summary>T413: active status indicators with turn countdowns or resource demand.</summary>
+    public static IReadOnlyList<CityStatusBadge> StatusBadges(CityPanelResult city)
+    {
+        var badges = new List<CityStatusBadge>();
+        if (city.IsInResistance)
+        {
+            string label = city.ResistanceTurns > 0 ? $"Resistance ({I(city.ResistanceTurns)}t)" : "In resistance";
+            string tip = city.ResistanceTurns > 0 ? $"City is in resistance for {I(city.ResistanceTurns)} more {(city.ResistanceTurns == 1 ? "turn" : "turns")}." : "City is in resistance.";
+            badges.Add(new CityStatusBadge("Resistance", AssetKey.Of(RulesetAssetKeys.UiIcon, "Blockade"), label, CityStatusTone.Warning, tip));
+        }
+        if (city.IsBeingRazed)
+        {
+            string label = city.RazingTurns > 0 ? $"Razing ({I(city.RazingTurns)}t)" : "Being razed";
+            string tip = city.RazingTurns > 0 ? $"City will finish razing in {I(city.RazingTurns)} {(city.RazingTurns == 1 ? "turn" : "turns")}." : "City is being razed.";
+            badges.Add(new CityStatusBadge("Razing", AssetKey.Of(RulesetAssetKeys.UiIcon, "Fire"), label, CityStatusTone.Danger, tip));
+        }
+        if (city.WeLoveTheKingTurns > 0)
+        {
+            string label = $"WLTKD ({I(city.WeLoveTheKingTurns)}t)";
+            string tip = $"We Love The King Day: +25% growth for {I(city.WeLoveTheKingTurns)} more {(city.WeLoveTheKingTurns == 1 ? "turn" : "turns")}.";
+            badges.Add(new CityStatusBadge("WLTKD", AssetKey.Of(RulesetAssetKeys.StatIcon, "Happiness"), label, CityStatusTone.Accent, tip));
+        }
+        else if (city.DemandedResource.Length > 0)
+        {
+            badges.Add(new CityStatusBadge("Demands", AssetKey.Of(RulesetAssetKeys.ResourceIcon, city.DemandedResource),
+                $"Wants {city.DemandedResource}", CityStatusTone.Warning, $"Acquire {city.DemandedResource} to celebrate We Love The King Day."));
+        }
+        return badges;
+    }
+
     private static string StatLetter(string stat) => stat switch
     {
         "Food" => "F",

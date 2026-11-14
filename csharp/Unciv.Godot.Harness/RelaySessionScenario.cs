@@ -99,7 +99,8 @@ public sealed class RelaySessionScenario : Scenario
                 Relay = () => endpoint,
                 Connect = ConnectAsync,
                 RelayNeedsPrompt = named => ChoiceOf(named).NeedsPrompt,
-            }) { Visible = false };
+            })
+            { Visible = false };
             joinScreen.Joined += OpenFriendLobby;
             Fill(joinScreen);
         }
@@ -194,7 +195,7 @@ public sealed class RelaySessionScenario : Scenario
             new Press("Map"),
             new Click(() => Centre(() => hostScreen.ChoiceButton("Size", "Tiny"))),
             new Press("Start hosting"),
-            new WaitUntil("the lobby is open and the relay gave the room", () => hostScreen.IsHosting && hostScreen.RelayInvite.Length > 0, 1200),
+            new WaitUntil("the lobby is open and the relay gave the room", () => hostScreen.IsHosting && hostScreen.RelayInvite.Length > 0 && hostScreen.RelayInviteField.Text.Length > 0, 1200),
             new AssertQuery("the relay invite names the relay, a room code and the host key, and no address of this computer", () =>
             {
                 var invite = RelayInvite();

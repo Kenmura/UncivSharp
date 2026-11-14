@@ -182,11 +182,7 @@ public class CityTurnManager(CityObject city)
         city.Expansion.NextTurn(stats.Culture);
         if (city.IsBeingRazed)
         {
-            var removedPopulation = 1;
-            city.Civ.ForEachMatchingUnique(UniqueType.CitiesAreRazedXTimesFaster, it =>
-            {
-                removedPopulation += it.Params[0].ToInt() - 1;
-            });
+            var removedPopulation = RazePopulationPerTurn(city);
 
             if (city.Population.Population <= removedPopulation)
             {
@@ -218,5 +214,15 @@ public class CityTurnManager(CityObject city)
         }
 
         city.ClearCaches();
+    }
+
+    internal static int RazePopulationPerTurn(City city)
+    {
+        var removedPopulation = 1;
+        city.Civ.ForEachMatchingUnique(UniqueType.CitiesAreRazedXTimesFaster, it =>
+        {
+            removedPopulation += it.Params[0].ToInt() - 1;
+        });
+        return removedPopulation;
     }
 }

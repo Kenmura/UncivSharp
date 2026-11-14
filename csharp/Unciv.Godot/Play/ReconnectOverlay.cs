@@ -1,4 +1,5 @@
 using Godot;
+using Unciv.Assets;
 using Unciv.Client.Net.Session;
 using Unciv.GodotClient.Setup;
 using Unciv.GodotClient.Ui;
@@ -13,10 +14,14 @@ namespace Unciv.GodotClient.Play;
 /// </summary>
 public partial class ReconnectOverlay : Control
 {
-    private readonly Label titleLabel = new() { Name = "ReconnectTitle", HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly Label titleLabel = new() { Name = "ReconnectTitle", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelHeading };
     private readonly Label detailLabel = new() { Name = "ReconnectDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart, HorizontalAlignment = HorizontalAlignment.Center };
+    private readonly PipStrip attemptPips;
+    private readonly StatBar retryBar;
     private NetGameSession? net;
     private readonly int mainThread = System.Environment.CurrentManagedThreadId;
+    private int lastAttempt = -1;
+    private int retryPeak;
 
     public ReconnectOverlay(UiTheme theme)
     {
@@ -28,11 +33,24 @@ public partial class ReconnectOverlay : Control
         AddChild(new ColorRect { Color = theme.Panel.BgColor with { A = 0.85f }, AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore });
         var centre = new CenterContainer { AnchorRight = 1, AnchorBottom = 1, MouseFilter = MouseFilterEnum.Ignore };
         AddChild(centre);
-        var panel = new PanelContainer();
+        var panel = new PanelContainer { ThemeTypeVariation = UiVariants.PanelModal };
         centre.AddChild(panel);
-        var column = new VBoxContainer { CustomMinimumSize = new Vector2(380, 0) };
-        panel.AddChild(column);
+        var pad = new MarginContainer();
+        foreach (string side in new[] { "left", "right", "top", "bottom" }) pad.FitConstant(theme, "margin_" + side, UiTokens.S4);
+        panel.AddChild(pad);
+        var column = new VBoxContainer().FitMin(theme, 380);
+        column.FitConstant(theme, "separation", UiTokens.S2);
+        pad.AddChild(column);
         column.AddChild(titleLabel);
+        attemptPips = new PipStrip(theme, pipWidth: 12, pipHeight: 6, gap: 4, circle: false)
+        {
+            Name = "ReconnectAttemptPips",
+            SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
+            Visible = false,
+        };
+        column.AddChild(attemptPips);
+        retryBar = new StatBar(theme, "Gold", 0, 1) { Name = "ReconnectCountdownBar", Visible = false };
+        column.AddChild(retryBar);
         column.AddChild(detailLabel);
         LeaveButton = new Button { Text = "Leave game".Tr(), Name = "ReconnectLeaveButton", Visible = false };
         LeaveButton.Pressed += () => LeaveRequested?.Invoke();
@@ -115,6 +133,32 @@ public partial class ReconnectOverlay : Control
         LeaveButton.Visible = view.Final;
         ContinueButton.Visible = view.Dismissible;
         RejoinButton.Visible = view.Rejoin;
+        if (view.Reconnect is { } rec && view.Visible)
+        {
+            attemptPips.Visible = rec.MaxAttempts > 0;
+            if (rec.MaxAttempts > 0) attemptPips.SetPips(rec.Attempt, rec.MaxAttempts, Math.Max(0, rec.Attempt - 1));
+            if (rec.SecondsToNextAttempt is { } next)
+            {
+                if (rec.Attempt != lastAttempt || next > retryPeak)
+                {
+                    lastAttempt = rec.Attempt;
+                    retryPeak = Math.Max(1, next);
+                }
+                retryBar.Visible = true;
+                retryBar.SetProgress(next, Math.Max(1, retryPeak));
+            }
+            else
+            {
+                retryBar.Visible = false;
+            }
+        }
+        else
+        {
+            attemptPips.Visible = false;
+            retryBar.Visible = false;
+            lastAttempt = -1;
+            retryPeak = 0;
+        }
     }
 
     /// <summary>

@@ -158,6 +158,9 @@ public sealed record OwnUnitDto
 
     /// <summary>C004: the unit has the experience to take another promotion (the engine's own check, not recomputed by the client).</summary>
     public bool CanBePromoted { get; init; }
+
+    /// <summary>T413: experience needed for the unit's next promotion (from the engine's promotion math).</summary>
+    public int XpForNextPromotion { get; init; }
 }
 
 /// <summary>Public war/peace fact between two civs the recipient knows (always including the recipient). Detailed status is a gap, see the ticket notes.</summary>

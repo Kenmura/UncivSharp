@@ -60,7 +60,7 @@ public sealed record TechTreeQuery : IQuery<TechTreeResult>
     }
 
     // Same arithmetic as TechManager.TurnsToTech, which returns translated text.
-    private static int? Turns(Civilization civ, string techName)
+    internal static int? Turns(Civilization civ, string techName)
     {
         double remaining = civ.Tech.RemainingScienceToTech(techName);
         if (remaining <= 0) return 0;

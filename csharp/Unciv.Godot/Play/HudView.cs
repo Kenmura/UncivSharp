@@ -1,5 +1,6 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
@@ -269,7 +270,7 @@ public partial class HudView : Control
             if (stat.Id == "Turn") row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore });
             Control item = stat.Id == "Turn" ? new Label { ThemeTypeVariation = UiVariants.LabelNumber, VerticalAlignment = VerticalAlignment.Center }
                 : stat.Icon is { Category: RulesetAssetKeys.StatIcon } icon ? new StatChip(theme, icon.Name, stat.Text)
-                : stat.Id == "GoldenAge" && stat.Icon is { } goldenIcon ? new StatChip(theme, goldenIcon, "Gold", stat.Text)
+                : stat.Id == "GoldenAge" && stat.Icon is { } goldenIcon ? BuildGoldenAgeItem(goldenIcon, stat.Text)
                 : stat.Icon is { } other ? new IconLabel(theme, other, stat.Text)
                 : new Label { VerticalAlignment = VerticalAlignment.Center };
             item.Name = stat.Id.Replace(':', '_');
@@ -280,10 +281,62 @@ public partial class HudView : Control
         }
     }
 
+    private GoldenAgeBox BuildGoldenAgeItem(AssetKey icon, string text) => new(theme, icon, text);
+
+    private sealed partial class GoldenAgeBox : VBoxContainer
+    {
+        private readonly StatChip chip;
+        private readonly MiniFillBar fillBar;
+
+        public GoldenAgeBox(UiTheme theme, AssetKey icon, string text)
+        {
+            SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            AddThemeConstantOverride("separation", 1);
+            chip = new StatChip(theme, icon, "Gold", text) { MouseFilter = MouseFilterEnum.Ignore };
+            fillBar = new MiniFillBar(theme, PlaceholderPalette.ForStat("Gold"));
+            AddChild(chip);
+            AddChild(fillBar);
+        }
+
+        public void SetState(string text, double value, double max)
+        {
+            chip.Value = text;
+            fillBar.SetProgress(value, max);
+        }
+    }
+
+    private sealed partial class MiniFillBar : Control
+    {
+        private readonly Rgb statRgb;
+        private float fraction;
+
+        public MiniFillBar(UiTheme theme, Rgb statColor)
+        {
+            statRgb = statColor;
+            MouseFilter = MouseFilterEnum.Ignore;
+            CustomMinimumSize = new Vector2(0f, Math.Max(2f, theme.Px(3)));
+        }
+
+        public void SetProgress(double value, double max)
+        {
+            fraction = max <= 0 ? 0f : (float)Math.Clamp(value / max, 0.0, 1.0);
+            QueueRedraw();
+        }
+
+        public override void _Draw()
+        {
+            if (Size.X <= 0f || Size.Y <= 0f) return;
+            DrawRect(new Rect2(Vector2.Zero, Size), ProceduralAssets.ToColor(UiTokens.Inset), filled: true);
+            if (fraction > 0f)
+                DrawRect(new Rect2(0f, 0f, Size.X * fraction, Size.Y), ProceduralAssets.ToColor(statRgb), filled: true);
+        }
+    }
+
     private static void Apply(Control item, HudStat stat)
     {
         switch (item)
         {
+            case GoldenAgeBox golden: golden.SetState(stat.Text, stat.ProgressValue ?? 0, stat.ProgressMax ?? 1); break;
             case StatChip chip: chip.Value = stat.Text; break;
             case IconLabel label: label.Text = stat.Text; break;
             case Label label: label.Text = stat.Text; break;

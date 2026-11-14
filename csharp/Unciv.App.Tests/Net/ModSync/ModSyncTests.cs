@@ -819,4 +819,25 @@ public sealed class ModSyncTests : IDisposable
         Assert.Equal(["Mine"], sums.Keys);
         Assert.Equal(ModManifestBuilder.Build("TestMod", new DirectoryRulesetFolder(Path.Combine(hostMods, "TestMod")))!.Checksum, sums["Mine"]);
     }
+
+    private sealed class ProgressSink : IProgress<ModSyncProgress>
+    {
+        public List<ModSyncProgress> Events { get; } = [];
+        public void Report(ModSyncProgress value) => Events.Add(value);
+    }
+
+    [Fact]
+    public async Task StageAsync_ReportsDownloadProgressPerFile()
+    {
+        await using var lobby = NewLobby();
+        var sink = new ProgressSink();
+        var service = new ModSyncService(ClientSource(), clientMods, _ => Task.FromResult(true), sink);
+        await using var session = Connect(lobby, Options(service));
+        var result = await session.JoinAsync().WaitAsync(Guard);
+        Assert.Equal(ModSyncCodes.Synced, result.Code);
+        long bytes = Encoding.UTF8.GetByteCount(UnitsJson);
+        Assert.NotEmpty(sink.Events);
+        Assert.Equal((1, 1, bytes, bytes, "TestMod"),
+            (sink.Events[^1].CompletedFiles, sink.Events[^1].TotalFiles, sink.Events[^1].CompletedBytes, sink.Events[^1].TotalBytes, sink.Events[^1].ModName));
+    }
 }

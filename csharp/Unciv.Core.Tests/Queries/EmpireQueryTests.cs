@@ -422,6 +422,14 @@ public class EmpireQueryTests
         Assert.Equal(player.GoldenAges.HappinessRequiredForNextGoldenAge(), bar.GoldenAgeNeeded);
         player.GoldenAges.EnterGoldenAge();
         Assert.Equal(player.GoldenAges.TurnsLeftForCurrentGoldenAge, Ask(new EmpireTopBarQuery()).GoldenAgeTurnsLeft);
+        Assert.Null(bar.CurrentTech);
+
+        player.Tech.TechsToResearch.Add("Agriculture");
+        player.Tech.AddScience(5);
+        var withTech = Ask(new EmpireTopBarQuery());
+        Assert.Equal("Agriculture", withTech.CurrentTech);
+        Assert.Equal(player.Tech.ResearchOfTech("Agriculture"), withTech.CurrentTechProgress);
+        Assert.Equal(player.Tech.CostOfTech("Agriculture"), withTech.CurrentTechCost);
         Assert.All(bar.Resources, it => Assert.NotEqual(0, it.Amount));
     }
 

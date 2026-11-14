@@ -125,4 +125,28 @@ public class HudModelTests
         Assert.Equal(5, HudModel.NextDueUnit([9, 2, 5], 3));
         Assert.Equal(2, HudModel.NextDueUnit([9, 2, 5], 100));
     }
+
+    [Fact]
+    public void GoldenAgeStatCarriesProgressTowardThresholdAndActiveTurns()
+    {
+        var accumulating = HudModel.TopBar(Bar()).Single(it => it.Id == "GoldenAge");
+        Assert.Equal((30f, 500f, "Gold"), (accumulating.ProgressValue, accumulating.ProgressMax, accumulating.ProgressStat));
+
+        var active = HudModel.TopBar(Bar(golden: 8)).Single(it => it.Id == "GoldenAge");
+        Assert.Equal((1.0, 1.0, "Gold"), (active.ProgressValue, active.ProgressMax, active.ProgressStat));
+    }
+
+    [Fact]
+    public void CurrentResearchShowsNameProgressAndTurnCountdown()
+    {
+        Assert.Null(HudModel.CurrentResearch(Bar()));
+
+        var bar = Bar() with { CurrentTech = "Writing", CurrentTechProgress = 24, CurrentTechCost = 55, CurrentTechTurns = 4 };
+        var research = HudModel.CurrentResearch(bar);
+        Assert.NotNull(research);
+        Assert.Equal(("Writing", 24, 55, 4, "Writing (4t)"), (research.TechName, research.Progress, research.Cost, research.Turns, research.Caption));
+
+        var noTurns = Bar() with { CurrentTech = "Pottery", CurrentTechProgress = 10, CurrentTechCost = 35, CurrentTechTurns = null };
+        Assert.Equal("Pottery", HudModel.CurrentResearch(noTurns)!.Caption);
+    }
 }

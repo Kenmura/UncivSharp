@@ -271,4 +271,20 @@ public sealed class JoinModelTests
     [InlineData(true, 0, false)]
     public void MayHaveSplit_OnlyAnElectionWithExactlyTwoHumans(bool election, int humans, bool expected) =>
         Assert.Equal(expected, HostMigrationModel.MayHaveSplit(election, humans));
+
+    [Fact]
+    public void Connection_PropagatesReconnectStateWhenDisconnected()
+    {
+        var reconnect = new ReconnectView(2, 5, 4, 30);
+        var view = JoinModel.Connection(false, false, null, null, reconnect);
+        Assert.Equal(reconnect, view.Reconnect);
+        Assert.Null(JoinModel.Connection(true, false, null).Reconnect);
+    }
+
+    [Fact]
+    public void ModDownloadProgressTextFormatsFilesAndBytes()
+    {
+        Assert.Equal("Downloading TestMod...", JoinModel.ModDownloadProgressText(0, 0, 0, 0, "TestMod"));
+        Assert.Equal("Downloading TestMod: 2/4 (15 KB / 2 MB)", JoinModel.ModDownloadProgressText(2, 4, 15 * 1024, 2 * 1024 * 1024, "TestMod"));
+    }
 }

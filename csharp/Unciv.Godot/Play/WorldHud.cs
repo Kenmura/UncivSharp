@@ -1,7 +1,9 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
+using Unciv.Models.Translations;
 
 namespace Unciv.GodotClient.Play;
 
@@ -55,6 +57,8 @@ public partial class WorldHud : Control
     private float builtScale;
     private bool playersShown;
     private bool technologyAsking;
+    private ResearchStatus? currentResearch;
+    private StatBar? technologyBar;
 
     public WorldHud()
     {
@@ -267,6 +271,22 @@ public partial class WorldHud : Control
         Menu = Make(NavTarget.Menu, Ui("Options"), "Menu", hotkey: "Esc");
         hud.Leading.AddChild(Menu);
         Technology = Make(NavTarget.Technology, AssetKey.Of(RulesetAssetKeys.StatIcon, "Science"), "Technology", "Technology", variation: UiVariants.ButtonSecondary);
+        Technology.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+        technologyBar = new StatBar(theme, "Science", 0, 1)
+        {
+            Name = "TechnologyBar",
+            MouseFilter = MouseFilterEnum.Ignore,
+            Visible = false,
+            AnchorLeft = 0f,
+            AnchorRight = 1f,
+            AnchorTop = 1f,
+            AnchorBottom = 1f,
+            OffsetLeft = theme.Px(UiTokens.S1),
+            OffsetRight = -theme.Px(UiTokens.S1),
+            OffsetTop = -theme.Px(4),
+            OffsetBottom = -1f,
+        };
+        Technology.AddChild(technologyBar);
         Policies = Make(NavTarget.Policies, Ui("Policies"), "Policies", compact ? null : "Policies", variation: compact ? UiVariants.ButtonIcon : UiVariants.ButtonSecondary);
         navLeft.AddChild(Technology);
         navLeft.AddChild(Policies);
@@ -281,6 +301,7 @@ public partial class WorldHud : Control
         foreach (var button in new[] { Technology, Policies, Diplomacy, Trade, Espionage, Civilopedia, Overview, Players, Menu }) button.Theme = theme.Theme;
         Technology.SetBadge(technologyAsking ? 1 : 0, accent: true); // a rebuild (breakpoint change) keeps the dot
         ApplyKeys();
+        ApplyResearch();
     }
 
     private Func<HotkeyAction, string>? keyOf = action => Hotkeys.Defaults[action];
@@ -289,7 +310,11 @@ public partial class WorldHud : Control
     public void SetKeys(Func<HotkeyAction, string> keys)
     {
         keyOf = keys;
-        if (Technology != null) ApplyKeys();
+        if (Technology != null)
+        {
+            ApplyKeys();
+            ApplyResearch();
+        }
     }
 
     private void ApplyKeys()
@@ -300,6 +325,35 @@ public partial class WorldHud : Control
         Diplomacy.Hotkey = keyOf(HotkeyAction.OpenDiplomacy);
         Civilopedia.Hotkey = keyOf(HotkeyAction.OpenPedia);
         Overview.Hotkey = keyOf(HotkeyAction.OpenOverview);
+    }
+
+    /// <summary>T413: shows active research name, turn countdown and Science progress bar on the Technology pill.</summary>
+    public void SetResearch(ResearchStatus? research)
+    {
+        currentResearch = research;
+        if (Technology != null) ApplyResearch();
+    }
+
+    private void ApplyResearch()
+    {
+        string? hotkey = keyOf?.Invoke(HotkeyAction.OpenTech);
+        if (currentResearch is { } research)
+        {
+            string turns = research.Turns is { } t ? $" ({t}t)" : "";
+            Technology.Text = research.TechName.TrText() + turns;
+            Technology.TooltipText = UiText.TooltipFor(research.TechName.TrText(), hotkey);
+            if (technologyBar != null)
+            {
+                technologyBar.Visible = true;
+                technologyBar.SetProgress(research.Progress, research.Cost);
+            }
+        }
+        else
+        {
+            Technology.Text = "Technology".Tr();
+            Technology.TooltipText = UiText.TooltipFor("Technology".Tr(), hotkey);
+            if (technologyBar != null) technologyBar.Visible = false;
+        }
     }
 
     /// <summary>The Accent dot on the Technology pill while the engine asks for a technology.</summary>

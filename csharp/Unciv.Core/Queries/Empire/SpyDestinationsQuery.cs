@@ -1,3 +1,4 @@
+using Unciv.Models;
 using Unciv.View;
 
 namespace Unciv.Queries.Empire;
@@ -15,7 +16,7 @@ public sealed record SpyDestination(string CityId, string CityName, string Civ, 
 // Destinations: The cities MoveSpy would accept for this spy, sorted by city name then id
 // CanDoCoup, CoupChance: Whether SetSpyCoup could stage a coup, and its odds as the Kotlin UI shows them (0..1; the defending spy is not revealed)
 public sealed record SpyEntry(string Name, int Rank, string Action, string Location, bool IsAlive, bool CanMoveToHideout,
-    IReadOnlyList<SpyDestination> Destinations, bool CanDoCoup, float? CoupChance);
+    IReadOnlyList<SpyDestination> Destinations, bool CanDoCoup, float? CoupChance, int TurnsRemaining = 0);
 
 public sealed record SpyDestinationsResult(IReadOnlyList<SpyEntry> Spies);
 
@@ -44,8 +45,10 @@ public sealed record SpyDestinationsQuery : IQuery<SpyDestinationsResult>
                         it.Civ.IsCityState && (civ.Knows(it.Civ) || it.Civ == civ))).ToList()
                 : [];
             bool canCoup = alive && spy.CanDoCoup();
+            int turnsRemaining = alive && (spy.Action.ShowTurns() || spy.Action == SpyAction.CounterIntelligence) && spy.TurnsRemainingForAction > 0
+                ? spy.TurnsRemainingForAction : 0;
             return new SpyEntry(spy.Name, spy.Rank, spy.Action.ToString(), spy.GetLocationName(), alive, alive && current != null, destinations, canCoup,
-                canCoup ? spy.GetCoupChanceOfSuccess(false) : null);
+                canCoup ? spy.GetCoupChanceOfSuccess(false) : null, turnsRemaining);
         }).ToList();
         return new SpyDestinationsResult(spies);
     }

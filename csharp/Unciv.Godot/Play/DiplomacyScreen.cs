@@ -29,7 +29,9 @@ public partial class DiplomacyScreen : PanelContainer
     private PanelContainer statusPill = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private IconBadge flag = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private Label info = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
+    private InfluenceMeter influenceMeter = null!; // JUSTIFY: T413 assigned by BuildFrame in the constructor
     private Label modifiers = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
+    private HFlowContainer modifierChips = null!; // JUSTIFY: T413 assigned by BuildFrame in the constructor
     private Label quests = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private VBoxContainer detail = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private Container actions = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
@@ -113,10 +115,17 @@ public partial class DiplomacyScreen : PanelContainer
         detail.AddChild(head);
         info = Wrapped("Info", UiVariants.LabelBodyStrong);
         detail.AddChild(info);
+        influenceMeter = new InfluenceMeter(theme) { Name = "InfluenceMeter", Visible = false };
+        detail.AddChild(influenceMeter);
         modifierHeader = new SectionHeader("Modifiers") { Visible = false };
         detail.AddChild(modifierHeader);
         modifiers = Wrapped("Modifiers", UiVariants.LabelSecondary);
+        modifiers.Visible = false;
         detail.AddChild(modifiers);
+        modifierChips = new HFlowContainer { Name = "ModifierChips", Visible = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        modifierChips.AddThemeConstantOverride("h_separation", gap);
+        modifierChips.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S1));
+        detail.AddChild(modifierChips);
         questHeader = new SectionHeader("Quests") { Visible = false };
         detail.AddChild(questHeader);
         quests = Wrapped("Quests", UiVariants.LabelSecondary);
@@ -317,10 +326,31 @@ public partial class DiplomacyScreen : PanelContainer
         status.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(panel.Status == DiplomacyScreenModel.WarStatus ? UiTokens.TextPrimary : UiTokens.OnAccent));
         statusPill.Visible = true;
         info.Text = string.Join("\n", DiplomacyScreenModel.InfoLines(panel).Select(it => it.TrText()));
+        influenceMeter.SetSpec(DiplomacyScreenModel.InfluenceMeter(panel));
         var modifierLines = DiplomacyScreenModel.ModifierLines(panel);
         modifiers.Text = string.Join("\n", modifierLines.Select(it => it.TrText()));
-        modifierHeader.Visible = modifierLines.Count > 0;
-        modifiers.Visible = modifierLines.Count > 0;
+        modifiers.Visible = false;
+        var chips = DiplomacyScreenModel.ModifierChips(panel);
+        modifierHeader.Visible = chips.Count > 0;
+        modifierChips.Visible = chips.Count > 0;
+        Clear(modifierChips);
+        foreach (var chip in chips)
+        {
+            var pill = new PanelContainer { ThemeTypeVariation = UiVariants.PanelCard, TooltipText = chip.Tooltip.TrText() };
+            var tint = chip.Tone switch
+            {
+                DiplomacyChipTone.Positive => UiTokens.Success,
+                DiplomacyChipTone.Negative => UiTokens.DangerText,
+                _ => UiTokens.TextSecondary,
+            };
+            pill.AddChild(new Label
+            {
+                Text = chip.Text.TrText(),
+                ThemeTypeVariation = UiVariants.LabelSmall,
+            });
+            ((Label)pill.GetChild(0)).AddThemeColorOverride("font_color", ProceduralAssets.ToColor(tint));
+            modifierChips.AddChild(pill);
+        }
         quests.Text = questList == null ? "" : string.Join("\n", DiplomacyScreenModel.QuestLines(questList).Select(it => it.TrText()));
         questHeader.Visible = questList != null;
         quests.Visible = questList != null;

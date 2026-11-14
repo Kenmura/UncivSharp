@@ -146,4 +146,25 @@ public class EspionageModelTests
         // A city only occupied (no id) matches nothing, not even the hideout target
         Assert.Null(EspionageModel.TargetFor(ann, new EspionageLocationRow(null, "Zeta", "", "")));
     }
+
+    [Fact]
+    public void RankIconsAndActionTimersFormatCorrectly()
+    {
+        Assert.Equal("★", EspionageModel.RankIcons(0));
+        Assert.Equal("★", EspionageModel.RankIcons(1));
+        Assert.Equal("★★", EspionageModel.RankIcons(2));
+        Assert.Equal("★★★", EspionageModel.RankIcons(3));
+        Assert.Equal("★★★", EspionageModel.RankIcons(5));
+
+        Assert.Equal("Stealing Tech (4t)", EspionageModel.FormatAction("Stealing Tech", 4));
+        Assert.Equal("Observing City", EspionageModel.FormatAction("Observing City", 0));
+
+        var spec = EspionageModel.Build(new SpyDestinationsResult(
+        [
+            new SpyEntry("Ann", 2, "Stealing Tech", "Rome", true, true, [], false, null, TurnsRemaining: 3),
+            new SpyEntry("Bob", 3, "Moving", "Spy Hideout", false, false, [], false, null, TurnsRemaining: 5),
+        ]));
+        Assert.Equal((2, 3, "Stealing Tech (3t)"), (spec.Spies[0].RankValue, spec.Spies[0].TurnsRemaining, spec.Spies[0].ActionText));
+        Assert.Equal((3, 5, "Dead (5t)"), (spec.Spies[1].RankValue, spec.Spies[1].TurnsRemaining, spec.Spies[1].ActionText));
+    }
 }

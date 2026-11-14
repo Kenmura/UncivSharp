@@ -266,12 +266,14 @@ public class DecisionQueryTests
         spy.MoveTo(city);
         spy.SetAction(SpyAction.Moving, 1);
         Assert.Null(Ask(new SpyDestinationsQuery()).Spies.Single().CoupChance);
+        Assert.Equal(1, Ask(new SpyDestinationsQuery()).Spies.Single().TurnsRemaining);
 
         spy.SetAction(SpyAction.RiggingElections, 5);
         Assert.True(spy.CanDoCoup());
         var entry = Ask(new SpyDestinationsQuery()).Spies.Single();
         Assert.True(entry.CanDoCoup);
         Assert.Equal(spy.GetCoupChanceOfSuccess(false), entry.CoupChance);
+        Assert.Equal(5, entry.TurnsRemaining);
     }
 
     private sealed record MoveSpyProbe(string Spy, string CityId)
@@ -386,6 +388,7 @@ public class DecisionQueryTests
         Votes[player.CivId] = enemy.CivId;
         Votes[enemy.CivId] = null; // abstained
         var result = Ask(new DiplomaticVoteResultQuery());
+        Assert.Equal(player.VictoryManager.VotesNeededForDiplomaticVictory(), result.VotesNeeded);
         var expected = testGame.GameInfo.GetCivsSorted(civToSortFirst: player).Where(it => it == player || player.Knows(it)).Select(it => it.CivName).ToList();
         Assert.Equal(expected, result.Rows.Select(it => it.CivName));
         Assert.Equal(player.CivName, result.Rows[0].CivName);

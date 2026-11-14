@@ -31,7 +31,8 @@ public sealed record JoinParse(JoinTarget? Target, string? Problem);
 /// <see cref="Dismissible"/> is set only for a playable warning; <see cref="Final"/> is set only for a session that is over; <see cref="Rejoin"/> asks for the
 /// Rejoin button (T346: the connection is down, so the player may dial the host now or start a fresh join); the caller's Rejoin either redials at once or opens the join screen again.
 /// </summary>
-public sealed record ConnectionView(bool Visible, string Title, string Detail, bool Final, bool Dismissible = false, bool Rejoin = false);
+public sealed record ConnectionView(bool Visible, string Title, string Detail, bool Final, bool Dismissible = false, bool Rejoin = false,
+    ReconnectView? Reconnect = null);
 
 /// <summary>T346: what the overlay says about the automatic reconnect: the attempt number and, when known, the time to the next try and to the election give-up.</summary>
 public sealed record ReconnectView(int Attempt, int MaxAttempts, int? SecondsToNextAttempt = null, int? SecondsToGiveUp = null);
@@ -164,6 +165,12 @@ public static class JoinModel
             + "\n\nOnly the rules data of these mods is downloaded (no images, sounds or programs) and it is checked before it is installed. Only continue if you trust this host.";
     }
 
+    /// <summary>T413: human-readable mod sync download status with file and byte counts.</summary>
+    public static string ModDownloadProgressText(int completedFiles, int totalFiles, long completedBytes, long totalBytes, string modName) =>
+        totalFiles > 0
+            ? $"Downloading {modName}: {completedFiles.ToString(CultureInfo.InvariantCulture)}/{totalFiles.ToString(CultureInfo.InvariantCulture)} ({FormatBytes(completedBytes)} / {FormatBytes(totalBytes)})"
+            : $"Downloading {modName}...";
+
     private static string FormatBytes(long bytes) => bytes < 1024 ? $"{bytes} B" : bytes < 1024 * 1024 ? $"{bytes / 1024} KB" : $"{bytes / (1024 * 1024)} MB";
 
     /// <summary>The fingerprint prompt for a host seen for the first time through a typed address.</summary>
@@ -201,7 +208,7 @@ public static class JoinModel
         if (hostClosing)
             return new ConnectionView(true, "The host went away", Waiting("The host is shutting down or restarting. Waiting for it to come back; you will rejoin by yourself with the same key.", waitingFor), false, Rejoin: true);
         if (!connected)
-            return new ConnectionView(true, "Connection lost", Waiting(ReconnectDetail(reconnect), waitingFor), false, Rejoin: true);
+            return new ConnectionView(true, "Connection lost", Waiting(ReconnectDetail(reconnect), waitingFor), false, Rejoin: true, Reconnect: reconnect);
         if (migration != null) return new ConnectionView(true, migration.Title, migration.Detail, false, Dismissible: true);
         return new ConnectionView(false, "", "", false);
     }
