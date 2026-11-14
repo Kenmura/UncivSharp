@@ -10,7 +10,7 @@ namespace Unciv.Logic.WorldCongress;
 /// A session is a window of one round: it opens at the end of a round (AI members vote at once), humans commit their delegates during the next round,
 /// and it is decided at the end of that round.
 /// </summary>
-public class League : IsPartOfGameInfoSerialization
+public class League : IIsPartOfGameInfoSerialization
 {
     /// <summary>Civ id of the host.</summary>
     [JsonPropertyName("host")]
@@ -67,7 +67,7 @@ public class League : IsPartOfGameInfoSerialization
 }
 
 /// <summary>A civ in the league. <see cref="ExtraVotes"/> is the spec's member field <c>extra</c> (the bonus of a failed diplomatic vote).</summary>
-public class LeagueMember : IsPartOfGameInfoSerialization
+public class LeagueMember : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("civ")]
     public string Civ { get; set; } = "";
@@ -95,7 +95,7 @@ public class LeagueMember : IsPartOfGameInfoSerialization
 }
 
 /// <summary>An enacted resolution. <see cref="Choice"/> is the proposer's decision (a civ id, luxury, religion or ideology name), else empty.</summary>
-public class ActiveResolution : IsPartOfGameInfoSerialization
+public class ActiveResolution : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }
@@ -117,7 +117,7 @@ public class ActiveResolution : IsPartOfGameInfoSerialization
 }
 
 /// <summary>A proposal to enact a resolution (<see cref="RepealId"/> is 0) or to repeal the active resolution with that id.</summary>
-public class LeagueProposal : IsPartOfGameInfoSerialization
+public class LeagueProposal : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("id")]
     public int Id { get; set; }
@@ -157,7 +157,7 @@ public class LeagueProposal : IsPartOfGameInfoSerialization
 }
 
 /// <summary>Delegates a civ put on one choice of a proposal. The choice is <see cref="LeagueRules.Yes"/>, <see cref="LeagueRules.No"/> or a civ id.</summary>
-public class LeagueVote : IsPartOfGameInfoSerialization
+public class LeagueVote : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("civ")]
     public string Civ { get; set; } = "";
@@ -172,7 +172,7 @@ public class LeagueVote : IsPartOfGameInfoSerialization
 }
 
 /// <summary>A league project under way (B017): the production each member has put into it so far.</summary>
-public class LeagueProject : IsPartOfGameInfoSerialization
+public class LeagueProject : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";

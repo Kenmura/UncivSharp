@@ -15,13 +15,13 @@ public static class MapLayout
     public static Vector3 TileTop(int x, int y, float elevation = 1f)
     {
         var world = HexMath.Hex2WorldCoords(new HexCoord(x, y));
-        return new Vector3(world.x, ProceduralAssets.HexHeight * elevation, -world.y);
+        return new Vector3(world.X, ProceduralAssets.HexHeight * elevation, -world.Y);
     }
 
     /// <summary>The tile a point on the ground plane lies in (rounding as the engine does for its own picking).</summary>
     public static HexCoord TileAt(Vector3 ground)
     {
         var hex = HexMath.RoundHexCoords(HexMath.World2HexCoords(new CoreVector2(ground.X, -ground.Z)));
-        return new HexCoord((int)hex.x, (int)hex.y);
+        return new HexCoord((int)hex.X, (int)hex.Y);
     }
 }

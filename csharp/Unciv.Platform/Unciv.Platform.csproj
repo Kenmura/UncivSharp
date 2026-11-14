@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>$(UncivTfm)</TargetFramework>
+    <BannedSymbolsFile>$(MSBuildThisFileDirectory)..\BannedSymbols.Host.txt</BannedSymbolsFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Unciv.Core\Unciv.Core.csproj" />
+  </ItemGroup>
+
+</Project>

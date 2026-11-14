@@ -151,12 +151,12 @@ public static class IncrementalViewBuilder
 
             // Tiles that were visible before and are fogged now: their live owner/road/units must disappear into the fog snapshot.
             foreach (var position in beforeVisible)
-                if (!visibleSet.Contains(position) && gameInfo.TileMap.Contains(position.x, position.y)) Resolve(position);
+                if (!visibleSet.Contains(position) && gameInfo.TileMap.Contains(position.X, position.Y)) Resolve(position);
 
             // Changes that leave no trace in the visible set but are reported at a position (terrain, sites, ...) are rebuilt explicitly.
             foreach (var gameEvent in events)
                 foreach (var position in gameEvent.Positions())
-                    if (gameInfo.TileMap.GetOrNull(position.x, position.y) is { } tile && tile.IsExplored(viewer)) Resolve(position);
+                    if (gameInfo.TileMap.GetOrNull(position.X, position.Y) is { } tile && tile.IsExplored(viewer)) Resolve(position);
         }
 
         var added = new List<(int Index, string Key)>();
@@ -254,5 +254,5 @@ public static class IncrementalViewBuilder
     // Shared with SnapshotDiff.TileKey so the rebuilt set and the diff always agree, whatever the ambient culture's negative sign is.
     private static string Key(TileDto tile) => SnapshotDiff.TileKey(tile.X, tile.Y);
 
-    private static string Key(HexCoord position) => SnapshotDiff.TileKey(position.x, position.y);
+    private static string Key(HexCoord position) => SnapshotDiff.TileKey(position.X, position.Y);
 }

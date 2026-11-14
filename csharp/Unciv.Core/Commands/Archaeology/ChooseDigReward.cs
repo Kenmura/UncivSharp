@@ -23,7 +23,7 @@ public sealed class ChooseDigReward : GameCommand
         if (!ArchaeologyRules.IsEnabled(context.Game.Ruleset))
             return CommandValidation.Fail(CommandErrors.NotAllowed, "This ruleset has no archaeology");
         if (!context.TileAt(Site).TryGet(out var tile, out failure)) return failure;
-        if (ArchaeologyRules.FindPending(context.Game, actor, Site.x, Site.y) == null)
+        if (ArchaeologyRules.FindPending(context.Game, actor, Site.X, Site.Y) == null)
             return CommandValidation.Fail(CommandErrors.InvalidTarget, "There is no finished dig of yours there");
         if (!TakeArtifact)
             return ArchaeologyRules.LandmarkImprovement(context.Game.Ruleset) != null
@@ -38,14 +38,14 @@ public sealed class ChooseDigReward : GameCommand
     {
         var actor = context.Actor;
         var tile = context.TileAt(Site).Value.NotNull();
-        ArchaeologyRules.RemovePending(context.Game, ArchaeologyRules.FindPending(context.Game, actor, Site.x, Site.y).NotNull());
+        ArchaeologyRules.RemovePending(context.Game, ArchaeologyRules.FindPending(context.Game, actor, Site.X, Site.Y).NotNull());
         if (!TakeArtifact)
         {
             ArchaeologyRules.BuildLandmark(actor, tile);
-            return [new DigResolved(actor.CivId, Site.x, Site.y, "", false)];
+            return [new DigResolved(actor.CivId, Site.X, Site.Y, "", false)];
         }
         var (work, location) = ArchaeologyRules.FindArtifact(actor, tile).NotNull();
         ArchaeologyRules.TakeArtifact(actor, tile, work, location);
-        return [new DigResolved(actor.CivId, Site.x, Site.y, work.Name, true)];
+        return [new DigResolved(actor.CivId, Site.X, Site.Y, work.Name, true)];
     }
 }

@@ -50,11 +50,11 @@ public sealed class ServerLobby : IAsyncDisposable
         this.clock = clock ?? SystemClock.Instance;
         this.store = store;
         lobbyHost = new LobbyHost(
+            random ?? SystemSecureRandom.Instance,
             settings,
             bindings,
             admission,
             hostFingerprint,
-            random,
             this.clock,
             hostName
         );

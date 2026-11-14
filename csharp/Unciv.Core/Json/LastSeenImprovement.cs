@@ -13,7 +13,7 @@ namespace Unciv.Json;
 // iteration (and thus the serialized field order) is java.util.HashMap order: this wraps a JavaHashMap and exposes
 // the map operations the Kotlin MutableMap delegation gave callers. Equality is content equality, like HashMap.equals.
 [JsonConverter(typeof(LastSeenImprovementConverter))]
-public class LastSeenImprovement : IEnumerable<KeyValuePair<HexCoord, string>>, IsPartOfGameInfoSerialization
+public class LastSeenImprovement : IEnumerable<KeyValuePair<HexCoord, string>>, IIsPartOfGameInfoSerialization
 {
     private readonly JavaHashMap<HexCoord, string> map;
 

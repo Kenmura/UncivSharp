@@ -221,8 +221,8 @@ public class MapLandmassGenerator
         foreach (var tile in tileMap.Values)
         {
             var coordinate = HexMath.Hex2WorldCoords(tile.Position);
-            float x = coordinate.x / coordinateDivisor * flipX;
-            float y = coordinate.y / coordinateDivisor * flipY;
+            float x = coordinate.X / coordinateDivisor * flipX;
+            float y = coordinate.Y / coordinateDivisor * flipY;
 
             // spiral function with output range -1 to +1
             float angle = (float)Math.Atan2(y, x);

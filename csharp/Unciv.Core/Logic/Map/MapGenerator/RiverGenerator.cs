@@ -116,8 +116,8 @@ public class RiverGenerator(TileMap tileMap, MapGenerationRandomness randomness,
             this.tileMap = tileMap;
             this.position = position;
             this.bottomRightOrLeft = bottomRightOrLeft;
-            int x = position.x;
-            int y = position.y;
+            int x = position.X;
+            int y = position.Y;
             myTile = tileMap[position];
             myTopLeft = tileMap.GetIfTileExistsOrNull(x + 1, y);
             myBottomLeft = tileMap.GetIfTileExistsOrNull(x, y - 1);

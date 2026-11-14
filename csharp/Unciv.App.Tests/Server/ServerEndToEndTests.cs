@@ -269,7 +269,7 @@ public sealed class ServerEndToEndTests : IDisposable
     public async Task ServerEndToEnd_Lobby_WrongPasswordIsRefusedAndHostKeyMismatchHardFails()
     {
         var settings = new LobbySettings { Password = "open sesame" };
-        await using var lobby = new LobbyHost(settings: settings, hostFingerprint: Fingerprint);
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance, settings: settings, hostFingerprint: Fingerprint);
         using var key = ClientIdentity.Generate();
 
         async Task<JoinResult> JoinAsync(string? password, string expectedFingerprint)

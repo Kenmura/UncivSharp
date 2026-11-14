@@ -354,7 +354,7 @@ public partial class GameScreen
 
         public float MovesLeft(int unitId) => Own(unitId)?.Own?.CurrentMovement ?? 0f;
 
-        public Task<PathPreviewResult?> PathAsync(int unitId, HexCoord to) => screen.queries.Path(unitId, to.x, to.y);
+        public Task<PathPreviewResult?> PathAsync(int unitId, HexCoord to) => screen.queries.Path(unitId, to.X, to.Y);
 
         public Task<SubmitResult> MoveAsync(int unitId, HexCoord to) => screen.session.SubmitAsync(new MoveUnit { UnitId = unitId, To = to });
     }

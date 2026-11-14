@@ -77,7 +77,7 @@ public class TradeEvaluation : ITradeAutomationEvaluation
             TradeOfferType.Embassy => true, // Already checked
             // if they go a little negative it's okay, but don't allowing going overboard (promising same gold to many)
             TradeOfferType.Gold => tradeOffer.Amount * 0.9f < offerer.Gold,
-            TradeOfferType.Gold_Per_Turn => tradeOffer.Amount * 0.9f < offerer.Stats.StatsForNextTurn.Gold,
+            TradeOfferType.GoldPerTurn => tradeOffer.Amount * 0.9f < offerer.Stats.StatsForNextTurn.Gold,
             // Current automation should prevent these from being offered anyway,
             //   these are a safeguard against future automation changes
             TradeOfferType.Treaty => tradeOffer.Name switch
@@ -88,9 +88,9 @@ public class TradeEvaluation : ITradeAutomationEvaluation
                 _ => true, // potentional future treaties
             },
             TradeOfferType.Agreement => true,
-            TradeOfferType.Luxury_Resource => HasResource(tradeOffer),
-            TradeOfferType.Strategic_Resource => HasResource(tradeOffer),
-            TradeOfferType.Stockpiled_Resource => HasResource(tradeOffer),
+            TradeOfferType.LuxuryResource => HasResource(tradeOffer),
+            TradeOfferType.StrategicResource => HasResource(tradeOffer),
+            TradeOfferType.StockpiledResource => HasResource(tradeOffer),
             TradeOfferType.Technology => true,
             TradeOfferType.Introduction => !tradePartner.Knows(tradeOffer.Name), // You can't introduce them to someone they already know!
             TradeOfferType.WarDeclaration => offerer.GetDiplomacyManager(tradeOffer.Name).NotNull().CanDeclareWar(),
@@ -156,7 +156,7 @@ public class TradeEvaluation : ITradeAutomationEvaluation
 
     public int EvaluateBuyCostWithInflation(TradeOffer offer, CivilizationObject civInfo, CivilizationObject tradePartner, Trade trade)
     {
-        if (offer.Type != TradeOfferType.Gold && offer.Type != TradeOfferType.Gold_Per_Turn)
+        if (offer.Type != TradeOfferType.Gold && offer.Type != TradeOfferType.GoldPerTurn)
             return KotlinMath.DoubleToInt(EvaluateBuyCost(offer, civInfo, tradePartner, trade) / GetGoldInflation(civInfo));
         return EvaluateBuyCost(offer, civInfo, tradePartner, trade);
     }
@@ -173,7 +173,7 @@ public class TradeEvaluation : ITradeAutomationEvaluation
             // Empire-wide production tends to grow at roughly 2% per turn (quick speed), so let's take that as a base line,
             // which results in an efficiency of (0.98 + 0.98^2 + ... + 0.98^25) / 25 = 0.7772 compared to instant gold, assume this scales similarly on different game speed
             // Formula could be more sophisticated by taking into account estimated chance of the gpt-giver cancelling the trade after X amount of turns
-            case TradeOfferType.Gold_Per_Turn: return unchecked(offer.Amount * offer.Duration * 4 / 5);
+            case TradeOfferType.GoldPerTurn: return unchecked(offer.Amount * offer.Duration * 4 / 5);
             case TradeOfferType.Treaty:
                 return offer.Name switch
                 {
@@ -184,11 +184,11 @@ public class TradeEvaluation : ITradeAutomationEvaluation
                     _ => 1000,
                 };
 
-            case TradeOfferType.Luxury_Resource: return BuyLuxury(offer, civInfo, tradePartner);
+            case TradeOfferType.LuxuryResource: return BuyLuxury(offer, civInfo, tradePartner);
 
-            case TradeOfferType.Strategic_Resource: return BuyStrategic(offer, civInfo, tradePartner);
+            case TradeOfferType.StrategicResource: return BuyStrategic(offer, civInfo, tradePartner);
 
-            case TradeOfferType.Stockpiled_Resource:
+            case TradeOfferType.StockpiledResource:
                 {
                     if (!gameInfo.Ruleset.TileResources.TryGetValue(offer.Name, out var resource)) return 0;
                     return LowestCost(resource, UniqueType.AiWillBuyAt, civInfo) ?? 0;
@@ -400,7 +400,7 @@ public class TradeEvaluation : ITradeAutomationEvaluation
 
     public int EvaluateSellCostWithInflation(TradeOffer offer, CivilizationObject civInfo, CivilizationObject tradePartner, Trade trade)
     {
-        if (offer.Type != TradeOfferType.Gold && offer.Type != TradeOfferType.Gold_Per_Turn)
+        if (offer.Type != TradeOfferType.Gold && offer.Type != TradeOfferType.GoldPerTurn)
             return KotlinMath.DoubleToInt(EvaluateSellCost(offer, civInfo, tradePartner, trade) / GetGoldInflation(civInfo));
         return EvaluateSellCost(offer, civInfo, tradePartner, trade);
     }
@@ -421,7 +421,7 @@ public class TradeEvaluation : ITradeAutomationEvaluation
                     return KotlinMath.FloatToInt(baseSellCost * civInfo.GameInfo.Speed.GoldCostModifier);
                 }
             case TradeOfferType.Gold: return offer.Amount;
-            case TradeOfferType.Gold_Per_Turn: return unchecked(offer.Amount * offer.Duration * 4 / 5);
+            case TradeOfferType.GoldPerTurn: return unchecked(offer.Amount * offer.Duration * 4 / 5);
             case TradeOfferType.Treaty:
                 return offer.Name switch
                 {
@@ -432,9 +432,9 @@ public class TradeEvaluation : ITradeAutomationEvaluation
                     _ => 1000,
                     //Todo:AddDefensiveTreatyHere
                 };
-            case TradeOfferType.Luxury_Resource: return SellLuxury(offer, civInfo);
-            case TradeOfferType.Strategic_Resource: return SellStrategic(offer, civInfo, tradePartner);
-            case TradeOfferType.Stockpiled_Resource:
+            case TradeOfferType.LuxuryResource: return SellLuxury(offer, civInfo);
+            case TradeOfferType.StrategicResource: return SellStrategic(offer, civInfo, tradePartner);
+            case TradeOfferType.StockpiledResource:
                 {
                     if (!gameInfo.Ruleset.TileResources.TryGetValue(offer.Name, out var resource)) return 0;
                     return LowestCost(resource, UniqueType.AiWillSellAt, civInfo) ?? int.MaxValue;

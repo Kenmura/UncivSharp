@@ -34,7 +34,7 @@ public sealed record TradeOptionsQuery(string CivName) : IQuery<TradeOptionsResu
     }
 
     internal static TradeOfferEntry Entry(TradeOffer offer, string? displayName = null) =>
-        new(offer.Name, offer.Type.ToString(), offer.Amount, offer.Duration, offer.IsTradable(), displayName);
+        new(offer.Name, offer.Type.ToWireString(), offer.Amount, offer.Duration, offer.IsTradable(), displayName);
 
     internal static string? DisplayNameOf(Unciv.Logic.GameInfo game, Civilization civ, Civilization other, TradeOffer offer) => offer.Type switch
     {

@@ -187,7 +187,7 @@ public class EmpireQueryTests
         player.GetDiplomacyManager(enemy)!.DeclareWar();
         var logic = new TradeLogic(player, enemy);
         var result = Ask(new TradeOptionsQuery(enemy.CivName));
-        Assert.Equal(logic.OurAvailableOffers.Select(it => (it.Name, it.Type.ToString(), it.Amount)),
+        Assert.Equal(logic.OurAvailableOffers.Select(it => (it.Name, it.Type.ToWireString(), it.Amount)),
             result.Ours.Select(it => (it.Name, it.Type, it.Amount)));
         Assert.Equal(logic.TheirAvailableOffers.Count, result.Theirs.Count);
         Assert.Contains(result.Ours, it => it.Type == "Treaty" && it.Name == Constants.PeaceTreaty); // at war after meeting

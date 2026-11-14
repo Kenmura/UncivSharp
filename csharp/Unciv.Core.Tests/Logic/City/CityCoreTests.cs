@@ -243,7 +243,7 @@ public class CityCoreTests
         w.City.Tiles.Add(HexCoord.Of(2, 2));
         w.City.Tiles.Add(HexCoord.Of(1, 2));
         w.City.WorkedTiles.Add(HexCoord.Of(1, 2));
-        Assert.Equal([w.TileAt(2, 2), w.TileAt(1, 2)], w.City.GetTiles().OrderBy(it => it.Position.x).Reverse());
+        Assert.Equal([w.TileAt(2, 2), w.TileAt(1, 2)], w.City.GetTiles().OrderBy(it => it.Position.X).Reverse());
         Assert.Equal([w.TileAt(1, 2)], w.City.GetWorkedTiles());
         Assert.True(w.City.IsWorked(w.TileAt(1, 2)));
         Assert.False(w.City.IsWorked(w.TileAt(2, 2)));
@@ -1041,7 +1041,7 @@ public class CityCoreTests
         w.City.DestroyCity();
 
         Assert.Equal([other.City], w.Civ.Cities);
-        Assert.Equal([w.TileAt(2, 2), w.TileAt(1, 2)], w.Fake.ExpansionFake.Relinquished.OrderByDescending(it => it.Position.x));
+        Assert.Equal([w.TileAt(2, 2), w.TileAt(1, 2)], w.Fake.ExpansionFake.Relinquished.OrderByDescending(it => it.Position.X));
         Assert.Null(spy.GetCityOrNull());
     }
 

@@ -332,7 +332,7 @@ public class UnitMovementTests
         Explore(w);
         var unit = w.Unit("Warrior", "Land", 0, 0);
         var target = unit.Movement.GetDistanceToTiles().Keys.First(it => it.AerialDistanceTo(unit.CurrentTile) == 2);
-        var blocker = w.Unit("Archer", "Land", target.Position.x, target.Position.y);
+        var blocker = w.Unit("Archer", "Land", target.Position.X, target.Position.Y);
         unit.Movement.MoveToTile(target);
         Assert.NotSame(target, unit.CurrentTile);
         Assert.Same(blocker, target.MilitaryUnit);
@@ -350,7 +350,7 @@ public class UnitMovementTests
         Assert.True(unit.Movement.CanReach(w.TileAt(4, 4)));
         Assert.Equal([unit.CurrentTile], unit.Movement.GetShortestPath(unit.CurrentTile));
 
-        foreach (var neighbor in w.TileAt(4, 4).Neighbors) w.SetTerrain(neighbor.Position.x, neighbor.Position.y, "Mountain");
+        foreach (var neighbor in w.TileAt(4, 4).Neighbors) w.SetTerrain(neighbor.Position.X, neighbor.Position.Y, "Mountain");
         var blocked = w.Unit("Warrior", "Land", 0, 1);
         Assert.Empty(blocked.Movement.GetShortestPath(w.TileAt(4, 4)));
         Assert.False(blocked.Movement.CanReach(w.TileAt(4, 4)));
@@ -422,7 +422,7 @@ public class UnitMovementTests
     {
         var w = NewWorld();
         Explore(w);
-        foreach (var neighbor in w.TileAt(4, 4).Neighbors) w.SetTerrain(neighbor.Position.x, neighbor.Position.y, "Mountain");
+        foreach (var neighbor in w.TileAt(4, 4).Neighbors) w.SetTerrain(neighbor.Position.X, neighbor.Position.Y, "Mountain");
         var unit = w.Unit("Warrior", "Land", 0, 0);
         Assert.Throws<UnitMovement.UnreachableDestinationException>(() => unit.Movement.GetTileToMoveToThisTurn(w.TileAt(4, 4)));
     }
@@ -553,8 +553,8 @@ public class UnitMovementTests
         var to = from.Neighbors[0];
         var common = from.Neighbors.First(it => it != to && it.AerialDistanceTo(to) == 1);
         var barbarians = MapUnitFactory.NewCiv(Constants.Barbarians, w.Info);
-        w.Unit("Brute", "Land", common.Position.x, common.Position.y, barbarians);
-        var unit = w.Unit("Warrior", "Land", from.Position.x, from.Position.y);
+        w.Unit("Brute", "Land", common.Position.X, common.Position.Y, barbarians);
+        var unit = w.Unit("Warrior", "Land", from.Position.X, from.Position.Y);
         Assert.Equal(100f, MovementCost.GetMovementCostBetweenAdjacentTiles(unit, from, to));
         Assert.Equal(1f, MovementCost.GetMovementCostBetweenAdjacentTiles(unit, from, to, considerZoneOfControl: false));
         var ignoring = w.Unit("Ghost", "Land", 0, 0, null, "Ignores Zone of Control");

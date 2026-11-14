@@ -95,7 +95,7 @@ public static class CityScreenModel
         {
             var world = HexMath.Hex2WorldCoords(new HexCoord(tile.Position.X, tile.Position.Y));
             string label = YieldLabel(tile.Stats);
-            cells.Add(new CityTileCell(tile.Position.X, tile.Position.Y, tile.State, tile.Locked, world.x - centre.x, -(world.y - centre.y), label, TileTooltip(tile))
+            cells.Add(new CityTileCell(tile.Position.X, tile.Position.Y, tile.State, tile.Locked, world.X - centre.X, -(world.Y - centre.Y), label, TileTooltip(tile))
             {
                 Yields = tile.Stats,
             });

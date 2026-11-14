@@ -6,7 +6,7 @@ namespace Unciv.Logic.Trade;
 // Kotlin overrides ArrayList.add only: AddRange (addAll, Kotlin's `+=`) and Insert stay plain bulk operations that do NOT merge,
 // and `Add` merges only through this type, as Kotlin does through ArrayList<TradeOffer> (never upcast to List here).
 
-public class TradeOffersList : List<TradeOffer>, IsPartOfGameInfoSerialization
+public class TradeOffersList : List<TradeOffer>, IIsPartOfGameInfoSerialization
 {
     /// <summary>Adds the offer, or merges its amount into the existing offer with the same name and type (removing it at 0).</summary>
     public new bool Add(TradeOffer element)

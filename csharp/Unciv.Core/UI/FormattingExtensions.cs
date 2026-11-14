@@ -89,7 +89,7 @@ public static class FormattingExtensions
 
     /// <summary>Format a Vector2 like (0,0) instead of (0.0,0.0).</summary>
     public static string ToPrettyString(this Vector2 vector) =>
-        $"({KotlinMath.FloatToInt(vector.x).ToString(CultureInfo.InvariantCulture)},{KotlinMath.FloatToInt(vector.y).ToString(CultureInfo.InvariantCulture)})";
+        $"({KotlinMath.FloatToInt(vector.X).ToString(CultureInfo.InvariantCulture)},{KotlinMath.FloatToInt(vector.Y).ToString(CultureInfo.InvariantCulture)})";
 }
 
 /// <summary>Standardize date formatting so dates are presented in a consistent style.</summary>

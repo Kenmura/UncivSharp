@@ -10,7 +10,7 @@ namespace Unciv.AI;
 /// T235: what the Civ 5 AI remembers between turns, saved with the civ (<c>Civilization.Civ5Ai</c>): the grand strategy with its 10-turn lock
 /// counter (hysteresis) and the running operations. Plain data, so a reload, a clone and a lockstep peer all continue identically.
 /// </summary>
-public sealed class Civ5AiState : IsPartOfGameInfoSerialization
+public sealed class Civ5AiState : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("strategy")]
     public GrandStrategyKind CurrentStrategy { get; set; } = GrandStrategyKind.None;

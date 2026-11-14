@@ -17,7 +17,7 @@ namespace Unciv.Models;
 //    `super.put`), so they can store zero values.
 //  - Counter.ZERO only throws on Put; Remove/Clear/PutAll are not guarded.
 //
-// Not ported: Json.Serializable write/read and the IsPartOfGameInfoSerialization marker (see JSON-layer ticket).
+// Not ported: Json.Serializable write/read and the IIsPartOfGameInfoSerialization marker (see JSON-layer ticket).
 public class Counter<K> : IEnumerable<KeyValuePair<K, int>> where K : notnull
 {
     private readonly OrderedDictionary<K, int> map;
@@ -148,8 +148,7 @@ public static class Counter
     private sealed class ZeroCounter : Counter<string>
     {
         public override int? Put(string key, int value) =>
-            // JUSTIFY: T118 Kotlin ZERO counter rejects writes (permanent)
-            throw new NotSupportedException("Do not modify Counter.ZERO");
+            throw new InvalidOperationException("Do not modify Counter.ZERO");
     }
 
     public static readonly Counter<string> ZERO = new ZeroCounter();

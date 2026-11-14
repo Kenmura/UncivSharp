@@ -18,10 +18,7 @@ public static class HostCertificate
         using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var request = new CertificateRequest(Subject, ecdsa, HashAlgorithmName.SHA256);
 
-        // JUSTIFY: T179 X.509 host certificate generation requires calendar timestamps for certificate validity
-#pragma warning disable RS0030
-        var notBefore = DateTimeOffset.UtcNow.AddDays(-1);
-#pragma warning restore RS0030
+        var notBefore = DateTimeOffset.FromUnixTimeMilliseconds(Unciv.Net.Turns.SystemClock.Instance.NowMillis).AddDays(-1);
         var notAfter = notBefore.AddYears(10);
         return request.CreateSelfSigned(notBefore, notAfter);
     }

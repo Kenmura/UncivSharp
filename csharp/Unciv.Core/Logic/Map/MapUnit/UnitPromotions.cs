@@ -17,7 +17,7 @@ namespace Unciv.Logic.Map.MapUnits;
 /// <param name="IsBlockedByUniques">The promotion's own uniques currently disallow picking it (<c>Unavailable</c>, or unmet <c>OnlyAvailable</c> conditionals)</param>
 public sealed record AvailablePromotion(Promotion Promotion, bool IsAdopted, bool IsBlockedByUniques);
 
-public class UnitPromotions : IsPartOfGameInfoSerialization
+public class UnitPromotions : IIsPartOfGameInfoSerialization
 {
     // Having this as mandatory constructor parameter would be safer, but this class is part of a
     // saved game and as usual the json deserializer needs a default constructor.

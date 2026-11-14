@@ -32,6 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Unciv.Core\Unciv.Core.csproj" />
+    <ProjectReference Include="..\Unciv.Platform\Unciv.Platform.csproj" />
     <ProjectReference Include="..\Unciv.Harness\Unciv.Harness.csproj" />
     <ProjectReference Include="..\Unciv.Assets\Unciv.Assets.csproj" />
   </ItemGroup>

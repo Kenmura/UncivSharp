@@ -162,8 +162,8 @@ public class CounterTests
     [Fact]
     public void ZeroRejectsPutButCloneIsMutable()
     {
-        Assert.Throws<NotSupportedException>(() => Counter.ZERO["a"] = 1);
-        Assert.Throws<NotSupportedException>(() => Counter.ZERO.Add("a", 1));
+        Assert.Throws<InvalidOperationException>(() => Counter.ZERO["a"] = 1);
+        Assert.Throws<InvalidOperationException>(() => Counter.ZERO.Add("a", 1));
         Assert.True(Counter.ZERO.IsEmpty());
         Assert.Equal(0, Counter.ZERO["a"]);
         var clone = Counter.ZERO.Clone();

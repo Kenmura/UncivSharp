@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Unciv.Core\Unciv.Core.csproj" />
+    <ProjectReference Include="..\Unciv.Platform\Unciv.Platform.csproj" />
   </ItemGroup>
 
 </Project>

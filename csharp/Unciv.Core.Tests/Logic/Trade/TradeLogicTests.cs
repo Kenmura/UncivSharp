@@ -72,7 +72,7 @@ public class TradeLogicTests
         {
             Assert.Contains(offers, it => it.Name == Constants.PeaceTreaty && it.Type == TradeOfferType.Treaty);
             Assert.Contains(offers, it => it.Name == Constants.FlatGold && it.Type == TradeOfferType.Gold);
-            Assert.Contains(offers, it => it.Name == Constants.GoldPerTurn && it.Type == TradeOfferType.Gold_Per_Turn);
+            Assert.Contains(offers, it => it.Name == Constants.GoldPerTurn && it.Type == TradeOfferType.GoldPerTurn);
         }
         Assert.Empty(logic.CurrentTrade.OurOffers);
         Assert.Empty(logic.CurrentTrade.TheirOffers);
@@ -152,7 +152,7 @@ public class TradeLogicTests
     {
         var (_, a, b) = TwoCivs();
         var logic = new TradeLogic(a, b, new StandInEvaluation());
-        logic.CurrentTrade.OurOffers.Add(new TradeOffer("Spice", TradeOfferType.Luxury_Resource, 1, 30));
+        logic.CurrentTrade.OurOffers.Add(new TradeOffer("Spice", TradeOfferType.LuxuryResource, 1, 30));
 
         logic.AcceptTrade(false);
 
@@ -348,5 +348,33 @@ public class TradeLogicTests
         var logic = new TradeLogic(a, b);
         Assert.Same(TradeEvaluation.Default, logic.Evaluation);
         logic.AcceptTrade(); // an empty trade evaluates to 0 on both sides: nothing is gifted
+    }
+
+    [Fact]
+    public void TradeOfferType_WireStringsAndJsonConverter_RoundTripKotlinNames()
+    {
+        Assert.Equal("Gold_Per_Turn", TradeOfferType.GoldPerTurn.ToWireString());
+        Assert.Equal("Luxury_Resource", TradeOfferType.LuxuryResource.ToWireString());
+        Assert.Equal("Strategic_Resource", TradeOfferType.StrategicResource.ToWireString());
+        Assert.Equal("Stockpiled_Resource", TradeOfferType.StockpiledResource.ToWireString());
+
+        Assert.True(TradeOfferTypeExtensions.TryParseWireString("Gold_Per_Turn", out var gpt));
+        Assert.Equal(TradeOfferType.GoldPerTurn, gpt);
+        Assert.True(TradeOfferTypeExtensions.TryParseWireString("Luxury_Resource", out var lux));
+        Assert.Equal(TradeOfferType.LuxuryResource, lux);
+        Assert.True(TradeOfferTypeExtensions.TryParseWireString("Strategic_Resource", out var strat));
+        Assert.Equal(TradeOfferType.StrategicResource, strat);
+        Assert.True(TradeOfferTypeExtensions.TryParseWireString("Stockpiled_Resource", out var stock));
+        Assert.Equal(TradeOfferType.StockpiledResource, stock);
+        Assert.False(TradeOfferTypeExtensions.TryParseWireString("Bogus_Type", out _));
+
+        foreach (var value in Enum.GetValues<TradeOfferType>())
+        {
+            var json = Unciv.Json.UncivJson.Serialize(value);
+            Assert.Equal($"\"{value.ToWireString()}\"", json);
+            Assert.Equal(value, Unciv.Json.UncivJson.Deserialize<TradeOfferType>(json));
+        }
+
+        Assert.Throws<System.Text.Json.JsonException>(() => Unciv.Json.UncivJson.Deserialize<TradeOfferType>("\"Unknown_Type\""));
     }
 }

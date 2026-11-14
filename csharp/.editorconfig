@@ -65,7 +65,7 @@ dotnet_naming_symbols.pascal_members.applicable_kinds = method, property, event
 dotnet_naming_symbols.pascal_members.applicable_accessibilities = public, internal, protected, protected_internal, private_protected
 
 # ---- Dead code: ports must not accumulate unused members ----
-dotnet_diagnostic.IDE0005.severity = error
+dotnet_diagnostic.CS8019.severity = error
 dotnet_diagnostic.IDE0051.severity = error
 dotnet_diagnostic.IDE0052.severity = error
 dotnet_diagnostic.IDE0060.severity = error
@@ -92,27 +92,5 @@ dotnet_diagnostic.CA1000.severity = suggestion
 dotnet_diagnostic.CA1822.severity = suggestion
 
 [Unciv.{Core,App}.Tests/**.cs]
-# Test names often use underscores; xunit tests need no accessibility fuss.
-dotnet_diagnostic.CA1707.severity = none
+# xunit tests need no accessibility fuss for unused parameters in theory/helper signatures.
 dotnet_diagnostic.IDE0060.severity = suggestion
-
-# libGDX/Kotlin-faithful lowercase public fields on the vector shims. Narrow, by file, on purpose.
-[Unciv.Core/Math/Vector{2,3}.cs]
-dotnet_diagnostic.IDE1006.severity = none
-
-# The `Stats` alias only resolves inside the namespace because the test namespace Unciv.Core.Tests.Models.Stats
-# would otherwise shadow the type (T004). Narrow, by file, on purpose.
-[Unciv.Core.Tests/Models/Stats/StatsTests.cs]
-dotnet_diagnostic.IDE0065.severity = none
-
-# Kotlin-faithful names: nested `Comparator` interface and public `comparator` property mirror the Kotlin API (T001).
-[Unciv.Core/Utils/LongPriorityQueue.cs]
-dotnet_diagnostic.IDE1006.severity = none
-
-# Kotlin-faithful API surface: HexCoord exposes both PascalCase and the original lowercase members (T006).
-[Unciv.Core/Logic/Map/HexMath.cs]
-dotnet_diagnostic.IDE1006.severity = none
-
-# Kotlin marker interface keeps its original name `IsPartOfGameInfoSerialization` (T007).
-[Unciv.Core/Json/IsPartOfGameInfoSerialization.cs]
-dotnet_diagnostic.IDE1006.severity = none

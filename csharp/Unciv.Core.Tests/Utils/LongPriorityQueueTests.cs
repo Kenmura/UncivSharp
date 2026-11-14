@@ -294,7 +294,7 @@ public class LongPriorityQueueTests
         Assert.Equal(0L, clone[0]);
     }
 
-    private sealed class ReverseComparator : LongPriorityQueue.Comparator
+    private sealed class ReverseComparator : LongPriorityQueue.IComparator
     {
         public int Invoke(long a, long b) => b.CompareTo(a);
     }

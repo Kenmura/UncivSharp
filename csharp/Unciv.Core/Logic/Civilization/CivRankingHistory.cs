@@ -17,7 +17,7 @@ namespace Unciv.Logic.Civilization;
 
 /// <summary>Records for each turn (key of outer map) what the score (value of inner map) was for each RankingType.</summary>
 [JsonConverter(typeof(CivRankingHistoryConverter))]
-public class CivRankingHistory : IEnumerable<KeyValuePair<int, IReadOnlyDictionary<RankingType, int>>>, IsPartOfGameInfoSerialization
+public class CivRankingHistory : IEnumerable<KeyValuePair<int, IReadOnlyDictionary<RankingType, int>>>, IIsPartOfGameInfoSerialization
 {
     private readonly JavaHashMap<int, IReadOnlyDictionary<RankingType, int>> map;
 

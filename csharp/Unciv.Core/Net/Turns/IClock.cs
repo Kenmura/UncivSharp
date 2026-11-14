@@ -15,10 +15,7 @@ public sealed class SystemClock : IClock
 {
     public static readonly SystemClock Instance = new();
 
-    // JUSTIFY: T177 system clock implementation for the server layer
-#pragma warning disable RS0030
-    public long NowMillis => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-#pragma warning restore RS0030
+    public long NowMillis => TimeProvider.System.GetUtcNow().ToUnixTimeMilliseconds();
 }
 
 /// <summary>A fake clock whose time can be advanced deterministically in tests.</summary>

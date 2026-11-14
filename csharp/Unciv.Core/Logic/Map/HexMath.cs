@@ -31,9 +31,9 @@ public static class HexMath
     public static float GetHexagonalRadiusForArea(int numberOfTiles) =>
         numberOfTiles < 1 ? 0f : ((float)Math.Sqrt(12f * numberOfTiles - 3) - 3f) / 6f;
 
-    public static int GetLatitude(HexCoord hexCoord) => hexCoord.x + hexCoord.y;
+    public static int GetLatitude(HexCoord hexCoord) => hexCoord.X + hexCoord.Y;
 
-    public static int GetLongitude(HexCoord hexCoord) => hexCoord.x - hexCoord.y;
+    public static int GetLongitude(HexCoord hexCoord) => hexCoord.X - hexCoord.Y;
 
     /// <summary>
     /// Convert a latitude and longitude back into a hex coordinate. Inverse of <see cref="GetLatitude"/> and <see cref="GetLongitude"/>.
@@ -48,8 +48,8 @@ public static class HexMath
     /// <summary>Convert hex latitude and longitude into world coordinates.</summary>
     public static Vector2 WorldFromLatLong(Vector2 vector, float tileRadius)
     {
-        float x = vector.x * tileRadius * 1.5f * -1f;
-        float y = vector.y * tileRadius * (float)Math.Sqrt(3f) * 0.5f;
+        float x = vector.X * tileRadius * 1.5f * -1f;
+        float y = vector.Y * tileRadius * (float)Math.Sqrt(3f) * 0.5f;
         return new Vector2(x, y);
     }
 
@@ -88,10 +88,10 @@ public static class HexMath
     public static Vector2 Hex2WorldCoords(HexCoord hexCoord)
     {
         var xVector = GetVectorByClockHour(10);
-        xVector.Scl((float)Math.Sqrt(3.0) * hexCoord.x);
+        xVector.Scl((float)Math.Sqrt(3.0) * hexCoord.X);
 
         var yVector = GetVectorByClockHour(2);
-        yVector.Scl((float)Math.Sqrt(3.0) * hexCoord.y);
+        yVector.Scl((float)Math.Sqrt(3.0) * hexCoord.Y);
 
         return xVector.Add(yVector);
     }
@@ -102,15 +102,15 @@ public static class HexMath
         D.Scl((float)Math.Sqrt(3.0));
         var A = GetVectorByClockHour(2);
         A.Scl((float)Math.Sqrt(3.0));
-        float den = D.x * A.y - D.y * A.x;
-        float x = (worldCoord.x * A.y - worldCoord.y * A.x) / den;
-        float y = (worldCoord.y * D.x - worldCoord.x * D.y) / den;
+        float den = D.X * A.Y - D.Y * A.X;
+        float x = (worldCoord.X * A.Y - worldCoord.Y * A.X) / den;
+        float y = (worldCoord.Y * D.X - worldCoord.X * D.Y) / den;
         return new Vector2(x, y);
     }
 
-    public static int GetRow(HexCoord hexCoord) => (hexCoord.x + hexCoord.y) / 2;
+    public static int GetRow(HexCoord hexCoord) => (hexCoord.X + hexCoord.Y) / 2;
 
-    public static int GetColumn(HexCoord hexCoord) => hexCoord.y - hexCoord.x;
+    public static int GetColumn(HexCoord hexCoord) => hexCoord.Y - hexCoord.X;
 
     public static HexCoord GetTileCoordsFromColumnRow(int column, int row)
     {
@@ -124,13 +124,13 @@ public static class HexMath
     {
         static Vector3 RoundCubicCoords(Vector3 cubicCoords)
         {
-            float rx = MathF.Round(cubicCoords.x, MidpointRounding.ToEven);
-            float ry = MathF.Round(cubicCoords.y, MidpointRounding.ToEven);
-            float rz = MathF.Round(cubicCoords.z, MidpointRounding.ToEven);
+            float rx = MathF.Round(cubicCoords.X, MidpointRounding.ToEven);
+            float ry = MathF.Round(cubicCoords.Y, MidpointRounding.ToEven);
+            float rz = MathF.Round(cubicCoords.Z, MidpointRounding.ToEven);
 
-            float deltaX = Math.Abs(rx - cubicCoords.x);
-            float deltaY = Math.Abs(ry - cubicCoords.y);
-            float deltaZ = Math.Abs(rz - cubicCoords.z);
+            float deltaX = Math.Abs(rx - cubicCoords.X);
+            float deltaY = Math.Abs(ry - cubicCoords.Y);
+            float deltaZ = Math.Abs(rz - cubicCoords.Z);
 
             if (deltaX > deltaY && deltaX > deltaZ)
                 rx = -ry - rz;
@@ -143,10 +143,10 @@ public static class HexMath
         }
 
         static Vector3 Hex2CubicCoords(Vector2 coord) =>
-            new(coord.y - coord.x, coord.x, -coord.y);
+            new(coord.Y - coord.X, coord.X, -coord.Y);
 
         static Vector2 Cubic2HexCoords(Vector3 coord) =>
-            new(coord.y, -coord.z);
+            new(coord.Y, -coord.Z);
 
         return Cubic2HexCoords(RoundCubicCoords(Hex2CubicCoords(hexCoord)));
     }
@@ -198,8 +198,8 @@ public static class HexMath
 
     public static int GetDistanceFromEdge(HexCoord position, MapParameters mapParameters)
     {
-        int x = position.x;
-        int y = position.y;
+        int x = position.X;
+        int y = position.Y;
         if (mapParameters.Shape == MapShape.Rectangular)
         {
             int height = mapParameters.MapSize.Height;
@@ -233,10 +233,10 @@ public static class HexMath
         tile.TileMap.GetNeighborTileClockPosition(tile, neighbor) / 2 - 1; // min: 2, max: 12, step 2; Divide by 2 and it's numbers 1-6, -1 to get 0-5
 
     public static int GetDistance(Vector2 origin, Vector2 destination) =>
-        GetDistance(KotlinMath.FloatToInt(origin.x), KotlinMath.FloatToInt(origin.y), KotlinMath.FloatToInt(destination.x), KotlinMath.FloatToInt(destination.y));
+        GetDistance(KotlinMath.FloatToInt(origin.X), KotlinMath.FloatToInt(origin.Y), KotlinMath.FloatToInt(destination.X), KotlinMath.FloatToInt(destination.Y));
 
     public static int GetDistance(HexCoord origin, HexCoord destination) =>
-        GetDistance(origin.x, origin.y, destination.x, destination.y);
+        GetDistance(origin.X, origin.Y, destination.X, destination.Y);
 
     public static int GetDistance(int originX, int originY, int destinationX, int destinationY)
     {
@@ -303,50 +303,38 @@ public static class HexMath
     }
 }
 
-public readonly record struct HexCoord(int x = 0, int y = 0)
+public readonly record struct HexCoord(
+    [property: System.Text.Json.Serialization.JsonPropertyName("x")] int X = 0,
+    [property: System.Text.Json.Serialization.JsonPropertyName("y")] int Y = 0)
 {
-    public int X => x;
-    public int Y => y;
-
     public static readonly HexCoord Zero = new(0, 0);
 
     public static HexCoord Of(int x, int y) => new(x, y);
-    public static HexCoord of(int x, int y) => new(x, y);
 
-    public HexCoord Plus(HexCoord hexCoord) => new(x + hexCoord.x, y + hexCoord.y);
-    public HexCoord plus(HexCoord hexCoord) => Plus(hexCoord);
+    public HexCoord Plus(HexCoord hexCoord) => new(X + hexCoord.X, Y + hexCoord.Y);
 
-    public HexCoord Plus(int plusX, int plusY) => new(x + plusX, y + plusY);
-    public HexCoord plus(int plusX, int plusY) => Plus(plusX, plusY);
+    public HexCoord Plus(int plusX, int plusY) => new(X + plusX, Y + plusY);
 
-    public HexCoord Minus(HexCoord hexCoord) => new(x - hexCoord.x, y - hexCoord.y);
-    public HexCoord minus(HexCoord hexCoord) => Minus(hexCoord);
+    public HexCoord Minus(HexCoord hexCoord) => new(X - hexCoord.X, Y - hexCoord.Y);
 
-    public HexCoord Times(int factor) => new(x * factor, y * factor);
-    public HexCoord times(int factor) => Times(factor);
+    public HexCoord Times(int factor) => new(X * factor, Y * factor);
 
-    public Vector2 ToVector2() => new(x, y);
-    public Vector2 toVector2() => ToVector2();
+    public Vector2 ToVector2() => new(X, Y);
 
-    public bool Eq(int x, int y) => this.x == x && this.y == y;
-    public bool eq(int x, int y) => Eq(x, y);
+    public bool Eq(int x, int y) => X == x && Y == y;
 
     public HexCoord Cpy() => this;
-    public HexCoord cpy() => this;
 
     public HexCoord ToHexCoord() => this;
-    public HexCoord toHexCoord() => this;
 
-    public HexCoord AsSerializable() => new(x, y);
-    public HexCoord asSerializable() => AsSerializable();
+    public HexCoord AsSerializable() => new(X, Y);
 
-    public string ToPrettyString() => string.Create(CultureInfo.InvariantCulture, $"({x},{y})");
-    public string toPrettyString() => ToPrettyString();
+    public string ToPrettyString() => string.Create(CultureInfo.InvariantCulture, $"({X},{Y})");
 
-    public override string ToString() => string.Create(CultureInfo.InvariantCulture, $"HexCoord(x={x}, y={y})");
+    public override string ToString() => string.Create(CultureInfo.InvariantCulture, $"HexCoord(x={X}, y={Y})");
 
     // Kotlin data class hashCode (31 * x + y): it feeds GameContext.hashCode, which seeds stateBasedRandom
-    public override int GetHashCode() => 31 * x + y;
+    public override int GetHashCode() => 31 * X + Y;
 
     public static HexCoord FromString(string str)
     {
@@ -357,7 +345,6 @@ public readonly record struct HexCoord(int x = 0, int y = 0)
         int y = ParseInt(str.AsSpan(commaPos + 1, str.Length - commaPos - 2));
         return new HexCoord(x, y);
     }
-    public static HexCoord fromString(string str) => FromString(str);
 
     // Kotlin String.toInt(): optional sign and ASCII digits only (no whitespace); overflow is a NumberFormatException
     private static int ParseInt(ReadOnlySpan<char> text)
@@ -371,14 +358,12 @@ public readonly record struct HexCoord(int x = 0, int y = 0)
     public static HexCoord operator *(HexCoord a, int factor) => a.Times(factor);
 }
 
-public readonly record struct InlineHexCoord(int coords = 0)
+public readonly record struct InlineHexCoord(int Coords = 0)
 {
-    public int x => coords >> 16;
-    public int y => (coords << 16) >> 16;
-    public int X => x;
-    public int Y => y;
+    public int X => Coords >> 16;
+    public int Y => (Coords << 16) >> 16;
 
-    public override string ToString() => string.Create(CultureInfo.InvariantCulture, $"HexCoord(x={x}, y={y})");
+    public override string ToString() => string.Create(CultureInfo.InvariantCulture, $"HexCoord(x={X}, y={Y})");
 
     public static InlineHexCoord Of(int x, int y)
     {
@@ -390,5 +375,5 @@ public readonly record struct InlineHexCoord(int coords = 0)
 
 public static class Vector2HexExtensions
 {
-    public static HexCoord ToHexCoord(this Vector2 vector) => HexCoord.Of(KotlinMath.FloatToInt(vector.x), KotlinMath.FloatToInt(vector.y));
+    public static HexCoord ToHexCoord(this Vector2 vector) => HexCoord.Of(KotlinMath.FloatToInt(vector.X), KotlinMath.FloatToInt(vector.Y));
 }

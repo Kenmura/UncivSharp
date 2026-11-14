@@ -2,6 +2,7 @@ using System.Text;
 using Unciv.Logic.Files;
 using Unciv.Logic.Map;
 using Unciv.Models;
+using Unciv.Models.Metadata;
 
 namespace Unciv.Core.Tests.Logic.Files;
 
@@ -148,7 +149,7 @@ public class FilesATests
     {
         var env = new FakeEnv { IsRunFromJar = true };
         env.Internal.Dir("voices");
-        Assert.Throws<NotSupportedException>(() => ((IMediaFinder)new Voices(env)).ListMediaFiles().ToList());
+        Assert.Throws<InvalidOperationException>(() => ((IMediaFinder)new Voices(env)).ListMediaFiles().ToList());
     }
 
     [Fact]
@@ -182,7 +183,7 @@ public class FilesATests
     public void LabeledSoundsRejectsNormalApi()
     {
         var finder = (IMediaFinder)new LabeledSounds(new FakeEnv());
-        Assert.Throws<NotSupportedException>(() => finder.FindMedia("x"));
+        Assert.Throws<InvalidOperationException>(() => finder.FindMedia("x"));
     }
 
     [Fact]
@@ -191,8 +192,46 @@ public class FilesATests
         var env = new FakeEnv();
         env.Visual = ["MyMod"];
         env.Mods.Dir("MyMod").Dir("sounds").Add("roar.ogg");
-        var labeled = new LabeledSounds(env).GetLabeledSounds().ToDictionary(it => it.Key, it => it.Value);
-        Assert.Equal("MyMod: Roar {}", labeled["roar"]);
+        var modRuleset = new Unciv.Models.Ruleset.Ruleset { Name = "MyMod" };
+        modRuleset.Units["Lion"] = new Unciv.Models.Ruleset.Unit.BaseUnit { Name = "Lion", AttackSound = "lion_roar" };
+        var gnkName = BaseRuleset.Civ_V_GnK.FullName();
+        var prevGnk = Unciv.Models.Ruleset.RulesetCache.Current.Get(gnkName);
+        var gnkRuleset = new Unciv.Models.Ruleset.Ruleset { Name = gnkName };
+        gnkRuleset.Units["Warrior"] = new Unciv.Models.Ruleset.Unit.BaseUnit { Name = "Warrior", AttackSound = "whoosh" };
+        Unciv.Models.Ruleset.RulesetCache.Current.Put("MyMod", modRuleset);
+        Unciv.Models.Ruleset.RulesetCache.Current.Put(gnkName, gnkRuleset);
+        try
+        {
+            var labeled = new LabeledSounds(env).GetLabeledSounds().ToDictionary(it => it.Key, it => it.Value);
+            Assert.Equal("MyMod: Roar {}", labeled["roar"]);
+            Assert.Equal("MyMod: {[Lion] Attack Sound}", labeled["lion_roar"]);
+            Assert.Equal("[Warrior] Attack Sound", labeled["whoosh"]);
+        }
+        finally
+        {
+            Unciv.Models.Ruleset.RulesetCache.Current.Remove("MyMod");
+            if (prevGnk != null) Unciv.Models.Ruleset.RulesetCache.Current.Put(gnkName, prevGnk);
+            else Unciv.Models.Ruleset.RulesetCache.Current.Remove(gnkName);
+        }
+    }
+
+    private sealed class RulesetMediaFinder(IMediaEnvironment env, Unciv.Models.Ruleset.Ruleset ruleset) : IMediaFinder
+    {
+        public IMediaEnvironment Environment => env;
+        public string MediaSubFolderName => "sounds";
+        public IReadOnlySet<string> SupportedMediaExtensions => MediaFinderDefaults.AudioExtensions;
+        public Unciv.Models.Ruleset.Ruleset? GetRuleset() => ruleset;
+    }
+
+    [Fact]
+    public void MediaFinderDefaults_ListsGameRulesetMods()
+    {
+        var env = new FakeEnv();
+        env.Mods.Dir("GameMod").Dir("sounds").Add("ping.ogg");
+        var rs = new Unciv.Models.Ruleset.Ruleset();
+        rs.Mods.Add("GameMod");
+        IMediaFinder finder = new RulesetMediaFinder(env, rs);
+        Assert.Contains(finder.ListMediaFiles(), f => f.Name == "ping.ogg");
     }
 
     [Fact]

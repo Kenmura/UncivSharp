@@ -39,8 +39,8 @@ public class HexCoordConverter : JsonConverter<HexCoord>
     public override void Write(Utf8JsonWriter writer, HexCoord value, JsonSerializerOptions options)
     {
         writer.WriteStartObject();
-        if (value.x != 0) writer.WriteNumber("x", value.x);
-        if (value.y != 0) writer.WriteNumber("y", value.y);
+        if (value.X != 0) writer.WriteNumber("x", value.X);
+        if (value.Y != 0) writer.WriteNumber("y", value.Y);
         writer.WriteEndObject();
     }
 }

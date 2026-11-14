@@ -76,7 +76,7 @@ public class HexMathTests
             int ringStartCoordinate = 1 + 6 * ring * (ring - 1) / 2;
             foreach (var coord in coords)
             {
-                int mapping = HexMath.GetZeroBasedIndex(coord.x, coord.y);
+                int mapping = HexMath.GetZeroBasedIndex(coord.X, coord.Y);
                 Assert.DoesNotContain(mapping, seenCoordsMapping);
                 Assert.InRange(mapping, ringStartCoordinate, ringStartCoordinate + 6 * ring - 1);
                 seenCoordsMapping.Add(mapping);
@@ -94,7 +94,7 @@ public class HexMathTests
             int ringStartCoordinate = 1 + 6 * ring * (ring - 1) / 2;
             foreach (var coord in coords)
             {
-                int redblob = HexMath.MapRelativePositionToPositiveIntRedblob(coord.x, coord.y);
+                int redblob = HexMath.MapRelativePositionToPositiveIntRedblob(coord.X, coord.Y);
                 Assert.DoesNotContain(redblob, seenCoordsMapping);
                 Assert.InRange(redblob, ringStartCoordinate, ringStartCoordinate + 6 * ring - 1);
                 seenCoordsMapping.Add(redblob);
@@ -110,8 +110,8 @@ public class HexMathTests
             for (int y = -2; y <= 2; y++)
             {
                 var hexCoord = HexCoord.Of(x, y);
-                Assert.Equal(x, hexCoord.x);
-                Assert.Equal(y, hexCoord.y);
+                Assert.Equal(x, hexCoord.X);
+                Assert.Equal(y, hexCoord.Y);
                 Assert.Equal(x, hexCoord.X);
                 Assert.Equal(y, hexCoord.Y);
                 Assert.True(hexCoord.Eq(x, y));
@@ -151,8 +151,8 @@ public class HexMathTests
         Assert.Equal(HexCoord.Of(2, 4), a.Plus(1, 2));
 
         var v = a.ToVector2();
-        Assert.Equal(1f, v.x);
-        Assert.Equal(2f, v.y);
+        Assert.Equal(1f, v.X);
+        Assert.Equal(2f, v.Y);
         Assert.Equal(a, v.ToHexCoord());
     }
 
@@ -164,8 +164,8 @@ public class HexMathTests
             for (int y = -50; y <= 50; y += 10)
             {
                 var inlineCoord = InlineHexCoord.Of(x, y);
-                Assert.Equal(x, inlineCoord.x);
-                Assert.Equal(y, inlineCoord.y);
+                Assert.Equal(x, inlineCoord.X);
+                Assert.Equal(y, inlineCoord.Y);
             }
         }
         Assert.Throws<ArgumentOutOfRangeException>(() => InlineHexCoord.Of(40000, 0));
@@ -197,8 +197,8 @@ public class HexMathTests
         Assert.Equal(2, lon);
 
         var hexVec = HexMath.HexFromLatLong(lat, lon);
-        Assert.Equal(5f, hexVec.x);
-        Assert.Equal(3f, hexVec.y);
+        Assert.Equal(5f, hexVec.X);
+        Assert.Equal(3f, hexVec.Y);
     }
 
     [Fact]
@@ -247,8 +247,8 @@ public class HexMathTests
                 var world = HexMath.Hex2WorldCoords(coord);
                 var recovered = HexMath.World2HexCoords(world);
                 var rounded = HexMath.RoundHexCoords(recovered);
-                Assert.Equal(coord.x, (int)System.Math.Round(rounded.x));
-                Assert.Equal(coord.y, (int)System.Math.Round(rounded.y));
+                Assert.Equal(coord.X, (int)System.Math.Round(rounded.X));
+                Assert.Equal(coord.Y, (int)System.Math.Round(rounded.Y));
             }
         }
     }
@@ -290,9 +290,9 @@ public class HexMathTests
     {
         Assert.Equal(HexCoord.Of(0, 0), HexMath.GetEquivalentRectangularSize(-1));
         var size = HexMath.GetEquivalentRectangularSize(10, 0.65f);
-        Assert.True(size.x > 0);
-        Assert.True(size.y > 0);
-        int radius = HexMath.GetEquivalentHexagonalRadius(size.x, size.y);
+        Assert.True(size.X > 0);
+        Assert.True(size.Y > 0);
+        int radius = HexMath.GetEquivalentHexagonalRadius(size.X, size.Y);
         Assert.InRange(radius, 9, 11);
     }
 
@@ -300,8 +300,8 @@ public class HexMathTests
     public void UnwrappedNearestTo()
     {
         var unwrapped = HexMath.GetUnwrappedNearestTo(HexCoord.Of(10, 0), HexCoord.Of(0, 0), 20);
-        Assert.Equal(10f, unwrapped.x);
-        Assert.Equal(0f, unwrapped.y);
+        Assert.Equal(10f, unwrapped.X);
+        Assert.Equal(0f, unwrapped.Y);
     }
 
     [Fact]
@@ -339,7 +339,7 @@ public class HexMathTests
     {
         // longitude 15 relative to a reference at -15 with radius 20 is 30 away, so it wraps to longitude -25 (latitude stays 15)
         var unwrapped = HexMath.GetUnwrappedNearestTo(HexCoord.Of(15, 0), HexCoord.Of(-15, 0), 20);
-        Assert.Equal(-5f, unwrapped.x);
-        Assert.Equal(20f, unwrapped.y);
+        Assert.Equal(-5f, unwrapped.X);
+        Assert.Equal(20f, unwrapped.Y);
     }
 }

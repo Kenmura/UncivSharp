@@ -7,7 +7,7 @@ namespace Unciv.Logic.Civilization;
 
 // Ported from core/src/com/unciv/logic/automation/civilization/BarbarianEncampment.kt (T078).
 
-public class BarbarianEncampment() : IsPartOfGameInfoSerialization
+public class BarbarianEncampment() : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("position")]
     public HexCoord Position { get; set; } = new();

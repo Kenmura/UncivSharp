@@ -127,7 +127,7 @@ public static class GroupMoveModel
     private static IEnumerable<HexCoord> Goals(HexCoord at, HexCoord target)
     {
         yield return target;
-        foreach (var ring in HexMath.GetHexCoordsAtDistance(target, 1, 1, false).Where(it => it != at).OrderBy(it => HexMath.GetDistance(at, it)).ThenBy(it => it.x).ThenBy(it => it.y))
+        foreach (var ring in HexMath.GetHexCoordsAtDistance(target, 1, 1, false).Where(it => it != at).OrderBy(it => HexMath.GetDistance(at, it)).ThenBy(it => it.X).ThenBy(it => it.Y))
             yield return ring;
     }
 
@@ -190,7 +190,7 @@ public static class GroupMoveModel
     {
         if (at == tile) return true;
         var path = await env.PathAsync(id, tile);
-        return path is { Reachable: true, Turns: 1, FirstStep: { } step } && step.X == tile.x && step.Y == tile.y;
+        return path is { Reachable: true, Turns: 1, FirstStep: { } step } && step.X == tile.X && step.Y == tile.Y;
     }
 
     /// <summary>The words of a report for the status line: how many moved and who was blocked and why.</summary>

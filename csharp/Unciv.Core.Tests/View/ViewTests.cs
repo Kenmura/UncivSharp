@@ -273,14 +273,14 @@ public sealed class ViewTests : IDisposable
         var offset = view.TileMapView.GetRelativeWorldPosition(from, to);
         var expected = HexMath.Hex2WorldCoords(Tile(41).Position);
         var origin = HexMath.Hex2WorldCoords(Tile(40).Position);
-        Assert.Equal(expected.x - origin.x, offset.x);
-        Assert.Equal(expected.y - origin.y, offset.y);
+        Assert.Equal(expected.X - origin.X, offset.X);
+        Assert.Equal(expected.Y - origin.Y, offset.Y);
         Assert.Equal(game.TileMap.GetUnwrappedPosition(Tile(41).Position), view.TileMapView.GetUnwrappedPosition(Tile(41).Position));
 
         // World wrap picks the nearest copy of the target, so the offset across the seam stays short
         game.TileMap.MapParameters.WorldWrap = true;
         var wrapped = view.TileMapView.GetRelativeWorldPosition(from, to);
-        Assert.True(System.Math.Abs(wrapped.x) <= System.Math.Abs(offset.x) + 0.0001f || System.Math.Abs(wrapped.y) <= System.Math.Abs(offset.y) + 0.0001f);
+        Assert.True(System.Math.Abs(wrapped.X) <= System.Math.Abs(offset.X) + 0.0001f || System.Math.Abs(wrapped.Y) <= System.Math.Abs(offset.Y) + 0.0001f);
     }
 
     [Fact]

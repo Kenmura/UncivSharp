@@ -7,7 +7,7 @@ using TileClass = Unciv.Logic.Map.Tiles.Tile;
 namespace Unciv.Logic.Battle;
 
 // Ported from core/src/com/unciv/logic/battle/AttackEvent.kt (T082). Purity annotations dropped.
-// JSON names are the Kotlin field names (IsPartOfGameInfoSerialization).
+// JSON names are the Kotlin field names (IIsPartOfGameInfoSerialization).
 
 public enum AttackResolution { Completed, Withdrawn }
 
@@ -15,7 +15,7 @@ public enum AttackResolution { Completed, Withdrawn }
 /// One unit attack and the endpoints each civilization observed when it happened.
 /// Knowledge is captured during the attack and never expanded by later exploration.
 /// </summary>
-public class AttackEvent() : IsPartOfGameInfoSerialization
+public class AttackEvent() : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("turn")]
     public int Turn { get; set; }

@@ -16,7 +16,7 @@ namespace Unciv.Logic.Civilization;
 // uses identity hashes and the stream differs from run to run. Here the list hash is java.util.ArrayList.hashCode with each element's hash
 // being the hash of its position, which makes the draw reproducible (an empty list hashes to 1 in both).
 
-public class BarbarianManager : IsPartOfGameInfoSerialization
+public class BarbarianManager : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("encampments")]
     public List<BarbarianEncampment> Encampments { get; set; } = [];

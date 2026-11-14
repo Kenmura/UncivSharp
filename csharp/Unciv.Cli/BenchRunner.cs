@@ -264,11 +264,9 @@ public static class BenchRunner
 
     // ---- the clock (the only place of the solution outside the server layer that reads one for the engine's sake)
 
-#pragma warning disable RS0030 // JUSTIFY: T261 the bench is the measuring tool: the engine reports phases through TurnProbe and only this class reads a clock
     private static long Timestamp() => System.Diagnostics.Stopwatch.GetTimestamp();
 
     private static double TicksToMs(long ticks) => ticks * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
-#pragma warning restore RS0030
 
     /// <summary>T351: totals of one phase name: how often it ran, the time it took with its children and without, and the GCs that ran inside it.</summary>
     public sealed class Agg
@@ -423,7 +421,6 @@ public static class BenchRunner
     {
         ScenarioResult? result = null;
         Exception? failure = null;
-#pragma warning disable RS0030 // JUSTIFY: T261 the bench runs the game on one big-stack thread like the soak tests (deep AI recursion); the engine itself is not threaded
         var worker = new Thread(() =>
         {
             try { result = RunOnThread(scenario, options, log); }
@@ -432,7 +429,6 @@ public static class BenchRunner
         { IsBackground = true };
         worker.Start();
         worker.Join();
-#pragma warning restore RS0030
         if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
         return result.NotNull();
     }

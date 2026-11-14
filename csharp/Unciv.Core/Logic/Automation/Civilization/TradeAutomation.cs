@@ -102,7 +102,7 @@ public static class TradeAutomation
         }
 
         // Only ask for enough of each resource to get maximum price
-        foreach (var ask in counterofferAsks.Keys.Where(it => it.Type == TradeOfferType.Luxury_Resource || it.Type == TradeOfferType.Strategic_Resource).ToList())
+        foreach (var ask in counterofferAsks.Keys.Where(it => it.Type == TradeOfferType.LuxuryResource || it.Type == TradeOfferType.StrategicResource).ToList())
         {
             // Remove 1 amount as long as doing so does not change the price
             var originalValue = counterofferAsks[ask];
@@ -133,14 +133,14 @@ public static class TradeAutomation
     {
         foreach (var offer in tradeLogic.TheirAvailableOffers)
         {
-            if ((offer.Type == TradeOfferType.Gold || offer.Type == TradeOfferType.Gold_Per_Turn)
+            if ((offer.Type == TradeOfferType.Gold || offer.Type == TradeOfferType.GoldPerTurn)
                 && tradeRequest.Trade.OurOffers.Any(it => it.Type == offer.Type))
                 continue; // Don't want to counteroffer straight gold for gold, that's silly
             if (!offer.IsTradable())
                 continue; // For example resources gained by trade or CS
             if (offer.Type == TradeOfferType.City)
                 continue; // Players generally don't want to give up their cities, and they might misclick
-            if (offer.Type == TradeOfferType.Luxury_Resource)
+            if (offer.Type == TradeOfferType.LuxuryResource)
                 continue; // Don't ask for luxuries as counteroffer, players likely don't want to sell them if they didn't offer them already
             if (tradeLogic.CurrentTrade.TheirOffers.Any(it => it.Type == offer.Type && it.Name == offer.Name))
                 continue; // So you don't get double offers of open borders declarations of war etc.
@@ -159,7 +159,7 @@ public static class TradeAutomation
     {
         var toRemove = new List<TradeOffer>();
         foreach (var goldAsk in counterofferAsks.Keys
-            .Where(it => it.Type == TradeOfferType.Gold_Per_Turn || it.Type == TradeOfferType.Gold)
+            .Where(it => it.Type == TradeOfferType.GoldPerTurn || it.Type == TradeOfferType.Gold)
             .OrderByDescending(it => (int)it.Type).ToList()) // Do GPT first
         {
             var valueOfOne = evaluation.EvaluateBuyCostWithInflation(new TradeOffer(goldAsk.Name, goldAsk.Type, 1, goldAsk.Duration), civInfo, otherCiv, tradeRequest.Trade);
@@ -187,7 +187,7 @@ public static class TradeAutomation
             deltaInOurFavor = (deltaInOurFavor * 2) / 3; // Only compensate some of it though, they're the ones asking us
             // First give some GPT, then lump sum - but only if they're not already offering the same
             foreach (var ourGold in tradeLogic.OurAvailableOffers
-                .Where(it => it.IsTradable() && (it.Type == TradeOfferType.Gold || it.Type == TradeOfferType.Gold_Per_Turn))
+                .Where(it => it.IsTradable() && (it.Type == TradeOfferType.Gold || it.Type == TradeOfferType.GoldPerTurn))
                 .OrderByDescending(it => (int)it.Type).ToList())
             {
                 if (!tradeLogic.CurrentTrade.TheirOffers.Any(it => it.Type == ourGold.Type) &&
@@ -261,15 +261,15 @@ public static class TradeAutomation
     {
         var tradeLogic = TradeEvaluationSeam.NewLogic(civInfo, otherCivInfo);
         var ourTradableLuxuryResources = tradeLogic.OurAvailableOffers
-            .Where(it => it.Type == TradeOfferType.Luxury_Resource && it.Amount > 1).ToList();
+            .Where(it => it.Type == TradeOfferType.LuxuryResource && it.Amount > 1).ToList();
         var theirTradableLuxuryResources = tradeLogic.TheirAvailableOffers
-            .Where(it => it.Type == TradeOfferType.Luxury_Resource && it.Amount > 1).ToList();
+            .Where(it => it.Type == TradeOfferType.LuxuryResource && it.Amount > 1).ToList();
         var weHaveTheyDont = ourTradableLuxuryResources
             .Where(resource => !tradeLogic.TheirAvailableOffers
-                .Any(it => it.Name == resource.Name && it.Type == TradeOfferType.Luxury_Resource)).ToList();
+                .Any(it => it.Name == resource.Name && it.Type == TradeOfferType.LuxuryResource)).ToList();
         var theyHaveWeDont = theirTradableLuxuryResources
             .Where(resource => !tradeLogic.OurAvailableOffers
-                .Any(it => it.Name == resource.Name && it.Type == TradeOfferType.Luxury_Resource))
+                .Any(it => it.Name == resource.Name && it.Type == TradeOfferType.LuxuryResource))
             .OrderByDescending(it => civInfo.Cities.Count(city => city.DemandedResource == it.Name)) // Prioritize resources that get WLTKD
             .ToList();
         var trades = new List<Trade.Trade>();

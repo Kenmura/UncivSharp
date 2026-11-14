@@ -9,7 +9,7 @@ namespace Unciv.Logic.Trade;
 
 // core/src/com/unciv/logic/trade/Trade.kt (Trade and TradeRequest)
 
-public class Trade : IsPartOfGameInfoSerialization
+public class Trade : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("theirOffers")]
     [JsonInclude]
@@ -63,7 +63,7 @@ public class Trade : IsPartOfGameInfoSerialization
     public bool IsPeaceTreaty() => OurOffers.Any(it => it.Type == TradeOfferType.Treaty && it.Name == Constants.PeaceTreaty);
 }
 
-public class TradeRequest : IsPartOfGameInfoSerialization
+public class TradeRequest : IIsPartOfGameInfoSerialization
 {
     /// <summary>Kotlin <c>lateinit var</c>: reading before assignment throws.</summary>
     [JsonPropertyName("requestingCiv")]
@@ -100,8 +100,8 @@ public class TradeRequest : IsPartOfGameInfoSerialization
         var requestingCivInfo = (CivilizationObject)decliningCiv.GameInfo.GetCivilization(RequestingCiv);
         var requestingCivDiploManager = requestingCivInfo.GetDiplomacyManager(decliningCiv).NotNull();
         // the numbers of the flags (20,5) are the amount of turns to wait until offering again
-        if (Trade.OurOffers.All(it => it.Type == TradeOfferType.Luxury_Resource)
-            && Trade.TheirOffers.All(it => it.Type == TradeOfferType.Luxury_Resource))
+        if (Trade.OurOffers.All(it => it.Type == TradeOfferType.LuxuryResource)
+            && Trade.TheirOffers.All(it => it.Type == TradeOfferType.LuxuryResource))
             requestingCivDiploManager.SetFlag(DiplomacyFlags.DeclinedLuxExchange, 5 - KotlinMath.FloatToInt(requestingCivInfo.GetPersonality()[PersonalityValue.Commerce] / 2));
         if (Trade.OurOffers.Any(it => it.Name == Constants.ResearchAgreement))
             requestingCivDiploManager.SetFlag(DiplomacyFlags.DeclinedResearchAgreement, 15 - KotlinMath.FloatToInt(requestingCivInfo.GetPersonality()[PersonalityValue.Science]));

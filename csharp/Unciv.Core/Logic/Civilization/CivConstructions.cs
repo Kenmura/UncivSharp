@@ -20,7 +20,7 @@ namespace Unciv.Logic.Civilization;
 //   Kotlin sequence does.
 // - @Readonly purity annotations are dropped. The Kotlin field names are the JSON names (T140).
 
-public class CivConstructions : IsPartOfGameInfoSerialization
+public class CivConstructions : IIsPartOfGameInfoSerialization
 {
     private Civilization? civInfo;
 

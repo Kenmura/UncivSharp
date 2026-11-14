@@ -182,7 +182,7 @@ public static partial class DiplomacyAiTests
             w.RunUntil(() => DiplomacyAutomation.OfferToEstablishEmbassy(w.CivViewOf(w.A)), () => w.B.TradeRequests.Count != 0);
             var request = w.B.TradeRequests[0];
             // embassyGptValue = 90 / 30 = 3; our gpt is below that in this empty economy -> flat gold 90 (gold >= value and gpt >= 0)
-            var gold = Assert.Single(request.Trade.TheirOffers, it => it.Type is TradeOfferType.Gold or TradeOfferType.Gold_Per_Turn);
+            var gold = Assert.Single(request.Trade.TheirOffers, it => it.Type is TradeOfferType.Gold or TradeOfferType.GoldPerTurn);
             Assert.True(gold.Type == TradeOfferType.Gold ? gold.Amount == 90 : gold.Amount == 3);
         }
 

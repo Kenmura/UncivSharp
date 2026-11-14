@@ -10,7 +10,7 @@ namespace Unciv.Logic.Civilization.Managers;
 // Ported from core/src/com/unciv/logic/civilization/managers/quests/AssignedQuest.kt (T069). Stripped: the purity annotations and
 // onClickAction (it only drives the GUI: GUI.resetToWorldScreen / setCenterPosition, client code).
 
-public class AssignedQuest : IsPartOfGameInfoSerialization
+public class AssignedQuest : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("questName")]
     public string QuestName { get; init; } = "";

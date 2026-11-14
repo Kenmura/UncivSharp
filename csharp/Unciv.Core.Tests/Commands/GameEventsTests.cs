@@ -288,7 +288,7 @@ public sealed class GameEventsTests
 
         created.CurrentMovement = 2f;
         var from = created.CurrentTile;
-        var target = testGame.GetTile(from.Position.x + 2, from.Position.y);
+        var target = testGame.GetTile(from.Position.X + 2, from.Position.Y);
         created.Movement.MoveToTile(target);
         var moved = Assert.Single(Of<UnitMoved>(sink));
         Assert.Equal(a.CivId, moved.CivId);
@@ -401,7 +401,7 @@ public sealed class GameEventsTests
 
         var owners = Of<TileOwnerChanged>(sink).Where(it => it.OldOwnerCivId == b.CivId && it.NewOwnerCivId == a.CivId).Select(it => it.Position).ToList();
         Assert.NotEmpty(owners);
-        Assert.Equal(owners.OrderBy(it => it.x).ThenBy(it => it.y), owners);
+        Assert.Equal(owners.OrderBy(it => it.X).ThenBy(it => it.Y), owners);
     }
 
     [Fact]

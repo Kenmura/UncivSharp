@@ -5,7 +5,7 @@ using Unciv.Utils;
 namespace Unciv.Models.Ruleset.Unique;
 
 /// <summary>Ported from core/src/com/unciv/models/ruleset/unique/TemporaryUnique.kt.</summary>
-public sealed class TemporaryUnique : IsPartOfGameInfoSerialization
+public sealed class TemporaryUnique : IIsPartOfGameInfoSerialization
 {
     public TemporaryUnique()
     {

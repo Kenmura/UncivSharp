@@ -6,7 +6,7 @@ using Unciv.Utils;
 namespace Unciv.Logic.Battle;
 
 // Ported from core/src/com/unciv/logic/battle/AttackParticipant.kt (T082). Purity annotations dropped.
-// JSON names are the Kotlin field names (IsPartOfGameInfoSerialization).
+// JSON names are the Kotlin field names (IIsPartOfGameInfoSerialization).
 
 public enum AttackParticipantOutcome
 {
@@ -14,7 +14,7 @@ public enum AttackParticipantOutcome
 }
 
 /// <summary>A participant's identity at attack time, independent of later movement, renaming or capture.</summary>
-public class AttackParticipant() : IsPartOfGameInfoSerialization
+public class AttackParticipant() : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("unitID")]
     public int? UnitID { get; set; }

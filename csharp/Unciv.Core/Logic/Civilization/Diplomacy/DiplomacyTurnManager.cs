@@ -43,7 +43,7 @@ public static class DiplomacyTurnManager
 
             foreach (var offer in trade.OurOffers)
             {
-                if ((offer.Type == TradeOfferType.Luxury_Resource || offer.Type == TradeOfferType.Strategic_Resource)
+                if ((offer.Type == TradeOfferType.LuxuryResource || offer.Type == TradeOfferType.StrategicResource)
                     && (negativeCivResources.Contains(offer.Name) || !civInfo.GameInfo.Ruleset.TileResources.ContainsKey(offer.Name)))
                 {
                     self.Trades.Remove(trade);
@@ -292,7 +292,7 @@ public static class DiplomacyTurnManager
 
                     civInfo.UpdateStatsForNextTurn(); // if they were bringing us gold per turn
                     if (Union(trade) // if resources were involved
-                            .Any(it => it.Type == TradeOfferType.Luxury_Resource || it.Type == TradeOfferType.Strategic_Resource))
+                            .Any(it => it.Type == TradeOfferType.LuxuryResource || it.Type == TradeOfferType.StrategicResource))
                         civInfo.Cache.UpdateCivResources();
                 }
             }

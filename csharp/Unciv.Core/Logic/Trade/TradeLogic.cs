@@ -88,18 +88,18 @@ public class TradeLogic
             .Where(it => it.Origin == Constants.Tradable)
             .ToList())
         {
-            var resourceTradeOfferType = entry.Resource.ResourceType == ResourceType.Luxury ? TradeOfferType.Luxury_Resource
-                : TradeOfferType.Strategic_Resource;
+            var resourceTradeOfferType = entry.Resource.ResourceType == ResourceType.Luxury ? TradeOfferType.LuxuryResource
+                : TradeOfferType.StrategicResource;
             offers.Add(new TradeOffer(entry.Resource.Name, resourceTradeOfferType, entry.Amount, civInfo.GameInfo.Speed));
         }
 
         foreach (var entry in civInfo.GetStockpiledResourcesForTrade())
         {
-            offers.Add(new TradeOffer(entry.Resource.Name, TradeOfferType.Stockpiled_Resource, entry.Amount, civInfo.GameInfo.Speed));
+            offers.Add(new TradeOffer(entry.Resource.Name, TradeOfferType.StockpiledResource, entry.Amount, civInfo.GameInfo.Speed));
         }
 
         offers.Add(new TradeOffer(Constants.FlatGold, TradeOfferType.Gold, civInfo.Gold, civInfo.GameInfo.Speed));
-        offers.Add(new TradeOffer(Constants.GoldPerTurn, TradeOfferType.Gold_Per_Turn, KotlinMath.FloatToInt(civInfo.Stats.StatsForNextTurn.Gold), civInfo.GameInfo.Speed));
+        offers.Add(new TradeOffer(Constants.GoldPerTurn, TradeOfferType.GoldPerTurn, KotlinMath.FloatToInt(civInfo.Stats.StatsForNextTurn.Gold), civInfo.GameInfo.Speed));
 
         if (!civInfo.IsOneCityChallenger() && !otherCiv.IsOneCityChallenger())
             foreach (var city in civInfo.Cities.Where(it => !(it.IsCapital() || it.IsInResistance())).ToList())
@@ -235,7 +235,7 @@ public class TradeLogic
                 to.AddGold(offer.Amount);
                 from.AddGold(-offer.Amount);
                 break;
-            case TradeOfferType.Stockpiled_Resource:
+            case TradeOfferType.StockpiledResource:
                 {
                     var resource = from.GameInfo.Ruleset.TileResources.GetValueOrDefault(offer.Name);
                     if (resource == null) return;

@@ -173,7 +173,7 @@ public static class ScenarioGame
                 var site = game.TileMap.Values
                     .Where(it => it.IsLand && !it.IsImpassible() && !it.IsCityCenter() && it.GetOwner() == null
                         && (capital == null || it.AerialDistanceTo(capital) >= 4))
-                    .OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).FirstOrDefault();
+                    .OrderBy(it => it.Position.X).ThenBy(it => it.Position.Y).FirstOrDefault();
                 if (site == null) break;
                 civ.AddCity(site.Position);
             }
@@ -200,7 +200,7 @@ public static class ScenarioGame
         var capital = human.Cities[0].GetCenterTile();
         var site = game.TileMap.Values
             .Where(it => it.IsLand && !it.IsImpassible() && !it.IsCityCenter() && it.GetOwner() == null && it.AerialDistanceTo(capital) >= 5)
-            .OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).First();
+            .OrderBy(it => it.Position.X).ThenBy(it => it.Position.Y).First();
         human.AddCity(site.Position).IsPuppet = true;
     }
 
@@ -229,7 +229,7 @@ public static class ScenarioGame
         var warrior = human.Units.GetCivUnits().OrderBy(it => it.Id).First(it => it.BaseUnit.Name == "Warrior");
         var free = warrior.CurrentTile.Neighbors
             .Where(it => it.IsLand && !it.IsImpassible() && !it.GetUnits().Any())
-            .OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).ToList();
+            .OrderBy(it => it.Position.X).ThenBy(it => it.Position.Y).ToList();
         ai.Units.PlaceUnitNearTile(free[0].Position, "Warrior");
         human.Units.PlaceUnitNearTile(free[1].Position, "Worker");
         human.GetDiplomacyManagerOrMeet(ai).DeclareWar();
@@ -259,7 +259,7 @@ public static class ScenarioGame
         var settler = human.Units.GetCivUnits().First(it => it.BaseUnit.IsCityFounder());
         var city = human.AddCity(settler.CurrentTile.Position, settler);
         var capital = city.GetCenterTile();
-        var unseen = game.TileMap.Values.Where(it => !it.IsVisible(human)).OrderByDescending(it => it.AerialDistanceTo(capital)).ThenBy(it => it.Position.x).ThenBy(it => it.Position.y).First();
+        var unseen = game.TileMap.Values.Where(it => !it.IsVisible(human)).OrderByDescending(it => it.AerialDistanceTo(capital)).ThenBy(it => it.Position.X).ThenBy(it => it.Position.Y).First();
         human.AddNotification("Your city [" + city.Name + "] has been founded", capital.Position, NotificationCategory.Cities);
         human.AddNotification("You have discovered [Agriculture]!", new TechAction("Agriculture"), NotificationCategory.General);
         human.AddNotification("An enemy scout was seen far away", unseen.Position, NotificationCategory.War);
@@ -407,7 +407,7 @@ public static class ScenarioGame
         foreach (var settler in human.Units.GetCivUnits().Where(it => it.BaseUnit.IsCityFounder()).ToList()) settler.Destroy(); // the capital is founded, so its tile is free for a prophet
         var site = game.TileMap.Values
             .Where(it => it.IsLand && !it.IsImpassible() && !it.IsCityCenter() && it.GetOwner() == null && it.AerialDistanceTo(capital.GetCenterTile()) >= 4)
-            .OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).First();
+            .OrderBy(it => it.Position.X).ThenBy(it => it.Position.Y).First();
         var second = human.AddCity(site.Position);
         second.CityConstructions.AddToQueue("Warrior");
         human.Units.PlaceUnitNearTile(capital.Location, "Great Prophet");

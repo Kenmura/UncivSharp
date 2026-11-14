@@ -119,23 +119,23 @@ public sealed class StateHasher
 
     public StateHasher Add(HexCoord coord)
     {
-        Add(coord.x);
-        Add(coord.y);
+        Add(coord.X);
+        Add(coord.Y);
         return this;
     }
 
     public StateHasher Add(Vector2 vector)
     {
-        Add(vector.x);
-        Add(vector.y);
+        Add(vector.X);
+        Add(vector.Y);
         return this;
     }
 
     public StateHasher Add(Vector3 vector)
     {
-        Add(vector.x);
-        Add(vector.y);
-        Add(vector.z);
+        Add(vector.X);
+        Add(vector.Y);
+        Add(vector.Z);
         return this;
     }
 

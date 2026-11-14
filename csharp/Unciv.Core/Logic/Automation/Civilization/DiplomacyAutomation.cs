@@ -150,7 +150,7 @@ public static class DiplomacyAutomation
                     var embassyGptValue = embassyValue / civInfo.GameInfo.Speed.DealDuration;
                     var ourGpt = civView.GetGoldPerTurn();
                     if (embassyGptValue >= 1 && embassyGptValue <= ourGpt)
-                        tradeLogic.CurrentTrade.OurOffers.Add(new TradeOffer(Constants.GoldPerTurn, TradeOfferType.Gold_Per_Turn, embassyGptValue, civInfo.GameInfo.Speed));
+                        tradeLogic.CurrentTrade.OurOffers.Add(new TradeOffer(Constants.GoldPerTurn, TradeOfferType.GoldPerTurn, embassyGptValue, civInfo.GameInfo.Speed));
                     else if (civView.Gold >= embassyValue && ourGpt >= 0)
                         tradeLogic.CurrentTrade.OurOffers.Add(new TradeOffer(Constants.FlatGold, TradeOfferType.Gold, embassyValue, civInfo.GameInfo.Speed));
                     // else let them make counter offer

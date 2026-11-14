@@ -148,8 +148,8 @@ public class JavaHashMapTests
     [Fact]
     public void KeyTypesWithoutDeterministicJvmHashCodeAreRejected()
     {
-        Assert.Throws<NotSupportedException>(() => new JavaHashSet<Stat>());
-        Assert.Throws<NotSupportedException>(() => new JavaHashMap<object, int>());
+        Assert.Throws<InvalidOperationException>(() => new JavaHashSet<Stat>());
+        Assert.Throws<InvalidOperationException>(() => new JavaHashMap<object, int>());
         var custom = new JavaHashSet<Stat>(stat => (int)stat); // an explicit hash function is the escape hatch
         Assert.True(custom.Add(Stat.Gold));
     }
@@ -163,7 +163,7 @@ public class JavaHashMapTests
         {
             "int" => Run(spec, int.Parse, key => key.ToString()),
             "long" => Run(spec, long.Parse, key => key.ToString()),
-            "hex" => Run(spec, text => { var p = text.Split(':'); return HexCoord.Of(int.Parse(p[0]), int.Parse(p[1])); }, coord => $"{coord.x}:{coord.y}"),
+            "hex" => Run(spec, text => { var p = text.Split(':'); return HexCoord.Of(int.Parse(p[0]), int.Parse(p[1])); }, coord => $"{coord.X}:{coord.Y}"),
             _ => Run(spec, text => text, key => key)
         };
     }

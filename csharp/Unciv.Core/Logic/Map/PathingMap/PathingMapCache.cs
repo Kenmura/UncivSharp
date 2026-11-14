@@ -81,8 +81,8 @@ internal sealed class PathingMapCache
         var ys = new PathingBitSet(height);
         foreach (var tile in routeTiles)
         {
-            xs.Set(tile.Position.x - tileMap.LeftX);
-            ys.Set(height - tile.Position.y + tileMap.BottomY); // invert the ys to easily iterate from positive to negative
+            xs.Set(tile.Position.X - tileMap.LeftX);
+            ys.Set(height - tile.Position.Y + tileMap.BottomY); // invert the ys to easily iterate from positive to negative
         }
         var stringBuilder = new StringBuilder("\n");
         // format the column headers

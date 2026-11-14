@@ -10,37 +10,37 @@ namespace Unciv.Utils;
 //  - The Kotlin `plus`/`minus` operators are not ported (use Add/Remove); C# operators cannot return void.
 public class LongPriorityQueue
 {
-    public interface Comparator
+    public interface IComparator
     {
         int Invoke(long a, long b);
     }
 
-    private sealed class DefaultComparatorImpl : Comparator
+    private sealed class DefaultComparatorImpl : IComparator
     {
         public int Invoke(long a, long b) => a.CompareTo(b);
     }
 
-    public static readonly Comparator DefaultComparator = new DefaultComparatorImpl();
+    public static readonly IComparator DefaultComparator = new DefaultComparatorImpl();
 
-    public Comparator comparator { get; }
+    public IComparator Comparator { get; }
 
     private long[] queue;
     private int size;
     private int mutCounter;
 
-    public LongPriorityQueue(int initialCapacity = 100, Comparator? comparator = null)
+    public LongPriorityQueue(int initialCapacity = 100, IComparator? comparator = null)
     {
-        this.comparator = comparator ?? DefaultComparator;
+        Comparator = comparator ?? DefaultComparator;
         queue = new long[initialCapacity];
     }
 
-    public LongPriorityQueue(ICollection<long> c, Comparator? comparator = null)
+    public LongPriorityQueue(ICollection<long> c, IComparator? comparator = null)
         : this(c.Count, comparator)
     {
         AddAll(c);
     }
 
-    public LongPriorityQueue(long[] c, Comparator? comparator = null)
+    public LongPriorityQueue(long[] c, IComparator? comparator = null)
         : this(c.Length, comparator)
     {
         AddAll(c);
@@ -168,11 +168,9 @@ public class LongPriorityQueue
     }
 
     // Quirk preserved from Kotlin: the argument is ignored, the head is removed.
-    // JUSTIFY: T001 IDE0060 the unused parameter is the Kotlin behaviour being preserved.
-#pragma warning disable IDE0060
     public bool Remove(long value)
-#pragma warning restore IDE0060
     {
+        _ = value;
         if (size == 0) return false;
         FillHole(0);
         ++mutCounter;
@@ -248,7 +246,7 @@ public class LongPriorityQueue
         while (index > 0)
         {
             var parentIndex = (index - 1) / 2;
-            if (comparator.Invoke(queue[parentIndex], queue[index]) < 0)
+            if (Comparator.Invoke(queue[parentIndex], queue[index]) < 0)
             {
                 break;
             }
@@ -274,7 +272,7 @@ public class LongPriorityQueue
                 queue[index] = queue[child1];
                 break;
             }
-            if (comparator.Invoke(queue[child1], queue[child2]) <= 0)
+            if (Comparator.Invoke(queue[child1], queue[child2]) <= 0)
             {
                 queue[index] = queue[child1];
                 index = child1;
@@ -322,7 +320,7 @@ public class LongPriorityQueue
     // backing array rather than the live elements. It throws if that tail does not fit into the clone.
     public LongPriorityQueue Clone()
     {
-        var c = new LongPriorityQueue(size, comparator);
+        var c = new LongPriorityQueue(size, Comparator);
         var count = queue.Length - size;
         if (count > c.queue.Length)
             throw new IndexOutOfRangeException($"The destination array is too small: {count} > {c.queue.Length}.");
@@ -334,7 +332,7 @@ public class LongPriorityQueue
     public override bool Equals(object? other)
     {
         if (other is not LongPriorityQueue o) return false;
-        if (!ReferenceEquals(comparator, o.comparator)) return false;
+        if (!ReferenceEquals(Comparator, o.Comparator)) return false;
         if (size != o.size) return false;
         for (var i = 0; i < size; i++)
         {
@@ -348,7 +346,7 @@ public class LongPriorityQueue
     {
         unchecked
         {
-            var hash = 31 + comparator.GetHashCode();
+            var hash = 31 + Comparator.GetHashCode();
             for (var i = 0; i < size; i++)
             {
                 var v = queue[i];

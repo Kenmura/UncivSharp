@@ -488,7 +488,7 @@ public sealed class QuestManagerTests : IDisposable
         camp.SetImprovementBasic(Constants.BarbarianEncampment);
         Assert.True(QuestName.ClearBarbarianCamp.IsValid(geneva, babylon));
         var (x, y) = QuestName.ClearBarbarianCamp.GetAssignedQuestData(geneva, ruleset.Quests["Clear Barbarian Camp"], babylon);
-        Assert.Equal((camp.Position.x.ToString(System.Globalization.CultureInfo.InvariantCulture), camp.Position.y.ToString(System.Globalization.CultureInfo.InvariantCulture)), (x, y));
+        Assert.Equal((camp.Position.X.ToString(System.Globalization.CultureInfo.InvariantCulture), camp.Position.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)), (x, y));
         var assigned = new AssignedQuest(game, ruleset.Quests["Clear Barbarian Camp"], geneva, babylon, 0, x, y);
         var actions = QuestName.ClearBarbarianCamp.GetNotificationActions(geneva, assigned);
         Assert.IsType<LocationAction>(actions[0]);

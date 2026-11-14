@@ -440,8 +440,7 @@ internal static class JavaHashCodes
         else if (typeof(T) == typeof(bool)) function = (Func<bool, int>)JavaHash.HashCode;
         else if (typeof(T) == typeof(HexCoord)) function = (Func<HexCoord, int>)(coord => coord.GetHashCode());
         if (function == null)
-            // JUSTIFY: T118 caller error, JVM hash code unknown (permanent)
-            throw new NotSupportedException($"{typeof(T).Name} has no deterministic JVM hashCode(); pass a hash function, or use an insertion-ordered collection");
+            throw new InvalidOperationException($"{typeof(T).Name} has no deterministic JVM hashCode(); pass a hash function, or use an insertion-ordered collection");
         return (Func<T, int>)function;
     }
 }

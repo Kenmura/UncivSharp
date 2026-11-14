@@ -19,7 +19,7 @@ public enum SpyFleeReason
 
 public class CityEspionageManager
 {
-    // Note: Instance lives in City, but since we don't carry data, it's transient, and no `: IsPartOfGameInfoSerialization` here.
+    // Note: Instance lives in City, but since we don't carry data, it's transient, and no `: IIsPartOfGameInfoSerialization` here.
 
     private CityObject? city;
     /// <summary>Kotlin <c>@Transient lateinit var</c>: reading before assignment throws.</summary>

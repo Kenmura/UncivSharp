@@ -185,8 +185,8 @@ public class MapSize : IIsPartOfGameInfoSerialization
     {
         Radius = radius;
         HexCoord size = HexMath.GetEquivalentRectangularSize(radius);
-        Width = size.x;
-        Height = size.y;
+        Width = size.X;
+        Height = size.Y;
     }
 
     public override string ToString() => Name == Custom ? $"{Width}x{Height}" : Name;

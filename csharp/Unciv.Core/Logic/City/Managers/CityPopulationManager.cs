@@ -20,7 +20,7 @@ namespace Unciv.Logic.City.Managers;
 // The members tests override (AutoAssignPopulation, UnassignExtraPopulation, GetPopulationFilterAmount) are virtual so that City tests can
 // count the calls without a full map and automation.
 
-public class CityPopulationManager : IsPartOfGameInfoSerialization
+public class CityPopulationManager : IIsPartOfGameInfoSerialization
 {
     private CityObject? city;
     /// <summary>Kotlin <c>@Transient lateinit var</c>, set by <c>City.setTransients</c>: reading before assignment throws.</summary>

@@ -648,10 +648,10 @@ public class MapUnitCoreTests
         unit.Health = 50;
         var neighbor = w.TileAt(2, 2).Neighbors[0];
         var other = w.TileAt(2, 2).Neighbors[1];
-        neighbor.MilitaryUnit = w.Unit("Medic", "Land", neighbor.Position.x, neighbor.Position.y, null, "All adjacent units heal [3] HP when healing");
-        other.MilitaryUnit = w.Unit("Surgeon", "Land", other.Position.x, other.Position.y, null, "All adjacent units heal [8] HP when healing");
+        neighbor.MilitaryUnit = w.Unit("Medic", "Land", neighbor.Position.X, neighbor.Position.Y, null, "All adjacent units heal [3] HP when healing");
+        other.MilitaryUnit = w.Unit("Surgeon", "Land", other.Position.X, other.Position.Y, null, "All adjacent units heal [8] HP when healing");
         var foreign = MapUnitFactory.NewCiv("Egypt", w.Info);
-        w.TileAt(2, 2).Neighbors[2].MilitaryUnit = w.Unit("Enemy", "Land", w.TileAt(2, 2).Neighbors[2].Position.x, w.TileAt(2, 2).Neighbors[2].Position.y, foreign, "All adjacent units heal [50] HP when healing");
+        w.TileAt(2, 2).Neighbors[2].MilitaryUnit = w.Unit("Enemy", "Land", w.TileAt(2, 2).Neighbors[2].Position.X, w.TileAt(2, 2).Neighbors[2].Position.Y, foreign, "All adjacent units heal [50] HP when healing");
         Assert.Equal(18, unit.HealingAmountForTile(w.TileAt(2, 2))); // 10 + max(3, 8); other civs do not count
     }
 
@@ -1237,7 +1237,7 @@ public class MapUnitCoreTests
         Assert.True(ghost.IsVisibleTo(egypt));
         var sneak = w.Unit("Sneak", "Land", 2, 2, null, "Invisible to non-adjacent units");
         Assert.True(sneak.HasActiveInvisibilityUnique(egypt));
-        w.TileAt(2, 2).Neighbors[0].MilitaryUnit = w.Unit("Spy", "Land", w.TileAt(2, 2).Neighbors[0].Position.x, w.TileAt(2, 2).Neighbors[0].Position.y, egypt);
+        w.TileAt(2, 2).Neighbors[0].MilitaryUnit = w.Unit("Spy", "Land", w.TileAt(2, 2).Neighbors[0].Position.X, w.TileAt(2, 2).Neighbors[0].Position.Y, egypt);
         Assert.False(sneak.HasActiveInvisibilityUnique(egypt));
     }
 

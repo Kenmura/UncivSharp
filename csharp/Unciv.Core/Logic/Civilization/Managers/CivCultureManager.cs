@@ -7,7 +7,7 @@ namespace Unciv.Logic.Civilization.Managers;
 // The influence ("culture on") a civ has over every other civ, and the snapshot of last turn the trend needs.
 
 /// <summary>What one civ knows about its cultural influence over another civ.</summary>
-public class InfluenceEntry : IsPartOfGameInfoSerialization
+public class InfluenceEntry : IIsPartOfGameInfoSerialization
 {
     /// <summary>Civ id of the civ the influence is over.</summary>
     [JsonPropertyName("civ")]
@@ -32,7 +32,7 @@ public class InfluenceEntry : IsPartOfGameInfoSerialization
 /// Per-civ tourism state (spec 2.2 <c>Civilization.Culture</c>). Null on <see cref="Civilization"/> until the first turn of a game with Great Works
 /// and tourism, so every G&amp;K save serialises as before. Entries are kept sorted by civ id (ordinal): a canonical form for saves and the checksum.
 /// </summary>
-public class CivCultureManager : IsPartOfGameInfoSerialization
+public class CivCultureManager : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("influence")]
     public List<InfluenceEntry> Entries { get; set; } = [];

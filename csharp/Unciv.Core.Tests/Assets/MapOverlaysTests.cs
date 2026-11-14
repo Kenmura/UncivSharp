@@ -168,8 +168,8 @@ public class MapOverlaysTests
         var (n2a, n2b) = MapOverlays.EdgeEnds(0, 0, 0, -1, 0.05f);
         var centre = HexMath.Hex2WorldCoords(new HexCoord(0, 0));
         static float Dist((float X, float Z) p, float cx, float cz) => MathF.Sqrt((p.X - cx) * (p.X - cx) + (p.Z - cz) * (p.Z - cz));
-        Assert.True(Dist(ia, centre.x, -centre.y) < Dist(a, centre.x, -centre.y));
-        Assert.True(Dist(ib, centre.x, -centre.y) < Dist(b, centre.x, -centre.y));
+        Assert.True(Dist(ia, centre.X, -centre.Y) < Dist(a, centre.X, -centre.Y));
+        Assert.True(Dist(ib, centre.X, -centre.Y) < Dist(b, centre.X, -centre.Y));
         // The side's midpoint moves by exactly the inset
         var mid = ((a.X + b.X) / 2f, (a.Z + b.Z) / 2f);
         var imid = ((ia.X + ib.X) / 2f, (ia.Z + ib.Z) / 2f);
@@ -190,7 +190,7 @@ public class MapOverlaysTests
         var (ga, gb) = MapOverlays.EdgeEnds(greece.X, greece.Y, greece.Dx, greece.Dy, 0.05f);
         // Measure along the world direction from Babylon's tile to Greece's (z is minus the engine's y)
         var to = HexMath.Hex2WorldCoords(new HexCoord(1, 0));
-        var dir = (X: to.x, Z: -to.y);
+        var dir = (X: to.X, Z: -to.Y);
         var len = MathF.Sqrt(dir.X * dir.X + dir.Z * dir.Z);
         float Along((float X, float Z) p, (float X, float Z) q) => ((p.X + q.X) / 2f * dir.X + (p.Z + q.Z) / 2f * dir.Z) / len;
         var raw = MapOverlays.EdgeEnds(0, 0, 1, 0);
@@ -282,8 +282,8 @@ public class MapOverlaysTests
         var centre = HexMath.Hex2WorldCoords(new HexCoord(2, -1));
         var neighbour = HexMath.Hex2WorldCoords(new HexCoord(2 + dx, -1 + dy));
         var mid = ((a.X + b.X) / 2f, (a.Z + b.Z) / 2f);
-        Assert.Equal((centre.x + neighbour.x) / 2f, mid.Item1, 3);
-        Assert.Equal(-(centre.y + neighbour.y) / 2f, mid.Item2, 3);
+        Assert.Equal((centre.X + neighbour.X) / 2f, mid.Item1, 3);
+        Assert.Equal(-(centre.Y + neighbour.Y) / 2f, mid.Item2, 3);
     }
 
     [Fact]

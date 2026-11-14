@@ -58,7 +58,7 @@ internal static class CityCommandChecks
         if (!context.TileAt(position).TryGet(out tile, out failure)) return false;
         if (!city.GetWorkableTiles().Contains(tile) || tile.IsBlockaded())
         {
-            failure = CommandValidation.Fail(CommandErrors.InvalidTarget, $"{city.Name} cannot work the tile at {position.x},{position.y}");
+            failure = CommandValidation.Fail(CommandErrors.InvalidTarget, $"{city.Name} cannot work the tile at {position.X},{position.Y}");
             return false;
         }
         return true;

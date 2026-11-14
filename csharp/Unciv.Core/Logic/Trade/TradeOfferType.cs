@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace Unciv.Logic.Trade;
 
 // core/src/com/unciv/logic/trade/TradeOfferType.kt
@@ -10,27 +13,26 @@ public enum TradeTypeNumberType
     Gold,
 }
 
-/// <summary>Enum that classifies Trade Types. The names are serialized, so the underscores stay.</summary>
-#pragma warning disable CA1707 // JUSTIFY: T059 the Kotlin enum entries (serialized by name in save files) contain underscores
+/// <summary>Enum that classifies Trade Types. Wire names preserve the Kotlin save format.</summary>
+[JsonConverter(typeof(TradeOfferTypeConverter))]
 public enum TradeOfferType
 {
     Embassy,
     Gold,
-    Gold_Per_Turn,
+    GoldPerTurn,
     /// <summary>Treaties are shared by both sides - like peace treaty and defensive pact</summary>
     Treaty,
     /// <summary>Agreements are one-sided, like open borders</summary>
     Agreement,
-    Luxury_Resource,
-    Strategic_Resource,
-    Stockpiled_Resource,
+    LuxuryResource,
+    StrategicResource,
+    StockpiledResource,
     Technology,
     Introduction,
     WarDeclaration,
     PeaceProposal,
     City,
 }
-#pragma warning restore CA1707
 
 /// <summary>The two constructor parameters of Kotlin's <c>TradeOfferType</c> enum entries.</summary>
 public static class TradeOfferTypeExtensions
@@ -40,12 +42,12 @@ public static class TradeOfferTypeExtensions
     {
         TradeOfferType.Embassy => TradeTypeNumberType.None,
         TradeOfferType.Gold => TradeTypeNumberType.Gold,
-        TradeOfferType.Gold_Per_Turn => TradeTypeNumberType.Gold,
+        TradeOfferType.GoldPerTurn => TradeTypeNumberType.Gold,
         TradeOfferType.Treaty => TradeTypeNumberType.None,
         TradeOfferType.Agreement => TradeTypeNumberType.None,
-        TradeOfferType.Luxury_Resource => TradeTypeNumberType.Simple,
-        TradeOfferType.Strategic_Resource => TradeTypeNumberType.Simple,
-        TradeOfferType.Stockpiled_Resource => TradeTypeNumberType.Simple,
+        TradeOfferType.LuxuryResource => TradeTypeNumberType.Simple,
+        TradeOfferType.StrategicResource => TradeTypeNumberType.Simple,
+        TradeOfferType.StockpiledResource => TradeTypeNumberType.Simple,
         TradeOfferType.Technology => TradeTypeNumberType.None,
         TradeOfferType.Introduction => TradeTypeNumberType.None,
         TradeOfferType.WarDeclaration => TradeTypeNumberType.None,
@@ -59,12 +61,12 @@ public static class TradeOfferTypeExtensions
     {
         TradeOfferType.Embassy => true,
         TradeOfferType.Gold => true,
-        TradeOfferType.Gold_Per_Turn => false,
+        TradeOfferType.GoldPerTurn => false,
         TradeOfferType.Treaty => false,
         TradeOfferType.Agreement => false,
-        TradeOfferType.Luxury_Resource => false,
-        TradeOfferType.Strategic_Resource => false,
-        TradeOfferType.Stockpiled_Resource => true,
+        TradeOfferType.LuxuryResource => false,
+        TradeOfferType.StrategicResource => false,
+        TradeOfferType.StockpiledResource => true,
         TradeOfferType.Technology => true,
         TradeOfferType.Introduction => true,
         TradeOfferType.WarDeclaration => true,
@@ -72,4 +74,49 @@ public static class TradeOfferTypeExtensions
         TradeOfferType.City => true,
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
+
+    /// <summary>Returns the Kotlin wire/save name for <paramref name="type"/>.</summary>
+    public static string ToWireString(this TradeOfferType type) => type switch
+    {
+        TradeOfferType.GoldPerTurn => "Gold_Per_Turn",
+        TradeOfferType.LuxuryResource => "Luxury_Resource",
+        TradeOfferType.StrategicResource => "Strategic_Resource",
+        TradeOfferType.StockpiledResource => "Stockpiled_Resource",
+        _ => type.ToString(),
+    };
+
+    /// <summary>Parses a Kotlin wire/save name or C# enum name into <see cref="TradeOfferType"/>.</summary>
+    public static bool TryParseWireString(string? value, out TradeOfferType result)
+    {
+        switch (value)
+        {
+            case "Gold_Per_Turn":
+                result = TradeOfferType.GoldPerTurn;
+                return true;
+            case "Luxury_Resource":
+                result = TradeOfferType.LuxuryResource;
+                return true;
+            case "Strategic_Resource":
+                result = TradeOfferType.StrategicResource;
+                return true;
+            case "Stockpiled_Resource":
+                result = TradeOfferType.StockpiledResource;
+                return true;
+            default:
+                return Enum.TryParse(value, out result) && Enum.IsDefined(result);
+        }
+    }
+}
+
+internal sealed class TradeOfferTypeConverter : JsonConverter<TradeOfferType>
+{
+    public override TradeOfferType Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        var raw = reader.GetString();
+        if (TradeOfferTypeExtensions.TryParseWireString(raw, out var value)) return value;
+        throw new JsonException($"Unknown TradeOfferType '{raw}'.");
+    }
+
+    public override void Write(Utf8JsonWriter writer, TradeOfferType value, JsonSerializerOptions options)
+        => writer.WriteStringValue(value.ToWireString());
 }

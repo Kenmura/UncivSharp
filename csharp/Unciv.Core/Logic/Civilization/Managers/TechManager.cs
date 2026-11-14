@@ -24,7 +24,7 @@ namespace Unciv.Logic.Civilization.Managers;
 // - Kotlin HashSet/HashMap fields keep java.util iteration order (JavaHashSet/JavaHashMap).
 // - Fonts.infinity (a UI class) is inlined as the constant InfinityChar.
 
-public partial class TechManager : IsPartOfGameInfoSerialization
+public partial class TechManager : IIsPartOfGameInfoSerialization
 {
     /// <summary>Fonts.infinity, inlined because Fonts is a UI class.</summary>
     private const char InfinityChar = '∞';

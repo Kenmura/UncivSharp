@@ -55,10 +55,10 @@ public sealed class MinimapRaster
             byCoord[coord] = tile;
             drawn.Add(coord);
             var world = HexMath.Hex2WorldCoords(coord);
-            minX = Math.Min(minX, world.x);
-            maxX = Math.Max(maxX, world.x);
-            minY = Math.Min(minY, world.y);
-            maxY = Math.Max(maxY, world.y);
+            minX = Math.Min(minX, world.X);
+            maxX = Math.Max(maxX, world.X);
+            minY = Math.Min(minY, world.Y);
+            maxY = Math.Max(maxY, world.Y);
         }
         if (tiles.Count == 0) minX = maxX = minY = maxY = 0f;
 
@@ -90,7 +90,7 @@ public sealed class MinimapRaster
     public (int X, int Y) CentreOf(HexCoord coord)
     {
         var world = HexMath.Hex2WorldCoords(coord);
-        return PixelOfWorld(world.x, world.y);
+        return PixelOfWorld(world.X, world.Y);
     }
 
     /// <summary>Pixel for an engine world position (north up on the picture).</summary>
@@ -104,7 +104,7 @@ public sealed class MinimapRaster
         var worldX = (pixelX - offset) / pixelsPerWorld + minX;
         var worldY = maxY - (pixelY - offset) / pixelsPerWorld;
         var hex = HexMath.RoundHexCoords(HexMath.World2HexCoords(new Vector2(worldX, worldY)));
-        var coord = new HexCoord((int)hex.x, (int)hex.y);
+        var coord = new HexCoord((int)hex.X, (int)hex.Y);
         return drawn.Contains(coord) ? coord : null;
     }
 

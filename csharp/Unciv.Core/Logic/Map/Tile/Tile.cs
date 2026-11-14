@@ -25,7 +25,7 @@ namespace Unciv.Logic.Map.Tiles;
 /// A single hex of the map. Kotlin <c>Tile</c> has no <c>equals</c>/<c>hashCode</c>: this class keeps reference identity.
 /// </summary>
 [JsonConverter(typeof(Tile.TileJsonConverter))]
-public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITileHistorySource
+public partial class Tile : IIsPartOfGameInfoSerialization, IGameContextTile, ITileHistorySource
 {
     #region Serialized fields
     public MapUnitClass? MilitaryUnit { get; set; }
@@ -171,7 +171,7 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
                 Resource = value.Name;
                 tileResourceCache = value;
             }
-            if (IsTilemapInitialized() && ReferenceEquals(TileMap.GetOrNull(Position.x, Position.y), this)) TileMap.BumpMapContentRevision();
+            if (IsTilemapInitialized() && ReferenceEquals(TileMap.GetOrNull(Position.X, Position.Y), this)) TileMap.BumpMapContentRevision();
         }
     }
 
@@ -655,15 +655,15 @@ public partial class Tile : IsPartOfGameInfoSerialization, IGameContextTile, ITi
         var positionHexcoord = Position;
         var otherPositionHexcoord = otherTile.Position;
 
-        var xDelta = positionHexcoord.x - otherPositionHexcoord.x;
-        var yDelta = positionHexcoord.y - otherPositionHexcoord.y;
+        var xDelta = positionHexcoord.X - otherPositionHexcoord.X;
+        var yDelta = positionHexcoord.Y - otherPositionHexcoord.Y;
         var distance = Math.Max(Math.Max(Math.Abs(xDelta), Math.Abs(yDelta)), Math.Abs(xDelta - yDelta));
 
         if (!TileMap.MapParameters.WorldWrap || distance <= TileMap.Width / 2) return distance;
 
         var otherTileUnwrappedPos = TileMap.GetUnwrappedPosition(otherPositionHexcoord);
-        var xDeltaWrapped = positionHexcoord.x - otherTileUnwrappedPos.x;
-        var yDeltaWrapped = positionHexcoord.y - otherTileUnwrappedPos.y;
+        var xDeltaWrapped = positionHexcoord.X - otherTileUnwrappedPos.X;
+        var yDeltaWrapped = positionHexcoord.Y - otherTileUnwrappedPos.Y;
         var wrappedDistance = Math.Max(Math.Max(Math.Abs(xDeltaWrapped), Math.Abs(yDeltaWrapped)), Math.Abs(xDeltaWrapped - yDeltaWrapped));
 
         return Math.Min(distance, wrappedDistance);

@@ -24,7 +24,7 @@ namespace Unciv.Logic.Civilization.Diplomacy;
 // - recieveGoldGifts / getGoldInflation: TradeEvaluation().getGoldInflation is TradeEvaluation.Default.GetGoldInflation (T089).
 // - Kotlin HashMaps (flagsCountdown, diplomaticModifiers) are JavaHashMaps: opinionOfOtherCiv sums the values in HashMap order.
 
-public class DiplomacyManager : IsPartOfGameInfoSerialization
+public class DiplomacyManager : IIsPartOfGameInfoSerialization
 {
     /// <summary>The value city-state influence can't go below</summary>
     public const float MinimumInfluence = -60f;
@@ -437,9 +437,9 @@ public class DiplomacyManager : IsPartOfGameInfoSerialization
         int goldPerTurnForUs = 0;
         foreach (var trade in Trades)
         {
-            foreach (var offer in trade.OurOffers.Where(it => it.Type == TradeOfferType.Gold_Per_Turn))
+            foreach (var offer in trade.OurOffers.Where(it => it.Type == TradeOfferType.GoldPerTurn))
                 goldPerTurnForUs -= offer.Amount;
-            foreach (var offer in trade.TheirOffers.Where(it => it.Type == TradeOfferType.Gold_Per_Turn))
+            foreach (var offer in trade.TheirOffers.Where(it => it.Type == TradeOfferType.GoldPerTurn))
                 goldPerTurnForUs += offer.Amount;
         }
         return goldPerTurnForUs;
@@ -450,7 +450,7 @@ public class DiplomacyManager : IsPartOfGameInfoSerialization
         var newResourceSupplyList = new ResourceSupplyList();
         var resourcesMap = CivInfo.GameInfo.Ruleset.TileResources;
         bool IsResourceFilter(TradeOffer it) =>
-            (it.Type == TradeOfferType.Strategic_Resource || it.Type == TradeOfferType.Luxury_Resource)
+            (it.Type == TradeOfferType.StrategicResource || it.Type == TradeOfferType.LuxuryResource)
                 && resourcesMap.ContainsKey(it.Name)
                 && !resourcesMap[it.Name].IsStockpiled;
         foreach (var trade in Trades)

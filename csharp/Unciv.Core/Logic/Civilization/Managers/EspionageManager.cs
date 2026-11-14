@@ -9,7 +9,7 @@ using CityObject = Unciv.Logic.City.City;
 namespace Unciv.Logic.Civilization.Managers;
 
 // Ported from core/src/com/unciv/logic/civilization/managers/EspionageManager.kt (T057).
-public class EspionageManager : IsPartOfGameInfoSerialization
+public class EspionageManager : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("spyList")]
     public List<Spy> SpyList { get; set; } = [];

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Unciv.Net;
 using Unciv.Net.Discovery;
+using Unciv.Net.Identity;
 using Unciv.Net.Lobby;
 using Unciv.Net.Turns;
 
@@ -96,7 +97,7 @@ public class NetDiscoveryTests
             Password = "secret"
         };
 
-        await using var host = new LobbyHost(settings, hostFingerprint: "FP-XYZ", hostName: "Bob");
+        await using var host = new LobbyHost(SystemSecureRandom.Instance, settings, hostFingerprint: "FP-XYZ", hostName: "Bob");
 
         var beacon = LanBeacon.FromLobbyHost(host, tcpPort: 50000);
 

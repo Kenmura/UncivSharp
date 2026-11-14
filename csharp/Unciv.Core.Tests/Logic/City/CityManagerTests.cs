@@ -199,8 +199,8 @@ public sealed class CityManagerTests
         var worked = w.City.GetWorkedTiles().ToList();
         var workable = w.City.GetWorkableTiles().Where(it => it.Stats.GetTileStats(w.City, w.Civ).Food == 2f)
             .OrderByDescending(it => it.Longitude).ThenByDescending(it => it.Latitude).Take(2).ToList();
-        Assert.Equal(workable.Select(it => it.Position).OrderBy(it => it.x).ThenBy(it => it.y),
-            worked.Select(it => it.Position).OrderBy(it => it.x).ThenBy(it => it.y));
+        Assert.Equal(workable.Select(it => it.Position).OrderBy(it => it.X).ThenBy(it => it.Y),
+            worked.Select(it => it.Position).OrderBy(it => it.X).ThenBy(it => it.Y));
         Assert.True(w.Stats.UpdateCalls >= 2);
     }
 

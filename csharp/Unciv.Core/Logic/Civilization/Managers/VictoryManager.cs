@@ -9,7 +9,7 @@ using Unciv.Utils;
 namespace Unciv.Logic.Civilization.Managers;
 
 // Ported from core/src/com/unciv/logic/civilization/managers/VictoryManager.kt (T057).
-public class VictoryManager : IsPartOfGameInfoSerialization
+public class VictoryManager : IIsPartOfGameInfoSerialization
 {
     private Civilization? civInfo;
     /// <summary>Transient. Kotlin <c>lateinit var</c>: reading before assignment throws.</summary>

@@ -35,7 +35,7 @@ public sealed class ConsoleContext(GameInfo game, string actorId, ConsoleSelecti
     }
 
     public Tile GetSelectedTile() =>
-        (Selection.Tile is { } position ? Game.TileMap.GetOrNull(position.x, position.y) : null) ?? throw new ConsoleErrorException("Select tile");
+        (Selection.Tile is { } position ? Game.TileMap.GetOrNull(position.X, position.Y) : null) ?? throw new ConsoleErrorException("Select tile");
 
     /// <summary>The city owning the selected tile.</summary>
     public CityObject GetSelectedCity() =>

@@ -40,13 +40,14 @@ public sealed class ElectionTally
     private readonly Dictionary<string, long> votes = new(StringComparer.Ordinal); // key id -> last seq
     private readonly HashSet<string> electorate;
 
-    public ElectionTally(string gameId, int epoch, string candidateKeyId, IReadOnlyList<SuccessorSeat> roster, bool rosterFresh, IClock clock, ISecureRandom? random = null, ElectionLimits? limits = null)
+    public ElectionTally(string gameId, int epoch, string candidateKeyId, IReadOnlyList<SuccessorSeat> roster, bool rosterFresh, IClock clock, ISecureRandom random, ElectionLimits? limits = null)
     {
+        ArgumentNullException.ThrowIfNull(random);
         GameId = gameId;
         Epoch = epoch;
         CandidateKeyId = candidateKeyId;
         this.clock = clock;
-        this.random = random ?? SystemSecureRandom.Instance;
+        this.random = random;
         this.limits = limits ?? new ElectionLimits();
         electorate = new HashSet<string>(roster.Where(it => it.IsHost != true && (it.Connected || !rosterFresh)).Select(it => it.KeyId), StringComparer.Ordinal) { candidateKeyId };
         StartedAt = clock.NowMillis;

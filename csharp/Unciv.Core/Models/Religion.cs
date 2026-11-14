@@ -16,7 +16,7 @@ namespace Unciv.Models;
 // - Kotlin Sequences are returned as IEnumerable (lazy, like the Sequence).
 
 /// <summary>Data object for Religions</summary>
-public class Religion : INamed, IsPartOfGameInfoSerialization, IGameContextReligion
+public class Religion : INamed, IIsPartOfGameInfoSerialization, IGameContextReligion
 {
     private string? name;
     /// <summary>Kotlin <c>lateinit var</c>: reading before assignment throws.</summary>

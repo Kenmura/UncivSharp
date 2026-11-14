@@ -136,7 +136,7 @@ public sealed class IncrementalViewBuilderTests
     {
         var s = Fresh();
         var (_, visible) = ViewDeltaBuilder.TileSets(s.Game, s.Viewer);
-        var target = visible.First(it => it.x < 0 || it.y < 0);
+        var target = visible.First(it => it.X < 0 || it.Y < 0);
         // A road change on a visible tile bumps no map-content or reveal revision, so the builder must rebuild it and the diff must find its key.
         var gameTile = s.Game.TileMap[target];
         gameTile.SetRoadStatus(gameTile.RoadStatus == RoadStatus.None ? RoadStatus.Road : RoadStatus.None, null);

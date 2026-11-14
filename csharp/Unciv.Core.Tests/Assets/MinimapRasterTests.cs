@@ -130,9 +130,9 @@ public class MinimapRasterTests
         var raster = MinimapRaster.Build(Block((x, y) => Tile(x, y)), Colour, cell: 6);
         var north = HexMath.Hex2WorldCoords(new HexCoord(3, 3));
         var south = HexMath.Hex2WorldCoords(new HexCoord(-3, -3));
-        Assert.True(north.y > south.y);
-        Assert.True(raster.PixelOfWorld(north.x, north.y).Y < raster.PixelOfWorld(south.x, south.y).Y);
-        var (px, py) = raster.PixelOfWorld(north.x, north.y);
+        Assert.True(north.Y > south.Y);
+        Assert.True(raster.PixelOfWorld(north.X, north.Y).Y < raster.PixelOfWorld(south.X, south.Y).Y);
+        var (px, py) = raster.PixelOfWorld(north.X, north.Y);
         Assert.Equal(new HexCoord(3, 3), raster.TileAt(px, py));
     }
 }

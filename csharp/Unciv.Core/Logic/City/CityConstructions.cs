@@ -41,7 +41,7 @@ namespace Unciv.Logic.City;
 /// </remarks>
 // Some members are virtual so that the tests of City, CityStats and CivConstructions can replace the construction logic by data-holding fakes
 // (Kotlin classes are final; this is the same device as CityStats.Update).
-public partial class CityConstructions : IsPartOfGameInfoSerialization
+public partial class CityConstructions : IIsPartOfGameInfoSerialization
 {
     private const int QueueMaxSize = 10;
 

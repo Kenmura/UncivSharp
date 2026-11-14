@@ -11,7 +11,7 @@ namespace Unciv.Logic.Civilization;
 // Notification.NotificationCategory.
 
 [JsonConverter(typeof(NotificationConverter))]
-public class Notification : IsPartOfGameInfoSerialization
+public class Notification : IIsPartOfGameInfoSerialization
 {
     /// <summary>Category - UI grouping, within a Category the most recent Notification will be shown on top</summary>
     public NotificationCategory Category { get; private set; } = NotificationCategory.General;

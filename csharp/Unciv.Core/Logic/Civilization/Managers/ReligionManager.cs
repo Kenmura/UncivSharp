@@ -18,7 +18,7 @@ namespace Unciv.Logic.Civilization.Managers;
 // - City, MapUnit and GameInfo are used through their contracts (CivilizationContracts.cs).
 // - Kotlin's `Random(seed)` is a GameRandom.
 // - The 'remainingFoundableReligionsBreakdown' Sequence of Pair is an iterator of tuples.
-public class ReligionManager : IsPartOfGameInfoSerialization
+public class ReligionManager : IIsPartOfGameInfoSerialization
 {
     private Civilization? civInfo;
     /// <summary>Transient. Kotlin <c>lateinit var</c>: reading before assignment throws.</summary>

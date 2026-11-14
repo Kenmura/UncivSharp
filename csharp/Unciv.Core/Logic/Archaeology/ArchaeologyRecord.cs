@@ -35,7 +35,7 @@ public static class ArtifactClassExtensions
 /// What happened on a tile (spec 4.4.1 <c>{ArtifactClass, Era, Player1, Player2, GreatWork}</c>). A newer event overwrites an older one. A site
 /// that hides a writing carries the name of that work in <see cref="GreatWork"/>.
 /// </summary>
-public class ArchaeologyRecord : IsPartOfGameInfoSerialization
+public class ArchaeologyRecord : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("artifactClass")]
     public ArtifactClass ArtifactClass { get; set; } = ArtifactClass.BattleMelee;
@@ -61,7 +61,7 @@ public class ArchaeologyRecord : IsPartOfGameInfoSerialization
 }
 
 /// <summary>A finished dig of a human civ whose owner has not chosen yet (spec 4.4.3): the tile still holds the dig.</summary>
-public class PendingDig : IsPartOfGameInfoSerialization
+public class PendingDig : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("x")]
     public int X { get; set; }

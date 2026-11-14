@@ -36,7 +36,7 @@ namespace Unciv.Logic;
 //   ConcurrentDictionary because it is cheap and the client may query rejection reasons from its render thread.
 
 /// <summary>The result of a game: who won how and when. Kotlin <c>data class VictoryData</c>.</summary>
-public class VictoryData : IsPartOfGameInfoSerialization
+public class VictoryData : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("winningCiv")]
     public string WinningCiv { get; set; } = "";
@@ -76,7 +76,7 @@ public class VictoryData : IsPartOfGameInfoSerialization
 }
 
 /// <summary>The virtual world the users play in</summary>
-public partial class GameInfo : IsPartOfGameInfoSerialization, IHasGameInfoSerializationVersion, IGameInfoState
+public partial class GameInfo : IIsPartOfGameInfoSerialization, IHasGameInfoSerializationVersion, IGameInfoState
 {
     private static T Lateinit<T>(T? value, string name) where T : class =>
         value ?? throw new InvalidOperationException($"lateinit property {name} has not been initialized");

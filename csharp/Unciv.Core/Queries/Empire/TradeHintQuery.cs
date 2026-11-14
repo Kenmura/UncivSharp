@@ -49,7 +49,7 @@ public sealed record TradeHintQuery(string CivName, IReadOnlyList<TradeOfferRequ
 
     private static TradeOffer Resolve(TradeOfferRequest request, TradeOffersList available)
     {
-        if (request == null || !Enum.TryParse<TradeOfferType>(request.Type, out var type) || !Enum.IsDefined(type))
+        if (request == null || !TradeOfferTypeExtensions.TryParseWireString(request.Type, out var type))
             throw new QueryException(EmpireQueryCodes.BadRequest, "Unknown trade offer type");
         var match = available.FirstOrDefault(it => it.Name == request.Name && it.Type == type && it.IsTradable());
         if (match == null)

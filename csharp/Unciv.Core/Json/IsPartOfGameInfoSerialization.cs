@@ -7,7 +7,3 @@ namespace Unciv.Json;
 public interface IIsPartOfGameInfoSerialization
 {
 }
-
-public interface IsPartOfGameInfoSerialization : IIsPartOfGameInfoSerialization
-{
-}

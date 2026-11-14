@@ -8,13 +8,13 @@ public class VectorTests
     public void Vector2_ConstructorsAndCpy()
     {
         var v = new Vector2(1.5f, -2f);
-        Assert.Equal(1.5f, v.x);
-        Assert.Equal(-2f, v.y);
+        Assert.Equal(1.5f, v.X);
+        Assert.Equal(-2f, v.Y);
         var c = v.Cpy();
         Assert.NotSame(v, c);
         Assert.Equal(v, c);
-        c.x = 9f;
-        Assert.Equal(1.5f, v.x);
+        c.X = 9f;
+        Assert.Equal(1.5f, v.X);
         Assert.Equal(new Vector2(0f, 0f), new Vector2());
     }
 
@@ -56,8 +56,8 @@ public class VectorTests
     public void Vector2_Nor()
     {
         var v = new Vector2(3f, 4f).Nor();
-        Assert.Equal(0.6f, v.x);
-        Assert.Equal(0.8f, v.y);
+        Assert.Equal(0.6f, v.X);
+        Assert.Equal(0.8f, v.Y);
         var zero = new Vector2().Nor();
         Assert.Equal(new Vector2(), zero);
     }
@@ -88,8 +88,8 @@ public class VectorTests
     public void Vector2_ZeroXY_ToString()
     {
         Assert.True(Vector2.Zero.IsZero());
-        Assert.Equal(new Vector2(1f, 0f), Vector2.X);
-        Assert.Equal(new Vector2(0f, 1f), Vector2.Y);
+        Assert.Equal(new Vector2(1f, 0f), Vector2.UnitX);
+        Assert.Equal(new Vector2(0f, 1f), Vector2.UnitY);
         Assert.Equal("(1,2.5)", new Vector2(1f, 2.5f).ToString());
     }
 
@@ -98,9 +98,9 @@ public class VectorTests
     {
         // 16777216f + 1f == 16777216f in float arithmetic (would differ in double)
         var v = new Vector2(16777216f, 0f).Add(1f, 0f);
-        Assert.Equal(16777216f, v.x);
+        Assert.Equal(16777216f, v.X);
         // 0.1f * 3 in float is 0.3f (rounded to float), not 0.30000000000000004
-        Assert.Equal(0.3f, new Vector2(0.1f, 0f).Scl(3f).x);
+        Assert.Equal(0.3f, new Vector2(0.1f, 0f).Scl(3f).X);
     }
 
     [Fact]
@@ -151,6 +151,6 @@ public class VectorTests
         int expected = unchecked(31 * (31 * (31 + 0x3f800000) + 0x40000000) + 0x40400000);
         Assert.Equal(expected, new Vector3(1f, 2f, 3f).GetHashCode());
         Assert.Equal("(1,2,3.5)", new Vector3(1f, 2f, 3.5f).ToString());
-        Assert.Equal(new Vector3(0f, 0f, 1f), Vector3.Z);
+        Assert.Equal(new Vector3(0f, 0f, 1f), Vector3.UnitZ);
     }
 }

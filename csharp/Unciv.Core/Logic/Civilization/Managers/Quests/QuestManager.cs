@@ -21,7 +21,7 @@ namespace Unciv.Logic.Civilization.Managers;
 // - `assignedQuests.removeAll { ... }` with side effects in the predicate (handleIndividualQuests) is List.RemoveAll, which runs
 //   the predicate once per element in order, as Kotlin's does.
 
-public class QuestManager : IsPartOfGameInfoSerialization
+public class QuestManager : IIsPartOfGameInfoSerialization
 {
     public const int UNSET = -1;
 
@@ -567,7 +567,7 @@ public class QuestManager : IsPartOfGameInfoSerialization
     public virtual void BarbarianCampCleared(Civilization civInfo, HexCoord location)
     {
         var matchingQuests = GetAssignedQuestsOfName(QuestName.ClearBarbarianCamp)
-            .Where(it => QuestImplementation.ParseInt(it.Data1) == location.x && QuestImplementation.ParseInt(it.Data2) == location.y)
+            .Where(it => QuestImplementation.ParseInt(it.Data1) == location.X && QuestImplementation.ParseInt(it.Data2) == location.Y)
             .ToList();
 
         var winningQuest = matchingQuests.FirstOrDefault(it => it.AssigneeCiv == civInfo);

@@ -20,7 +20,7 @@ namespace Unciv.Logic.Civilization.Managers;
 //   and free tenets never buy social policies, so a free policy (Poland) is a social-branch policy by construction.
 // - priorityMap uses IHasUniques.GetWeightForAiDecision (T087); a PolicyBranch is neither BaseUnit nor Building, so it is the AiChoiceWeight product.
 
-public class PolicyManager : IsPartOfGameInfoSerialization
+public class PolicyManager : IIsPartOfGameInfoSerialization
 {
     /// <summary>Used in <see cref="GetCultureRefundMap"/> when refunding more policies than were bought with culture
     /// to indicate the "surplus" policies - those must have been adopted as free policies.</summary>

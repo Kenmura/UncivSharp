@@ -59,7 +59,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Hello_ValidHandshake_ReturnsWelcomeWithChallenge()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (clientTransport, serverTransport) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(serverTransport);
 
@@ -83,7 +83,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Hello_ProtocolMismatch_RefusesWithProtocolMismatch()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (clientTransport, serverTransport) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(serverTransport);
 
@@ -103,7 +103,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Hello_RulesetHashMismatch_RefusesWithRulesetMismatch()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (clientTransport, serverTransport) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(serverTransport);
 
@@ -124,7 +124,7 @@ public sealed class NetLobbyTests : IDisposable
     public async Task Join_PasswordRequired_WrongPasswordRefusesAndRateLimits()
     {
         var settings = new LobbySettings { Password = "SecureLobbyPassword123" };
-        await using var lobby = new LobbyHost(settings: settings);
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance, settings: settings);
         var (clientTransport, serverTransport) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(serverTransport);
 
@@ -167,7 +167,7 @@ public sealed class NetLobbyTests : IDisposable
         var token = tokens.Mint(TimeSpan.FromMinutes(10));
         Assert.NotNull(token);
 
-        await using var lobby = new LobbyHost(settings: settings, admission: admission);
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance, settings: settings, admission: admission);
         var (clientTransport, serverTransport) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(serverTransport);
 
@@ -204,7 +204,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Auth_InvalidProof_RefusedWithAuthFailed()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (clientTransport, serverTransport) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(serverTransport);
 
@@ -237,7 +237,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task LobbySet_PicksNationAndTogglesReady_EnforcesUniqueness()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (c1, s1) = InMemoryTransport.CreatePair();
         var (c2, s2) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s1);
@@ -284,7 +284,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task LobbyChat_BroadcastsToAllClients()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (c1, s1) = InMemoryTransport.CreatePair();
         var (c2, s2) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s1);
@@ -319,7 +319,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Kick_RemovesPlayerAndResetsSlot()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (c1, s1) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s1);
 
@@ -362,7 +362,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task LobbyChat_BlankLinesAreDroppedAndLongOnesCut()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (id, client) = await JoinRawAsync(lobby, "Alice");
         using var idScope = id;
 
@@ -379,7 +379,7 @@ public sealed class NetLobbyTests : IDisposable
     public async Task LobbyChat_RateLimitDropsTheExcessUntilTheWindowPasses()
     {
         var clock = new ManualClock(1_000_000);
-        await using var lobby = new LobbyHost(clock: clock, limits: new LobbyLimits { MaxChatPerWindow = 2, ChatWindowMillis = 10_000 });
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance, clock: clock, limits: new LobbyLimits { MaxChatPerWindow = 2, ChatWindowMillis = 10_000 });
         var (id, client) = await JoinRawAsync(lobby, "Alice");
         using var idScope = id;
 
@@ -400,7 +400,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Kick_SendsTheHostsReasonAndStripsControls()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (id, client) = await JoinRawAsync(lobby, "Alice");
         using var idScope = id;
 
@@ -416,7 +416,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Kick_WithoutAReasonSendsNoReason()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (id, client) = await JoinRawAsync(lobby, "Alice");
         using var idScope = id;
 
@@ -430,7 +430,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Ban_RemovesThePlayerAndRefusesTheKeyUntilUnbanned()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (id, client) = await JoinRawAsync(lobby, "Alice");
         using var idScope = id;
 
@@ -460,7 +460,7 @@ public sealed class NetLobbyTests : IDisposable
         var settings = new LobbySettings { Password = "SecureLobbyPassword123" };
         var random = SystemSecureRandom.Instance;
         var admission = new LobbyAdmission(JoinPassword.Create("SecureLobbyPassword123", random), inviteOnly: false, new InviteTokens(TimeProvider.System, random), new AttemptLimiter(TimeProvider.System));
-        await using var lobby = new LobbyHost(settings: settings, admission: admission);
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance, settings: settings, admission: admission);
         var (id, client) = await JoinRawAsync(lobby, "Alice", "SecureLobbyPassword123");
         using var idScope = id;
         await lobby.BanAsync(0);
@@ -477,7 +477,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task RejoinByName_NewKeyWithTheSameNameReclaimsTheDroppedSlot()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (id1, c1) = await JoinRawAsync(lobby, "Alice");
         using var id1Scope = id1;
 
@@ -508,7 +508,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task StartGame_AiFillAndRandomNationResolution_ProducesGameAndBroadcasts()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (c1, s1) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s1);
 
@@ -582,7 +582,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task CloseSlot_And_OpenSlot_UpdatesSlotKind()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         Assert.Equal(SlotKind.Open, lobby.Slots[1].Kind);
 
         await lobby.CloseSlotAsync(1);
@@ -595,7 +595,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task SetSlotKind_SetsAiAndOpen()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
 
         await lobby.SetSlotKindAsync(2, SlotKind.AI);
         Assert.Equal(SlotKind.AI, lobby.Slots[2].Kind);
@@ -611,7 +611,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task UpdateSettings_UpdatesSettingsAndBroadcasts()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (c1, s1) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s1);
 
@@ -642,7 +642,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task StartGame_NotAllHumansReady_ThrowsInvalidOperationException()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (c1, s1) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s1);
 
@@ -663,7 +663,7 @@ public sealed class NetLobbyTests : IDisposable
     [Fact]
     public async Task Auth_ReconnectsToExistingBoundSlot()
     {
-        await using var lobby = new LobbyHost();
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance);
         var (c1, s1) = InMemoryTransport.CreatePair();
         _ = lobby.AttachConnectionAsync(s1);
 

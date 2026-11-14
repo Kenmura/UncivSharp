@@ -26,11 +26,11 @@ public class GroupMoveModelTests
         public Task<PathPreviewResult?> PathAsync(int unitId, HexCoord to)
         {
             var at = Units[unitId];
-            if (Occupied.Contains(to) && to != at && !Civilians.Contains(unitId)) return Task.FromResult<PathPreviewResult?>(new PathPreviewResult(unitId, new TilePos(to.x, to.y), false, false, 0, null, []));
+            if (Occupied.Contains(to) && to != at && !Civilians.Contains(unitId)) return Task.FromResult<PathPreviewResult?>(new PathPreviewResult(unitId, new TilePos(to.X, to.Y), false, false, 0, null, []));
             int distance = HexMath.GetDistance(at, to);
             int turns = (distance + MaxStep - 1) / MaxStep;
-            var step = distance <= MaxStep ? to : new HexCoord(at.x + System.Math.Sign(to.x - at.x) * MaxStep, at.y);
-            return Task.FromResult<PathPreviewResult?>(new PathPreviewResult(unitId, new TilePos(to.x, to.y), true, true, turns, new TilePos(step.x, step.y), []));
+            var step = distance <= MaxStep ? to : new HexCoord(at.X + System.Math.Sign(to.X - at.X) * MaxStep, at.Y);
+            return Task.FromResult<PathPreviewResult?>(new PathPreviewResult(unitId, new TilePos(to.X, to.Y), true, true, turns, new TilePos(step.X, step.Y), []));
         }
 
         public Task<SubmitResult> MoveAsync(int unitId, HexCoord to)

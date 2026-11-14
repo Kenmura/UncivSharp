@@ -47,7 +47,7 @@ public enum AlertType
     Denounced,
 }
 
-public class PopupAlert : IsPartOfGameInfoSerialization
+public class PopupAlert : IIsPartOfGameInfoSerialization
 {
     /// <summary>Kotlin <c>lateinit var</c>: reading before assignment throws.</summary>
     [JsonPropertyName("type")]

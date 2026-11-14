@@ -31,7 +31,7 @@ namespace Unciv.Logic.Map;
 /// An Unciv map with all properties as produced by the map editor or MapGenerator; or as part of a running game.
 /// </summary>
 [JsonConverter(typeof(TileMap.TileMapJsonConverter))]
-public class TileMap : IsPartOfGameInfoSerialization
+public class TileMap : IIsPartOfGameInfoSerialization
 {
     #region Fields, Serialized
 
@@ -45,7 +45,7 @@ public class TileMap : IsPartOfGameInfoSerialization
     /// <param name="Usage">How the starting location may be used; the default is for maps saved prior to this feature</param>
     [JsonConverter(typeof(StartingLocationJsonConverter))]
     public sealed record StartingLocation(HexCoord Position = default, string Nation = "", StartingLocation.UsageType Usage = StartingLocation.UsageType.Player)
-        : IsPartOfGameInfoSerialization
+        : IIsPartOfGameInfoSerialization
     {
         /// <summary>How a starting location may be used when the map is loaded for a new game</summary>
         public enum UsageType
@@ -248,12 +248,12 @@ public class TileMap : IsPartOfGameInfoSerialization
         return toReturn;
     }
 
-    public bool Contains(Vector2 vector) => Contains(KotlinMath.FloatToInt(vector.x), KotlinMath.FloatToInt(vector.y));
-    public bool Contains(HexCoord hexCoord) => Contains(hexCoord.x, hexCoord.y);
+    public bool Contains(Vector2 vector) => Contains(KotlinMath.FloatToInt(vector.X), KotlinMath.FloatToInt(vector.Y));
+    public bool Contains(HexCoord hexCoord) => Contains(hexCoord.X, hexCoord.Y);
     public bool Contains(int x, int y) => GetOrNull(x, y) != null;
 
-    public Tile this[Vector2 vector] => this[KotlinMath.FloatToInt(vector.x), KotlinMath.FloatToInt(vector.y)];
-    public Tile this[HexCoord hexCoord] => this[hexCoord.x, hexCoord.y];
+    public Tile this[Vector2 vector] => this[KotlinMath.FloatToInt(vector.X), KotlinMath.FloatToInt(vector.Y)];
+    public Tile this[HexCoord hexCoord] => this[hexCoord.X, hexCoord.Y];
     public Tile this[int x, int y] =>
         tileMatrix[x - LeftX][y - BottomY] ?? throw new InvalidOperationException($"No tile at ({x},{y})");
 
@@ -300,8 +300,8 @@ public class TileMap : IsPartOfGameInfoSerialization
 
     private IEnumerable<Tile> GetTilesAtPositiveDistance(HexCoord origin, int distance)
     {
-        var centerX = origin.x;
-        var centerY = origin.y;
+        var centerX = origin.X;
+        var centerY = origin.Y;
 
         // Start from 6 O'clock point which means (-distance, -distance) away from the center point
         var currentX = centerX - distance;
@@ -381,8 +381,8 @@ public class TileMap : IsPartOfGameInfoSerialization
         }
         else
         {
-            var centerX = origin.x;
-            var centerY = origin.y;
+            var centerX = origin.X;
+            var centerY = origin.Y;
 
             // Start from 6 O'clock point which means (-distance, -distance) away from the center point
             var currentX = centerX - distance;
@@ -436,7 +436,7 @@ public class TileMap : IsPartOfGameInfoSerialization
             for (var worldRowNumber = y; worldRowNumber < endRow; worldRowNumber++)
             {
                 var hexCoords = HexMath.GetTileCoordsFromColumnRow(worldColumnNumber, worldRowNumber);
-                var tile = GetIfTileExistsOrNull(hexCoords.x, hexCoords.y);
+                var tile = GetIfTileExistsOrNull(hexCoords.X, hexCoords.Y);
                 if (tile != null) yield return tile;
             }
         }
@@ -477,10 +477,10 @@ public class TileMap : IsPartOfGameInfoSerialization
         var radius = MapParameters.Shape == MapShape.Rectangular
             ? MapParameters.MapSize.Width / 2
             : MapParameters.MapSize.Radius;
-        var x1 = tile.Position.x;
-        var y1 = tile.Position.y;
-        var x2 = otherTile.Position.x;
-        var y2 = otherTile.Position.y;
+        var x1 = tile.Position.X;
+        var y1 = tile.Position.Y;
+        var x2 = otherTile.Position.X;
+        var y2 = otherTile.Position.Y;
 
         var xDifference = x1 - x2;
         var yDifference = y1 - y2;
@@ -508,7 +508,7 @@ public class TileMap : IsPartOfGameInfoSerialization
         var difference = HexMath.GetClockPositionToHexcoord(clockPosition);
         if (difference == HexCoord.Zero) return null;
         var possibleNeighborPosition = tile.Position.Plus(difference);
-        return GetIfTileExistsOrNull(possibleNeighborPosition.x, possibleNeighborPosition.y);
+        return GetIfTileExistsOrNull(possibleNeighborPosition.X, possibleNeighborPosition.Y);
     }
 
     /// <summary>Convert relative direction of <paramref name="otherTile"/> seen from <paramref name="tile"/>'s position into a vector
@@ -530,13 +530,13 @@ public class TileMap : IsPartOfGameInfoSerialization
             ? MapParameters.MapSize.Width / 2
             : MapParameters.MapSize.Radius;
 
-        var vectorUnwrappedLeft = HexCoord.Of(position.x + radius, position.y - radius);
-        var vectorUnwrappedRight = HexCoord.Of(position.x - radius, position.y + radius);
+        var vectorUnwrappedLeft = HexCoord.Of(position.X + radius, position.Y - radius);
+        var vectorUnwrappedRight = HexCoord.Of(position.X - radius, position.Y + radius);
 
         static int SquareSum(HexCoord hexCoord)
         {
-            var x = hexCoord.x;
-            var y = hexCoord.y;
+            var x = hexCoord.X;
+            var y = hexCoord.Y;
             return x * x + y * y;
         }
 
@@ -623,9 +623,7 @@ public class TileMap : IsPartOfGameInfoSerialization
         { // This can fail if the map contains a resource that isn't in the ruleset, in Tile.tileResource
             SetTransients(ruleset);
         }
-#pragma warning disable CA1031 // JUSTIFY: T039 Kotlin catches every Exception here; any failure of setTransients means "stop checking"
-        catch (Exception)
-#pragma warning restore CA1031
+        catch (Exception ex) when (ex is KeyNotFoundException or InvalidOperationException or ArgumentException)
         {
             return rulesetIncompatibilities;
         }
@@ -668,10 +666,10 @@ public class TileMap : IsPartOfGameInfoSerialization
 
         if (tileMatrix.Count == 0)
         {
-            var topY = TileList.Max(it => it.Position.y);
-            BottomY = TileList.Min(it => it.Position.y);
-            var rightX = TileList.Max(it => it.Position.x);
-            LeftX = TileList.Min(it => it.Position.x);
+            var topY = TileList.Max(it => it.Position.Y);
+            BottomY = TileList.Min(it => it.Position.Y);
+            var rightX = TileList.Max(it => it.Position.X);
+            LeftX = TileList.Min(it => it.Position.X);
 
             // Initialize arrays with enough capacity to avoid re-allocations (+Arrays.copyOf).
             // We have just calculated the dimensions above, so we know the final size.
@@ -693,7 +691,7 @@ public class TileMap : IsPartOfGameInfoSerialization
 
         foreach (var tileInfo in Values)
         {
-            tileMatrix[tileInfo.Position.x - LeftX][tileInfo.Position.y - BottomY] = tileInfo;
+            tileMatrix[tileInfo.Position.X - LeftX][tileInfo.Position.Y - BottomY] = tileInfo;
         }
         var index = 0;
         foreach (var tileInfo in Values)
@@ -1174,8 +1172,7 @@ public class TileMap : IsPartOfGameInfoSerialization
         }
 
         public override void Write(Utf8JsonWriter writer, Preview value, JsonSerializerOptions options) =>
-            // JUSTIFY: T118 Preview is only ever read (permanent)
-            throw new NotSupportedException("TileMap.Preview is only ever read");
+            throw new InvalidOperationException("TileMap.Preview is only ever read");
     }
 
     #endregion

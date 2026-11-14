@@ -44,7 +44,7 @@ public enum Proximity
     Distant,
 }
 
-public partial class Civilization : IsPartOfGameInfoSerialization
+public partial class Civilization : IIsPartOfGameInfoSerialization
 {
     private static T Lateinit<T>(T? value, string name) where T : class =>
         value ?? throw new InvalidOperationException($"lateinit property {name} has not been initialized");
@@ -231,7 +231,7 @@ public partial class Civilization : IsPartOfGameInfoSerialization
     [JsonPropertyName("notificationsLog")]
     public List<NotificationsLog> NotificationsLogs { get; set; } = [];
 
-    public class NotificationsLog(int turn = 0) : IsPartOfGameInfoSerialization
+    public class NotificationsLog(int turn = 0) : IIsPartOfGameInfoSerialization
     {
         [JsonPropertyName("turn")]
         public int Turn { get; } = turn;
@@ -312,7 +312,7 @@ public partial class Civilization : IsPartOfGameInfoSerialization
     public string LeaderTitle { get; set; } = "";
 
     /// <summary>Container class to represent a historical attack recently performed by this civilization.</summary>
-    public class HistoricalAttackMemory() : IsPartOfGameInfoSerialization
+    public class HistoricalAttackMemory() : IIsPartOfGameInfoSerialization
     {
         public HistoricalAttackMemory(string? attackingUnit, HexCoord source, HexCoord target) : this()
         {

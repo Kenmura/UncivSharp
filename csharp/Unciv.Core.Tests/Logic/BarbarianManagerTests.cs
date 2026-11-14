@@ -161,7 +161,7 @@ public class BarbarianManagerTests
         MakeCamp(w, 3, 3);
         w.Manager.SetTransients(w.Info);
         w.Manager.SetTransients(w.Info);
-        Assert.Equal([HexCoord.Of(1, 1), HexCoord.Of(3, 3)], w.Manager.Encampments.Select(it => it.Position).OrderBy(it => it.x).ThenBy(it => it.y).ToList());
+        Assert.Equal([HexCoord.Of(1, 1), HexCoord.Of(3, 3)], w.Manager.Encampments.Select(it => it.Position).OrderBy(it => it.X).ThenBy(it => it.Y).ToList());
         Assert.All(w.Manager.Encampments, it => Assert.Same(w.Info, it.GameInfo));
     }
 
@@ -224,7 +224,7 @@ public class BarbarianManagerTests
     {
         var w = NewWorld(15, 15);
         w.Info.Turns = 3;
-        bool Hidden(TileClass t) => t.Position.x < 4 && t.Position.y < 4; // 16 fog tiles, 8 per camp: room for a camp
+        bool Hidden(TileClass t) => t.Position.X < 4 && t.Position.Y < 4; // 16 fog tiles, 8 per camp: room for a camp
         w.Rome.ViewableTiles = w.Map.Values.Where(it => !Hidden(it)).ToHashSet();
         w.Manager.PlaceBarbarianEncampment(forTesting: true);
         Assert.True(Hidden(w.Map[Assert.Single(w.Manager.Encampments).Position]));

@@ -76,7 +76,7 @@ internal static class ConsoleTileCommands
             if (locations.Count == 0) return ConsolePlan.Hint("None found");
             // Kotlin shows a one-time notification with a location action per match; the engine answers with the positions
             const int shown = 50;
-            string list = string.Join(", ", locations.Take(shown).Select(it => $"({it.x},{it.y})"));
+            string list = string.Join(", ", locations.Take(shown).Select(it => $"({it.X},{it.Y})"));
             return ConsolePlan.Hint($"tile find {parameters[0].ToStringAsPlaceholder()}: {locations.Count} matches: {list}{(locations.Count > shown ? ", ..." : "")}");
         });
         node.Subcommands["spawn-barbarian-encampment"] = new ConsoleAction("tile spawn-barbarian-encampment", (console, _) =>

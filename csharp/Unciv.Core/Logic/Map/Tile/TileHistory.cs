@@ -27,7 +27,7 @@ public interface ITileHistorySource
 /// Ported from <c>core/src/com/unciv/logic/map/tile/TileHistory.kt</c>.
 /// </summary>
 [JsonConverter(typeof(TileHistoryConverter))]
-public class TileHistory : IsPartOfGameInfoSerialization, IEnumerable<KeyValuePair<int, TileHistory.TileHistoryState>>
+public class TileHistory : IIsPartOfGameInfoSerialization, IEnumerable<KeyValuePair<int, TileHistory.TileHistoryState>>
 {
     public enum CityCenterType
     {
@@ -37,7 +37,7 @@ public class TileHistory : IsPartOfGameInfoSerialization, IEnumerable<KeyValuePa
     }
 
     /// <remarks>Like the Kotlin class this has reference equality (it is not a data class).</remarks>
-    public class TileHistoryState : IsPartOfGameInfoSerialization
+    public class TileHistoryState : IIsPartOfGameInfoSerialization
     {
         /// <summary>The name of the civilization owning this tile or <c>null</c> if there is no owner.</summary>
         public string? OwningCivName { get; }

@@ -1,24 +1,9 @@
-using System.Security.Cryptography;
-
 namespace Unciv.Net.Identity;
 
 /// <summary>Source of unpredictable bytes for salts, challenges and tokens. Network security only; never game state.</summary>
 public interface ISecureRandom
 {
     void Fill(Span<byte> buffer);
-}
-
-/// <summary>OS CSPRNG. The single place in Unciv.Core allowed to touch <c>RandomNumberGenerator</c>.</summary>
-public sealed class SystemSecureRandom : ISecureRandom
-{
-    public static readonly SystemSecureRandom Instance = new();
-
-    public void Fill(Span<byte> buffer)
-    {
-#pragma warning disable RS0030 // JUSTIFY: T173 salts, challenges and invite tokens must be unpredictable, not seeded; never feeds game state
-        RandomNumberGenerator.Fill(buffer);
-#pragma warning restore RS0030
-    }
 }
 
 internal static class SecureRandomExtensions

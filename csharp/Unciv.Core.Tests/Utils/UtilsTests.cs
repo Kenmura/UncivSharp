@@ -45,7 +45,7 @@ public class UtilsTests
     {
         var random = new GameRandom(1);
         Assert.Throws<InvalidOperationException>(() => new List<string>().RandomWeighted(new List<float>(), random));
-        Assert.Throws<NotSupportedException>(() => Items.RandomWeighted([1f], random));
+        Assert.Throws<ArgumentException>(() => Items.RandomWeighted([1f], random));
         // all-zero weights: totalWeight 0 makes every share NaN, so the loop never matches and the last item is returned
         Assert.Equal("e", Items.RandomWeighted([0f, 0f, 0f, 0f, 0f], new GameRandom(1)));
     }

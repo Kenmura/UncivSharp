@@ -46,7 +46,7 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
             if (listen) StartListening(info.Successor);
             while (!cancellationToken.IsCancellationRequested)
             {
-                var cycle = new ElectionTally(info.GameId, epoch, info.Successor.KeyId, info.Roster, info.RosterFresh, clock, random, limits);
+                var cycle = new ElectionTally(info.GameId, epoch, info.Successor.KeyId, info.Roster, info.RosterFresh, clock, random ?? SystemSecureRandom.Instance, limits);
                 lock (gate) tally = cycle;
                 while (!cycle.IsExpired)
                 {

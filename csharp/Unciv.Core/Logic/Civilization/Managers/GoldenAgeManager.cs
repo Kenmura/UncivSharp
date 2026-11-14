@@ -10,7 +10,7 @@ namespace Unciv.Logic.Civilization.Managers;
 // Ported from core/src/com/unciv/logic/civilization/managers/GoldenAgeManager.kt (T056).
 // Stripped: the purity annotations.
 
-public class GoldenAgeManager : IsPartOfGameInfoSerialization
+public class GoldenAgeManager : IIsPartOfGameInfoSerialization
 {
     private Civilization? civInfo;
     /// <summary>Kotlin <c>@Transient lateinit var</c>, set by <c>Civilization.setTransients</c>: reading before assignment throws.</summary>

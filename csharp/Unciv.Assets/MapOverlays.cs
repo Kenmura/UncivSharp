@@ -178,14 +178,14 @@ public static class MapOverlays
     {
         var centre = HexMath.Hex2WorldCoords(new HexCoord(x, y));
         var toNeighbour = HexMath.Hex2WorldCoords(new HexCoord(dx, dy));
-        var length = MathF.Sqrt(toNeighbour.x * toNeighbour.x + toNeighbour.y * toNeighbour.y);
+        var length = MathF.Sqrt(toNeighbour.X * toNeighbour.X + toNeighbour.Y * toNeighbour.Y);
         // Midpoint of the side is half way to the neighbour; the side runs perpendicular to that direction and is one tile radius (1) long
-        var midX = centre.x + toNeighbour.x / 2f;
-        var midY = centre.y + toNeighbour.y / 2f;
-        var halfX = -toNeighbour.y / length / 2f;
-        var halfY = toNeighbour.x / length / 2f;
+        var midX = centre.X + toNeighbour.X / 2f;
+        var midY = centre.Y + toNeighbour.Y / 2f;
+        var halfX = -toNeighbour.Y / length / 2f;
+        var halfY = toNeighbour.X / length / 2f;
         var scale = 1f - inset / (length / 2f); // the apothem is half the centre distance
-        (float X, float Z) End(float ex, float ey) => (centre.x + (ex - centre.x) * scale, -(centre.y + (ey - centre.y) * scale));
+        (float X, float Z) End(float ex, float ey) => (centre.X + (ex - centre.X) * scale, -(centre.Y + (ey - centre.Y) * scale));
         return (End(midX - halfX, midY - halfY), End(midX + halfX, midY + halfY));
     }
 

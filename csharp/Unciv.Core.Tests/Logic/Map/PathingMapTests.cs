@@ -179,9 +179,9 @@ public sealed class PathingMapTests
         // Right side all hills, left side all roads.  A line of enemy warriors just north.
         foreach (var tile in testGame.TileMap.TileList)
         {
-            if (tile.Position.x > 0) tile.AddTerrainFeature("Hill");
-            if (tile.Position.x < 0) tile.SetRoadStatus(RoadStatus.Road, civInfo);
-            if (tile.Position.y == 2) testGame.AddUnit("Warrior", evemyCiv, tile);
+            if (tile.Position.X > 0) tile.AddTerrainFeature("Hill");
+            if (tile.Position.X < 0) tile.SetRoadStatus(RoadStatus.Road, civInfo);
+            if (tile.Position.Y == 2) testGame.AddUnit("Warrior", evemyCiv, tile);
         }
         var baseUnit = testGame.CreateBaseUnit();
         baseUnit.Movement = 3;
@@ -198,7 +198,7 @@ public sealed class PathingMapTests
             new HexCoord(-3, 2), new HexCoord(-2, 2), new HexCoord(-1, 2),
             new HexCoord(0, 2), new HexCoord(1, 2), new HexCoord(2, 2),
         };
-        static int ByXThenY(HexCoord l, HexCoord r) => l.x != r.x ? l.x.CompareTo(r.x) : l.y.CompareTo(r.y);
+        static int ByXThenY(HexCoord l, HexCoord r) => l.X != r.X ? l.X.CompareTo(r.X) : l.Y.CompareTo(r.Y);
         var actual = attackableTiles.Select(it => it.Position).OrderBy(it => it, Comparer<HexCoord>.Create(ByXThenY)).ToList();
         Assert.Equal(expected, actual);
         Assert.Equal("\n        -5     -4     -3     -2     -1     +0     +1     +2    \n  +2     /      /     0/17.0* 0/17.0* 0/17.0* 0/17.0* 0/17.0* 0/17.0*\n  +1     /     0/3.0  0/2.5  0/2.0  0/1.5  0/1.0  0/2.0  0/3.0 \n  +0    0/3.0  0/2.5  0/2.0  0/1.5  0/1.0  0/0.0S 0/2.0  0/3.0 \n  -1    0/3.0  0/2.5  0/2.0  0/1.5  0/1.0  0/1.0  0/3.0   /    \n  -2    0/3.0  0/2.5  0/2.0  0/1.5  0/1.5  0/2.0  0/3.0   /    \n  -3    0/3.0  0/2.5  0/2.0  0/2.0  0/2.0  0/3.0   /      /    \n  -4    0/3.0  0/2.5  0/2.5  0/2.5  0/2.5  0/3.0   /      /    \n  -5    0/3.0  0/3.0  0/3.0  0/3.0  0/3.0   /      /      /    \n", pathing.ToDebugString());
@@ -366,12 +366,12 @@ public sealed class PathingMapTests
         var warriors = new List<MapUnit>();
         foreach (var tile in testGame.TileMap.TileList)
         {
-            if (tile.Position.x < -6 && tile.Position.y < 1)
+            if (tile.Position.X < -6 && tile.Position.Y < 1)
                 warriors.Add(testGame.AddUnit("Warrior", civInfo, tile));
         }
         Assert.Equal(18, warriors.Count);
         // tell all 19 warriors to move 15 tiles to the right, and 8 up.
-        var targets = warriors.Select(it => testGame.TileMap[it.GetTile().Position.x + 15, it.GetTile().Position.y + 8]).ToList();
+        var targets = warriors.Select(it => testGame.TileMap[it.GetTile().Position.X + 15, it.GetTile().Position.Y + 8]).ToList();
         // Ideally, moving these 15 tiles takes them 8 turns
         for (var turn = 0; turn < 8; turn++)
         {
@@ -384,7 +384,7 @@ public sealed class PathingMapTests
         foreach (var warrior in warriors)
         {
             var position = warrior.GetTile().Position;
-            Assert.True(position.x > 0, $"{warrior} at {position} should have moved to x>0");
+            Assert.True(position.X > 0, $"{warrior} at {position} should have moved to x>0");
         }
     }
 }

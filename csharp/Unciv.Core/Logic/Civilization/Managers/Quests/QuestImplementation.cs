@@ -81,7 +81,7 @@ public abstract class QuestImplementation : IQuestImplementation
         public override (string, string) GetAssignedQuestData(Civilization civ, Quest quest, Civilization assignee)
         {
             var position = civ.GetBarbarianEncampmentForQuest(assignee).NotNull().Position;
-            return (position.x.ToString(CultureInfo.InvariantCulture), position.y.ToString(CultureInfo.InvariantCulture));
+            return (position.X.ToString(CultureInfo.InvariantCulture), position.Y.ToString(CultureInfo.InvariantCulture));
         }
 
         public override List<NotificationAction> GetNotificationActions(Civilization civ, AssignedQuest assignedQuest) =>

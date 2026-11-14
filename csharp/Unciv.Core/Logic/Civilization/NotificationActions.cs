@@ -16,7 +16,7 @@ namespace Unciv.Logic.Civilization;
 // Not realized as lambdas, so no references to objects that should not be serialized sneak in.
 
 /// <summary>defines what to do if the user clicks on a notification</summary>
-public abstract class NotificationAction : IsPartOfGameInfoSerialization
+public abstract class NotificationAction : IIsPartOfGameInfoSerialization
 {
 }
 

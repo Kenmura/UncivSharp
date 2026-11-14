@@ -221,7 +221,7 @@ public static class ArchaeologyRules
             return;
         }
         game.PendingDigs?.RemoveAll(it => game.TileMap.GetOrNull(it.X, it.Y) is not { } other || !IsDigOf(other) || game.GetCivilization(it.Civ).IsDefeated()); // drop digs that no longer exist
-        (game.PendingDigs ??= []).Add(new PendingDig { X = tile.Position.x, Y = tile.Position.y, Civ = civ.CivId });
+        (game.PendingDigs ??= []).Add(new PendingDig { X = tile.Position.X, Y = tile.Position.Y, Civ = civ.CivId });
         civ.AddNotification("Our archaeologist has finished the dig! Choose what to do with the site.", tile.Position,
             NotificationCategory.General, NotificationIcon.Culture);
     }

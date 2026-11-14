@@ -45,18 +45,19 @@ public sealed class LobbyHost : IAsyncDisposable
     private bool disposed;
 
     public LobbyHost(
+        ISecureRandom random,
         LobbySettings? settings = null,
         SlotBindings? bindings = null,
         LobbyAdmission? admission = null,
         string? hostFingerprint = null,
-        ISecureRandom? random = null,
         IClock? clock = null,
         string hostName = "Host",
         LobbyLimits? limits = null)
     {
+        ArgumentNullException.ThrowIfNull(random);
         Settings = settings ?? new LobbySettings();
         Bindings = bindings ?? new SlotBindings();
-        this.random = random ?? SystemSecureRandom.Instance;
+        this.random = random;
         this.clock = clock ?? SystemClock.Instance;
         this.limits = limits ?? LobbyLimits.Default;
         HostFingerprint = hostFingerprint ?? "ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z";

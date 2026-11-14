@@ -55,7 +55,7 @@ public class MapGenerationRandomness
 
         // Non-wrapping maps use standard 2D noise which naturally has a seam at the edges.
         if (!parameters.WorldWrap)
-            return noiseFunction(worldCoords.x, worldCoords.y, seed, nOctaves, persistence, lacunarity, scale);
+            return noiseFunction(worldCoords.X, worldCoords.Y, seed, nOctaves, persistence, lacunarity, scale);
 
         // We wrap the 2D map plane into a 3D cylinder. By calculating noise on the surface of this
         // cylinder, the left edge (0 deg) and right edge (360 deg) of the map occupy the exact same
@@ -71,7 +71,7 @@ public class MapGenerationRandomness
 
         // Map horizontal world coordinates to a circle. In Unciv HexMath, a full wrap is 3.0 * radius.
         double wrapPeriod = 3.0 * radius;
-        double angle = worldCoords.x / wrapPeriod * 2 * Math.PI;
+        double angle = worldCoords.X / wrapPeriod * 2 * Math.PI;
         double cylinderRadius = wrapPeriod / (2 * Math.PI);
 
         // Unciv's Perlin noise algorithm uses a 256-element permutation array, meaning the core
@@ -90,7 +90,7 @@ public class MapGenerationRandomness
         // Map the 2D coordinates onto a 3D cylinder to achieve seamless X-axis world wrapping.
         double nx = cylinderRadius * Math.Cos(angle) + offsetX;
         double ny = cylinderRadius * Math.Sin(angle) + offsetY;
-        double nz = worldCoords.y + offsetZ;
+        double nz = worldCoords.Y + offsetZ;
 
         return noiseFunction(nx, ny, nz, nOctaves, persistence, lacunarity, scale);
     }

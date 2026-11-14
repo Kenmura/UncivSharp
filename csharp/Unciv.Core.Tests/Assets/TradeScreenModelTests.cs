@@ -66,7 +66,7 @@ public class TradeScreenModelTests
     {
         var all = TradeScreenModel.GroupOrder.SelectMany(it => it.Types).ToList();
         Assert.Equal(all.Count, all.Distinct().Count());
-        foreach (var type in Enum.GetNames<Unciv.Logic.Trade.TradeOfferType>()) Assert.Contains(type, all);
+        foreach (var type in Enum.GetValues<Unciv.Logic.Trade.TradeOfferType>()) Assert.Contains(Unciv.Logic.Trade.TradeOfferTypeExtensions.ToWireString(type), all);
     }
 
     [Fact]

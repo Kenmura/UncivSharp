@@ -74,7 +74,7 @@ public class TileMapView(TileMap map, CivilizationClass? viewer, bool spectatorM
             targetPos = HexMath.GetUnwrappedNearestTo(targetPos.ToHexCoord(), fromTile.Position, tileMap.MaxLongitude);
         var targetWorld = HexMath.Hex2WorldCoords(targetPos.ToHexCoord());
         var fromWorld = HexMath.Hex2WorldCoords(fromTile.Position);
-        return new Vector2(targetWorld.x - fromWorld.x, targetWorld.y - fromWorld.y);
+        return new Vector2(targetWorld.X - fromWorld.X, targetWorld.Y - fromWorld.Y);
     }
 
     /// <summary>Names of nations with a starting location on <paramref name="tile"/> (map editor only).</summary>

@@ -76,7 +76,7 @@ public class DiplomacyTurnTests
     private static TradeObject MakeTrade(string name, int duration)
     {
         var trade = new TradeObject();
-        trade.TheirOffers.Add(new TradeOffer(name, TradeOfferType.Luxury_Resource, 1, duration));
+        trade.TheirOffers.Add(new TradeOffer(name, TradeOfferType.LuxuryResource, 1, duration));
         return trade;
     }
 
@@ -612,8 +612,8 @@ public class DiplomacyTurnTests
         MakePeace(a, b);
         var manager = Manager(a, b);
         var trade = new TradeObject();
-        trade.OurOffers.Add(new TradeOffer("Our gold", TradeOfferType.Gold_Per_Turn, 3, 4));
-        trade.TheirOffers.Add(new TradeOffer("Their gold", TradeOfferType.Gold_Per_Turn, 5, 4));
+        trade.OurOffers.Add(new TradeOffer("Our gold", TradeOfferType.GoldPerTurn, 3, 4));
+        trade.TheirOffers.Add(new TradeOffer("Their gold", TradeOfferType.GoldPerTurn, 5, 4));
         trade.TheirOffers.Add(new TradeOffer("Gift", TradeOfferType.Gold, 5, -1));
         manager.Trades.Add(trade);
 
@@ -667,7 +667,7 @@ public class DiplomacyTurnTests
         MakePeace(a, b);
         var manager = Manager(a, b);
         var trade = new TradeObject();
-        trade.OurOffers.Add(new TradeOffer("Unobtainium", TradeOfferType.Luxury_Resource, 1, 20));
+        trade.OurOffers.Add(new TradeOffer("Unobtainium", TradeOfferType.LuxuryResource, 1, 20));
         trade.TheirOffers.Add(new TradeOffer(Constants.PeaceTreaty, TradeOfferType.Treaty, 1, 7));
         manager.Trades.Add(trade);
         Manager(b, a).Trades.Add(trade.Reverse());

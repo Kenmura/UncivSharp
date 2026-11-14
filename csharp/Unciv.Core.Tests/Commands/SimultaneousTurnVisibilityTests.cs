@@ -278,9 +278,9 @@ public sealed partial class SimultaneousTurnTests
                 SameAsNothing(viewer, seq, new UnitActionsQuery(unit.Id), new UnitActionsQuery(Nothing), "UnitActions");
                 SameAsNothing(viewer, seq, new PromotionChoicesQuery(unit.Id), new PromotionChoicesQuery(Nothing), "PromotionChoices");
                 SameAsNothing(viewer, seq, new ReachableTilesQuery(unit.Id), new ReachableTilesQuery(Nothing), "ReachableTiles");
-                SameAsNothing(viewer, seq, new PathPreviewQuery(unit.Id, p.x, p.y), new PathPreviewQuery(Nothing, p.x, p.y), "PathPreview");
+                SameAsNothing(viewer, seq, new PathPreviewQuery(unit.Id, p.X, p.Y), new PathPreviewQuery(Nothing, p.X, p.Y), "PathPreview");
                 SameAsNothing(viewer, seq, new AttackableTargetsQuery(unit.Id), new AttackableTargetsQuery(Nothing), "AttackableTargets");
-                SameAsNothing(viewer, seq, new AttackPreviewQuery(p.x, p.y, unit.Id), new AttackPreviewQuery(p.x, p.y, Nothing), "AttackPreview");
+                SameAsNothing(viewer, seq, new AttackPreviewQuery(p.X, p.Y, unit.Id), new AttackPreviewQuery(p.X, p.Y, Nothing), "AttackPreview");
                 stats.HiddenUnitQueries++;
             }
 
@@ -304,14 +304,14 @@ public sealed partial class SimultaneousTurnTests
             if (nobody != null)
                 foreach (var p in onlyOther.Where((_, i) => i % 5 == 0).Take(12))
                 {
-                    SameAsNothing(viewer, seq, new TileInfoQuery(p.x, p.y), new TileInfoQuery(nobody.Value.x, nobody.Value.y), "TileInfo of an unexplored tile");
-                    SameAsNothing(viewer, seq, new CitySiteQuery(p.x, p.y), new CitySiteQuery(nobody.Value.x, nobody.Value.y), "CitySite of an unexplored tile");
+                    SameAsNothing(viewer, seq, new TileInfoQuery(p.X, p.Y), new TileInfoQuery(nobody.Value.X, nobody.Value.Y), "TileInfo of an unexplored tile");
+                    SameAsNothing(viewer, seq, new CitySiteQuery(p.X, p.Y), new CitySiteQuery(nobody.Value.X, nobody.Value.Y), "CitySite of an unexplored tile");
                     stats.HiddenTileQueries++;
                 }
             var explored = game.TileMap.TileList.Where(it => it.IsExplored(viewer)).Select(it => it.Position).ToList();
             foreach (var p in explored.Where((_, i) => i % 7 == 0).Take(16))
             {
-                var answer = Ask(viewer, seq, new TileInfoQuery(p.x, p.y));
+                var answer = Ask(viewer, seq, new TileInfoQuery(p.X, p.Y));
                 Assert.True(answer.Ok);
                 var info = answer.Payload!.Value.Deserialize<TileInfoResult>(UncivJson.DefaultOptions)!;
                 Assert.Equal(viewable.Contains(p), info.IsVisible);

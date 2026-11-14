@@ -30,7 +30,7 @@ namespace Unciv.Logic.Map.MapUnits;
 /// Kotlin <c>MapUnit</c> has no <c>equals</c>/<c>hashCode</c>: this class keeps reference identity.
 /// </summary>
 [JsonConverter(typeof(MapUnit.MapUnitJsonConverter))]
-public partial class MapUnit : IsPartOfGameInfoSerialization, IMapUnitState
+public partial class MapUnit : IIsPartOfGameInfoSerialization, IMapUnitState
 {
     private static T Lateinit<T>(T? value, string name) where T : class =>
         value ?? throw new InvalidOperationException($"lateinit property {name} has not been initialized");
@@ -115,7 +115,7 @@ public partial class MapUnit : IsPartOfGameInfoSerialization, IMapUnitState
     /// </summary>
     public List<HexCoord> AttacksSinceTurnStart { get; set; } = [];
 
-    public class UnitStatus(string name, int turnsLeft) : IsPartOfGameInfoSerialization
+    public class UnitStatus(string name, int turnsLeft) : IIsPartOfGameInfoSerialization
     {
         /// <summary>For deserialization.</summary>
         public UnitStatus() : this("", 1)
@@ -252,7 +252,7 @@ public partial class MapUnit : IsPartOfGameInfoSerialization, IMapUnitState
     /// <summary>
     /// Container class to represent a single instant in a <see cref="MapUnit"/>'s recent movement history.
     /// </summary>
-    public class UnitMovementMemory(HexCoord position, UnitMovementMemoryType type) : IsPartOfGameInfoSerialization
+    public class UnitMovementMemory(HexCoord position, UnitMovementMemoryType type) : IIsPartOfGameInfoSerialization
     {
         /// <summary>Needed because this is part of a save and gets deserialized.</summary>
         public UnitMovementMemory() : this(HexCoord.Zero, UnitMovementMemoryType.UnitMoved)

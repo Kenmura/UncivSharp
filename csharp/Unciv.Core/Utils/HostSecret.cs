@@ -11,13 +11,14 @@ namespace Unciv.Utils;
 /// </summary>
 public static class HostSecret
 {
-    /// <summary>A fresh non-zero 64-bit secret from the OS CSPRNG. Host only; not deterministic by design.</summary>
-    public static long Generate(ISecureRandom? random = null)
+    /// <summary>A fresh non-zero 64-bit secret from the supplied CSPRNG. Host only; not deterministic by design.</summary>
+    public static long Generate(ISecureRandom random)
     {
+        ArgumentNullException.ThrowIfNull(random);
         var bytes = new byte[8];
         while (true)
         {
-            (random ?? SystemSecureRandom.Instance).Fill(bytes);
+            random.Fill(bytes);
             var secret = BitConverter.ToInt64(bytes, 0);
             if (secret != 0) return secret;
         }

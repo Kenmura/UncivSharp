@@ -87,7 +87,7 @@ public sealed class ArchaeologyTests
         ArchaeologyRules.SpawnSites(W.Game.GameInfo);
         ArchaeologyRules.SpawnSites(other.W.Game.GameInfo);
         string Dump(Unciv.Core.Tests.Logic.GreatWorks.GreatWorkWorld w) => string.Join(";", w.Game.TileMap.TileList
-            .Where(it => it.Resource != null).Select(it => $"{it.Position.x},{it.Position.y},{it.Resource},{it.ArchaeologyRecord!.ArtifactClass},{it.ArchaeologyRecord.Era}"));
+            .Where(it => it.Resource != null).Select(it => $"{it.Position.X},{it.Position.Y},{it.Resource},{it.ArchaeologyRecord!.ArtifactClass},{it.ArchaeologyRecord.Era}"));
         Assert.Equal(Dump(other.W), Dump(W));
         Assert.NotEqual("", Dump(W));
         var kept = W.Game.GetTile(3, 3);
@@ -195,7 +195,7 @@ public sealed class ArchaeologyTests
         var unit = a.FinishDig(tile);
         Assert.True(unit.IsDestroyed);
         var pending = Assert.Single(W.Game.GameInfo.PendingDigs!);
-        Assert.Equal((W.A.CivId, tile.Position.x, tile.Position.y), (pending.Civ, pending.X, pending.Y));
+        Assert.Equal((W.A.CivId, tile.Position.X, tile.Position.Y), (pending.Civ, pending.X, pending.Y));
         Assert.Equal(a.Dig.Name, tile.Improvement);
         Assert.Single(ArchaeologyRules.PendingOf(W.Game.GameInfo, W.A));
         Assert.Empty(ArchaeologyRules.PendingOf(W.Game.GameInfo, W.B));
@@ -269,7 +269,7 @@ public sealed class ArchaeologyTests
         var pillaged = a.Site();
         a.FinishDig(pillaged);
         pillaged.ImprovementIsPillaged = true;
-        Assert.Null(ArchaeologyRules.FindPending(game, W.A, pillaged.Position.x, pillaged.Position.y));
+        Assert.Null(ArchaeologyRules.FindPending(game, W.A, pillaged.Position.X, pillaged.Position.Y));
 
         var gone = a.Site(ArtifactClass.Writing);
         a.FinishDig(gone);
@@ -303,7 +303,7 @@ public sealed class ArchaeologyTests
         Assert.Equal(a.Dig.Name, tile.Improvement);
         Assert.True(unit.IsDestroyed);
         var pending = Assert.Single(W.Game.GameInfo.PendingDigs!);
-        Assert.Equal((tile.Position.x, tile.Position.y), (pending.X, pending.Y));
+        Assert.Equal((tile.Position.X, tile.Position.Y), (pending.X, pending.Y));
     }
 
     [Fact]

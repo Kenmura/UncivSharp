@@ -20,7 +20,7 @@ namespace Unciv.Logic.Civilization.Managers;
 // todo: Free GP from policies and wonders should increase threshold according to the wiki
 // todo: GP from Maya long count should increase threshold as well - implement together
 
-public class GreatPersonManager : IsPartOfGameInfoSerialization
+public class GreatPersonManager : IIsPartOfGameInfoSerialization
 {
     private Civilization? civInfo;
     /// <summary>Kotlin <c>@Transient lateinit var</c>, set by <c>Civilization.setTransients</c>: reading before assignment throws.</summary>

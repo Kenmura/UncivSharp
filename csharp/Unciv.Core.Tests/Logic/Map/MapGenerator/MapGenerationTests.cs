@@ -176,7 +176,7 @@ public class MapGenerationTests
         var map = NewMap(ruleset, MapType.Perlin, MapShape.Hexagonal, false, 5);
         var tile = map[HexCoord.Of(2, 1)];
         var coords = HexMath.Hex2WorldCoords(tile.Position);
-        Assert.Equal(Perlin.Noise3d(coords.x, coords.y, 3.0, 6, 0.5, 2.0, 30.0), new MapGenerationRandomness().GetPerlinNoise(tile, 3.0));
+        Assert.Equal(Perlin.Noise3d(coords.X, coords.Y, 3.0, 6, 0.5, 2.0, 30.0), new MapGenerationRandomness().GetPerlinNoise(tile, 3.0));
     }
 
     [Fact]
@@ -221,7 +221,7 @@ public class MapGenerationTests
         var ruleset = GenRuleset();
         var map = NewMap(ruleset, MapType.Perlin, MapShape.Hexagonal, false, 10);
         foreach (var tile in map.Values)
-            tile.BaseTerrain = tile.Position.x % 2 == 0 ? "Grassland" : "Plains";
+            tile.BaseTerrain = tile.Position.X % 2 == 0 ? "Grassland" : "Plains";
         var randomness = new MapGenerationRandomness();
         var chosen = randomness.ChooseSpreadOutLocations(6, map.Values, 10);
         Assert.Equal(6, chosen.Count);

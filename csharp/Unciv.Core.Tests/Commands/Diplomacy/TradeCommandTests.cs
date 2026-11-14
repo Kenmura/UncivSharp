@@ -65,7 +65,7 @@ public sealed class TradeCommandTests
         w.Rejected(request([Gold(-5)], []), CommandErrors.InvalidTarget);
         w.Rejected(request([], [Gold(10)]), CommandErrors.InvalidTarget); // B has no gold
         w.Rejected(request([Gold(10), Gold(20)], []), CommandErrors.InvalidTarget); // twice
-        w.Rejected(request([new TradeOfferSpec("Iron", nameof(TradeOfferType.Strategic_Resource))], []), CommandErrors.InvalidTarget);
+        w.Rejected(request([new TradeOfferSpec("Iron", nameof(TradeOfferType.StrategicResource))], []), CommandErrors.InvalidTarget);
         w.Rejected(request([new TradeOfferSpec(Constants.FlatGold, "Nonsense")], []), CommandErrors.InvalidTarget);
         w.Rejected(request([], []), CommandErrors.NotAllowed);
         w.Rejected(new ProposeTrade { CivId = w.S.CivId, OurOffers = [Gold(10)] }, CommandErrors.InvalidTarget);

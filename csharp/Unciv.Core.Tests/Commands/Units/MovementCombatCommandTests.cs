@@ -104,7 +104,7 @@ public sealed class MovementCombatCommandTests
         var warrior = Unit("Warrior", a, -3, 0);
         var foreign = Unit("Warrior", b, 3, 0);
         var near = warrior.CurrentTile.Neighbors.First();
-        Unit("Warrior", b, near.Position.x, near.Position.y);
+        Unit("Warrior", b, near.Position.X, near.Position.Y);
 
         AssertRejected(new MoveUnit { UnitId = warrior.Id, To = At(Tile(3, 0)) }, CommandErrors.InvalidTarget); // too far for one turn
         AssertRejected(new MoveUnit { UnitId = warrior.Id, To = At(warrior.CurrentTile) }, CommandErrors.InvalidTarget);
@@ -179,7 +179,7 @@ public sealed class MovementCombatCommandTests
         Assert.Equal("moveTo 3,0", warrior.Action);
 
         var boxed = Unit("Warrior", a, 0, 4);
-        foreach (var around in boxed.CurrentTile.Neighbors.ToList()) Unit("Warrior", a, around.Position.x, around.Position.y);
+        foreach (var around in boxed.CurrentTile.Neighbors.ToList()) Unit("Warrior", a, around.Position.X, around.Position.Y);
         boxed.Action = "Fortify";
         var origin = boxed.CurrentTile;
         session.Submit(a.CivId, new SetMoveOrder { UnitId = boxed.Id, To = At(Tile(0, -4)) });
@@ -203,8 +203,8 @@ public sealed class MovementCombatCommandTests
     public void SwapUnitsExchangesTwoFriendlyUnitsOfTheSameKind()
     {
         var first = Unit("Warrior", a, -3, 0);
-        var neighbor = first.CurrentTile.Neighbors.First(it => it.Position.x <= 0);
-        var second = Unit("Warrior", a, neighbor.Position.x, neighbor.Position.y);
+        var neighbor = first.CurrentTile.Neighbors.First(it => it.Position.X <= 0);
+        var second = Unit("Warrior", a, neighbor.Position.X, neighbor.Position.Y);
         var firstHome = first.CurrentTile;
 
         Assert.True(session.Submit(a.CivId, new SwapUnits { UnitId = first.Id, To = At(neighbor) }).Accepted);
@@ -218,7 +218,7 @@ public sealed class MovementCombatCommandTests
     {
         var first = Unit("Warrior", a, -3, 0);
         var neighbors = first.CurrentTile.Neighbors.ToList();
-        var enemy = Unit("Warrior", b, neighbors[0].Position.x, neighbors[0].Position.y);
+        var enemy = Unit("Warrior", b, neighbors[0].Position.X, neighbors[0].Position.Y);
         AssertRejected(new SwapUnits { UnitId = first.Id, To = At(neighbors[1]) }, CommandErrors.InvalidTarget); // empty
         AssertRejected(new SwapUnits { UnitId = first.Id, To = At(neighbors[0]) }, CommandErrors.InvalidTarget); // enemy
         AssertRejected(new SwapUnits { UnitId = enemy.Id, To = At(neighbors[1]) }, CommandErrors.NotYourUnit);
@@ -233,7 +233,7 @@ public sealed class MovementCombatCommandTests
         See(a);
         var attacker = Unit("Warrior", a, 0, 0);
         var defenderTile = attacker.CurrentTile.Neighbors.First();
-        var defender = Unit("Warrior", b, defenderTile.Position.x, defenderTile.Position.y);
+        var defender = Unit("Warrior", b, defenderTile.Position.X, defenderTile.Position.Y);
         See(a);
 
         var result = session.Submit(a.CivId, new AttackWithUnit { UnitId = attacker.Id, Target = At(defenderTile) });
@@ -248,9 +248,9 @@ public sealed class MovementCombatCommandTests
     {
         var attacker = Unit("Warrior", a, 0, 0);
         var neighbors = attacker.CurrentTile.Neighbors.ToList();
-        var enemy = Unit("Warrior", b, neighbors[0].Position.x, neighbors[0].Position.y);
-        var friend = Unit("Warrior", a, neighbors[1].Position.x, neighbors[1].Position.y);
-        var worker = Unit("Worker", a, neighbors[2].Position.x, neighbors[2].Position.y);
+        var enemy = Unit("Warrior", b, neighbors[0].Position.X, neighbors[0].Position.Y);
+        var friend = Unit("Warrior", a, neighbors[1].Position.X, neighbors[1].Position.Y);
+        var worker = Unit("Worker", a, neighbors[2].Position.X, neighbors[2].Position.Y);
         var far = Unit("Warrior", b, 4, 0);
         See(a);
 
@@ -270,8 +270,8 @@ public sealed class MovementCombatCommandTests
         var first = Unit("Warrior", a, 0, 0);
         var targetTile = first.CurrentTile.Neighbors.First();
         var secondTile = targetTile.Neighbors.First(it => it != first.CurrentTile && it.GetUnits().Count() == 0);
-        var second = Unit("Warrior", a, secondTile.Position.x, secondTile.Position.y);
-        var defender = Unit("Warrior", b, targetTile.Position.x, targetTile.Position.y);
+        var second = Unit("Warrior", a, secondTile.Position.X, secondTile.Position.Y);
+        var defender = Unit("Warrior", b, targetTile.Position.X, targetTile.Position.Y);
         defender.Health = 1;
         See(a);
 
@@ -290,7 +290,7 @@ public sealed class MovementCombatCommandTests
     {
         var city = testGame.AddCity(a, Tile(0, 0));
         var inRange = Tile(0, 2);
-        var enemy = Unit("Warrior", b, inRange.Position.x, inRange.Position.y);
+        var enemy = Unit("Warrior", b, inRange.Position.X, inRange.Position.Y);
         var outOfRange = Unit("Warrior", b, 0, 5);
         See(a);
         Assert.True(city.CanBombard());
@@ -406,7 +406,7 @@ public sealed class MovementCombatCommandTests
     public void DisbandUnitRemovesTheUnitAndRefundsGoldInsideOwnBorders()
     {
         var city = testGame.AddCity(a, Tile(0, 0));
-        var inside = Unit("Warrior", a, city.GetCenterTile().Position.x, city.GetCenterTile().Position.y);
+        var inside = Unit("Warrior", a, city.GetCenterTile().Position.X, city.GetCenterTile().Position.Y);
         var outside = Unit("Warrior", a, 4, 0);
         int gold = a.Gold;
         int refund = inside.BaseUnit.GetDisbandGold(a);

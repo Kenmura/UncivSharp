@@ -132,8 +132,8 @@ public sealed class HostSecretRandomTests
     [Fact]
     public void GeneratedSecretsAreNonZeroAndSkipAZeroDraw()
     {
-        Assert.NotEqual(0L, HostSecret.Generate());
-        Assert.NotEqual(HostSecret.Generate(), HostSecret.Generate());
+        Assert.NotEqual(0L, HostSecret.Generate(SystemSecureRandom.Instance));
+        Assert.NotEqual(HostSecret.Generate(SystemSecureRandom.Instance), HostSecret.Generate(SystemSecureRandom.Instance));
         var draws = new ZeroThenOne();
         Assert.Equal(1L, HostSecret.Generate(draws));
         Assert.Equal(2, draws.Calls);

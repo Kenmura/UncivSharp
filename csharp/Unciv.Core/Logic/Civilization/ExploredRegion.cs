@@ -11,7 +11,7 @@ namespace Unciv.Logic.Civilization;
 // Kotlin Rectangle is mutable; the engine Rectangle is an immutable record struct, so getRectangle() returns the current value
 // and calculateStageCoords replaces it.
 
-public class ExploredRegion : IsPartOfGameInfoSerialization
+public class ExploredRegion : IIsPartOfGameInfoSerialization
 {
     /// <summary><c>TileGroupMap.groupSize</c>.</summary>
     private const float GroupSize = 50f;
@@ -47,10 +47,10 @@ public class ExploredRegion : IsPartOfGameInfoSerialization
     public bool ShouldUpdateMinimap() => shouldUpdateMinimap;
     public Rectangle GetRectangle() => exploredRectangle;
     public bool ShouldRestrictX() => shouldRestrictX;
-    public float GetLeftX() => topLeftStage.x;
-    public float GetRightX() => bottomRightStage.x;
-    public float GetTopY() => topLeftStage.y;
-    public float GetBottomY() => bottomRightStage.y;
+    public float GetLeftX() => topLeftStage.X;
+    public float GetRightX() => bottomRightStage.X;
+    public float GetTopY() => topLeftStage.Y;
+    public float GetBottomY() => bottomRightStage.Y;
 
     public ExploredRegion Clone()
     {
@@ -97,27 +97,27 @@ public class ExploredRegion : IsPartOfGameInfoSerialization
         }
 
         // Check X coord
-        if (topLeft.x >= bottomRight.x)
+        if (topLeft.X >= bottomRight.X)
         {
-            if (longitude > topLeft.x)
+            if (longitude > topLeft.X)
             {
                 // For world wrap maps when the maximumX is reached, we move to a minimumX - 1f
                 if (worldWrap && longitude == mapRadius) longitude = mapRadius * -1f;
-                topLeft.x = longitude;
+                topLeft.X = longitude;
                 mapExplored = true;
             }
-            else if (longitude < bottomRight.x)
+            else if (longitude < bottomRight.X)
             {
                 // For world wrap maps when the minimumX is reached, we move to a maximumX + 1f
                 if (worldWrap && longitude == mapRadius * -1f + 1f) longitude = mapRadius + 1f;
-                bottomRight.x = longitude;
+                bottomRight.X = longitude;
                 mapExplored = true;
             }
         }
         else
         {
             // When we cross the map edge with world wrap, the vectors are swapped along the x-axis
-            if (longitude < bottomRight.x && longitude > topLeft.x)
+            if (longitude < bottomRight.X && longitude > topLeft.X)
             {
                 float rightSideDistance;
                 float leftSideDistance;
@@ -129,43 +129,43 @@ public class ExploredRegion : IsPartOfGameInfoSerialization
                     // Kotlin Int, promoted to Float by the arithmetic below
                     int explorerLongitude = HexMath.GetLongitude(explorerPosition.Value);
 
-                    rightSideDistance = explorerLongitude < 0 && bottomRight.x > 0
+                    rightSideDistance = explorerLongitude < 0 && bottomRight.X > 0
                         // The explorer is still on the right edge of the map, but has explored over the edge
-                        ? mapRadius * 2f + explorerLongitude - bottomRight.x
-                        : Math.Abs(explorerLongitude - bottomRight.x);
+                        ? mapRadius * 2f + explorerLongitude - bottomRight.X
+                        : Math.Abs(explorerLongitude - bottomRight.X);
 
-                    leftSideDistance = explorerLongitude > 0 && topLeft.x < 0
+                    leftSideDistance = explorerLongitude > 0 && topLeft.X < 0
                         // The explorer is still on the left edge of the map, but has explored over the edge
-                        ? mapRadius * 2f - explorerLongitude + topLeft.x
-                        : Math.Abs(topLeft.x - explorerLongitude);
+                        ? mapRadius * 2f - explorerLongitude + topLeft.X
+                        : Math.Abs(topLeft.X - explorerLongitude);
                 }
                 else
                 {
                     // If we don't have explorerPosition, we calculate the distance to the edges of the explored region
                     // e.g. when capitals are revealed
-                    rightSideDistance = bottomRight.x - longitude;
-                    leftSideDistance = longitude - topLeft.x;
+                    rightSideDistance = bottomRight.X - longitude;
+                    leftSideDistance = longitude - topLeft.X;
                 }
 
                 // Expand region from the nearest edge
                 if (rightSideDistance > leftSideDistance)
-                    topLeft.x = longitude;
+                    topLeft.X = longitude;
                 else
-                    bottomRight.x = longitude;
+                    bottomRight.X = longitude;
 
                 mapExplored = true;
             }
         }
 
         // Check Y coord
-        if (latitude > topLeft.y)
+        if (latitude > topLeft.Y)
         {
-            topLeft.y = latitude;
+            topLeft.Y = latitude;
             mapExplored = true;
         }
-        else if (latitude < bottomRight.y)
+        else if (latitude < bottomRight.Y)
         {
-            bottomRight.y = latitude;
+            bottomRight.Y = latitude;
             mapExplored = true;
         }
 
@@ -181,7 +181,7 @@ public class ExploredRegion : IsPartOfGameInfoSerialization
         shouldRecalculateCoords = false;
 
         // Check if we explored the whole world wrap map horizontally
-        shouldRestrictX = bottomRight.x - topLeft.x != 1f;
+        shouldRestrictX = bottomRight.X - topLeft.X != 1f;
 
         // Get world (x;y)
         var topLeftWorld = HexMath.WorldFromLatLong(topLeft, tileRadius);
@@ -189,8 +189,8 @@ public class ExploredRegion : IsPartOfGameInfoSerialization
 
         // Convert X to the stage coords
         float mapCenterX = evenMapWidth ? (mapMaxX + GroupSize + 4f) * 0.5f : mapMaxX * 0.5f;
-        float left = mapCenterX + topLeftWorld.x;
-        float right = mapCenterX + bottomRightWorld.x;
+        float left = mapCenterX + topLeftWorld.X;
+        float right = mapCenterX + bottomRightWorld.X;
 
         // World wrap over edge check
         if (left > mapMaxX) left = 10f;
@@ -198,8 +198,8 @@ public class ExploredRegion : IsPartOfGameInfoSerialization
 
         // Convert Y to the stage coords
         float mapCenterY = rectangularMap ? mapMaxY * 0.5f + GroupSize * 0.25f : mapMaxY * 0.5f;
-        float top = mapCenterY - topLeftWorld.y;
-        float bottom = mapCenterY - bottomRightWorld.y;
+        float top = mapCenterY - topLeftWorld.Y;
+        float bottom = mapCenterY - bottomRightWorld.Y;
 
         topLeftStage = new Vector2(left, top);
         bottomRightStage = new Vector2(right, bottom);
@@ -217,24 +217,24 @@ public class ExploredRegion : IsPartOfGameInfoSerialization
     {
         int lon = HexMath.GetLongitude(position);
         int lat = HexMath.GetLatitude(position);
-        return topLeft.x > bottomRight.x
-            ? lon <= topLeft.x && lon >= bottomRight.x && lat <= topLeft.y && lat >= bottomRight.y
-            : ((lon >= topLeft.x && lon >= bottomRight.x) || (lon <= topLeft.x && lon <= bottomRight.x)) && lat <= topLeft.y && lat >= bottomRight.y;
+        return topLeft.X > bottomRight.X
+            ? lon <= topLeft.X && lon >= bottomRight.X && lat <= topLeft.Y && lat >= bottomRight.Y
+            : ((lon >= topLeft.X && lon >= bottomRight.X) || (lon <= topLeft.X && lon <= bottomRight.X)) && lat <= topLeft.Y && lat >= bottomRight.Y;
     }
 
     public int GetWidth()
     {
         float result;
-        if (topLeft.x > bottomRight.x) result = topLeft.x - bottomRight.x;
-        else result = mapRadius * 2f - (bottomRight.x - topLeft.x);
+        if (topLeft.X > bottomRight.X) result = topLeft.X - bottomRight.X;
+        else result = mapRadius * 2f - (bottomRight.X - topLeft.X);
         return KotlinMath.FloatToInt(result) + 1;
     }
 
-    public int GetHeight() => KotlinMath.FloatToInt(topLeft.y - bottomRight.y) + 1;
+    public int GetHeight() => KotlinMath.FloatToInt(topLeft.Y - bottomRight.Y) + 1;
 
     public float GetMinimapLeft(float tileSize)
     {
         shouldUpdateMinimap = false;
-        return (topLeft.x + 1f) * tileSize * -0.75f;
+        return (topLeft.X + 1f) * tileSize * -0.75f;
     }
 }

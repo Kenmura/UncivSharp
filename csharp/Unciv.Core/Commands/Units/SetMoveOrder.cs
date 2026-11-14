@@ -43,7 +43,7 @@ public sealed class SetMoveOrder : GameCommand
         }
         if (unit.CurrentTile == origin) return []; // a dud, like the UI: leave the current action alone
         if (unit.IsExploring() || unit.IsMoving()) unit.Action = null;
-        if (unit.CurrentTile != target) unit.Action = $"moveTo {To.x},{To.y}";
+        if (unit.CurrentTile != target) unit.Action = $"moveTo {To.X},{To.Y}";
         return [];
     }
 }

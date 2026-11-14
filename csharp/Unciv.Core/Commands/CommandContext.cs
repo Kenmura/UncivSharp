@@ -119,9 +119,9 @@ public sealed class CommandContext(GameInfo game, string actorId)
 
     public Resolved<Tile> TileAt(HexCoord position)
     {
-        var tile = Game.TileMap.GetOrNull(position.x, position.y);
+        var tile = Game.TileMap.GetOrNull(position.X, position.Y);
         return tile == null
-            ? Resolved<Tile>.Fail(CommandErrors.UnknownTile, $"There is no tile at {position.x},{position.y}")
+            ? Resolved<Tile>.Fail(CommandErrors.UnknownTile, $"There is no tile at {position.X},{position.Y}")
             : Resolved<Tile>.Of(tile);
     }
 }

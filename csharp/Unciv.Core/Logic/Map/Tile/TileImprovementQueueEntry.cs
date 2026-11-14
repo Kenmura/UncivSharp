@@ -5,7 +5,7 @@ namespace Unciv.Logic.Map.Tiles;
 // Split out of Tile.cs (B010) to keep that file within its size ratchet.
 public partial class Tile
 {
-    internal class ImprovementQueueEntry(string improvement, int turnsToImprovement) : IsPartOfGameInfoSerialization
+    internal class ImprovementQueueEntry(string improvement, int turnsToImprovement) : IIsPartOfGameInfoSerialization
     {
         public string Improvement { get; } = improvement;
         public int TurnsToImprovement { get; private set; } = turnsToImprovement;

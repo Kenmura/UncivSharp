@@ -9,7 +9,7 @@ namespace Unciv.Logic.GreatWorks;
 /// A Great Work that exists in the game (spec 2.2 <c>GameInfo.GreatWorks</c>). Every named work exists at most once per game, so the
 /// <see cref="Name"/> identifies it, and a destroyed work stays in the list: a work that was created never comes back.
 /// </summary>
-public class GreatWorkInstance : IsPartOfGameInfoSerialization
+public class GreatWorkInstance : IIsPartOfGameInfoSerialization
 {
     /// <summary>Name of the <see cref="Unciv.Models.Ruleset.GreatWork"/> in the ruleset.</summary>
     [JsonPropertyName("name")]
@@ -39,7 +39,7 @@ public class GreatWorkInstance : IsPartOfGameInfoSerialization
 /// A civ's standing offer to swap one of its works (spec 4.2.3). A civ has at most one offer per class (Art, Artifact, Writing).
 /// An offer is only honoured while the civ still holds the work in a city of its own.
 /// </summary>
-public class GreatWorkSwapOffer : IsPartOfGameInfoSerialization
+public class GreatWorkSwapOffer : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("civ")]
     public string Civ { get; set; } = "";
@@ -51,7 +51,7 @@ public class GreatWorkSwapOffer : IsPartOfGameInfoSerialization
 }
 
 /// <summary>The works held by the slots of one building of a city, by slot index. A null entry is an empty slot.</summary>
-public class BuildingGreatWorks : IsPartOfGameInfoSerialization
+public class BuildingGreatWorks : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("building")]
     public string Building { get; set; } = "";

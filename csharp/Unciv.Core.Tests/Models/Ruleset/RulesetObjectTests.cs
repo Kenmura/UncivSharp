@@ -66,7 +66,7 @@ public class RulesetObjectTests
         Assert.Single(specialist.UniqueObjects);
         Assert.Throws<System.Text.Json.JsonException>(() => Read<Specialist>("""{ "gold": true }"""));
         Assert.Throws<System.Text.Json.JsonException>(() => Read<Specialist>("[]"));
-        Assert.Throws<NotSupportedException>(() => UncivJson.Serialize(new Specialist()));
+        Assert.Throws<InvalidOperationException>(() => UncivJson.Serialize(new Specialist()));
     }
 
     // region Speed

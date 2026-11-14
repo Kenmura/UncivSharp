@@ -100,7 +100,7 @@ public sealed class HostPingTests : IDisposable
 
     private static Tile ExploredBy(GameInfo game, params string[] civs)
     {
-        var tile = game.TileMap.TileList.OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).First();
+        var tile = game.TileMap.TileList.OrderBy(it => it.Position.X).ThenBy(it => it.Position.Y).First();
         foreach (var civ in civs) tile.SetExplored(game.GetCivilization(civ), true);
         return tile;
     }
@@ -116,10 +116,10 @@ public sealed class HostPingTests : IDisposable
         var ally = await AttachAsync(host, "Greece");
         var stranger = await AttachAsync(host, "Rome");
 
-        await PingAsync(mine, tile.Position.x, tile.Position.y);
+        await PingAsync(mine, tile.Position.X, tile.Position.Y);
 
         var atAlly = await ReadUntilAsync<MapPingNotice>(ally);
-        Assert.Equal((tile.Position.x, tile.Position.y, MapPingKinds.Danger, "Babylon"), (atAlly.X, atAlly.Y, atAlly.Kind, atAlly.Sender));
+        Assert.Equal((tile.Position.X, tile.Position.Y, MapPingKinds.Danger, "Babylon"), (atAlly.X, atAlly.Y, atAlly.Kind, atAlly.Sender));
         Assert.Equal(atAlly, await ReadUntilAsync<MapPingNotice>(mine)); // echoed to the sender
         Assert.True(await NothingRelayedAsync(stranger));
     }
@@ -135,7 +135,7 @@ public sealed class HostPingTests : IDisposable
         var mine = await AttachAsync(host, "Babylon");
         var ally = await AttachAsync(host, "Greece");
 
-        await PingAsync(mine, tile.Position.x, tile.Position.y);
+        await PingAsync(mine, tile.Position.X, tile.Position.Y);
 
         await ReadUntilAsync<MapPingNotice>(mine);
         Assert.True(await NothingRelayedAsync(ally));
@@ -147,17 +147,17 @@ public sealed class HostPingTests : IDisposable
         var game = NewGame();
         Ally(game, "Babylon", "Greece");
         var babylon = game.GetCivilization("Babylon");
-        var unknown = game.TileMap.TileList.OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).First(it => !it.IsExplored(babylon));
+        var unknown = game.TileMap.TileList.OrderBy(it => it.Position.X).ThenBy(it => it.Position.Y).First(it => !it.IsExplored(babylon));
         unknown.SetExplored(game.GetCivilization("Greece"), true);
-        var known = game.TileMap.TileList.OrderBy(it => it.Position.x).ThenBy(it => it.Position.y).First(it => it != unknown && it.IsExplored(babylon));
+        var known = game.TileMap.TileList.OrderBy(it => it.Position.X).ThenBy(it => it.Position.Y).First(it => it != unknown && it.IsExplored(babylon));
         known.SetExplored(game.GetCivilization("Greece"), true);
         await using var host = new GameHost(new GameSession(game), clock: new ManualClock(1_000_000));
         var mine = await AttachAsync(host, "Babylon");
         var ally = await AttachAsync(host, "Greece");
 
-        await PingAsync(mine, unknown.Position.x, unknown.Position.y);
+        await PingAsync(mine, unknown.Position.X, unknown.Position.Y);
         await PingAsync(mine, 9999, 9999);
-        await PingAsync(mine, known.Position.x, known.Position.y, "Spam");
+        await PingAsync(mine, known.Position.X, known.Position.Y, "Spam");
 
         Assert.True(await NothingRelayedAsync(mine));
         Assert.True(await NothingRelayedAsync(ally));
@@ -172,13 +172,13 @@ public sealed class HostPingTests : IDisposable
         await using var host = new GameHost(new GameSession(game), clock: clock, limits: new HostLimits { MaxPingPerWindow = 2, PingWindowMillis = 5_000 });
         var mine = await AttachAsync(host, "Babylon");
 
-        for (int i = 0; i < 3; i++) await PingAsync(mine, tile.Position.x, tile.Position.y, i == 0 ? MapPingKinds.Look : i == 1 ? MapPingKinds.Danger : MapPingKinds.Help);
+        for (int i = 0; i < 3; i++) await PingAsync(mine, tile.Position.X, tile.Position.Y, i == 0 ? MapPingKinds.Look : i == 1 ? MapPingKinds.Danger : MapPingKinds.Help);
         Assert.Equal(MapPingKinds.Look, (await ReadUntilAsync<MapPingNotice>(mine)).Kind);
         Assert.Equal(MapPingKinds.Danger, (await ReadUntilAsync<MapPingNotice>(mine)).Kind);
         Assert.True(await NothingRelayedAsync(mine)); // the third was dropped
 
         clock.Advance(5_001);
-        await PingAsync(mine, tile.Position.x, tile.Position.y, MapPingKinds.Help);
+        await PingAsync(mine, tile.Position.X, tile.Position.Y, MapPingKinds.Help);
         Assert.Equal(MapPingKinds.Help, (await ReadUntilAsync<MapPingNotice>(mine)).Kind);
     }
 
@@ -193,7 +193,7 @@ public sealed class HostPingTests : IDisposable
         long seq = gameSession.LastSeq;
         int logged = gameSession.Log.Count;
 
-        await PingAsync(mine, tile.Position.x, tile.Position.y);
+        await PingAsync(mine, tile.Position.X, tile.Position.Y);
         await ReadUntilAsync<MapPingNotice>(mine);
 
         Assert.Equal(seq, gameSession.LastSeq);
@@ -228,7 +228,7 @@ public sealed class HostPingTests : IDisposable
             await using var host = InProcessHost.Start(game, setup, Seed, 1000L, Path.Combine(root, "g"), "Babylon", bindings, new InProcessHostOptions { TickInterval = null });
             var mine = await host.ConnectHostPlayerAsync();
 
-            await PingAsync(mine, tile.Position.x, tile.Position.y);
+            await PingAsync(mine, tile.Position.X, tile.Position.Y);
 
             var notice = await ReadUntilAsync<MapPingNotice>(mine);
             Assert.Equal(new HostLimits().MaxPingNameChars, notice.Sender.Length);
@@ -278,7 +278,7 @@ public sealed class HostPingTests : IDisposable
         var ally = await AttachAsync(host, "Greece");
         var unbound = await AttachAsync(host, "Nobody");
 
-        await PingAsync(unbound, tile.Position.x, tile.Position.y);
+        await PingAsync(unbound, tile.Position.X, tile.Position.Y);
 
         Assert.True(await NothingRelayedAsync(unbound));
         Assert.True(await NothingRelayedAsync(ally));

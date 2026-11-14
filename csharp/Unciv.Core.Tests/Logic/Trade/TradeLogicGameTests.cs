@@ -174,8 +174,8 @@ public class TradeLogicGameTests
         var resource = game.CreateResource(UniqueType.Stockpiled.Text());
         a.GainStockpiledResource(resource, 10);
         var logic = NewLogic(a, b);
-        logic.CurrentTrade.OurOffers.Add(new TradeOffer(resource.Name, TradeOfferType.Stockpiled_Resource, 4));
-        logic.CurrentTrade.OurOffers.Add(new TradeOffer("No such resource", TradeOfferType.Stockpiled_Resource, 4));
+        logic.CurrentTrade.OurOffers.Add(new TradeOffer(resource.Name, TradeOfferType.StockpiledResource, 4));
+        logic.CurrentTrade.OurOffers.Add(new TradeOffer("No such resource", TradeOfferType.StockpiledResource, 4));
 
         logic.AcceptTrade(false);
 
@@ -202,9 +202,9 @@ public class TradeLogicGameTests
 
         var offers = NewLogic(a, b).OurAvailableOffers;
 
-        Assert.Equal(TradeOfferType.Luxury_Resource, offers.Single(it => it.Name == lux.Name).Type);
+        Assert.Equal(TradeOfferType.LuxuryResource, offers.Single(it => it.Name == lux.Name).Type);
         Assert.Equal(2, offers.Single(it => it.Name == lux.Name).Amount);
-        Assert.Equal(TradeOfferType.Strategic_Resource, offers.Single(it => it.Name == strategic.Name).Type);
+        Assert.Equal(TradeOfferType.StrategicResource, offers.Single(it => it.Name == strategic.Name).Type);
         Assert.Equal(5, offers.Single(it => it.Name == strategic.Name).Amount);
         Assert.DoesNotContain(offers, it => it.Name == bonus.Name);
         Assert.Equal(0, offers.Single(it => it.Name == received.Name).Amount);

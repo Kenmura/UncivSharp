@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unciv.App.Tests", "Unciv.Ap
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unciv.Relay", "Unciv.Relay\Unciv.Relay.csproj", "{22EBFE2D-6571-4BA1-9DF1-A9863148827F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unciv.Platform", "Unciv.Platform\Unciv.Platform.csproj", "{A2E9E4C5-5F1A-4B8E-9C3D-1E7B6A4D8F21}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -139,6 +141,10 @@ Global
 		{22EBFE2D-6571-4BA1-9DF1-A9863148827F}.Release|x64.Build.0 = Release|Any CPU
 		{22EBFE2D-6571-4BA1-9DF1-A9863148827F}.Release|x86.ActiveCfg = Release|Any CPU
 		{22EBFE2D-6571-4BA1-9DF1-A9863148827F}.Release|x86.Build.0 = Release|Any CPU
+		{A2E9E4C5-5F1A-4B8E-9C3D-1E7B6A4D8F21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2E9E4C5-5F1A-4B8E-9C3D-1E7B6A4D8F21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2E9E4C5-5F1A-4B8E-9C3D-1E7B6A4D8F21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2E9E4C5-5F1A-4B8E-9C3D-1E7B6A4D8F21}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

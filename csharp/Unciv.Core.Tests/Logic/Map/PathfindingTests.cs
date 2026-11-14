@@ -45,7 +45,7 @@ public class PathfindingTests
         tile.SetTerrainTransients();
     }
 
-    private static string Positions(IEnumerable<TileClass> tiles) => string.Join(" ", tiles.Select(it => $"{it.Position.x},{it.Position.y}"));
+    private static string Positions(IEnumerable<TileClass> tiles) => string.Join(" ", tiles.Select(it => $"{it.Position.X},{it.Position.Y}"));
 
     // ---- BFS
 
@@ -90,7 +90,7 @@ public class PathfindingTests
     public void Bfs_PredicateBlocksTiles_AndUnreachedDestinationHasEmptyPath()
     {
         var map = HexMap(4);
-        var wall = map.Values.Where(it => it.Position.x == 2).ToHashSet();
+        var wall = map.Values.Where(it => it.Position.X == 2).ToHashSet();
         var bfs = new BFS(map[HexCoord.Zero], tile => !wall.Contains(tile));
         bfs.StepToEnd();
         Assert.All(wall, tile => Assert.False(bfs.HasReachedTile(tile)));
@@ -151,7 +151,7 @@ public class PathfindingTests
     public void AStar_NoPath_WhenBlocked()
     {
         var map = HexMap(3);
-        var astar = new AStar(map[HexCoord.Zero], tile => tile.Position.x != 1, (_, _) => 1f, (_, _) => 0f);
+        var astar = new AStar(map[HexCoord.Zero], tile => tile.Position.X != 1, (_, _) => 1f, (_, _) => 0f);
         astar.StepToEnd();
         Assert.True(astar.HasEnded());
         Assert.Empty(astar.GetPathTo(map[HexCoord.Of(2, 0)]));
@@ -393,7 +393,7 @@ public class PathfindingTests
         var civ = ExploredCiv(map);
         var start = map[HexCoord.Zero];
         Assert.Equal([start], MapPathing.GetRoadPath(civ, start, start));
-        foreach (var tile in map.Values.Where(it => it.Position.x == 1)) SetTerrain(tile, "Ocean");
+        foreach (var tile in map.Values.Where(it => it.Position.X == 1)) SetTerrain(tile, "Ocean");
         Assert.Null(MapPathing.GetRoadPath(civ, start, map[HexCoord.Of(2, 0)]));
     }
 

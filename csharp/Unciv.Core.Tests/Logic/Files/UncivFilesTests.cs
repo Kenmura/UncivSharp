@@ -181,7 +181,7 @@ public sealed class UncivFilesTests : IDisposable
         diplomacy.AddModifier(DiplomaticModifiers.DeclaredFriendshipWithOurEnemies, 15f);
         diplomacy.SetFlag(DiplomacyFlags.DeclinedLuxExchange, 4);
         var trade = new Trade();
-        trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30));
+        trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30));
         trade.TheirOffers.Add(new TradeOffer("Gold", TradeOfferType.Gold, 50));
         majors[1].TradeRequests.Add(new TradeRequest(majors[0].CivId, trade));
         diplomacy.Trades.Add(trade.Clone());

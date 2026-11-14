@@ -23,7 +23,7 @@ namespace Unciv.Logic.City.Managers;
 // the pressure per follower is an Int division. The members the City tests replace (the majority religion, pressure, followers and
 // inquisitor queries) are virtual.
 
-public class CityReligionManager : IsPartOfGameInfoSerialization
+public class CityReligionManager : IIsPartOfGameInfoSerialization
 {
     private CityObject? city;
     /// <summary>Kotlin <c>@Transient lateinit var</c>, set by <see cref="SetTransients"/>: reading before assignment throws.</summary>

@@ -109,7 +109,7 @@ public sealed class LobbyStandbyTests : IDisposable
 
     private static LobbyHost NewLobby(int? backup, FakeProber prober)
     {
-        var lobby = new LobbyHost(new LobbySettings { BackupHost = backup });
+        var lobby = new LobbyHost(SystemSecureRandom.Instance, new LobbySettings { BackupHost = backup });
         lobby.Standby.Prober = prober;
         return lobby;
     }
@@ -117,7 +117,7 @@ public sealed class LobbyStandbyTests : IDisposable
     [Fact]
     public async Task Welcome_CarriesTheNameFreeTrustNoticeOnlyWhileABackupHostIsIntended()
     {
-        await using var none = new LobbyHost();
+        await using var none = new LobbyHost(SystemSecureRandom.Instance);
         using var id = ClientIdentity.Generate();
         var (plain, plainWelcome) = await JoinAsync(none, id, "Ann");
         await using (plain) Assert.Null(plainWelcome.BackupHostNotice);

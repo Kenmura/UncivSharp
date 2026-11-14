@@ -19,7 +19,7 @@ namespace Unciv.Logic.City.Managers;
 // Tile.GetCity() is typed City (retyped by T115); getOwner() is typed by the Tile seam (IGameContextCivilization); City, Civilization
 // and MapUnit instances are compared by reference like Kotlin (none of the three has equals).
 
-public class CityExpansionManager : IsPartOfGameInfoSerialization
+public class CityExpansionManager : IIsPartOfGameInfoSerialization
 {
     private CityObject? city;
     /// <summary>Kotlin <c>@Transient lateinit var</c>, set by <c>City.setTransients</c>: reading before assignment throws.</summary>

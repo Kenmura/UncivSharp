@@ -205,7 +205,7 @@ public class JsonTests
     [Fact]
     public void CounterWithNonStringKeysIsNotSupported()
     {
-        Assert.Throws<NotSupportedException>(() => UncivJson.Serialize(new Counter<int>()));
+        Assert.Throws<InvalidOperationException>(() => UncivJson.Serialize(new Counter<int>()));
     }
 
     [Theory]

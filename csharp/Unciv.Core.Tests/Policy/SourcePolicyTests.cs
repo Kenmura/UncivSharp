@@ -50,40 +50,30 @@ public partial class SourcePolicyTests
             .Where(path => !path.Contains(Path.DirectorySeparatorChar + "Policy" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
             .Order(StringComparer.Ordinal);
 
-    [GeneratedRegex(@"JUSTIFY: T\d{3}\b")]
-    private static partial Regex JustifyRegex();
-
     [GeneratedRegex(@"#pragma\s+warning\s+disable|SuppressMessage\s*\(")]
     private static partial Regex SuppressionRegex();
 
     [GeneratedRegex(@"\b(TODO|HACK|FIXME)\b(?!\(T\d{3}\))")]
     private static partial Regex UntrackedMarkerRegex();
 
-    private static bool HasJustification(string[] lines, int index)
-    {
-        for (var i = int.Max(0, index - 3); i <= index; i++)
-            if (JustifyRegex().IsMatch(lines[i])) return true;
-        return false;
-    }
-
     [Fact]
-    public void EverySuppressionCarriesATicketLinkedJustification()
+    public void NoSuppressionsAllowed()
     {
         var offenders = new List<string>();
         foreach (var file in SourceFiles("*.cs"))
         {
             var lines = File.ReadAllLines(file);
             for (var i = 0; i < lines.Length; i++)
-                if (SuppressionRegex().IsMatch(lines[i]) && !HasJustification(lines, i))
+                if (SuppressionRegex().IsMatch(lines[i]))
                     offenders.Add($"{Path.GetRelativePath(CSharpRoot, file)}:{i + 1}");
         }
 
         Assert.True(offenders.Count == 0,
-            "Suppressions need a `// JUSTIFY: T### reason` comment within the 3 lines above: " + string.Join(", ", offenders));
+            "Suppressions (#pragma warning disable / SuppressMessage) are not allowed: " + string.Join(", ", offenders));
     }
 
     [Fact]
-    public void NoWarnInProjectFilesCarriesAJustification()
+    public void NoWarnNotAllowedInProjectFiles()
     {
         var offenders = new List<string>();
         var files = SourceFiles("*.csproj").Concat(SourceFiles("*.props"));
@@ -91,32 +81,29 @@ public partial class SourcePolicyTests
         {
             var lines = File.ReadAllLines(file);
             for (var i = 0; i < lines.Length; i++)
-                if (lines[i].Contains("<NoWarn>", StringComparison.Ordinal) && !HasJustification(lines, i))
+                if (lines[i].Contains("<NoWarn>", StringComparison.Ordinal))
                     offenders.Add($"{Path.GetRelativePath(CSharpRoot, file)}:{i + 1}");
         }
 
         Assert.True(offenders.Count == 0,
-            "<NoWarn> needs an XML comment `JUSTIFY: T### reason` within the 3 lines above: " + string.Join(", ", offenders));
+            "<NoWarn> is not allowed in project or props files: " + string.Join(", ", offenders));
     }
 
-    // Disabling a rule for the whole tree is a policy change; per-file overrides in their own section are not.
     [Fact]
-    public void EditorConfigDoesNotDisableRulesGlobally()
+    public void EditorConfigDoesNotDisableRules()
     {
         var offenders = new List<string>();
         var editorConfig = Path.Combine(CSharpRoot, ".editorconfig");
-        var section = "";
         var lines = File.ReadAllLines(editorConfig);
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
-            if (line.StartsWith('[')) section = line;
-            else if (section == "[*.cs]" && Regex.IsMatch(line, @"^dotnet_diagnostic\.\S+\.severity\s*=\s*none\b"))
+            if (Regex.IsMatch(line, @"^dotnet_diagnostic\.\S+\.severity\s*=\s*none\b"))
                 offenders.Add($".editorconfig:{i + 1}");
         }
 
         Assert.True(offenders.Count == 0,
-            "Rules may not be set to `none` in the global [*.cs] section; scope the override to a file or change the policy via a ticket: "
+            "Rules may not be set to `none` in .editorconfig: "
             + string.Join(", ", offenders));
     }
 

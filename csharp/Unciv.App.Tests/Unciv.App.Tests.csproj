@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Unciv.Core\Unciv.Core.csproj" />
+    <ProjectReference Include="..\Unciv.Platform\Unciv.Platform.csproj" />
     <ProjectReference Include="..\Unciv.Cli\Unciv.Cli.csproj" />
     <ProjectReference Include="..\Unciv.Server\Unciv.Server.csproj" />
     <ProjectReference Include="..\Unciv.Relay\Unciv.Relay.csproj" />

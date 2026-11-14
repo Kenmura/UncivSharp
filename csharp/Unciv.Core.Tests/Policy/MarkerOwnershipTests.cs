@@ -30,9 +30,6 @@ public partial class MarkerOwnershipTests
     [GeneratedRegex(@"\bT\d{3}\b")]
     private static partial Regex TicketIdRegex();
 
-    [GeneratedRegex(@"JUSTIFY: T\d{3}\b")]
-    private static partial Regex JustifyRegex();
-
     [GeneratedRegex(@"throw new (NotSupportedException|NotImplementedException)\b")]
     private static partial Regex ThrowRegex();
 
@@ -112,16 +109,14 @@ public partial class MarkerOwnershipTests
                 var owned = false;
                 for (var j = int.Max(0, i - 3); j <= i && !owned; j++)
                 {
-                    if (JustifyRegex().IsMatch(lines[j])) owned = true;
-                    else
-                        foreach (Match match in TodoRegex().Matches(lines[j]))
-                            if (Problem(states, match.Groups[1].Value) == null) owned = true;
+                    foreach (Match match in TodoRegex().Matches(lines[j]))
+                        if (Problem(states, match.Groups[1].Value) == null) owned = true;
                 }
                 if (!owned) offenders.Add($"{Rel(file)}:{i + 1}");
             }
         }
         Assert.True(offenders.Count == 0,
-            "throw new NotSupportedException/NotImplementedException needs a TODO(T###) of an open ticket or a `// JUSTIFY: T### reason` on the same or the 3 previous lines: "
+            "throw new NotSupportedException/NotImplementedException needs a TODO(T###) of an open ticket on the same or the 3 previous lines: "
             + string.Join(", ", offenders));
     }
 

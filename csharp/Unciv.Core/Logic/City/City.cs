@@ -43,7 +43,7 @@ public enum CityFlags
     Resistance,
 }
 
-public partial class City : IsPartOfGameInfoSerialization, INamed, IConstructionCity, ILocalUniqueCacheCity
+public partial class City : IIsPartOfGameInfoSerialization, INamed, IConstructionCity, ILocalUniqueCacheCity
 {
     private static T Lateinit<T>(T? value, string name) where T : class =>
         value ?? throw new InvalidOperationException($"lateinit property {name} has not been initialized");

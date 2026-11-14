@@ -177,7 +177,7 @@ public static class GameEventHooks
     public static void CityMoved(CityObject city, CivilizationObject oldCiv, CivilizationObject newCiv)
     {
         if (city.Civ.GameInfo.EventSink is not { } sink) return;
-        foreach (var position in city.Tiles.OrderBy(it => it.x).ThenBy(it => it.y))
+        foreach (var position in city.Tiles.OrderBy(it => it.X).ThenBy(it => it.Y))
             sink.Emit(new TileOwnerChanged(position, oldCiv.CivId, newCiv.CivId));
     }
 

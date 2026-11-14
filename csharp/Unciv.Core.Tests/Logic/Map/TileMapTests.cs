@@ -292,7 +292,7 @@ public class TileMapTests
         Assert.Equal(37, seen.Count);
         Assert.Equal(seen.Distinct().Count(), seen.Count);
         // the ring at the map edge is clipped
-        Assert.Equal(3, HexMap(1).GetTilesAtDistance(HexCoord.Of(1, 1), 1).Count(it => it.Position.x <= 1));
+        Assert.Equal(3, HexMap(1).GetTilesAtDistance(HexCoord.Of(1, 1), 1).Count(it => it.Position.X <= 1));
     }
 
     [Fact]
@@ -304,8 +304,8 @@ public class TileMapTests
         map.ForEachTileAtDistance(HexCoord.Of(1, 0), 3, viaCallback.Add);
         Assert.Equal(viaSequence, viaCallback);
         var filtered = new List<TileClass>();
-        map.ForEachTileAtDistance(HexCoord.Of(1, 0), 3, it => it.Position.x > 1, filtered.Add);
-        Assert.Equal(viaSequence.Where(it => it.Position.x > 1), filtered);
+        map.ForEachTileAtDistance(HexCoord.Of(1, 0), 3, it => it.Position.X > 1, filtered.Add);
+        Assert.Equal(viaSequence.Where(it => it.Position.X > 1), filtered);
     }
 
     [Fact]
@@ -314,8 +314,8 @@ public class TileMapTests
         var map = new TileMap(6, 4, MapRuleset(), true) { MapParameters = { WorldWrap = true, Shape = MapShape.Rectangular, MapSize = new MapSize(6, 4) } };
         Assert.Null(map.GetOrNull(100, 100));
         var left = map.TileList.OrderBy(it => HexMath.GetColumn(it.Position)).First();
-        Assert.Null(map.GetOrNull(left.Position.x - 3, left.Position.y + 3)); // radius = width / 2 = 3: just outside on the left...
-        var wrapped = map.GetIfTileExistsOrNull(left.Position.x - 3, left.Position.y + 3);
+        Assert.Null(map.GetOrNull(left.Position.X - 3, left.Position.Y + 3)); // radius = width / 2 = 3: just outside on the left...
+        var wrapped = map.GetIfTileExistsOrNull(left.Position.X - 3, left.Position.Y + 3);
         Assert.Same(left, wrapped); // ...wraps (x + r, y - r) back to the left tile itself
         map.MapParameters.WorldWrap = false;
         Assert.Null(map.GetIfTileExistsOrNull(100, 100));
@@ -584,12 +584,18 @@ public class TileMapTests
         foreach (var tile in map.Values.ToList())
         {
             n++;
-            var baseTerrain = bases[System.Math.Abs(tile.Position.x * 7 + tile.Position.y * 13 + n) % bases.Length];
-            SetTile(map, tile.Position, baseTerrain, baseTerrain is "Grassland" or "Plains" ? features[System.Math.Abs(n * 3 + tile.Position.x) % features.Length] : []);
+            var baseTerrain = bases[System.Math.Abs(tile.Position.X * 7 + tile.Position.Y * 13 + n) % bases.Length];
+            SetTile(map, tile.Position, baseTerrain, baseTerrain is "Grassland" or "Plains" ? features[System.Math.Abs(n * 3 + tile.Position.X) % features.Length] : []);
         }
         foreach (var tile in map.Values)
             foreach (var sight in new[] { 0, 1, 2, 3, 4 })
                 foreach (var forAttack in new[] { false, true })
                     Assert.Equal(ReferenceViewableTiles(map, tile.Position, sight, forAttack), map.GetViewableTiles(tile.Position, sight, forAttack));
+    }
+
+    [Fact]
+    public void PreviewConverter_WriteThrowsInvalidOperationException()
+    {
+        Assert.Throws<InvalidOperationException>(() => Unciv.Json.UncivJson.Serialize(new TileMap.Preview()));
     }
 }

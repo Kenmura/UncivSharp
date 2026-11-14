@@ -29,6 +29,7 @@ public static class UncivJson
         options.Converters.Add(new StatsSubclassConverterFactory());
         options.Converters.Add(new StatMapConverter());
         options.Converters.Add(new Vector2Converter());
+        options.Converters.Add(new Unciv.Logic.Trade.TradeOfferTypeConverter());
         options.Converters.Add(new JsonStringEnumConverter());
 
         return options;

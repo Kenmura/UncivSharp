@@ -507,8 +507,8 @@ public class DiplomacyCoreTests
         Assert.True(manager.CanAttack());
         var trade = new Trade();
         trade.OurOffers.Add(new TradeOffer(Constants.PeaceTreaty, TradeOfferType.Treaty, info.SpeedData));
-        trade.OurOffers.Add(new TradeOffer("Gold", TradeOfferType.Gold_Per_Turn, 5, 30));
-        trade.TheirOffers.Add(new TradeOffer("Gold", TradeOfferType.Gold_Per_Turn, 12, 30));
+        trade.OurOffers.Add(new TradeOffer("Gold", TradeOfferType.GoldPerTurn, 5, 30));
+        trade.TheirOffers.Add(new TradeOffer("Gold", TradeOfferType.GoldPerTurn, 12, 30));
         manager.Trades.Add(trade);
         Assert.Equal(info.SpeedData.PeaceDealDuration, manager.TurnsToPeaceTreaty());
         Assert.False(manager.CanDeclareWar());
@@ -665,7 +665,7 @@ public class DiplomacyCoreTests
         Assert.Equal(7, new TradeOffer(Constants.PeaceTreaty, TradeOfferType.Treaty, speed).Duration);
         Assert.Equal(-1, new TradeOffer(Constants.PeaceTreaty, TradeOfferType.PeaceProposal, speed).Duration); // PeaceProposal is immediate
         Assert.Equal(21, new TradeOffer(Constants.OpenBorders, TradeOfferType.Agreement, speed).Duration);
-        Assert.Equal(21, new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 3, speed).Duration);
+        Assert.Equal(21, new TradeOffer("Iron", TradeOfferType.StrategicResource, 3, speed).Duration);
         Assert.Equal(1, new TradeOffer(Constants.OpenBorders, TradeOfferType.Agreement, speed).Amount);
 
         var empty = new TradeOffer();
@@ -680,12 +680,12 @@ public class DiplomacyCoreTests
     [Fact]
     public void TradeOfferType_NumberTypeAndImmediacy()
     {
-        Assert.Equal(TradeTypeNumberType.Gold, TradeOfferType.Gold_Per_Turn.NumberType());
-        Assert.Equal(TradeTypeNumberType.Simple, TradeOfferType.Stockpiled_Resource.NumberType());
+        Assert.Equal(TradeTypeNumberType.Gold, TradeOfferType.GoldPerTurn.NumberType());
+        Assert.Equal(TradeTypeNumberType.Simple, TradeOfferType.StockpiledResource.NumberType());
         Assert.Equal(TradeTypeNumberType.None, TradeOfferType.City.NumberType());
-        Assert.False(TradeOfferType.Gold_Per_Turn.IsImmediate());
-        Assert.True(TradeOfferType.Stockpiled_Resource.IsImmediate());
-        Assert.False(TradeOfferType.Luxury_Resource.IsImmediate());
+        Assert.False(TradeOfferType.GoldPerTurn.IsImmediate());
+        Assert.True(TradeOfferType.StockpiledResource.IsImmediate());
+        Assert.False(TradeOfferType.LuxuryResource.IsImmediate());
         Assert.False(TradeOfferType.Treaty.IsImmediate());
         Assert.False(TradeOfferType.Agreement.IsImmediate());
         Assert.True(TradeOfferType.City.IsImmediate());
@@ -697,38 +697,38 @@ public class DiplomacyCoreTests
     [Fact]
     public void TradeOffer_EqualityIsDataClassEqualityButTheOverloadIgnoresDuration()
     {
-        var one = new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30);
-        var other = new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 10);
+        var one = new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30);
+        var other = new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 10);
         Assert.True(one.Equals(other)); // fun equals(offer: TradeOffer): name, type, amount
         Assert.False(one.Equals((object)other)); // generated data-class equals(Any?) includes duration
         Assert.True(one.Equals((object)one.Copy()));
         Assert.Equal(one.GetHashCode(), one.Copy().GetHashCode());
         Assert.False(one.Equals(one.Copy(amount: 3)));
-        Assert.False(one.Equals(one.Copy(type: TradeOfferType.Luxury_Resource)));
+        Assert.False(one.Equals(one.Copy(type: TradeOfferType.LuxuryResource)));
         var copy = one.Copy(name: "Horses", duration: 5);
-        Assert.Equal(("Horses", TradeOfferType.Strategic_Resource, 2, 5), (copy.Name, copy.Type, copy.Amount, copy.Duration));
+        Assert.Equal(("Horses", TradeOfferType.StrategicResource, 2, 5), (copy.Name, copy.Type, copy.Amount, copy.Duration));
     }
 
     [Fact]
     public void TradeOffersList_AddMergesEquivalentOffersAndRemovesZeroAmounts()
     {
         var list = new TradeOffersList();
-        Assert.True(list.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30)));
-        Assert.True(list.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 3, 99)));
-        Assert.True(list.Add(new TradeOffer("Iron", TradeOfferType.Luxury_Resource, 1, 30))); // other type: not equivalent
+        Assert.True(list.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30)));
+        Assert.True(list.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 3, 99)));
+        Assert.True(list.Add(new TradeOffer("Iron", TradeOfferType.LuxuryResource, 1, 30))); // other type: not equivalent
         var iron = list[0];
         Assert.Equal(2, list.Count);
         Assert.Equal(5, iron.Amount);
         Assert.Equal(30, iron.Duration); // the existing offer's duration is kept
-        list.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, -5, 30));
-        Assert.Equal(TradeOfferType.Luxury_Resource, Assert.Single(list).Type);
+        list.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, -5, 30));
+        Assert.Equal(TradeOfferType.LuxuryResource, Assert.Single(list).Type);
     }
 
     [Fact]
     public void TradeOffersList_AddRangeDoesNotMerge()
     {
         var list = new TradeOffersList();
-        list.AddRange([new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30), new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30)]);
+        list.AddRange([new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30), new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30)]);
         Assert.Equal(2, list.Count);
     }
 
@@ -736,11 +736,11 @@ public class DiplomacyCoreTests
     public void TradeOffersList_WithoutSubtractsCopies()
     {
         var ours = new TradeOffersList();
-        ours.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 4, 30));
+        ours.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 4, 30));
         ours.Add(new TradeOffer("Gold", TradeOfferType.Gold, 100, -1));
         var theirs = new TradeOffersList();
-        theirs.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 4, 30));
-        theirs.Add(new TradeOffer("Horses", TradeOfferType.Strategic_Resource, 1, 30));
+        theirs.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 4, 30));
+        theirs.Add(new TradeOffer("Horses", TradeOfferType.StrategicResource, 1, 30));
 
         var result = ours.Without(theirs);
 
@@ -804,8 +804,8 @@ public class DiplomacyCoreTests
         var speed = info.SpeedData;
 
         var trade = new Trade();
-        trade.OurOffers.Add(new TradeOffer("Wine", TradeOfferType.Luxury_Resource, 1, 30));
-        trade.TheirOffers.Add(new TradeOffer("Silk", TradeOfferType.Luxury_Resource, 1, 30));
+        trade.OurOffers.Add(new TradeOffer("Wine", TradeOfferType.LuxuryResource, 1, 30));
+        trade.TheirOffers.Add(new TradeOffer("Silk", TradeOfferType.LuxuryResource, 1, 30));
         trade.OurOffers.Add(new TradeOffer(Constants.ResearchAgreement, TradeOfferType.Treaty, 1, 30));
         trade.OurOffers.Add(new TradeOffer(Constants.OpenBorders, TradeOfferType.Agreement, speed));
         trade.OurOffers.Add(new TradeOffer(Constants.PeaceTreaty, TradeOfferType.Treaty, speed));
@@ -826,7 +826,7 @@ public class DiplomacyCoreTests
         Assert.Equal(3, manager.GetFlag(DiplomacyFlags.DeclinedPeace));
 
         var luxuries = new Trade();
-        luxuries.OurOffers.Add(new TradeOffer("Wine", TradeOfferType.Luxury_Resource, 1, 30));
+        luxuries.OurOffers.Add(new TradeOffer("Wine", TradeOfferType.LuxuryResource, 1, 30));
         new TradeRequest("Requester", luxuries).Decline(decliner);
         Assert.Equal(5 - 2, manager.GetFlag(DiplomacyFlags.DeclinedLuxExchange)); // personality: neutral Commerce focus 5, / 2 truncated
 
@@ -863,9 +863,9 @@ public class DiplomacyCoreTests
         Meet(a, b);
         var manager = a.GetDiplomacyManager(b)!;
         var trade = new Trade();
-        trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30));
-        trade.TheirOffers.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 5, 30));
-        trade.TheirOffers.Add(new TradeOffer("Unknown", TradeOfferType.Luxury_Resource, 1, 30));
+        trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30));
+        trade.TheirOffers.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 5, 30));
+        trade.TheirOffers.Add(new TradeOffer("Unknown", TradeOfferType.LuxuryResource, 1, 30));
         trade.TheirOffers.Add(new TradeOffer("Iron", TradeOfferType.Gold, 9, 30));
         manager.Trades.Add(trade);
 
@@ -1234,8 +1234,8 @@ public class DiplomacyCoreTests
     public void TradeOffer_HashCodeIsAFixedCombineOfTheFields()
     {
         // Kotlin's data-class hash: ((name.hashCode() * 31 + type) * 31 + amount) * 31 + duration, with Java's String.hashCode
-        var offer = new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30);
-        var expected = ((("Iron".Aggregate(0, (h, ch) => 31 * h + ch) * 31 + (int)TradeOfferType.Strategic_Resource) * 31 + 2) * 31) + 30;
+        var offer = new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30);
+        var expected = ((("Iron".Aggregate(0, (h, ch) => 31 * h + ch) * 31 + (int)TradeOfferType.StrategicResource) * 31 + 2) * 31) + 30;
         Assert.Equal(expected, offer.GetHashCode());
         Assert.NotEqual(offer.GetHashCode(), offer.Copy(duration: 31).GetHashCode());
     }
@@ -1245,10 +1245,10 @@ public class DiplomacyCoreTests
     {
         var list = new TradeOffersList();
         IList<TradeOffer> asList = list;
-        asList.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 2, 30));
-        asList.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 3, 30));
+        asList.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 2, 30));
+        asList.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 3, 30));
         Assert.Equal(2, list.Count); // IList.Add does not merge: save loading must go through TradeOffersList.Add
-        list.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 1, 30));
+        list.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 1, 30));
         Assert.Equal(3, list[0].Amount);
     }
 }

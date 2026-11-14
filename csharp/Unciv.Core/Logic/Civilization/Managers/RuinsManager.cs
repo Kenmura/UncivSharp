@@ -9,7 +9,7 @@ namespace Unciv.Logic.Civilization.Managers;
 
 // Ported from core/src/com/unciv/logic/civilization/managers/RuinsManager.kt (T057).
 // The triggering unit is typed by the MapUnit seam, which is the MapUnit.
-public class RuinsManager : IsPartOfGameInfoSerialization
+public class RuinsManager : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("lastChosenRewards")]
     [JsonInclude]

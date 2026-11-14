@@ -12,7 +12,7 @@ namespace Unciv.Logic.Trade;
 // data-class equality of the generated equals(Any?).
 // Not ported: getOfferText (translation and Fonts, UI-side text; it also reads UncivGame.Current.gameInfo).
 
-public class TradeOffer : IsPartOfGameInfoSerialization
+public class TradeOffer : IIsPartOfGameInfoSerialization
 {
     [JsonPropertyName("name")]
     public string Name { get; init; }

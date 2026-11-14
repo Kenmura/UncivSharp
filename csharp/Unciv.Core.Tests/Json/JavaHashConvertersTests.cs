@@ -136,7 +136,7 @@ public class JavaHashConvertersTests
         var map = UncivJson.Deserialize<JavaHashMap<string, int>>("""{"a":"4","b":{"class":"java.lang.Float","value":2.9}}""")!;
         Assert.Equal(4, map["a"]);
         Assert.Equal(2, map["b"]);
-        Assert.Throws<NotSupportedException>(() => UncivJson.Serialize(new JavaHashMap<int, int>()));
+        Assert.Throws<InvalidOperationException>(() => UncivJson.Serialize(new JavaHashMap<int, int>()));
         Assert.Throws<JsonException>(() => UncivJson.Deserialize<JavaHashSet<string>>("""{"a":1}"""));
     }
 }

@@ -86,7 +86,7 @@ public static partial class DiplomacyAiTests
             w.Evaluation.BuyCost = offer => offer.Type == TradeOfferType.Gold ? offer.Amount : 0;
             // B asks A for a strategic resource (not gold: B's own gold may then be asked for)
             var trade = new TradeObject();
-            trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 1, -1));
+            trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 1, -1));
             w.A.TradeRequests.Add(new TradeRequest(w.B.CivId, trade));
             TradeAutomation.RespondToTradeRequests(w.A, true);
 
@@ -108,7 +108,7 @@ public static partial class DiplomacyAiTests
             w.Evaluation.Acceptability = 200; // (int)(200 / 1.1f) = 181; 2/3 of it = 120 >= 100 -> we add gold
             w.Evaluation.SellCost = _ => 1;
             var trade = new TradeObject();
-            trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.Strategic_Resource, 1, -1));
+            trade.OurOffers.Add(new TradeOffer("Iron", TradeOfferType.StrategicResource, 1, -1));
             w.A.TradeRequests.Add(new TradeRequest(w.B.CivId, trade));
             TradeAutomation.RespondToTradeRequests(w.A, true);
             var counter = Assert.Single(w.B.TradeRequests);

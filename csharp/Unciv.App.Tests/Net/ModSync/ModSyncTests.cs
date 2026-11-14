@@ -71,7 +71,7 @@ public sealed class ModSyncTests : IDisposable
     private DirectoryRulesetFileSource ClientSource() => new(jsons, clientMods);
 
     private LobbyHost NewLobby(string? password = null, Dictionary<string, string>? folders = null) =>
-        new(settings: Settings(password), hostFingerprint: ClientNetFingerprint) { ModFolders = new FixedFolders(folders ?? new() { ["TestMod"] = Path.Combine(hostMods, "TestMod") }) };
+        new(SystemSecureRandom.Instance, settings: Settings(password), hostFingerprint: ClientNetFingerprint) { ModFolders = new FixedFolders(folders ?? new() { ["TestMod"] = Path.Combine(hostMods, "TestMod") }) };
 
     private static readonly string ClientNetFingerprint = HostKey.Fingerprint(new byte[] { 9, 8, 7, 6 });
 
@@ -237,7 +237,7 @@ public sealed class ModSyncTests : IDisposable
         var tokens = new InviteTokens(TimeProvider.System, SystemSecureRandom.Instance);
         var token = tokens.Mint(TimeSpan.FromMinutes(5))!;
         var admission = new LobbyAdmission(null, inviteOnly: true, tokens, new AttemptLimiter(TimeProvider.System));
-        await using var lobby = new LobbyHost(settings: Settings(), admission: admission, hostFingerprint: ClientNetFingerprint) { ModFolders = new FixedFolders(new() { ["TestMod"] = Path.Combine(hostMods, "TestMod") }) };
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance, settings: Settings(), admission: admission, hostFingerprint: ClientNetFingerprint) { ModFolders = new FixedFolders(new() { ["TestMod"] = Path.Combine(hostMods, "TestMod") }) };
         var (client, welcome) = await HelloAsync(lobby, clientHash, modSync: true);
         await client.SendAsync(ProtocolCodec.Encode(new Join { PlayerKey = identity.PlayerKey, DisplayName = "Mallory", InviteToken = token }));
         await client.SendAsync(ProtocolCodec.Encode(new Auth { Proof = identity.Sign(welcome.HostKeyFingerprint, welcome.SessionId, welcome.Challenge) }));
@@ -786,7 +786,7 @@ public sealed class ModSyncTests : IDisposable
     {
         var folders = new Dictionary<string, string>();
         var clock = new ManualClock(1000);
-        await using var lobby = new LobbyHost(settings: Settings(), hostFingerprint: ClientNetFingerprint, clock: clock) { ModFolders = new FixedFolders(folders) };
+        await using var lobby = new LobbyHost(SystemSecureRandom.Instance, settings: Settings(), hostFingerprint: ClientNetFingerprint, clock: clock) { ModFolders = new FixedFolders(folders) };
         var (c1, w1) = await HelloAsync(lobby, clientHash, modSync: true);
         await c1.SendAsync(ProtocolCodec.Encode(new Join { PlayerKey = identity.PlayerKey, DisplayName = "Mallory" }));
         await c1.SendAsync(ProtocolCodec.Encode(new Auth { Proof = identity.Sign(w1.HostKeyFingerprint, w1.SessionId, w1.Challenge) }));

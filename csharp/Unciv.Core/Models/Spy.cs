@@ -68,7 +68,7 @@ public static class SpyActionExtensions
     };
 }
 
-public class Spy : IsPartOfGameInfoSerialization
+public class Spy : IIsPartOfGameInfoSerialization
 {
     private string? name;
     /// <summary>Kotlin <c>lateinit var</c> with a private setter: reading before assignment throws.</summary>
@@ -649,6 +649,6 @@ public class Spy : IsPartOfGameInfoSerialization
     private int RandomSeed()
     {
         var seedCity = GetCity();
-        return KotlinMath.FloatToInt(seedCity.Location.x * seedCity.Location.y + 123f * CivInfo.GameInfo.Turns) + JavaHash.HashCode(Name);
+        return KotlinMath.FloatToInt(seedCity.Location.X * seedCity.Location.Y + 123f * CivInfo.GameInfo.Turns) + JavaHash.HashCode(Name);
     }
 }

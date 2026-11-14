@@ -61,9 +61,9 @@ public class TradeEvaluationTests
         Assert.Equal(123, evaluation.EvaluateBuyCostWithInflation(Offer(Constants.FlatGold, TradeOfferType.Gold, 123), a, b, trade));
         Assert.Equal(123, evaluation.EvaluateSellCostWithInflation(Offer(Constants.FlatGold, TradeOfferType.Gold, 123), a, b, trade));
         // 7 * 30 * 4 / 5 = 168; Kotlin Int arithmetic is left to right: (7 * 30 * 4) / 5
-        Assert.Equal(168, evaluation.EvaluateBuyCostWithInflation(Offer(Constants.GoldPerTurn, TradeOfferType.Gold_Per_Turn, 7, 30), a, b, trade));
-        Assert.Equal(168, evaluation.EvaluateSellCostWithInflation(Offer(Constants.GoldPerTurn, TradeOfferType.Gold_Per_Turn, 7, 30), a, b, trade));
-        Assert.Equal(1, evaluation.EvaluateSellCostWithInflation(Offer(Constants.GoldPerTurn, TradeOfferType.Gold_Per_Turn, 1, 2), a, b, trade)); // 8/5
+        Assert.Equal(168, evaluation.EvaluateBuyCostWithInflation(Offer(Constants.GoldPerTurn, TradeOfferType.GoldPerTurn, 7, 30), a, b, trade));
+        Assert.Equal(168, evaluation.EvaluateSellCostWithInflation(Offer(Constants.GoldPerTurn, TradeOfferType.GoldPerTurn, 7, 30), a, b, trade));
+        Assert.Equal(1, evaluation.EvaluateSellCostWithInflation(Offer(Constants.GoldPerTurn, TradeOfferType.GoldPerTurn, 1, 2), a, b, trade)); // 8/5
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class TradeEvaluationTests
     {
         var (game, a, b) = Setup();
         var luxury = FirstResource(game, ResourceType.Luxury);
-        var offer = Offer(luxury, TradeOfferType.Luxury_Resource);
+        var offer = Offer(luxury, TradeOfferType.LuxuryResource);
         var trade = new TradeObject();
         Assert.Equal(Inflated(a, 350), evaluation.EvaluateBuyCostWithInflation(offer, a, b, trade)); // happiness 0 < 10
         a.Stats.Happiness = 10;
@@ -139,7 +139,7 @@ public class TradeEvaluationTests
     {
         var (game, a, b) = Setup();
         var strategic = FirstResource(game, ResourceType.Strategic);
-        var offer = Offer(strategic, TradeOfferType.Strategic_Resource, 3);
+        var offer = Offer(strategic, TradeOfferType.StrategicResource, 3);
         Assert.Equal(Inflated(a, 150), evaluation.EvaluateSellCostWithInflation(offer, a, b, new TradeObject()));
         // we already have enough? We have none, but nothing in range of the cities needs it: not wanted
         Assert.True(evaluation.EvaluateBuyCostWithInflation(offer, a, b, new TradeObject()) >= 0);
@@ -150,11 +150,11 @@ public class TradeEvaluationTests
     {
         var (game, a, b) = Setup();
         var trade = new TradeObject();
-        Assert.Equal(0, evaluation.EvaluateBuyCostWithInflation(Offer("No such resource", TradeOfferType.Stockpiled_Resource), a, b, trade));
-        Assert.Equal(0, evaluation.EvaluateSellCostWithInflation(Offer("No such resource", TradeOfferType.Stockpiled_Resource), a, b, trade));
+        Assert.Equal(0, evaluation.EvaluateBuyCostWithInflation(Offer("No such resource", TradeOfferType.StockpiledResource), a, b, trade));
+        Assert.Equal(0, evaluation.EvaluateSellCostWithInflation(Offer("No such resource", TradeOfferType.StockpiledResource), a, b, trade));
         var known = game.Ruleset.TileResources.Values.First(it => it.ResourceType == ResourceType.Strategic).Name;
-        Assert.Equal(0, evaluation.EvaluateBuyCostWithInflation(Offer(known, TradeOfferType.Stockpiled_Resource), a, b, trade));
-        Assert.Equal(Inflated(a, int.MaxValue), evaluation.EvaluateSellCostWithInflation(Offer(known, TradeOfferType.Stockpiled_Resource), a, b, trade));
+        Assert.Equal(0, evaluation.EvaluateBuyCostWithInflation(Offer(known, TradeOfferType.StockpiledResource), a, b, trade));
+        Assert.Equal(Inflated(a, int.MaxValue), evaluation.EvaluateSellCostWithInflation(Offer(known, TradeOfferType.StockpiledResource), a, b, trade));
     }
 
     [Fact]
@@ -363,11 +363,11 @@ public class TradeEvaluationTests
         Assert.False(evaluation.IsTradeValid(trade, a, b));
         trade.OurOffers.Clear();
 
-        trade.TheirOffers.Add(Offer(Constants.GoldPerTurn, TradeOfferType.Gold_Per_Turn, 100000, 30)); // B makes far less gold per turn
+        trade.TheirOffers.Add(Offer(Constants.GoldPerTurn, TradeOfferType.GoldPerTurn, 100000, 30)); // B makes far less gold per turn
         Assert.False(evaluation.IsTradeValid(trade, a, b));
         trade.TheirOffers.Clear();
 
-        trade.OurOffers.Add(Offer(FirstResource(game, ResourceType.Luxury), TradeOfferType.Luxury_Resource)); // we do not have it
+        trade.OurOffers.Add(Offer(FirstResource(game, ResourceType.Luxury), TradeOfferType.LuxuryResource)); // we do not have it
         Assert.False(evaluation.IsTradeValid(trade, a, b));
         trade.OurOffers.Clear();
 

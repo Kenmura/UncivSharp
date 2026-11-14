@@ -8,7 +8,7 @@ namespace Unciv.Logic.City;
 //
 // Kotlin CityFocus is an enum with constructor properties and per-value overrides; C# keeps the enum and puts the members in CityFocusExtensions.
 // Stripped: the UI-only `binding` (KeyboardBinding) and the KDoc references to Automation / CitizenManagementTable.
-// Serialized by name (IsPartOfGameInfoSerialization): City stores it as the string `cityAIFocus`.
+// Serialized by name (IIsPartOfGameInfoSerialization): City stores it as the string `cityAIFocus`.
 
 /// <summary>
 /// Controls automatic worker-to-tile assignment. Order matters for building the CitizenManagementTable.

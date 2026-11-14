@@ -35,8 +35,8 @@ public sealed class ProposeTrade : GameCommand
     public IReadOnlyList<TradeOfferSpec> TheirOffers { get; init; } = [];
 
     private static bool IsQuantity(TradeOfferType type) =>
-        type is TradeOfferType.Gold or TradeOfferType.Gold_Per_Turn or TradeOfferType.Luxury_Resource
-            or TradeOfferType.Strategic_Resource or TradeOfferType.Stockpiled_Resource;
+        type is TradeOfferType.Gold or TradeOfferType.GoldPerTurn or TradeOfferType.LuxuryResource
+            or TradeOfferType.StrategicResource or TradeOfferType.StockpiledResource;
 
     private static CommandValidation Bad(string message) => CommandValidation.Fail(CommandErrors.InvalidTarget, message);
 
@@ -47,7 +47,7 @@ public sealed class ProposeTrade : GameCommand
         var seen = new HashSet<(string, TradeOfferType)>();
         foreach (var spec in specs ?? [])
         {
-            if (spec == null || !Enum.TryParse<TradeOfferType>(spec.Kind, out var type) || !Enum.IsDefined(type))
+            if (spec == null || !TradeOfferTypeExtensions.TryParseWireString(spec.Kind, out var type))
             {
                 failure = Bad("Unknown trade offer type");
                 return false;
