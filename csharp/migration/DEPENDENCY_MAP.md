@@ -162,4 +162,4 @@ xychart-beta
 | T404 | Blocked | T301 | 0 | T301 follow-up: window maximize/resize on Wayland-native, Windows, macOS and with UiScale != 1 in the real app |
 | T418 | Available (waiting on T417) | T416, T417 | 0 | Clean cutover docs: rewrite root README.md, archive legacy changelog, and update contributor/modding docs for C#/.NET + Godot |
 | T419 | Available (waiting on T325, T330) | T325, T330, T280, T416 | 0 | Automated releases: one-click version bump, changelog generation, optional Android release signing, and main-branch workflow alignment |
-| T426 | Needs-Review [Antigravity] | none | 0 | Policy & analyzer purity: eliminate all #pragma warning disable, <NoWarn> CS1591, .editorconfig severity=none, and JUSTIFY suppression bypasses |
+| T426 | In-Review [Antigravity] | none | 0 | Policy & analyzer purity: eliminate all #pragma warning disable, <NoWarn> CS1591, .editorconfig severity=none, and JUSTIFY suppression bypasses |
