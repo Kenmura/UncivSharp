@@ -30,15 +30,11 @@ public static class Conditionals
         public bool IsTutorialTaskCompleted(string task) => false;
     }
 
-    private static volatile IConditionalsSettings CurrentSettings = new NoSettings();
+    private static readonly NoSettings DefaultSettings = new();
     private static readonly AsyncLocal<IConditionalsSettings?> ScopedSettings = new();
 
-    /// <summary>Stands in for <c>UncivGame.Current.settings</c>. A <see cref="UseSettings"/> scope of the running call chain wins over the global value.</summary>
-    public static IConditionalsSettings Settings
-    {
-        get => ScopedSettings.Value ?? CurrentSettings;
-        set => CurrentSettings = value;
-    }
+    /// <summary>Stands in for <c>UncivGame.Current.settings</c>. A <see cref="UseSettings"/> scope of the running call chain wins over the default value.</summary>
+    public static IConditionalsSettings Settings => ScopedSettings.Value ?? DefaultSettings;
 
     private sealed class SettingsScope(IConditionalsSettings? previous) : IDisposable
     {

@@ -13,11 +13,11 @@ public sealed class TutorialTranslationTests : IDisposable
     public TutorialTranslationTests()
     {
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        tutorials = RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName())!.Tutorials;
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        tutorials = RulesetCache.Current.Get(BaseRuleset.Civ_V_GnK.FullName())!.Tutorials;
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {

@@ -7,22 +7,20 @@ using Trans = Unciv.Models.Translations.Translations;
 
 namespace Unciv.Core.Tests.Models.Translations;
 
-[Collection("TranslationState")]
 public class TranslationTests : IDisposable
 {
+    private readonly IDisposable scope;
+
     public TranslationTests()
     {
-        Trans.Current = new Trans();
-        Trans.Current.CurrentLanguage = "English";
+        var translations = new Trans { CurrentLanguage = "English" };
+        scope = Trans.Use(translations);
         TranslationCache.InvalidateLanguage();
     }
 
     public void Dispose()
     {
-        Trans.Current = new Trans();
-        Trans.Current.CurrentLanguage = "English";
-        TranslationCache.InvalidateLanguage();
-        FontRulesetIcons.RulesetObjectNameToChar.Clear();
+        scope.Dispose();
     }
 
     private static void AddTranslation(string original, string result) =>

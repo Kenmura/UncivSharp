@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.Json.Serialization;
 using Unciv.GodotClient.Settings;
 
@@ -37,7 +38,7 @@ public static class MapMarkerModel
 
     private const string ForbiddenChars = "[]{}\"\\<>";
 
-    private static readonly (string Name, string Glyph, Rgb Colour)[] IconTable =
+    private static readonly ImmutableArray<(string Name, string Glyph, Rgb Colour)> IconTable =
     [
         ("Pin", "", new Rgb(215, 60, 55)),
         ("Star", "*", new Rgb(235, 190, 45)),

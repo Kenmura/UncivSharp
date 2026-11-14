@@ -66,7 +66,7 @@ public class PathsToTilesWithinTurn : IReadOnlyDictionary<Tile, UnitMovement.Par
     {
         if (!ContainsKey(tile))
         {
-            Log.Debug("PathsToTilesWithinTurn#getPathToTile does not contain {0}", tile);
+            Log.Null.Debug("PathsToTilesWithinTurn#getPathToTile does not contain {0}", tile);
             throw new InvalidOperationException($"Can't reach {tile}");
         }
         var reversePathList = new List<Tile>();

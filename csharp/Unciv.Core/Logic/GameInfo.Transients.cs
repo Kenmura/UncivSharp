@@ -133,19 +133,19 @@ public partial class GameInfo
         }
 
         // Try to fix mods that are displayed in save with - but when downloaded it's replaced with a space
-        if (!RulesetCache.ContainsKey(GameParameters.BaseRuleset) && RulesetCache.ContainsKey(GameParameters.BaseRuleset.Replace("-", " ")))
+        if (!RulesetCache.Current.ContainsKey(GameParameters.BaseRuleset) && RulesetCache.Current.ContainsKey(GameParameters.BaseRuleset.Replace("-", " ")))
             GameParameters.BaseRuleset = GameParameters.BaseRuleset.Replace("-", " ");
 
         foreach (var mod in GameParameters.Mods.ToList())
         {
-            if (!RulesetCache.ContainsKey(mod) && RulesetCache.ContainsKey(mod.Replace("-", " ")))
+            if (!RulesetCache.Current.ContainsKey(mod) && RulesetCache.Current.ContainsKey(mod.Replace("-", " ")))
             {
                 GameParameters.Mods.Remove(mod);
                 GameParameters.Mods.Add(mod.Replace("-", " "));
             }
         }
 
-        Ruleset = RulesetCache.GetComplexRuleset(GameParameters);
+        Ruleset = RulesetCache.Current.GetComplexRuleset(GameParameters);
 
         // any mod the saved game lists that is currently not installed causes null pointer
         // exceptions in this routine unless it contained no new objects or was very simple.
@@ -272,29 +272,29 @@ public partial class GameInfo
             // See issue: https://github.com/yairm210/Unciv/issues/7781
             .OrderByDescending(it => it.IsCityState).ToList())
         {
-            using (TurnProbe.Measure("UCS.UnitVisibleTiles"))
+            using (Utils.TurnProbe.Measure(TurnProbe, "UCS.UnitVisibleTiles"))
                 foreach (var unit in civInfo.Units.GetCivUnits().ToList())
                     unit.UpdateVisibleTiles(false); // this needs to be done after all the units are assigned to their civs and all other transients are set
             if (civInfo.PlayerType == PlayerType.Human)
                 civInfo.ExploredRegion.SetMapParameters(TileMap.MapParameters); // Required for the correct calculation of the explored region on world wrap maps
 
-            using (TurnProbe.Measure("UCS.UpdateOurTiles")) civInfo.Cache.UpdateOurTiles();
-            using (TurnProbe.Measure("UCS.UpdateSightAndResources")) civInfo.Cache.UpdateSightAndResources(); // only run ONCE and not for each unit - this is a huge performance saver!
+            using (Utils.TurnProbe.Measure(TurnProbe, "UCS.UpdateOurTiles")) civInfo.Cache.UpdateOurTiles();
+            using (Utils.TurnProbe.Measure(TurnProbe, "UCS.UpdateSightAndResources")) civInfo.Cache.UpdateSightAndResources(); // only run ONCE and not for each unit - this is a huge performance saver!
 
             // Since this depends on the cities of ALL civilizations,
             // we need to wait until we've set the transients of all the cities before we can run this.
             // Hence why it's not in CivInfo.setTransients().
-            using (TurnProbe.Measure("UCS.CitiesConnectedToCapital")) civInfo.Cache.UpdateCitiesConnectedToCapital(true);
+            using (Utils.TurnProbe.Measure(TurnProbe, "UCS.CitiesConnectedToCapital")) civInfo.Cache.UpdateCitiesConnectedToCapital(true);
 
             // We need to determine the GLOBAL happiness state in order to determine the city stats
-            using (TurnProbe.Measure("UCS.TileStatsAndHappiness"))
+            using (Utils.TurnProbe.Measure(TurnProbe, "UCS.TileStatsAndHappiness"))
                 foreach (var city in civInfo.Cities)
                 {
                     city.CityStats.UpdateTileStats(); // Some nat wonders can give happiness!
                     city.CityStats.UpdateCityHappiness(city.CityConstructions.GetStats());
                 }
 
-            using (TurnProbe.Measure("UCS.CityStatsUpdate"))
+            using (Utils.TurnProbe.Measure(TurnProbe, "UCS.CityStatsUpdate"))
                 foreach (var city in civInfo.Cities)
                 {
                     // We remove constructions from the queue that aren't defined in the ruleset.
@@ -317,7 +317,7 @@ public partial class GameInfo
 
     private void ConvertOldSavesToNewSaves()
     {
-        var baseRulesetInMods = GameParameters.Mods.FirstOrDefault(it => RulesetCache.Get(it)?.ModOptions.IsBaseRuleset == true);
+        var baseRulesetInMods = GameParameters.Mods.FirstOrDefault(it => RulesetCache.Current.Get(it)?.ModOptions.IsBaseRuleset == true);
         if (baseRulesetInMods != null)
         {
             GameParameters.BaseRuleset = baseRulesetInMods;

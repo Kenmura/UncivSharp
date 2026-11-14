@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Unciv.Models.Ruleset.Unique.Expressions;
 using Unciv.Models.StatTypes;
@@ -160,11 +159,6 @@ public sealed class Countables
 
     private static IReadOnlySet<string> EmptySet() => new LinkedHashSet<string>();
 
-    // Since each filter matches a small subset of buildings, and there can be lots of cities with lots of buildings,
-    // it's faster to *pre-check* the filter *once* to find matching buildings and then use that "list of matching buildings" for the count.
-    // Like Kotlin, the cache is keyed by the filter alone (not by ruleset) and never invalidated.
-    private static readonly ConcurrentDictionary<string, IReadOnlySet<string>> FilterToMatchingBuildingsCache = new(StringComparer.Ordinal);
-
     //region Entries
     public static readonly Countables Integer = new("Integer",
         documentationHeader: "Integer constant - any positive or negative integer number",
@@ -301,8 +295,7 @@ public sealed class Countables
             if (cities == null) return null;
             var ruleset = gameContext.GameInfo?.Ruleset;
             if (ruleset == null) return null;
-            var matchingBuildings = FilterToMatchingBuildingsCache.GetOrAdd(filter,
-                key => new HashSet<string>(ruleset.GetBuildingNamesMatchingFilter(key), StringComparer.Ordinal));
+            var matchingBuildings = ruleset.GetCachedBuildingNamesMatchingFilter(filter);
             return SumOf(cities, city =>
             {
                 // Pure time optimization, intersecting both ways gives the same result

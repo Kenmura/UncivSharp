@@ -16,9 +16,9 @@ namespace Unciv.Core.Tests.Models.Ruleset;
 [Collection("RulesetCache")]
 public sealed class VanillaRulesetTests : IDisposable
 {
-    public VanillaRulesetTests() => RulesetCache.Clear();
+    public VanillaRulesetTests() => RulesetCache.Current.Clear();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {
@@ -32,17 +32,17 @@ public sealed class VanillaRulesetTests : IDisposable
 
     private static RulesetClass LoadBase(BaseRuleset baseRuleset)
     {
-        var errors = RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(JsonsPath(), Path.Combine(JsonsPath(), "no mods here")), noMods: true);
+        var errors = RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(JsonsPath(), Path.Combine(JsonsPath(), "no mods here")), noMods: true);
         Assert.Empty(errors);
-        return RulesetCache.Get(baseRuleset.FullName())!;
+        return RulesetCache.Current.Get(baseRuleset.FullName())!;
     }
 
     [Fact]
     public void LoadRulesetsNoModsLoadsExactlyTheBaseRulesets()
     {
         LoadBase(BaseRuleset.Civ_V_Vanilla);
-        Assert.Equal(["Civ V - Brave New World", "Civ V - Gods & Kings", "Civ V - Vanilla"], RulesetCache.Keys.Order(StringComparer.Ordinal));
-        Assert.Equal(3, RulesetCache.Count);
+        Assert.Equal(["Civ V - Brave New World", "Civ V - Gods & Kings", "Civ V - Vanilla"], RulesetCache.Current.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(3, RulesetCache.Current.Count);
     }
 
     [Fact]
@@ -137,7 +137,7 @@ public sealed class VanillaRulesetTests : IDisposable
     public void ComplexRulesetOfGodsAndKingsValidates()
     {
         LoadBase(BaseRuleset.Civ_V_Vanilla);
-        var combined = RulesetCache.GetComplexRuleset(new GameParameters());
+        var combined = RulesetCache.Current.GetComplexRuleset(new GameParameters());
         Assert.False(combined.GetErrorList().IsError());
     }
 }

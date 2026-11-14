@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace Unciv.Assets;
 
 public enum PrimitiveShape
@@ -17,7 +19,7 @@ public sealed record ModelSpec(IReadOnlyList<PrimitiveSpec> Primitives, string I
 /// <summary>Builds the primitive description of unit blocks and props from a key alone. Same key, same model, on every machine.</summary>
 public static class ModelSpecs
 {
-    private static readonly Dictionary<string, PrimitiveShape> UnitTypeShapes = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, PrimitiveShape> UnitTypeShapes = new Dictionary<string, PrimitiveShape>(StringComparer.Ordinal)
     {
         ["Melee"] = PrimitiveShape.Box,
         ["Sword"] = PrimitiveShape.Box,
@@ -47,7 +49,7 @@ public static class ModelSpecs
         ["Submarine"] = PrimitiveShape.Sphere,
         ["WaterAircraftCarrier"] = PrimitiveShape.Box,
         ["Aircraft Carrier"] = PrimitiveShape.Box,
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Unit block: one coloured primitive (shape from <paramref name="unitType"/>, or the key itself for unitType keys; hash-chosen when unknown; colour from the key's hash) with an initials billboard above.</summary>
     public static ModelSpec Unit(AssetKey key, string? unitType = null)

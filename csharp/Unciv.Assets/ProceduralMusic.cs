@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace Unciv.Assets;
 
 /// <summary>Music mood selected by the client's current state (menu, peace, war tension, or game over).</summary>
@@ -22,7 +24,7 @@ public static class ProceduralMusic
 
     private readonly record struct MusicVoice(float[] FrequenciesHz, float StepSeconds, float Gain, bool WarmPad);
 
-    private static readonly Dictionary<string, MusicVoice[]> Tracks = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, MusicVoice[]> Tracks = new Dictionary<string, MusicVoice[]>(StringComparer.Ordinal)
     {
         ["menu"] =
         [
@@ -49,7 +51,7 @@ public static class ProceduralMusic
             new([261.63f, 329.63f, 392.00f], 2.0f, 0.30f, true),
             new([523.25f, 659.25f, 783.99f, 1046.50f, 783.99f, 1046.50f], 1.0f, 0.24f, false),
         ],
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static IReadOnlyCollection<string> TrackNames => Tracks.Keys;
 

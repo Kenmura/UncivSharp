@@ -137,7 +137,7 @@ public class Sounds(IMediaEnvironment environment) : IMediaFinder
     // Keeps unit around not for this class but for the labeled version
     protected static IEnumerable<(BaseUnit Unit, string Sound)> UnitAttackSounds()
     {
-        var ruleset = RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName());
+        var ruleset = RulesetCache.Current.Get(BaseRuleset.Civ_V_GnK.FullName());
         if (ruleset == null) return [];
         return ruleset.Units.Values
             .Where(it => it.AttackSound != null)
@@ -232,7 +232,7 @@ public class LabeledSounds(IMediaEnvironment environment) : Sounds(environment),
         {
             if (folder.IsInternal) continue;
             var mod = folder.Parent.Name;
-            var ruleset = RulesetCache.Get(mod);
+            var ruleset = RulesetCache.Current.Get(mod);
             if (ruleset != null)
             {
                 foreach (var unit in ruleset.Units.Values)

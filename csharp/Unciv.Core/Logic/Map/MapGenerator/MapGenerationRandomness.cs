@@ -169,7 +169,7 @@ public class MapGenerationRandomness
             {
                 // Either we got them all, or we're not going to get anything better
                 if (distanceBetweenResources < initialDistance)
-                    Log.Debug("chooseSpreadOutLocations: distance %d < initial %d", distanceBetweenResources, initialDistance);
+                    Log.Null.Debug("chooseSpreadOutLocations: distance %d < initial %d", distanceBetweenResources, initialDistance);
                 return chosenTiles;
             }
         }

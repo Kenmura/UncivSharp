@@ -19,13 +19,13 @@ public sealed class KotlinModGoldenTests : IDisposable
 
     public KotlinModGoldenTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(AppContext.BaseDirectory, "Determinism")));
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(AppContext.BaseDirectory, "Determinism")));
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {

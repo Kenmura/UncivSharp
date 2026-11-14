@@ -14,10 +14,10 @@ public sealed class UniqueErrorTests : IDisposable
 {
     private readonly ValidatorTestRuleset game = new();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static RulesetErrorList ValidateUnique(string uniqueText) =>
-        new UniqueValidator(RulesetCache.GetVanillaRuleset()).CheckUnique(new UniqueObject(uniqueText), null);
+        new UniqueValidator(RulesetCache.Current.GetVanillaRuleset()).CheckUnique(new UniqueObject(uniqueText), null);
 
     [Fact]
     public void TestMultipleUniqueTypesSameText()
@@ -36,7 +36,7 @@ public sealed class UniqueErrorTests : IDisposable
     [Fact]
     public void TestCodependantTechs()
     {
-        var ruleset = RulesetCache.GetVanillaRuleset();
+        var ruleset = RulesetCache.Current.GetVanillaRuleset();
 
         // Create a prerequisite loop
         var techWithPrerequisites = ruleset.Technologies.Values.First(it => it.Prerequisites.Count != 0);
@@ -85,7 +85,7 @@ public sealed class UniqueErrorTests : IDisposable
     [Fact]
     public void TestCompleteUniqueWithComplexMultiFilterIsValidated()
     {
-        var ruleset = RulesetCache.GetVanillaRuleset();
+        var ruleset = RulesetCache.Current.GetVanillaRuleset();
         var unique = new UniqueObject("Only available <if [Colosseum] is constructed in all [non-[{non-[Resisting]} {non-[Razing]} {non-[Coastal]}]] cities>");
         var errors = new UniqueValidator(ruleset).CheckUnique(unique, null, UniqueValidator.ExtensionModParameterSeverities);
         Assert.False(errors.IsNotOK());
@@ -94,7 +94,7 @@ public sealed class UniqueErrorTests : IDisposable
     [Fact]
     public void TestTimedGlobalUniqueAcceptsTriggerConditionsWhenOnUnit()
     {
-        var ruleset = RulesetCache.GetVanillaRuleset();
+        var ruleset = RulesetCache.Current.GetVanillaRuleset();
         // Since the <for [3] turns> turns this unique into a triggerable, the <upon> trigger condition should be ok
         const string uniqueText = "[-5]% Strength <for [3] turns> <upon damaging a [Warrior] unit>";
 

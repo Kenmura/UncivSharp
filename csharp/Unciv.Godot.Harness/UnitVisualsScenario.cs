@@ -126,7 +126,7 @@ public sealed class UnitVisualsScenario : Scenario
         var ruleset = session.Game.Ruleset;
         var registry = AssetRegistry.ForRuleset(ruleset);
         // C084/T363: the session plays Brave New World; the Gods & Kings ruleset is only a fallback for a roster unit the session lacks
-        var gods = RulesetCache.Get("Civ V - Gods & Kings") ?? ruleset;
+        var gods = RulesetCache.Current.Get("Civ V - Gods & Kings") ?? ruleset;
         RulesetClass Of(string unit) => ruleset.Units.ContainsKey(unit) ? ruleset : gods;
         var colours = new Dictionary<string, Rgb> { [Rome] = PlaceholderPalette.AttackTint, [Egypt] = PlaceholderPalette.ReachableTint };
 

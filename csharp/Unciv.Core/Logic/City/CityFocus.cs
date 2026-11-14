@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Unciv.Models.StatTypes;
 using Unciv.Utils;
 
@@ -77,21 +78,13 @@ public static class CityFocusExtensions
         }
     }
 
-    private static readonly Dictionary<CityFocus, List<Stat>> StatValuesCache = [];
+    private static readonly FrozenDictionary<CityFocus, IReadOnlyList<Stat>> StatValuesCache = Entries
+        .ToFrozenDictionary(
+            focus => focus,
+            focus => (IReadOnlyList<Stat>)StatExtensions.Entries.Where(it => focus.GetStatMultiplier(it) != 1f).ToArray());
 
     /// <summary>Kotlin <c>statValuesForFocus</c> (a lazy property).</summary>
-    public static IReadOnlyList<Stat> StatValuesForFocus(this CityFocus focus)
-    {
-        lock (StatValuesCache)
-        {
-            if (!StatValuesCache.TryGetValue(focus, out var values))
-            {
-                values = StatExtensions.Entries.Where(it => focus.GetStatMultiplier(it) != 1f).ToList();
-                StatValuesCache[focus] = values;
-            }
-            return values;
-        }
-    }
+    public static IReadOnlyList<Stat> StatValuesForFocus(this CityFocus focus) => StatValuesCache[focus];
 
     /// <summary>Kotlin <c>CityFocus.safeValueOf(stat)</c>.</summary>
     public static CityFocus SafeValueOf(Stat stat) => Entries.FirstOrDefault(it => it.FocusStat() == stat, CityFocus.NoFocus);

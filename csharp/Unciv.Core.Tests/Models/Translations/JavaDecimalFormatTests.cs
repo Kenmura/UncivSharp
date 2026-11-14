@@ -13,7 +13,6 @@ namespace Unciv.Core.Tests.Models.Translations;
 /// all agreeing) with decimal ties (k/1000, k/8000), floats widened to double and random magnitudes.
 /// The only known disagreement is for doubles where the JVM's historic digit generator is not shortest (1.0E23): not in the golden.
 /// </summary>
-[Collection("TranslationState")]
 public class JavaDecimalFormatTests
 {
     private static string Unhex(string hex) => hex.Length == 0 ? "" : string.Concat(hex.Split(',').Select(x => (char)Convert.ToInt32(x, 16)));

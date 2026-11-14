@@ -12,17 +12,17 @@ public sealed class EventCircularTriggersTests : IDisposable
 
     public EventCircularTriggersTests()
     {
-        if (RulesetCache.Count == 0) LoadRulesets();
-        ruleset = RulesetCache.GetVanillaRuleset();
+        if (RulesetCache.Current.Count == 0) LoadRulesets();
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
         ruleset.ModOptions.IsBaseRuleset = true;
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static void LoadRulesets()
     {
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
     private static string JsonsPath()

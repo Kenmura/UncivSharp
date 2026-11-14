@@ -23,7 +23,7 @@ public sealed record ValidateSetupQuery(GameSetupInfo Setup, bool IsHostedGame =
         var errors = new List<SetupError>();
         var warnings = new List<string>();
         var parameters = Setup.GameParameters;
-        var ruleset = RulesetCache.GetComplexRuleset(parameters);
+        var ruleset = RulesetCache.Current.GetComplexRuleset(parameters);
         var online = IsHostedGame || parameters.IsOnlineMultiplayer;
 
         void Add(string code, string message) => errors.Add(new SetupError(code, message));
@@ -76,7 +76,7 @@ public sealed record ValidateSetupQuery(GameSetupInfo Setup, bool IsHostedGame =
             if (message != null) Add("MapSize", message);
         }
 
-        var (_, rulesetErrors) = RulesetCache.CheckCombinedModLinks(parameters.Mods, parameters.BaseRuleset);
+        var (_, rulesetErrors) = RulesetCache.Current.CheckCombinedModLinks(parameters.Mods, parameters.BaseRuleset);
         foreach (var error in rulesetErrors)
         {
             if (error.ErrorSeverityToReport == RulesetErrorSeverity.Error) Add("RulesetError", error.Text);

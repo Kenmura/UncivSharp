@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Unciv.Assets;
 
 /// <summary>Plain triangle mesh: xyz positions and normals, uv pairs, a triangle index list (clockwise front faces, as Godot expects) and optionally rgba vertex colours (multiplied onto the material's albedo).</summary>
@@ -13,7 +15,7 @@ public static class HexGeometry
     private const float HalfSqrt3 = 0.8660254f;
 
     /// <summary>Unit-circle corner offsets (x, z) at 0, 60, 120, 180, 240, 300 degrees, written out so no trig library is involved.</summary>
-    public static readonly (float X, float Z)[] Corners =
+    public static readonly ImmutableArray<(float X, float Z)> Corners =
     [
         (1f, 0f), (0.5f, HalfSqrt3), (-0.5f, HalfSqrt3), (-1f, 0f), (-0.5f, -HalfSqrt3), (0.5f, -HalfSqrt3),
     ];

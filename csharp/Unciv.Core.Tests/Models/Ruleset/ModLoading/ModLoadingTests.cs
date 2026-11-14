@@ -24,52 +24,52 @@ public sealed class ModLoadingTests : IDisposable
 
     private static DirectoryRulesetFileSource Source() => new(JsonsPath(), ModsPath());
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     [Fact]
     public void ModFoldersAreLoadedAfterTheBaseRulesetsAndBrokenOnesReported()
     {
-        var errors = RulesetCache.LoadRulesets(Source());
+        var errors = RulesetCache.Current.LoadRulesets(Source());
 
         // '.hidden' is skipped, BrokenMod is reported and left out; the cache is a hash map, so compare as a set.
-        Assert.Equal(["Civ V - Brave New World", "Civ V - Gods & Kings", "Civ V - Vanilla", "LateMod", "TestMod"], RulesetCache.Keys.Order(StringComparer.Ordinal).ToArray());
-        Assert.False(RulesetCache.ContainsKey("BrokenMod"));
-        Assert.False(RulesetCache.ContainsKey(".hidden"));
+        Assert.Equal(["Civ V - Brave New World", "Civ V - Gods & Kings", "Civ V - Vanilla", "LateMod", "TestMod"], RulesetCache.Current.Keys.Order(StringComparer.Ordinal).ToArray());
+        Assert.False(RulesetCache.Current.ContainsKey("BrokenMod"));
+        Assert.False(RulesetCache.Current.ContainsKey(".hidden"));
         Assert.Equal("Exception loading mod 'BrokenMod':", errors[0]);
         Assert.True(errors.Count >= 2);
 
-        var testMod = RulesetCache.Get("TestMod")!;
+        var testMod = RulesetCache.Current.Get("TestMod")!;
         Assert.Equal(["Test Hut"], testMod.Buildings.Keys);
         Assert.Equal(60, testMod.Buildings["Test Hut"].Cost);
         Assert.Equal("TestMod", testMod.Buildings["Test Hut"].OriginRuleset);
         Assert.Equal("TestMod", testMod.FolderLocation!.Name);
         Assert.False(testMod.ModOptions.IsBaseRuleset);
-        Assert.Null(RulesetCache.Get("Civ V - Vanilla")!.FolderLocation);
+        Assert.Null(RulesetCache.Current.Get("Civ V - Vanilla")!.FolderLocation);
     }
 
     [Fact]
     public void NoModsSkipsTheModsFolder()
     {
-        Assert.Empty(RulesetCache.LoadRulesets(Source(), noMods: true));
-        Assert.Equal(3, RulesetCache.Count);
+        Assert.Empty(RulesetCache.Current.LoadRulesets(Source(), noMods: true));
+        Assert.Equal(3, RulesetCache.Current.Count);
     }
 
     [Fact]
     public void ReloadSingleRulesetReplacesAndReportsMissing()
     {
-        RulesetCache.LoadRulesets(Source());
-        var before = RulesetCache.Get("TestMod");
-        Assert.Empty(RulesetCache.ReloadSingleRuleset(Source(), "TestMod"));
-        Assert.NotSame(before, RulesetCache.Get("TestMod"));
-        Assert.Equal(["No such mod"], RulesetCache.ReloadSingleRuleset(Source(), "NoSuchMod"));
-        Assert.NotEmpty(RulesetCache.ReloadSingleRuleset(Source(), "BrokenMod"));
+        RulesetCache.Current.LoadRulesets(Source());
+        var before = RulesetCache.Current.Get("TestMod");
+        Assert.Empty(RulesetCache.Current.ReloadSingleRuleset(Source(), "TestMod"));
+        Assert.NotSame(before, RulesetCache.Current.Get("TestMod"));
+        Assert.Equal(["No such mod"], RulesetCache.Current.ReloadSingleRuleset(Source(), "NoSuchMod"));
+        Assert.NotEmpty(RulesetCache.Current.ReloadSingleRuleset(Source(), "BrokenMod"));
     }
 
     [Fact]
     public void ComplexRulesetCombinesBaseAndModInOrder()
     {
-        RulesetCache.LoadRulesets(Source());
-        var combined = RulesetCache.GetComplexRuleset(new LinkedHashSet<string>(["LateMod", "TestMod", "Missing"]), "Civ V - Gods & Kings");
+        RulesetCache.Current.LoadRulesets(Source());
+        var combined = RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>(["LateMod", "TestMod", "Missing"]), "Civ V - Gods & Kings");
 
         Assert.Equal(["Civ V - Gods & Kings", "LateMod", "TestMod"], combined.Mods.ToArray());
         Assert.Contains("Test Hut", combined.Buildings.Keys);
@@ -81,7 +81,7 @@ public sealed class ModLoadingTests : IDisposable
     [Fact]
     public void ModTranslationsAreReadPerModFolderAndSearchedInActiveModOrder()
     {
-        RulesetCache.LoadRulesets(Source());
+        RulesetCache.Current.LoadRulesets(Source());
         var game = new DirectoryRulesetFolder(Path.Combine(ModsPath(), "NoSuchGameFolder"));
         var translations = new Trans();
 

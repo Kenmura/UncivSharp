@@ -39,16 +39,16 @@ public sealed class ModSyncTests : IDisposable
         Directory.CreateDirectory(clientMods);
         WriteMod(hostMods, "TestMod", UnitsJson);
         // The client's own rules (the mod unknown to it) and the host's (the mod loaded).
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, clientMods));
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, clientMods));
         clientHash = Settings().ComputeRulesetHash();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, hostMods));
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, hostMods));
         hostHash = Settings().ComputeRulesetHash();
     }
 
     public void Dispose()
     {
         identity.Dispose();
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         Directory.Delete(root, recursive: true);
     }
 
@@ -271,7 +271,7 @@ public sealed class ModSyncTests : IDisposable
         Assert.DoesNotContain(Directory.GetDirectories(clientMods), it => Path.GetFileName(it).StartsWith(".sync-staging-", StringComparison.Ordinal));
 
         Assert.Null(service.HotLoad(outcome));
-        Assert.True(RulesetCache.ContainsKey("TestMod"));
+        Assert.True(RulesetCache.Current.ContainsKey("TestMod"));
         Assert.Equal(hostHash, Settings().ComputeRulesetHash());
 
         await using var second = Connect(lobby, Options(null, hash: outcome.Manifest!.RulesetHash));

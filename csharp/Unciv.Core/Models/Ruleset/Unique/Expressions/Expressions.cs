@@ -33,25 +33,27 @@ public sealed class Expressions
     /// <param name="Exception">the parse error, if any</param>
     private sealed record ParseResult(INode? Node, Parser.ParsingError? Exception);
 
-    private static readonly ConcurrentDictionary<string, ParseResult> Cache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ParseResult> cache = new(StringComparer.Ordinal);
 
-    private static ParseResult Parse(string parameterText) => Cache.GetOrAdd(parameterText, static text =>
+    private ParseResult Parse(string parameterText) => cache.GetOrAdd(parameterText, ParseUncached);
+
+    private static ParseResult ParseUncached(string parameterText)
     {
         try
         {
-            return new ParseResult(Parser.Parse(text), null);
+            return new ParseResult(Parser.Parse(parameterText), null);
         }
         catch (Parser.ParsingError ex)
         {
             return new ParseResult(null, ex);
         }
-    });
+    }
 
-    public static Parser.ParsingError? GetParsingError(string parameterText) => Parse(parameterText).Exception;
+    public static Parser.ParsingError? GetParsingError(string parameterText) => ParseUncached(parameterText).Exception;
 
     public static IReadOnlyList<string> GetCountableErrors(string parameterText, IRulesetParameterView ruleset)
     {
-        var parseResult = Parse(parameterText);
+        var parseResult = ParseUncached(parameterText);
         return parseResult.Node == null ? [] : parseResult.Node.GetErrors(ruleset);
     }
 }

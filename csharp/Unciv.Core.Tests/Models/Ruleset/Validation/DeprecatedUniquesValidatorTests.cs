@@ -21,14 +21,14 @@ public sealed class DeprecatedUniquesValidatorTests : IDisposable
 {
     private readonly ValidatorTestRuleset game = new();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     [Fact]
     public void FullyDeprecatedUniqueReportsErrorInValidator()
     {
         var unique = new UniqueObject(DeprecatedUniqueTypes.Get(DeprecatedUniqueType.TripleGoldFromEncampmentsAndCities).Text);
 
-        var errors = new UniqueValidator(RulesetCache.GetVanillaRuleset()).CheckUnique(unique, null);
+        var errors = new UniqueValidator(RulesetCache.Current.GetVanillaRuleset()).CheckUnique(unique, null);
 
         Assert.Contains(errors, it => it.ErrorSeverityToReport == RulesetErrorSeverity.ErrorOptionsOnly);
         var error = errors.Single();
@@ -119,7 +119,7 @@ public sealed class DeprecatedUniquesValidatorTests : IDisposable
     [Fact]
     public void MultiAlternativeReplacementsMatchKotlin()
     {
-        var ruleset = RulesetCache.GetVanillaRuleset();
+        var ruleset = RulesetCache.Current.GetVanillaRuleset();
         string[] lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "Models", "Ruleset", "Unique", "Golden", "DeprecatedUniquesValidated.golden.tsv"));
         Assert.Equal(30, lines.Length);
         foreach (string line in lines)

@@ -46,12 +46,6 @@ public sealed class FormattedLine
     /// <summary>Default color for text and icons</summary>
     public static readonly EngineColor DefaultColor = EngineColor.White;
 
-    // Cache to quickly match Categories to names (Kotlin: single-entry cache keyed on ruleset identity, two unsynchronised statics).
-    // Here ruleset and map are one immutable entry published through a single volatile write, so a reader never pairs a map with the wrong ruleset.
-    private sealed record NameMapCache(Ruleset Ruleset, Dictionary<string, CivilopediaCategories> Map);
-
-    private static volatile NameMapCache? NameMapCacheInstance;
-
     private readonly KotlinLazy<LinkTypeEnum> linkType;
     private readonly KotlinLazy<EngineColor> displayColor;
 
@@ -247,12 +241,10 @@ public sealed class FormattedLine
         var explicitLinks = unique.GetModifiers(UniqueType.CivilopediaLink);
         if (explicitLinks.Count != 0)
             return explicitLinks[0].Params[0];
-        var cache = NameMapCacheInstance;
-        if (cache == null || !ReferenceEquals(cache.Ruleset, ruleSet))
-            NameMapCacheInstance = cache = new NameMapCache(ruleSet, InitNamesCategoryMap(context));
+        var map = ruleSet.CivilopediaNameMap ??= InitNamesCategoryMap(context);
         foreach (var parameter in unique.Params.Concat(unique.Modifiers.SelectMany(it => it.Params)))
         {
-            if (!cache.Map.TryGetValue(parameter, out var category)) continue;
+            if (!map.TryGetValue(parameter, out var category)) continue;
             return category + "/" + parameter;
         }
         return "";

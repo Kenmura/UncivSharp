@@ -4,7 +4,6 @@ namespace Unciv.Core.Tests.Models.Stats;
 
 using Stats = Unciv.Models.StatTypes.Stats;
 
-[Collection("TranslationState")]
 public class StatsTests
 {
     // Port of BasicTests.statParserWorks

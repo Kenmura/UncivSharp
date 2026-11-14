@@ -657,7 +657,7 @@ public sealed class NewGameFormTests
     public void CountsExactlyAtTheirMaximumAreValid()
     {
         var form = VanillaForm();
-        var vanilla = Unciv.Models.Ruleset.RulesetCache.GetVanillaRuleset();
+        var vanilla = Unciv.Models.Ruleset.RulesetCache.Current.GetVanillaRuleset();
         Assert.Equal(vanilla.Nations.Values.Count(it => it.IsCityState), form.MaxCityStates);
         Assert.Equal(vanilla.Nations.Values.Count(it => it.IsMajorCiv && !it.IsSpectator), form.MaxPlayers);
         Assert.Null(form.SetPlayerCount(form.MaxPlayers));

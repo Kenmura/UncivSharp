@@ -82,10 +82,10 @@ public sealed class LobbyStandbyTests : IDisposable
     public LobbyStandbyTests()
     {
         var jsons = Path.Combine(RepoRoot(), "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string RepoRoot()
     {
@@ -323,13 +323,13 @@ public sealed class GameStandbyTests : IDisposable
     public GameStandbyTests()
     {
         var jsons = Path.Combine(RepoRoot(), "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
     }
 
     public void Dispose()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         babylon.Dispose();
         greece.Dispose();
         try { Directory.Delete(root, recursive: true); } catch (IOException) { }

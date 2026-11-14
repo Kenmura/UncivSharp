@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace Unciv.Assets;
 
 /// <summary>
@@ -34,7 +36,7 @@ public static class Pictograms
 
     internal static Piece Disc(bool dark, int x, int y, int r) => new(dark, [x, y], r);
 
-    private static readonly Dictionary<Kind, Piece[]> Shapes = new()
+    private static readonly FrozenDictionary<Kind, Piece[]> Shapes = new Dictionary<Kind, Piece[]>()
     {
         [Kind.Generic] = [L(50, 6, 94, 50, 50, 94, 6, 50), Disc(true, 50, 50, 12)],
         [Kind.Gem] = [L(50, 8, 90, 36, 50, 94, 10, 36), D(10, 35, 90, 35, 90, 40, 10, 40), D(30, 38, 36, 38, 54, 88, 48, 88), D(70, 38, 64, 38, 46, 88, 52, 88)],
@@ -50,7 +52,7 @@ public static class Pictograms
         [Kind.Banner] = [L(12, 6, 22, 6, 22, 94, 12, 94), L(22, 10, 90, 10, 90, 62, 22, 62), D(22, 30, 90, 30, 90, 40, 22, 40)],
         [Kind.Arrow] = [L(6, 38, 56, 38, 56, 14, 96, 50, 56, 86, 56, 62, 6, 62)],
         [Kind.Bell] = [Disc(false, 50, 40, 30), L(20, 40, 80, 40, 90, 76, 10, 76), L(6, 76, 94, 76, 94, 85, 6, 85), Disc(false, 50, 91, 7)],
-    };
+    }.ToFrozenDictionary();
 
     /// <summary>The pictogram of an icon category (<c>icon/resource</c> and so on); any other category gets the generic diamond with a dot.</summary>
     public static Kind KindFor(string category) => category switch

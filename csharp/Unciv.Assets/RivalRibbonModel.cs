@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using Unciv.Presentation.Victory;
 using Unciv.Queries.Empire;
@@ -22,7 +23,7 @@ public static class RivalRibbonModel
     public const string Unknown = "?";
 
     /// <summary>Ranking type, figure id, icon and tooltip label (an existing translation key) in display order.</summary>
-    private static readonly (RankingType Ranking, string Id, AssetKey Icon, string Label)[] Figures =
+    private static readonly ImmutableArray<(RankingType Ranking, string Id, AssetKey Icon, string Label)> Figures =
     [
         (RankingType.Technologies, "Science", AssetKey.Of(RulesetAssetKeys.StatIcon, "Science"), "Technologies"),
         (RankingType.Culture, "Culture", AssetKey.Of(RulesetAssetKeys.StatIcon, "Culture"), "Culture"),

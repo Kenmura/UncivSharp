@@ -1,3 +1,6 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
+
 namespace Unciv.Assets;
 
 /// <summary>
@@ -6,7 +9,7 @@ namespace Unciv.Assets;
 /// </summary>
 public static class PlaceholderPalette
 {
-    private static readonly Dictionary<string, Rgb> TerrainColours = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, Rgb> TerrainColours = new Dictionary<string, Rgb>(StringComparer.Ordinal)
     {
         ["Ocean"] = new Rgb(30, 70, 140),
         ["Coast"] = new Rgb(60, 120, 190),
@@ -26,9 +29,9 @@ public static class PlaceholderPalette
         ["Ice"] = new Rgb(200, 230, 245),
         ["Atoll"] = new Rgb(110, 200, 200),
         ["Fallout"] = new Rgb(120, 130, 60),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
-    private static readonly Dictionary<string, Rgb> StatColours = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, Rgb> StatColours = new Dictionary<string, Rgb>(StringComparer.Ordinal)
     {
         ["Production"] = new Rgb(160, 110, 60),
         ["Food"] = new Rgb(90, 170, 60),
@@ -37,16 +40,16 @@ public static class PlaceholderPalette
         ["Culture"] = new Rgb(170, 90, 200),
         ["Happiness"] = new Rgb(240, 150, 60),
         ["Faith"] = new Rgb(230, 230, 240),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
-    private static readonly Dictionary<string, Rgb> TechStateColours = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, Rgb> TechStateColours = new Dictionary<string, Rgb>(StringComparer.Ordinal)
     {
         ["Researched"] = new Rgb(60, 130, 70),
         ["Queued"] = new Rgb(200, 150, 50),
         ["Researchable"] = new Rgb(70, 110, 170),
         ["Locked"] = new Rgb(48, 52, 62),
         ["Unavailable"] = new Rgb(40, 40, 44),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Fill of a tech tree node by its state (C019); an unknown state reads as locked.</summary>
     public static Rgb ForTechState(string state) => TechStateColours.TryGetValue(state, out var c) ? c : TechStateColours["Locked"];
@@ -60,7 +63,7 @@ public static class PlaceholderPalette
     };
 
     /// <summary>Outline of a locked tile on the city screen.</summary>
-    private static readonly (string Name, Rgb Colour)[] LobbyColourTable =
+    private static readonly ImmutableArray<(string Name, Rgb Colour)> LobbyColourTable =
     [
         ("Red", new Rgb(214, 70, 64)),
         ("Blue", new Rgb(70, 120, 220)),
@@ -126,13 +129,13 @@ public static class PlaceholderPalette
     /// <summary>Multiplied into the albedo of an explored tile that is not currently visible.</summary>
     public static Rgb FogDim { get; } = new(120, 120, 140);
 
-    private static readonly Dictionary<string, Rgb> StatusColours = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, Rgb> StatusColours = new Dictionary<string, Rgb>(StringComparer.Ordinal)
     {
         ["Fortified"] = new Rgb(90, 130, 200),
         ["Sleeping"] = new Rgb(140, 120, 200),
         ["Automated"] = new Rgb(80, 180, 120),
         ["PromotionAvailable"] = new Rgb(240, 200, 60),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>C004: fill of a unit status mark; an unknown name gets a hash colour.</summary>
     public static Rgb ForStatus(string name) => StatusColours.TryGetValue(name, out var c) ? c : FromHash(name, 150, 210);

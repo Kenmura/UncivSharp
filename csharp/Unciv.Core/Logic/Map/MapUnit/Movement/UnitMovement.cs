@@ -104,7 +104,7 @@ public class UnitMovement
         Dictionary<int, float>? movementCostCache = null,
         bool includeOtherEscortUnit = true)
     {
-        using (TurnProbe.Measure("Path.MovementToTiles"))
+        using (TurnProbe.Measure(Unit.Civ.GameInfo.TurnProbe, "Path.MovementToTiles"))
             return GetMovementToTilesAtPositionCore(position, unitMovement, considerZoneOfControl, tilesToIgnoreBitset,
                 canPassThroughCache, movementCostCache, includeOtherEscortUnit);
     }
@@ -222,7 +222,7 @@ public class UnitMovement
     /// </summary>
     public List<Tile> GetShortestPath(Tile destination, bool avoidDamagingTerrain = false)
     {
-        using (TurnProbe.Measure("Path.ShortestPath"))
+        using (TurnProbe.Measure(Unit.Civ.GameInfo.TurnProbe, "Path.ShortestPath"))
             return GetShortestPathCore(destination, avoidDamagingTerrain);
     }
 
@@ -362,7 +362,7 @@ public class UnitMovement
         if (distance == 1)
             return GetDistanceToTiles(true, passThroughCacheNew, movementCostCache); // check cache
         reusableDistanceToTiles.ClearAndRecycle();
-        using (TurnProbe.Measure("Path.MovementToTiles"))
+        using (TurnProbe.Measure(Unit.Civ.GameInfo.TurnProbe, "Path.MovementToTiles"))
             FillMovementToTilesAtPosition(reusableDistanceToTiles, tileToCheck.Position, unitMaxMovement,
                 false, visitedTilesBitset, passThroughCacheNew, movementCostCache, includeOtherEscortUnit: true);
         return reusableDistanceToTiles;
@@ -428,7 +428,7 @@ public class UnitMovement
     /// <returns>The tile that we reached this turn</returns>
     public virtual Tile HeadTowards(Tile destination)
     {
-        using (TurnProbe.Measure("Path.HeadTowards"))
+        using (TurnProbe.Measure(Unit.Civ.GameInfo.TurnProbe, "Path.HeadTowards"))
         {
             var destinationTileThisTurn = GetTileToMoveToThisTurn(destination);
             MoveToTile(destinationTileThisTurn);
@@ -443,7 +443,7 @@ public class UnitMovement
     /// <seealso cref="CanReachInCurrentTurn"/>
     public virtual bool CanReach(Tile destination)
     {
-        using (TurnProbe.Measure("Path.CanReach"))
+        using (TurnProbe.Measure(Unit.Civ.GameInfo.TurnProbe, "Path.CanReach"))
             return CanReachCommon(destination, it => GetShortestPath(it).Count != 0);
     }
 
@@ -616,7 +616,7 @@ public class UnitMovement
 
     public virtual void MoveToTile(Tile destination, bool considerZoneOfControl = true)
     {
-        using (TurnProbe.Measure("Path.MoveToTile"))
+        using (TurnProbe.Measure(Unit.Civ.GameInfo.TurnProbe, "Path.MoveToTile"))
             MoveToTileCore(destination, considerZoneOfControl);
     }
 
@@ -1060,7 +1060,7 @@ public class UnitMovement
         Dictionary<int, float>? movementCostCache = null,
         bool includeOtherEscortUnit = true)
     {
-        using (TurnProbe.Measure("Path.DistanceToTiles"))
+        using (TurnProbe.Measure(Unit.Civ.GameInfo.TurnProbe, "Path.DistanceToTiles"))
             return GetDistanceToTilesCore(considerZoneOfControl, passThroughCacheNew, movementCostCache, includeOtherEscortUnit);
     }
 

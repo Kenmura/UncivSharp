@@ -529,7 +529,7 @@ public partial class SaveController : Control
         {
             return activeMatch;
         }
-        if (RulesetCache.ContainsKey(rulesetName) && RulesetCache.Get(rulesetName) is { } cached && cached.Nations.TryGetValue(civName, out var match)) return match;
+        if (RulesetCache.Current.ContainsKey(rulesetName) && RulesetCache.Current.Get(rulesetName) is { } cached && cached.Nations.TryGetValue(civName, out var match)) return match;
         return null;
     }
 

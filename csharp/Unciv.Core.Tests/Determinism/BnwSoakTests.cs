@@ -41,13 +41,13 @@ public sealed class BnwSoakTests : IDisposable
     public BnwSoakTests(ITestOutputHelper output)
     {
         this.output = output;
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = SoakTests.JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.Get(BaseRuleset.Civ_V_BNW.FullName()).NotNull();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.Get(BaseRuleset.Civ_V_BNW.FullName()).NotNull();
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private GameSetupInfo Setup(MapSize size, int majors, int cityStates, int mapSeed, string[]? victories) => new(
         new GameParameters

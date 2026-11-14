@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
@@ -25,11 +26,11 @@ public sealed class StatsSubclassConverterFactory : JsonConverterFactory
 
 internal sealed class StatsSubclassConverter<T> : JsonConverter<T> where T : Stats
 {
-    private static readonly Dictionary<string, PropertyInfo> Properties = typeof(T)
+    private static readonly FrozenDictionary<string, PropertyInfo> Properties = typeof(T)
         .GetProperties(BindingFlags.Public | BindingFlags.Instance)
         .Where(it => it.CanWrite && it.GetIndexParameters().Length == 0 && it.GetCustomAttribute<JsonIgnoreAttribute>() == null
             && it.DeclaringType != typeof(Stats))
-        .ToDictionary(it => it.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? it.Name, StringComparer.OrdinalIgnoreCase);
+        .ToFrozenDictionary(it => it.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? it.Name, StringComparer.OrdinalIgnoreCase);
 
     public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {

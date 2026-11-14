@@ -18,7 +18,7 @@ public class TestGameTests
         var game = new TestGame("[+1 Gold] <for [1] turns>");
         Assert.Equal(BaseRuleset.Civ_V_GnK.FullName(), game.Ruleset.Name);
         Assert.Same(game.Ruleset, game.GameInfo.Ruleset);
-        Assert.NotSame(RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName()), game.Ruleset);
+        Assert.NotSame(RulesetCache.Current.Get(BaseRuleset.Civ_V_GnK.FullName()), game.Ruleset);
         Assert.Contains("[+1 Gold] <for [1] turns>", game.Ruleset.GlobalUniques.Uniques);
         Assert.Equal("Prince", game.GameInfo.Difficulty);
         Assert.Equal(Speed.DefaultForSimulation, game.GameInfo.GameParameters.Speed);

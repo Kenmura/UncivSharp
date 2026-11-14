@@ -27,10 +27,10 @@ public sealed class ViewTests : IDisposable
 
     public ViewTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
         game = new GameInfo
         {
             GameParameters = new GameParameters { BaseRuleset = ruleset.Name },
@@ -56,7 +56,7 @@ public sealed class ViewTests : IDisposable
         geneva = game.GetCivilization("Geneva");
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {

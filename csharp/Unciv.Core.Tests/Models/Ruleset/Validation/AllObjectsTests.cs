@@ -11,12 +11,12 @@ public sealed class AllObjectsTests : IDisposable
 {
     public AllObjectsTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         string jsons = ValidatorTestRuleset.JsonsPath();
-        Assert.Empty(RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true));
+        Assert.Empty(RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true));
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static List<T> FindDuplicateReferences<T>(IEnumerable<T> entries) where T : class
     {
@@ -34,20 +34,20 @@ public sealed class AllObjectsTests : IDisposable
     public void AllRulesetObjectsShouldNotReturnDuplicateReferences()
     {
         foreach (var baseRuleset in Enum.GetValues<BaseRuleset>())
-            Assert.Empty(FindDuplicateReferences(RulesetCache.Get(baseRuleset.FullName())!.AllRulesetObjects()).Select(it => $"{baseRuleset.FullName()}: {it.Name}"));
+            Assert.Empty(FindDuplicateReferences(RulesetCache.Current.Get(baseRuleset.FullName())!.AllRulesetObjects()).Select(it => $"{baseRuleset.FullName()}: {it.Name}"));
     }
 
     [Fact]
     public void AllICivilopediaTextShouldNotReturnDuplicateReferences()
     {
         foreach (var baseRuleset in Enum.GetValues<BaseRuleset>())
-            Assert.Empty(FindDuplicateReferences(RulesetCache.Get(baseRuleset.FullName())!.AllICivilopediaText()).Select(it => $"{baseRuleset.FullName()}: {it.MakeLink()}"));
+            Assert.Empty(FindDuplicateReferences(RulesetCache.Current.Get(baseRuleset.FullName())!.AllICivilopediaText()).Select(it => $"{baseRuleset.FullName()}: {it.MakeLink()}"));
     }
 
     [Fact]
     public void AllUniquesShouldNotReturnDuplicateReferences()
     {
         foreach (var baseRuleset in Enum.GetValues<BaseRuleset>())
-            Assert.Empty(FindDuplicateReferences(RulesetCache.Get(baseRuleset.FullName())!.AllUniques()).Select(it => $"{baseRuleset.FullName()}: {it.Text}"));
+            Assert.Empty(FindDuplicateReferences(RulesetCache.Current.Get(baseRuleset.FullName())!.AllUniques()).Select(it => $"{baseRuleset.FullName()}: {it.Text}"));
     }
 }

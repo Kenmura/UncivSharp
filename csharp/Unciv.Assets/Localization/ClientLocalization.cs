@@ -25,8 +25,7 @@ public sealed class ClientLocalization
     public ClientLocalization(string translationsDirectory, Translations? target = null)
     {
         directory = translationsDirectory;
-        Translations = target ?? Translations.Current;
-        Translations.Current = Translations;
+        Translations = target ?? new Translations();
         Reload();
     }
 
@@ -76,13 +75,16 @@ public sealed class ClientLocalization
         Load(language);
         if (Translations.CurrentLanguage == language) return language;
         Translations.CurrentLanguage = language;
-        TranslationCache.InvalidateLanguage();
+        using (Translations.Use(Translations)) TranslationCache.InvalidateLanguage();
         LanguageChanged?.Invoke(language);
         return language;
     }
 
     /// <summary>Translates <paramref name="key"/> into the current language, exactly as the engine's <c>Tr()</c> does.</summary>
-    public string Tr(string key) => key.Tr();
+    public string Tr(string key)
+    {
+        using (Translations.Use(Translations)) return key.Tr();
+    }
 
     /// <summary>Loads a language's file into <see cref="Translations"/> if it is not there yet. Returns false when it has no file (English, or a name that does not exist).</summary>
     public bool Load(string language)

@@ -18,10 +18,10 @@ public sealed class NetLobbyTests : IDisposable
     public NetLobbyTests()
     {
         var jsons = Path.Combine(RepoRoot(), "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string RepoRoot()
     {

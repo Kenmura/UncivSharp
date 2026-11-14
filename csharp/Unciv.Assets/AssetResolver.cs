@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Text.Json;
 
 namespace Unciv.Assets;
@@ -52,8 +54,8 @@ public sealed class AssetResolver
 
     /// <summary>C083: the pack of unit models shipped with the client (animated humanoids, mounted riders); consulted after <see cref="BundledPack"/> by every registry.</summary>
     public const string UnitsPack = "units";
-    public static readonly string[] OverrideExtensions = ["tres", "glb", "png", "ogg"];
-    private static readonly HashSet<string> ManifestExtensions = new(OverrideExtensions, StringComparer.Ordinal) { "jpg", "webp", "wav", "ttf", "otf" };
+    public static readonly ImmutableArray<string> OverrideExtensions = ["tres", "glb", "png", "ogg"];
+    private static readonly FrozenSet<string> ManifestExtensions = new HashSet<string>(OverrideExtensions, StringComparer.Ordinal) { "jpg", "webp", "wav", "ttf", "otf" }.ToFrozenSet(StringComparer.Ordinal);
 
     private readonly IAssetFiles files;
     private readonly IAssetFallbacks fallbacks;

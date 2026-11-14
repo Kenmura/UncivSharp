@@ -18,11 +18,11 @@ internal sealed class ValidatorTestRuleset
 
     public ValidatorTestRuleset()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         string jsons = JsonsPath();
-        var errors = RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")));
+        var errors = RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")));
         Assert.Empty(errors);
-        Ruleset = RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName())!.Clone();
+        Ruleset = RulesetCache.Current.Get(BaseRuleset.Civ_V_GnK.FullName())!.Clone();
     }
 
     public static string JsonsPath()

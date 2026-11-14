@@ -70,17 +70,17 @@ public static partial class NextTurnAutomation
             StateFunctions(civInfo).UpdateDiplomaticRelationshipForCityState();
         }
 
-        using (TurnProbe.Measure("AI.ChooseTech")) ChooseTechToResearch(civView);
-        using (TurnProbe.Measure("AI.CityBombardment")) AutomateCityBombardment(civView);
+        using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.ChooseTech")) ChooseTechToResearch(civView);
+        using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.CityBombardment")) AutomateCityBombardment(civView);
         if (tradeAndChangeState)
-            using (TurnProbe.Measure("AI.UseGold")) UseGoldAutomation.UseGold(civInfo);
+            using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.UseGold")) UseGoldAutomation.UseGold(civInfo);
         if (tradeAndChangeState && !civView.IsCityState)
         {
             ProtectCityStates(civView);
             BullyCityStates(civView);
         }
         var cache = new AutomationCache();
-        using (TurnProbe.Measure("AI.AutomateUnits")) AutomateUnits(civView, cache); // this is the most expensive part
+        using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.AutomateUnits")) AutomateUnits(civView, cache); // this is the most expensive part
 
         if (tradeAndChangeState && civInfo.IsMajorCiv())
         {
@@ -96,7 +96,7 @@ public static partial class NextTurnAutomation
             }
         }
 
-        using (TurnProbe.Measure("AI.AutomateCities")) AutomateCities(civView); // second most expensive
+        using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.AutomateCities")) AutomateCities(civView); // second most expensive
         if (tradeAndChangeState) TrainSettler(civView);
         // I'm not sure what will happen if we *don't* vote when we can, so automate vote even when forced automation
         TryVoteForDiplomaticVictory(civView);

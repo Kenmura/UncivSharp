@@ -24,8 +24,29 @@ public sealed class Translations : IEnumerable<KeyValuePair<string, TranslationE
 {
     private readonly OrderedDictionary<string, TranslationEntry> entries = new(StringComparer.Ordinal);
 
-    /// <summary>Stands in for <c>UncivGame.Current.translations</c>.</summary>
-    public static Translations Current { get; set; } = new();
+    private static readonly Translations EmptyDefault = new();
+    private static readonly AsyncLocal<Translations?> ScopedCurrent = new();
+
+    private sealed class CurrentScope(Translations? previous) : IDisposable
+    {
+        public void Dispose() => ScopedCurrent.Value = previous;
+    }
+
+    /// <summary>Stands in for <c>UncivGame.Current.translations</c>. A <see cref="Use"/> scope on the running call chain wins over the empty default.</summary>
+    public static Translations Current => ScopedCurrent.Value ?? EmptyDefault;
+
+    /// <summary>Scopes <see cref="Current"/> to <paramref name="translations"/> for the running async/call chain until the returned handle is disposed.</summary>
+    public static IDisposable Use(Translations translations)
+    {
+        var previous = ScopedCurrent.Value;
+        ScopedCurrent.Value = translations;
+        return new CurrentScope(previous);
+    }
+
+    /// <summary>Glyph registry mapping ruleset object names to font icon characters.</summary>
+    public Dictionary<string, char> FontRulesetIcons { get; } = new(StringComparer.Ordinal);
+
+    internal TranslationCache.LanguageCache? CachedLangData { get; set; }
 
     /// <summary>Stands in for <c>UncivGame.Current.settings.language</c>.</summary>
     public string CurrentLanguage { get; set; } = Constants.English;
@@ -121,7 +142,7 @@ public sealed class Translations : IEnumerable<KeyValuePair<string, TranslationE
         }
         catch (Exception ex)
         {
-            Log.Error($"Exception reading translations for {language}", ex);
+            Log.Null.Error($"Exception reading translations for {language}", ex);
             return;
         }
 
@@ -144,7 +165,7 @@ public sealed class Translations : IEnumerable<KeyValuePair<string, TranslationE
             }
             catch (Exception ex)
             {
-                Log.Error($"Exception reading translations for {modName} {language}", ex);
+                Log.Null.Error($"Exception reading translations for {modName} {language}", ex);
             }
         }
 
@@ -159,7 +180,7 @@ public sealed class Translations : IEnumerable<KeyValuePair<string, TranslationE
     public void TryReadTranslationForLanguage(string language, IRulesetFolder gameFolder)
     {
         string translationFileName = TranslationsFolderPath + language + ".properties";
-        var modFiles = RulesetCache.Values
+        var modFiles = RulesetCache.Current.Values
             .Select(it => it.FolderLocation)
             .OfType<IRulesetFolder>()
             .Select(modFolder => (modFolder.Name, (ITranslationFileHandle)new RulesetFolderTranslationFileHandle(modFolder.Child(translationFileName))))

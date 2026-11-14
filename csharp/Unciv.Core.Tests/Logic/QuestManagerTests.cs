@@ -27,10 +27,10 @@ public sealed class QuestManagerTests : IDisposable
 
     public QuestManagerTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
         var mapParameters = new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny };
         game = new GameInfo
         {
@@ -50,7 +50,7 @@ public sealed class QuestManagerTests : IDisposable
         geneva = game.Civilizations[2];
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {

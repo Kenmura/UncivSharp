@@ -629,10 +629,10 @@ public sealed class GameEventsTests
 
     private static RulesetClass LoadVanilla()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         string jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        return RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        return RulesetCache.Current.GetVanillaRuleset();
     }
 
     private static string JsonsPath()
@@ -681,7 +681,7 @@ public sealed class GameEventsTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 
@@ -735,7 +735,7 @@ public sealed class GameEventsTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 
@@ -751,7 +751,7 @@ public sealed class GameEventsTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Unciv.Net;
 
 namespace Unciv.Assets;
@@ -17,7 +18,7 @@ public static class MapPingModel
     /// <summary>Pings kept on screen at once; a new one beyond this replaces the oldest.</summary>
     public const int MaxActive = 12;
 
-    private static readonly (string Kind, string Text, Rgb Colour)[] Table =
+    private static readonly ImmutableArray<(string Kind, string Text, Rgb Colour)> Table =
     [
         (MapPingKinds.Look, "Look here", new Rgb(70, 160, 230)),
         (MapPingKinds.Danger, "Danger", new Rgb(225, 70, 55)),

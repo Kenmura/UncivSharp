@@ -33,7 +33,7 @@ internal class MapElevationGenerator(
     {
         if (flats.Count == 0)
         {
-            Log.Debug("Ruleset seems to contain no flat terrain - can't generate heightmap");
+            Log.Null.Debug("Ruleset seems to contain no flat terrain - can't generate heightmap");
             return;
         }
 
@@ -67,7 +67,7 @@ internal class MapElevationGenerator(
     private void CellularMountainRanges()
     {
         if (mountains.Count == 0) return;
-        Log.Debug("Mountain-like generation");
+        Log.Null.Debug("Mountain-like generation");
 
         int targetMountains = tileMap.Values.Count(IsMountainTerrain) * 2;
         var impassableTerrains = ruleset.Terrains.Values.Where(it => it.Impassable).Select(it => it.Name).ToHashSet();
@@ -128,7 +128,7 @@ internal class MapElevationGenerator(
     private void CellularHills()
     {
         if (hills.Count == 0) return;
-        Log.Debug("Hill-like generation");
+        Log.Null.Debug("Hill-like generation");
 
         int targetHills = tileMap.Values.Count(IsHillTerrain);
 
@@ -238,7 +238,7 @@ internal class MapElevationGenerator(
                 baseTerrains = flats.Where(it => desiredTerrain.Terrain.OccursOn.Contains(it.Name)).ToList();
             if (baseTerrains.Count == 0)
             {
-                Log.Debug("Ruleset seems to contain no flat terrain that %s can apply to. Failing feature.", desiredTerrain.Name);
+                Log.Null.Debug("Ruleset seems to contain no flat terrain that %s can apply to. Failing feature.", desiredTerrain.Name);
                 return;
             }
             var baseTerrain = baseTerrains.Random(randomness.RNG);

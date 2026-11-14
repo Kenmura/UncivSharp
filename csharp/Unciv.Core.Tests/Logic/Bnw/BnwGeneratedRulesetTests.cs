@@ -27,9 +27,9 @@ namespace Unciv.Core.Tests.Logic.Bnw;
 [Collection("RulesetCache")]
 public sealed class BnwGeneratedRulesetTests : IDisposable
 {
-    public BnwGeneratedRulesetTests() => RulesetCache.Clear();
+    public BnwGeneratedRulesetTests() => RulesetCache.Current.Clear();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static GameInfo NewBnwGame(string first = "Brazil")
     {
@@ -887,7 +887,7 @@ public sealed class BnwGeneratedRulesetTests : IDisposable
             var unflagged = AssignCoastStarts(false);
             Assert.Equal(unflagged.Best, unflagged.England);
         }
-        finally { RulesetCache.Clear(); }
+        finally { RulesetCache.Current.Clear(); }
     }
 
     // BuildingPurchaseCostModifier stays pending on purpose: Skyscrapers uses the generic '[stat] cost of purchasing [buildingFilter] buildings' unique.

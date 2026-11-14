@@ -20,12 +20,12 @@ public sealed class PendingDecisionsTests : IDisposable
 
     public PendingDecisionsTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var root = new DirectoryInfo(AppContext.BaseDirectory);
         while (!Directory.Exists(Path.Combine(root.FullName, "data", "jsons"))) root = root.Parent!;
         var jsons = Path.Combine(root.FullName, "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
         game = GameStarter.StartNewGame(
             new GameSetupInfo(
                 new GameParameters
@@ -42,7 +42,7 @@ public sealed class PendingDecisionsTests : IDisposable
         foreach (var unit in babylon.Units.GetCivUnits()) unit.Due = false;
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     // ReligionState has a private setter (it is driven by great prophets); tests put the civ straight into the state they need.
     private void SetReligionState(ReligionState state) =>

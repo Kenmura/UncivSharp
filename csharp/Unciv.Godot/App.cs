@@ -267,7 +267,7 @@ public partial class App : Node
             ShowMenu(first: false);
             return;
         }
-        var ruleset = Unciv.Models.Ruleset.RulesetCache.GetComplexRuleset(new LinkedHashSet<string>(form.Mods), form.BaseRuleset);
+        var ruleset = Unciv.Models.Ruleset.RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>(form.Mods), form.BaseRuleset);
         var net = new NetGameSession(session, ruleset);
         ShowGame(net, async () =>
         {

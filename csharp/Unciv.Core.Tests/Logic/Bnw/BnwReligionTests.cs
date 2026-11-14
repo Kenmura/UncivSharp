@@ -19,9 +19,9 @@ namespace Unciv.Core.Tests.Logic.Bnw;
 [Collection("RulesetCache")]
 public sealed class BnwReligionTests : IDisposable
 {
-    public BnwReligionTests() => RulesetCache.Clear();
+    public BnwReligionTests() => RulesetCache.Current.Clear();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static GameInfo NewGame(BaseRuleset ruleset, params string[] nations)
     {

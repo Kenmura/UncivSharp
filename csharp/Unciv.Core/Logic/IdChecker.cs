@@ -76,7 +76,7 @@ public static class IdChecker
             rawSegments.RemoveAt(rawSegments.Count - 1);
         }
 
-        if (!Log.SoftRequire(rawSegments.Count == 3, "url %s should be in \"Unciv\\G\" path", id))
+        if (!Log.Null.SoftRequire(rawSegments.Count == 3, "url %s should be in \"Unciv\\G\" path", id))
         {
             return null;
         }
@@ -93,12 +93,12 @@ public static class IdChecker
             return null;
         }
 
-        if (!Log.SoftRequire(segments[0].Equals("Unciv", StringComparison.OrdinalIgnoreCase), "%s url %s is not an \"Unciv\" link", id, segments[0]))
+        if (!Log.Null.SoftRequire(segments[0].Equals("Unciv", StringComparison.OrdinalIgnoreCase), "%s url %s is not an \"Unciv\" link", id, segments[0]))
         {
             return null;
         }
 
-        if (!Log.SoftRequire(segments[1].Equals(prefix, StringComparison.OrdinalIgnoreCase), "%s url %s has incorrect prefix %s", prefix, id, segments[0]))
+        if (!Log.Null.SoftRequire(segments[1].Equals(prefix, StringComparison.OrdinalIgnoreCase), "%s url %s has incorrect prefix %s", prefix, id, segments[0]))
         {
             return null;
         }
@@ -115,7 +115,7 @@ public static class IdChecker
         {
             if (!trimmedPlayerId.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
             {
-                Log.Error($"{prefix} uuid {url} has incorrect prefix");
+                Log.Null.Error($"{prefix} uuid {url} has incorrect prefix");
                 return null;
             }
 
@@ -125,13 +125,13 @@ public static class IdChecker
             if (calculatedCheckDigit == null
                 || calculatedCheckDigit.Value.ToString(CultureInfo.InvariantCulture) != checkDigit)
             {
-                Log.Error($"{prefix} uuid {url} has incorrect checkDigit {checkDigit}");
+                Log.Null.Error($"{prefix} uuid {url} has incorrect checkDigit {checkDigit}");
                 return null;
             }
 
             if (!shortenedPlayerId.IsUUID())
             {
-                Log.Error($"invalid uuid {url}");
+                Log.Null.Error($"invalid uuid {url}");
                 return null;
             }
 
@@ -142,14 +142,14 @@ public static class IdChecker
         {
             if (!trimmedPlayerId.IsUUID())
             {
-                Log.Error($"invalid uuid {url}");
+                Log.Null.Error($"invalid uuid {url}");
                 return null;
             }
 
             return trimmedPlayerId;
         }
 
-        Log.Error($"{prefix} uuid {url} has incorrect length");
+        Log.Null.Error($"{prefix} uuid {url} has incorrect length");
         return null;
     }
 

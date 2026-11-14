@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Unciv.Models.Ruleset;
 using Unciv.Models.StatTypes;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
@@ -37,14 +38,14 @@ public static class RulesetAssetKeys
     public static readonly AssetKey DefaultFont = new("font", "default");
 
     /// <summary>Every category has a <c>_default</c> key so fallback chains always terminate in something that exists.</summary>
-    public static readonly string[] Categories =
+    public static readonly ImmutableArray<string> Categories =
     [
         Terrain, Feature, Unit, UnitType, Resource, ResourceType, Improvement, Building,
         StatIcon, TechIcon, BuildingIcon, UnitIcon, ResourceIcon, ImprovementIcon, PolicyIcon, PromotionIcon, StatusIcon, UiIcon, NationIcon, ActionIcon, NotificationIcon, Ui, "mesh", "font",
     ];
 
     /// <summary>C063: the interface icons of the bundled <c>unciv</c> pack (<c>icon/ui/&lt;name&gt;</c>); a name without a file in the active pack falls back to the generated badge.</summary>
-    public static readonly string[] UiIconNames =
+    public static readonly ImmutableArray<string> UiIconNames =
     [
         "ArrowRight", "BackArrow", "Blockade", "Camera", "Capital", "Chat", "Checkmark", "Cities", "CityState", "Close", "Diplomacy", "Espionage",
         "ExclamationMark", "Fire", "ForwardArrow", "Hexagon", "HexagonOutline", "Improvements", "Increase", "Keyboard", "Link", "Load", "LockSmall",
@@ -53,7 +54,7 @@ public static class RulesetAssetKeys
     ];
 
     /// <summary>C063: unit action icons (<c>icon/action/&lt;name&gt;</c>), the file names of Unciv's UnitActionIcons.</summary>
-    public static readonly string[] ActionIconNames =
+    public static readonly ImmutableArray<string> ActionIconNames =
     [
         "AddInCapital", "AirSweep", "Automate", "ConstructImprovement", "DisbandUnit", "EnhanceReligion", "Escort", "Explore",
         "Fortify", "FortifyUntilHealed", "FoundCity", "FoundReligion", "Guard", "HideMore", "HurryConstruction", "HurryPolicy", "HurryResearch",
@@ -62,7 +63,7 @@ public static class RulesetAssetKeys
     ];
 
     /// <summary>C063: notification icons (<c>icon/notification/&lt;name&gt;</c>), the file names of Unciv's NotificationIcons.</summary>
-    public static readonly string[] NotificationIconNames =
+    public static readonly ImmutableArray<string> NotificationIconNames =
     [
         "Bobot", "DollarSign", "EnhanceReligion", "FoundPantheon", "FoundReligion", "Loading", "MoveAutomatedUnits", "MoveSpies", "NextTurn",
         "NextUnit", "PickConstruction", "PickPolicy", "PickTech", "ReformReligion", "RobotArm", "RobotHeadRect", "RobotHeadSquare", "ServerRack",

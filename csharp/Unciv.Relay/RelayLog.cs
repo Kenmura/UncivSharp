@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using Unciv.Net.Turns;
 
@@ -9,9 +10,9 @@ namespace Unciv.Relay;
 /// </summary>
 public sealed class RelayLog(TextWriter? output, string? logDirectory, int retentionDays, string minimumLevel, IClock clock)
 {
-    private static readonly string[] Levels = ["debug", "info", "warn", "error"];
+    private static readonly ImmutableArray<string> Levels = ["debug", "info", "warn", "error"];
     private readonly Lock gate = new();
-    private readonly int minimum = Math.Max(0, Array.IndexOf(Levels, minimumLevel));
+    private readonly int minimum = Math.Max(0, Levels.IndexOf(minimumLevel));
 
     public void Debug(string ev, string? room = null, string? fp = null, string? peer = null, string? reason = null, long? bytes = null, string? ip = null) =>
         Write(0, ev, room, fp, peer, reason, bytes, ip);

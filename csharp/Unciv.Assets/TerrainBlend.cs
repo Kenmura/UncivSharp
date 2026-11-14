@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Unciv.Assets;
 
 /// <summary>Linear float colour used by the blend maths (the client turns it into a Godot colour). Components are not clamped.</summary>
@@ -29,7 +31,7 @@ public readonly record struct Tint(float R, float G, float B)
 public static class TerrainBlend
 {
     /// <summary>Outward unit normals (x, z) of the six hexagon edges, at 30, 90, ... degrees (the hex has corners at 0, 60, ...).</summary>
-    public static readonly (float X, float Z)[] EdgeNormals =
+    public static readonly ImmutableArray<(float X, float Z)> EdgeNormals =
     [
         (0.8660254f, 0.5f), (0f, 1f), (-0.8660254f, 0.5f), (-0.8660254f, -0.5f), (0f, -1f), (0.8660254f, -0.5f),
     ];

@@ -10,9 +10,9 @@ namespace Unciv.Core.Tests.Harness;
 [Collection("RulesetCache")]
 public sealed class ScenarioHarnessTests : IDisposable
 {
-    public ScenarioHarnessTests() => RulesetCache.Clear();
+    public ScenarioHarnessTests() => RulesetCache.Current.Clear();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static ScenarioResult RenameScenario(out string hash)
     {

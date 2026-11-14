@@ -16,7 +16,7 @@ public static class MapSaver
 {
     public const string MapsFolder = "maps";
 
-    public static bool SaveZipped { get; set; } = true;
+    public static readonly SaveOptions DefaultSaveOptions = new(Zipped: true);
 
     public static TileMap MapFromSavedString(string mapString)
     {
@@ -32,17 +32,17 @@ public static class MapSaver
         return MapFromJson(unzippedJson);
     }
 
-    public static string MapToSavedString(TileMap tileMap)
+    public static string MapToSavedString(TileMap tileMap, SaveOptions? options = null)
     {
         tileMap.AssignContinents(TileMap.AssignContinentsMode.Reassign);
         var mapJson = UncivJson.Serialize(tileMap);
-        return SaveZipped ? FileConversions.Zip(mapJson) : mapJson;
+        return (options ?? DefaultSaveOptions).Zipped ? FileConversions.Zip(mapJson) : mapJson;
     }
 
-    public static void SaveMap(string mapName, TileMap tileMap, Func<string, IUncivFileHandle> localFile)
+    public static void SaveMap(string mapName, TileMap tileMap, Func<string, IUncivFileHandle> localFile, SaveOptions? options = null)
     {
         tileMap.AssignContinents(TileMap.AssignContinentsMode.Reassign);
-        FileConversions.WriteJson(localFile($"{MapsFolder}/{mapName}"), tileMap, SaveZipped);
+        FileConversions.WriteJson(localFile($"{MapsFolder}/{mapName}"), tileMap, (options ?? DefaultSaveOptions).Zipped);
     }
 
     public static TileMap LoadMap(IUncivFileHandle mapFile) => FileConversions.ReadJson<TileMap>(mapFile).NotNull();

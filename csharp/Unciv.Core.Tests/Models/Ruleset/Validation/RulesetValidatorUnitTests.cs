@@ -19,7 +19,7 @@ public sealed class RulesetValidatorUnitTests : IDisposable
 {
     private readonly ValidatorTestRuleset game = new();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     // region TextSimilarity
 
@@ -180,8 +180,8 @@ public sealed class RulesetValidatorUnitTests : IDisposable
         var needsBase = Mod("NeedsBase", "Mod requires [Base]");
         var needsOther = Mod("NeedsOther", "Mod requires [Other]");
         var incompatible = Mod("Incompatible", "Mod is incompatible with [Other]");
-        RulesetCache.Put("Base", baseRuleset);
-        RulesetCache.Put("Other", other);
+        RulesetCache.Current.Put("Base", baseRuleset);
+        RulesetCache.Current.Put("Other", other);
 
         Assert.True(ModCompatibility.MeetsBaseRequirements(needsBase, baseRuleset));
         Assert.True(ModCompatibility.MeetsBaseRequirements(needsOther, baseRuleset)); // Other is a cached extension mod
@@ -232,7 +232,7 @@ public sealed class RulesetValidatorUnitTests : IDisposable
     public void BuiltInRulesetsValidateWithoutAnyMessage()
     {
         foreach (var baseRuleset in Enum.GetValues<BaseRuleset>())
-            Assert.Empty(RulesetCache.Get(baseRuleset.FullName())!.GetErrorList(tryFixUnknownUniques: true).Select(it => $"{it.ErrorSeverityToReport}: {it.Text}"));
+            Assert.Empty(RulesetCache.Current.Get(baseRuleset.FullName())!.GetErrorList(tryFixUnknownUniques: true).Select(it => $"{it.ErrorSeverityToReport}: {it.Text}"));
     }
 
     [Fact]
@@ -417,7 +417,7 @@ public sealed class RulesetValidatorUnitTests : IDisposable
     [Fact]
     public void CheckCombinedModLinksValidatesTheCombinedRuleset()
     {
-        var (ruleset, errors) = RulesetCache.CheckCombinedModLinks(new LinkedHashSet<string>(), BaseRuleset.Civ_V_GnK.FullName());
+        var (ruleset, errors) = RulesetCache.Current.CheckCombinedModLinks(new LinkedHashSet<string>(), BaseRuleset.Civ_V_GnK.FullName());
         Assert.NotNull(ruleset);
         Assert.True(ruleset.ModOptions.IsBaseRuleset);
         Assert.Empty(errors);

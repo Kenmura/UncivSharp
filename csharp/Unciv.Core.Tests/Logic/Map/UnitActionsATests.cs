@@ -10,7 +10,6 @@ using Unciv.Models.Ruleset.Tech;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.Ruleset.Unique;
 using Unciv.Models.Ruleset.Unit;
-using Unciv.Models.Translations;
 using Unciv.Presentation.Components;
 using Unciv.Utils;
 using CityObject = Unciv.Logic.City.City;
@@ -253,14 +252,11 @@ public class UnitActionsATests
         UnitActionModifiers.ActivateSideEffects(unit, unique);
         Assert.DoesNotContain("Blessed", unit.Promotions.Promotions);
 
-        FontRulesetIcons.RulesetObjectNameToChar["Blessed"] = 'B';
-        try
+        var tr = new Unciv.Models.Translations.Translations();
+        tr.FontRulesetIcons["Blessed"] = 'B';
+        using (Unciv.Models.Translations.Translations.Use(tr))
         {
             Assert.Equal($"(1{Fonts.Movement}, -B)", UnitActionModifiers.GetSideEffectString(unit, unique));
-        }
-        finally
-        {
-            FontRulesetIcons.RulesetObjectNameToChar.Remove("Blessed");
         }
     }
 

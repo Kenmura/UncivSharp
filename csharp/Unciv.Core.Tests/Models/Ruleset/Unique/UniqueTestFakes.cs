@@ -58,6 +58,17 @@ internal sealed class FakeNamed(string name) : IRulesetResourceParameterView
 internal sealed class FakeRuleset : IGameContextRuleset
 {
     private readonly EmptyRulesetParameterView empty = EmptyRulesetParameterView.Instance;
+    private readonly Dictionary<string, IReadOnlySet<string>> matchingBuildingsCache = new(StringComparer.Ordinal);
+
+    public IReadOnlySet<string> GetCachedBuildingNamesMatchingFilter(string filter)
+    {
+        if (!matchingBuildingsCache.TryGetValue(filter, out var set))
+        {
+            set = new HashSet<string>(((IGameContextRuleset)this).GetBuildingNamesMatchingFilter(filter), StringComparer.Ordinal);
+            matchingBuildingsCache[filter] = set;
+        }
+        return set;
+    }
     public Dictionary<string, IRulesetResourceParameterView> ResourceMap { get; } = new();
     public Dictionary<string, IRulesetObjectParameterView> TechMap { get; } = new();
     public Dictionary<string, int> EraNumbers { get; } = new();

@@ -82,7 +82,7 @@ public class NaturalWonderGenerator(Ruleset ruleset, MapGenerationRandomness ran
             }
         }
 
-        Log.Debug("Natural Wonders for this game: %s", string.Join(", ", spawned.Select(it => it.Name)));
+        Log.Null.Debug("Natural Wonders for this game: %s", string.Join(", ", spawned.Select(it => it.Name)));
     }
 
     private static List<Tile> GetCandidateTilesForWonder(TileMap tileMap, Terrain naturalWonder, ISet<Tile> tilesTooCloseToSpawnLocations) =>
@@ -131,13 +131,13 @@ public class NaturalWonderGenerator(Ruleset ruleset, MapGenerationRandomness ran
                     tileToConvert.ForEachTileInDistance(tileToConvert.TileMap.MapParameters.MapSize.Height / 5, it => blockedTiles.Add(it));
                 }
 
-                Log.Debug("Natural Wonder %s @%s", wonder.Name, location.Position);
+                Log.Null.Debug("Natural Wonder %s @%s", wonder.Name, location.Position);
 
                 return true;
             }
         }
 
-        Log.Debug("No suitable location for %s", wonder.Name);
+        Log.Null.Debug("No suitable location for %s", wonder.Name);
         return false;
     }
 

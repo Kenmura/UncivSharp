@@ -189,12 +189,12 @@ public sealed class HostSecretRandomTests
 
     private static (CommandLog Log, ulong FinalHash) PlayHosted(long hostSecret, int turns)
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         try
         {
-            var ruleset = RulesetCache.GetVanillaRuleset();
+            var ruleset = RulesetCache.Current.GetVanillaRuleset();
             var setup = new GameSetupInfo(
                 new GameParameters
                 {
@@ -213,7 +213,7 @@ public sealed class HostSecretRandomTests
             var log = CommandLogReader.Read(text.ToString());
             return (log, ReplayVerifier.FullHash(session.Game));
         }
-        finally { RulesetCache.Clear(); }
+        finally { RulesetCache.Current.Clear(); }
     }
 
     [Fact]
@@ -222,7 +222,7 @@ public sealed class HostSecretRandomTests
         const int turns = 40;
         var (hosted, hash) = PlayHosted(Secret, turns);
         Assert.Equal(Secret, hosted.Header.HostSecret);
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         LoadRulesets();
         try
         {
@@ -236,7 +236,7 @@ public sealed class HostSecretRandomTests
             Assert.True(tailResult.Matches);
             Assert.Equal(Secret, tailResult.Game.RandomSalt);
         }
-        finally { RulesetCache.Clear(); }
+        finally { RulesetCache.Current.Clear(); }
 
         var (_, otherHash) = PlayHosted(Secret + 1, turns);
         var (_, plainHash) = PlayHosted(0, turns);
@@ -267,15 +267,15 @@ public sealed class HostSecretRandomTests
             Assert.False(result.Matches);
         }
         catch (CommandDesyncException) { /* a command that no longer validates is divergence too */ }
-        finally { RulesetCache.Clear(); }
+        finally { RulesetCache.Current.Clear(); }
     }
 
     private static string UncivJsonLine(CommandLogHeader header) => Unciv.Json.UncivJson.Serialize(header);
 
     private static void LoadRulesets()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 }

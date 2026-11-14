@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Unciv.Assets;
 
 /// <summary>UI size class of the window: <see cref="UiTokens.BreakpointFor"/>.</summary>
@@ -157,7 +159,7 @@ public static class UiTokens
     /// 1:1 up to 1080p (1.5) so a small window stays as before, then flattens so a large monitor gets bigger controls but not proportionally bigger ones (a 4K monitor is viewed from the same
     /// distance as a 1080p one, and its extra pixels should mostly buy sharpness and room). Past the last knot the scale stays at <see cref="MaxCurveScale"/>.
     /// </summary>
-    private static readonly (float Fit, float Scale)[] ScaleKnots = [(1f, 1f), (1.5f, 1.5f), (2f, 1.9f), (3f, 2.6f), (6f, MaxCurveScale)];
+    private static readonly ImmutableArray<(float Fit, float Scale)> ScaleKnots = [(1f, 1f), (1.5f, 1.5f), (2f, 1.9f), (3f, 2.6f), (6f, MaxCurveScale)];
 
     /// <summary>T311: the smooth part of the auto scale for a window <paramref name="fit"/> times the 1280x720 design window: 1 below it, the knot table above, never above <see cref="MaxCurveScale"/>.</summary>
     public static float ScaleCurve(float fit)

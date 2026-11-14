@@ -96,7 +96,7 @@ public static class ModCompatibility
     {
         if (IsIncompatible(mod, baseRuleset)) return false;
 
-        var allOtherExtensionModNames = RulesetCache.Values
+        var allOtherExtensionModNames = RulesetCache.Current.Values
             .Where(it => !ReferenceEquals(it, mod) && !it.ModOptions.IsBaseRuleset && it.Name.Length != 0)
             .Select(it => it.Name)
             .ToList();

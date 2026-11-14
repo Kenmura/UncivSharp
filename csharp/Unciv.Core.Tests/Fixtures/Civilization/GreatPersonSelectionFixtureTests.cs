@@ -24,7 +24,7 @@ public sealed class GreatPersonSelectionFixtureTests
         var ruleset = baseRuleset switch
         {
             BaseRuleset.Civ_V_GnK => game.Ruleset,
-            _ => RulesetCache.Get(baseRuleset.FullName())!.Clone(),
+            _ => RulesetCache.Current.Get(baseRuleset.FullName())!.Clone(),
         };
 
         game.GameInfo.Ruleset = ruleset;

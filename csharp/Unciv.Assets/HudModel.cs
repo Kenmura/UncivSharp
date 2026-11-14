@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using Unciv.Logic;
 using Unciv.Models.StatTypes;
@@ -38,7 +39,7 @@ public sealed record HudAction(HudActionKind Kind, string Label, DecisionKind? D
 public static class HudModel
 {
     /// <summary>Kotlin <c>NextTurnAction</c> texts, in the order <see cref="PendingDecisions"/> lists the decisions.</summary>
-    private static readonly Dictionary<DecisionKind, string> DecisionLabels = new()
+    private static readonly FrozenDictionary<DecisionKind, string> DecisionLabels = new Dictionary<DecisionKind, string>()
     {
         [DecisionKind.FreeGreatPerson] = "Choose a free great person",
         [DecisionKind.CityProduction] = "Pick construction",
@@ -55,7 +56,7 @@ public static class HudModel
         [DecisionKind.MoveAutomatedUnits] = "Move automated units",
         [DecisionKind.Alert] = "Review alert",
         [DecisionKind.TradeRequest] = "Review trade offer",
-    };
+    }.ToFrozenDictionary();
 
     public const string EndTurnLabel = "Next turn";
 

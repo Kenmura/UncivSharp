@@ -272,6 +272,10 @@ public partial class GameInfo : IsPartOfGameInfoSerialization, IHasGameInfoSeria
     [JsonIgnore]
     public GameClientState ClientState { get; set; } = new();
 
+    /// <summary>Optional phase measurement observer attached by the CLI bench (never serialized).</summary>
+    [JsonIgnore]
+    public ITurnProbe? TurnProbe { get; set; }
+
     private readonly KotlinLazy<Dictionary<string, Civilization.Civilization>> civMap;
 
     #endregion

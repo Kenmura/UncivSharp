@@ -50,7 +50,7 @@ public static class ScenarioGame
     private static void LoadBaseRulesets()
     {
         var jsons = FindJsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
     /// <summary>
@@ -60,16 +60,16 @@ public static class ScenarioGame
     /// </summary>
     public static RulesetClass LoadVanilla()
     {
-        if (RulesetCache.ContainsKey(BaseRuleset.Civ_V_Vanilla.FullName())) return RulesetCache.GetVanillaRuleset();
+        if (RulesetCache.Current.ContainsKey(BaseRuleset.Civ_V_Vanilla.FullName())) return RulesetCache.Current.GetVanillaRuleset();
         LoadBaseRulesets();
-        return RulesetCache.GetVanillaRuleset();
+        return RulesetCache.Current.GetVanillaRuleset();
     }
 
     /// <summary>T363: the scenario default ruleset, Brave New World, as a clone so a scenario can mutate it (e.g. AudioScenario adds a unique).</summary>
     public static RulesetClass LoadBraveNewWorld()
     {
-        if (!RulesetCache.ContainsKey(BaseRuleset.Civ_V_BNW.FullName())) LoadBaseRulesets();
-        return RulesetCache.Get(BaseRuleset.Civ_V_BNW.FullName()).NotNull().Clone();
+        if (!RulesetCache.Current.ContainsKey(BaseRuleset.Civ_V_BNW.FullName())) LoadBaseRulesets();
+        return RulesetCache.Current.Get(BaseRuleset.Civ_V_BNW.FullName()).NotNull().Clone();
     }
 
     public static string FindJsonsPath()

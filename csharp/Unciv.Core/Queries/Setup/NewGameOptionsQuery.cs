@@ -59,21 +59,21 @@ public sealed record NewGameOptionsQuery(string? BaseRuleset = null, IReadOnlyLi
     {
         var mods = new LinkedHashSet<string>(Mods ?? []);
         var baseName = BaseRuleset ?? Models.Metadata.BaseRuleset.Civ_V_BNW.FullName();
-        var ruleset = RulesetCache.GetComplexRuleset(mods, baseName);
-        var effectiveBase = RulesetCache.Get(baseName)?.ModOptions.IsBaseRuleset == true
+        var ruleset = RulesetCache.Current.GetComplexRuleset(mods, baseName);
+        var effectiveBase = RulesetCache.Current.Get(baseName)?.ModOptions.IsBaseRuleset == true
             ? baseName
-            : RulesetCache.GetVanillaRuleset().Name;
+            : RulesetCache.Current.GetVanillaRuleset().Name;
 
-        var available = RulesetCache.GetSortedBaseRulesets()
+        var available = RulesetCache.Current.GetSortedBaseRulesets()
             .Select(it => new SetupMod(it, true, false))
-            .Concat(RulesetCache.Values
+            .Concat(RulesetCache.Current.Values
                 .Where(it => !it.ModOptions.IsBaseRuleset)
                 .OrderBy(it => it.Name, StringComparer.Ordinal)
                 .Select(it => new SetupMod(it.Name, false, ModCompatibility.IsExtensionMod(it))))
             .ToList();
 
         var defaults = new GameParameters { BaseRuleset = effectiveBase };
-        foreach (var mod in mods.Where(RulesetCache.ContainsKey)) defaults.Mods.Add(mod);
+        foreach (var mod in mods.Where(RulesetCache.Current.ContainsKey)) defaults.Mods.Add(mod);
         defaults.Difficulty = ruleset.Difficulties.ContainsKey(defaults.Difficulty) ? defaults.Difficulty : ruleset.Difficulties.Keys.FirstOrDefault() ?? defaults.Difficulty;
         defaults.Speed = ruleset.Speeds.ContainsKey(defaults.Speed) ? defaults.Speed : ruleset.Speeds.Keys.FirstOrDefault() ?? defaults.Speed;
         defaults.StartingEra = ruleset.Eras.ContainsKey(defaults.StartingEra) ? defaults.StartingEra : ruleset.Eras.Keys.FirstOrDefault() ?? defaults.StartingEra;

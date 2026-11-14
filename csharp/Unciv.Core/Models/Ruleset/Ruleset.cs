@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Text.Json.Serialization;
 using Unciv.Json;
 using Unciv.Logic.Map.Tiles;
 using Unciv.Models.Ruleset.Nation;
@@ -35,8 +37,18 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
     /// <summary>
     /// Kotlin <c>UniqueValidator(ruleset).checkUnique(Unique(text), null).isEmpty()</c> in the fallback CityStateTypes of base rulesets; a seam so that tests can replace it.
     /// </summary>
-    public static Func<Ruleset, string, bool> IsUniqueValid { get; set; } =
+    [JsonIgnore]
+    public Func<Ruleset, string, bool> IsUniqueValid { get; set; } =
         (ruleset, text) => new Validation.UniqueValidator(ruleset).CheckUnique(new UniqueObject(text), null).Count == 0;
+
+    private readonly ConcurrentDictionary<string, IReadOnlySet<string>> matchingBuildingsCache = new(StringComparer.Ordinal);
+
+    [JsonIgnore]
+    internal Dictionary<string, CivilopediaCategories>? CivilopediaNameMap { get; set; }
+
+    public IReadOnlySet<string> GetCachedBuildingNamesMatchingFilter(string filter) =>
+        matchingBuildingsCache.GetOrAdd(filter,
+            key => new HashSet<string>(((IGameContextRuleset)this).GetBuildingNamesMatchingFilter(key), StringComparer.Ordinal));
 
     /// <summary>If (and only if) this Ruleset is a mod, this will be the source folder. In other words, this is <c>null</c> for built-in and combined rulesets.</summary>
     public IRulesetFolder? FolderLocation { get; set; }
@@ -456,7 +468,7 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
         }
         catch (Exception ex)
         {
-            Log.Error($"Failed to get modOptions from json file; Mod name: {folderHandle.Name}", ex);
+            Log.Null.Error($"Failed to get modOptions from json file; Mod name: {folderHandle.Name}", ex);
         }
     }
 
@@ -495,7 +507,7 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
     private void ApplyBaseRulesetFallbacks(bool hasRuinRewardsFile, bool hasGlobalUniquesFile)
     {
         // Add objects that might not be present in base ruleset mods, but are required
-        var fallbackLazy = new KotlinLazy<Ruleset>(RulesetCache.GetVanillaRuleset); // clone at most once
+        var fallbackLazy = new KotlinLazy<Ruleset>(RulesetCache.Current.GetVanillaRuleset); // clone at most once
         // This one should be temporary
         if (UnitTypes.Count == 0)
             UnitTypes.PutAll(fallbackLazy.Value.UnitTypes);
@@ -605,7 +617,7 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
     public override string ToString()
     {
         if (Name.Length != 0) return Name;
-        if (Mods.Count == 1 && RulesetCache.Get(Mods.First()).NotNull().ModOptions.IsBaseRuleset) return Mods.First();
+        if (Mods.Count == 1 && RulesetCache.Current.Get(Mods.First()).NotNull().ModOptions.IsBaseRuleset) return Mods.First();
         return $"Combined RuleSet ({JavaFormat.ToJavaString(Mods)})";
     }
 

@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using static Unciv.Assets.Pictograms;
 
 namespace Unciv.Assets;
@@ -8,7 +9,7 @@ namespace Unciv.Assets;
 /// </summary>
 public static class ObjectPictograms
 {
-    private static readonly Dictionary<(string Category, string Name), Piece[]> ByKey = new()
+    private static readonly FrozenDictionary<(string Category, string Name), Piece[]> ByKey = new Dictionary<(string Category, string Name), Piece[]>()
     {
         // Techs (3)
         [(RulesetAssetKeys.TechIcon, "Penicillin")] = [L(24, 34, 76, 34, 84, 50, 76, 66, 24, 66, 16, 50), D(48, 34, 52, 34, 52, 66, 48, 66), D(30, 46, 42, 46, 42, 54, 30, 54)],
@@ -114,7 +115,7 @@ public static class ObjectPictograms
         [(RulesetAssetKeys.PromotionIcon, "Flight Deck III")] = [L(14, 14, 86, 14, 74, 88, 26, 88), D(30, 24, 38, 24, 38, 76, 30, 76), D(46, 24, 54, 24, 54, 76, 46, 76), D(62, 24, 70, 24, 70, 76, 62, 76)],
         [(RulesetAssetKeys.PromotionIcon, "Devout")] = [L(44, 10, 56, 10, 56, 90, 44, 90), L(20, 32, 80, 32, 80, 44, 20, 44)],
         [(RulesetAssetKeys.PromotionIcon, "Unable to pillage tiles")] = [L(42, 42, 58, 42, 54, 90, 46, 90), L(50, 10, 68, 32, 50, 44, 32, 32), L(14, 14, 22, 10, 86, 86, 78, 90)],
-    };
+    }.ToFrozenDictionary();
 
     public static bool Has(AssetKey key) => ByKey.ContainsKey((key.Category, key.Name));
 

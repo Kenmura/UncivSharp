@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using Unciv.Commands;
 using Unciv.Commands.Diplomacy;
@@ -43,7 +44,7 @@ public static class AlertPopupModel
     private sealed record Wording(string Title, string Body);
 
     // {civ}: the civ named by the alert value; {city}: the city (value is its id); {value}: the raw value; {minor}: the second part of "civ@minor".
-    private static readonly Dictionary<AlertType, Wording> Words = new()
+    private static readonly FrozenDictionary<AlertType, Wording> Words = new Dictionary<AlertType, Wording>()
     {
         [AlertType.Defeated] = new("Civilization destroyed", "{civ} has been destroyed by your armies."),
         [AlertType.WonderBuilt] = new("Wonder built", "{value} has been built in a faraway land."),
@@ -75,9 +76,9 @@ public static class AlertPopupModel
         [AlertType.GameHasBeenWon] = new("Game won", "Another civilization has won the game."),
         [AlertType.Event] = new("Event", ""),
         [AlertType.Denounced] = new("Denounced", "{civ} has denounced you. Will you declare war?"),
-    };
+    }.ToFrozenDictionary();
 
-    private static readonly Dictionary<string, string> ChoiceLabels = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, string> ChoiceLabels = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["annex"] = "Annex",
         ["puppet"] = "Make it a puppet",
@@ -89,7 +90,7 @@ public static class AlertPopupModel
         ["war"] = "Declare war",
         ["side"] = "Side with the city-state",
         ["abandon"] = "Abandon the city-state",
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>Every alert type with its title and body text (before names are filled in).</summary>
     public static IReadOnlyDictionary<AlertType, (string Title, string Body)> Table =>

@@ -16,9 +16,9 @@ namespace Unciv.Core.Tests.Logic.Bnw;
 [Collection("RulesetCache")]
 public sealed class BnwScoreTests : IDisposable
 {
-    public BnwScoreTests() => RulesetCache.Clear();
+    public BnwScoreTests() => RulesetCache.Current.Clear();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static (GameInfo Game, CivilizationObject Civ, CityObject Capital) NewCapital(BaseRuleset ruleset, string first = "Brazil", string second = "Poland")
     {

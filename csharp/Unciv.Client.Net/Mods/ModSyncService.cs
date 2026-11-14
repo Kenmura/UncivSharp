@@ -208,7 +208,7 @@ public sealed class ModSyncService(IRulesetFileSource files, string modsDirector
         try
         {
             foreach (var name in outcome.Installed)
-                if (RulesetCache.ReloadSingleRuleset(files, name).Count > 0) return ModSyncCodes.BadFile;
+                if (RulesetCache.Current.ReloadSingleRuleset(files, name).Count > 0) return ModSyncCodes.BadFile;
             var hash = new LobbySettings { Ruleset = manifest.BaseRuleset, Mods = [.. manifest.Mods] }.ComputeRulesetHash();
             return string.Equals(hash, manifest.RulesetHash, StringComparison.OrdinalIgnoreCase) ? null : JoinRefusedCodes.RulesetMismatch;
         }

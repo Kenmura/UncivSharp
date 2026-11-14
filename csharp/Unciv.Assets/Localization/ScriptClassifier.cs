@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 
 namespace Unciv.Assets.Localization;
@@ -24,7 +25,7 @@ public enum TextScript
 public static class ScriptClassifier
 {
     // Ordered, non-overlapping ranges, searched linearly (the table is tiny).
-    private static readonly (int From, int To, TextScript Script)[] Ranges =
+    private static readonly ImmutableArray<(int From, int To, TextScript Script)> Ranges =
     [
         (0x0041, 0x005A, TextScript.Latin), (0x0061, 0x007A, TextScript.Latin),
         (0x00AA, 0x00AA, TextScript.Latin), (0x00BA, 0x00BA, TextScript.Latin), (0x00C0, 0x024F, TextScript.Latin),

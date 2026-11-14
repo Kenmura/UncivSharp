@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 
 namespace Unciv.Assets;
@@ -11,14 +12,14 @@ public sealed record LintViolation(string File, int Line, string Rule, string Te
 /// </summary>
 public static partial class LiteralLint
 {
-    private static readonly (string Rule, Regex Pattern)[] Rules =
+    private static readonly ImmutableArray<(string Rule, Regex Pattern)> Rules =
     [
         ("res:// literal", ResPath()),
         ("colour literal", ColourLiteral()),
         ("untranslated text literal", UntranslatedText()),
     ];
 
-    private static readonly string[] BuildOutput = ["bin", "obj", ".godot", ".mono"];
+    private static readonly ImmutableArray<string> BuildOutput = ["bin", "obj", ".godot", ".mono"];
 
     public static IReadOnlyList<LintViolation> Scan(string file, string text)
     {

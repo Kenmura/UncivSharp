@@ -6,11 +6,9 @@ namespace Unciv.Core.Tests.Assets;
 public class LocalizationTests : IDisposable
 {
     private readonly string dir = Directory.CreateTempSubdirectory("l10n-").FullName;
-    private readonly Translations previous = Translations.Current;
 
     public void Dispose()
     {
-        Translations.Current = previous;
         Directory.Delete(dir, recursive: true);
     }
 
@@ -40,13 +38,16 @@ public class LocalizationTests : IDisposable
     public void TranslatesAndFallsBackToTheKey()
     {
         var l = Make();
-        Assert.Equal("Cancel", l.Tr("Cancel"));
-        Assert.Equal("German", l.SetLanguage("German"));
-        Assert.Equal("Abbrechen", l.Tr("Cancel"));
-        Assert.Equal("Unknown key", l.Tr("Unknown key"));
-        l.SetLanguage("Japanese");
-        Assert.Equal("キャンセル", "Cancel".Tr());
-        Assert.Equal("Close", l.Tr("Close"));
+        using (Translations.Use(l.Translations))
+        {
+            Assert.Equal("Cancel", l.Tr("Cancel"));
+            Assert.Equal("German", l.SetLanguage("German"));
+            Assert.Equal("Abbrechen", l.Tr("Cancel"));
+            Assert.Equal("Unknown key", l.Tr("Unknown key"));
+            l.SetLanguage("Japanese");
+            Assert.Equal("キャンセル", "Cancel".Tr());
+            Assert.Equal("Close", l.Tr("Close"));
+        }
     }
 
     [Fact]
@@ -94,12 +95,15 @@ public class LocalizationTests : IDisposable
     public void SwitchingLanguageDropsTheTranslationsCachedForTheOldOne()
     {
         var l = Make();
-        l.SetLanguage("German");
-        Assert.Equal("Abbrechen", "Cancel".Tr());
-        l.SetLanguage("Japanese");
-        Assert.Equal("キャンセル", "Cancel".Tr());
-        l.SetLanguage("English");
-        Assert.Equal("Cancel", "Cancel".Tr());
+        using (Translations.Use(l.Translations))
+        {
+            l.SetLanguage("German");
+            Assert.Equal("Abbrechen", "Cancel".Tr());
+            l.SetLanguage("Japanese");
+            Assert.Equal("キャンセル", "Cancel".Tr());
+            l.SetLanguage("English");
+            Assert.Equal("Cancel", "Cancel".Tr());
+        }
     }
 
     [Fact]
@@ -109,15 +113,18 @@ public class LocalizationTests : IDisposable
             "Refused = Abgelehnt\nConnection problem = Verbindungsproblem\nThe engine would not show the policies. = Keine Politiken\nNot enough culture = Zu wenig Kultur\nNeeds 25 culture = Braucht 25 Kultur\n");
         File.WriteAllText(Path.Combine(dir, "English.properties"), "Refused = \n");
         var l = new ClientLocalization(dir, new Translations());
-        Assert.Equal("Refused: Not enough culture", Unciv.Assets.PolicyScreenModel.RefusedLine("Not enough culture"));
-        Assert.Equal("Connection problem: Not enough culture", Unciv.Assets.PolicyScreenModel.ConnectionProblemLine("Not enough culture"));
-        Assert.Equal("The engine would not show the policies.", Unciv.Assets.PolicyScreenModel.UnavailableLine());
-        l.SetLanguage("German");
-        Assert.Equal("Abgelehnt: Zu wenig Kultur", Unciv.Assets.PolicyScreenModel.RefusedLine("Not enough culture"));
-        Assert.Equal("Abgelehnt: Needs 25 culture", Unciv.Assets.PolicyScreenModel.RefusedLine("Needs 25 culture")); // composed: left alone
-        Assert.Equal("Verbindungsproblem: Not enough culture", Unciv.Assets.PolicyScreenModel.ConnectionProblemLine("Not enough culture")); // raw error text
-        Assert.Equal("Keine Politiken", Unciv.Assets.PolicyScreenModel.UnavailableLine());
-        l.SetLanguage("English");
+        using (Translations.Use(l.Translations))
+        {
+            Assert.Equal("Refused: Not enough culture", Unciv.Assets.PolicyScreenModel.RefusedLine("Not enough culture"));
+            Assert.Equal("Connection problem: Not enough culture", Unciv.Assets.PolicyScreenModel.ConnectionProblemLine("Not enough culture"));
+            Assert.Equal("The engine would not show the policies.", Unciv.Assets.PolicyScreenModel.UnavailableLine());
+            l.SetLanguage("German");
+            Assert.Equal("Abgelehnt: Zu wenig Kultur", Unciv.Assets.PolicyScreenModel.RefusedLine("Not enough culture"));
+            Assert.Equal("Abgelehnt: Needs 25 culture", Unciv.Assets.PolicyScreenModel.RefusedLine("Needs 25 culture")); // composed: left alone
+            Assert.Equal("Verbindungsproblem: Not enough culture", Unciv.Assets.PolicyScreenModel.ConnectionProblemLine("Not enough culture")); // raw error text
+            Assert.Equal("Keine Politiken", Unciv.Assets.PolicyScreenModel.UnavailableLine());
+            l.SetLanguage("English");
+        }
     }
 
     [Fact]

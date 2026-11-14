@@ -30,7 +30,7 @@ public static class RulesetNameExtensions
     {
         if (getINamed == null || ruleset.Name.Length != 0)
             return ruleset.Name;
-        var componentRulesets = ruleset.Mods.Select(RulesetCache.Get).OfType<Ruleset>().ToList();
+        var componentRulesets = ruleset.Mods.Select(RulesetCache.Current.Get).OfType<Ruleset>().ToList();
         for (int i = componentRulesets.Count - 1; i >= 0; i--)
         {
             var componentRuleset = componentRulesets[i];

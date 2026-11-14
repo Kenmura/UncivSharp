@@ -70,18 +70,18 @@ public sealed class GameStarter
         // In the case where we used to have an extension mod, and now we don't, we cannot "unselect" it in the UI.
         // We need to remove the dead mods so there aren't problems later.
         foreach (var mod in gameParameters.Mods.ToList())
-            if (!RulesetCache.ContainsKey(mod)) gameParameters.Mods.Remove(mod);
+            if (!RulesetCache.Current.ContainsKey(mod)) gameParameters.Mods.Remove(mod);
 
         // [TEMPORARY] If we have a base ruleset in the mod list, we make that our base ruleset
-        var baseRulesetInMods = gameParameters.Mods.FirstOrDefault(it => RulesetCache.Get(it).NotNull().ModOptions.IsBaseRuleset);
+        var baseRulesetInMods = gameParameters.Mods.FirstOrDefault(it => RulesetCache.Current.Get(it).NotNull().ModOptions.IsBaseRuleset);
         if (baseRulesetInMods != null)
             gameParameters.BaseRuleset = baseRulesetInMods;
 
-        if (!RulesetCache.ContainsKey(gameParameters.BaseRuleset))
-            gameParameters.BaseRuleset = RulesetCache.GetVanillaRuleset().Name;
+        if (!RulesetCache.Current.ContainsKey(gameParameters.BaseRuleset))
+            gameParameters.BaseRuleset = RulesetCache.Current.GetVanillaRuleset().Name;
 
         gameInfo.GameParameters = gameParameters;
-        ruleset = RulesetCache.GetComplexRuleset(gameInfo.GameParameters);
+        ruleset = RulesetCache.Current.GetComplexRuleset(gameInfo.GameParameters);
         var mapGen = new Map.MapGenerator.MapGenerator(ruleset, currentTimeMillis: () => currentTimeMillis);
 
         // Make sure that a valid game speed is loaded (catches a base ruleset not using the default game speed)

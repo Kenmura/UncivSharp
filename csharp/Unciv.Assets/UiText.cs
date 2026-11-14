@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Text;
 
@@ -12,7 +13,7 @@ public readonly record struct TextRun(string Text, string? Stat);
 /// </summary>
 public static class UiText
 {
-    private static readonly Dictionary<char, string> GlyphStats = new()
+    private static readonly FrozenDictionary<char, string> GlyphStats = new Dictionary<char, string>()
     {
         ['⁂'] = "Food",
         ['⚙'] = "Production",
@@ -27,7 +28,7 @@ public static class UiText
         ['…'] = "Range",
         ['⏳'] = "",
         ['☠'] = "",
-    };
+    }.ToFrozenDictionary();
 
     /// <summary>The stat a Unciv font glyph stands for (<c>Fonts.Gold</c> is Gold), or null when not an iconised glyph.</summary>
     public static string? StatForGlyph(char glyph) => GlyphStats.TryGetValue(glyph, out string? stat) && stat.Length > 0 ? stat : null;

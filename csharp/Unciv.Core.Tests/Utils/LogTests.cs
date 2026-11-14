@@ -3,8 +3,7 @@ using Unciv.Utils;
 namespace Unciv.Core.Tests.Utils;
 
 /// <summary>Log facade (T047) and its printf-style formatting. Expected strings come from <c>String.format</c> on the JVM (JDK 25).</summary>
-[Collection("TranslationState")] // the process-wide statics (Translations.Current, Log.Backend) are shared by all test classes in this collection
-public class LogTests : IDisposable
+public class LogTests
 {
     private sealed class CapturingBackend : ILogBackend
     {
@@ -20,24 +19,12 @@ public class LogTests : IDisposable
     }
 
     private readonly CapturingBackend backend = new();
+    private readonly Log log;
 
     public LogTests()
     {
-        Log.Backend = backend;
-        Log.DisableLogsFrom.Clear();
-        Log.EnableLogsFrom.Clear();
-    }
-
-    public void Dispose()
-    {
-        Log.Backend = NullLogBackend.Instance;
-        Log.DisableLogsFrom.Clear();
-        foreach (string disabled in new[] { "Battle", "Music", "Sounds", "Translations", "WorkerAutomation", "assignRegions", "RoadBetweenCitiesAutomation", "StageMouseOverDebug", "DiplomacyAutomation" })
-        {
-            Log.DisableLogsFrom.Add(disabled);
-        }
-
-        Log.EnableLogsFrom.Clear();
+        log = new Log(backend);
+        log.DisableLogsFrom.Clear();
     }
 
     private static readonly (string Format, object?[] Args, string Expected)[] FormatCases =
@@ -111,24 +98,24 @@ public class LogTests : IDisposable
     [Fact]
     public void MismatchedFormatIsLoggedRawInsteadOfThrowing()
     {
-        Log.Error("needs [%s] and [%s]", "one");
-        Log.Error("%d", "not a number");
+        log.Error("needs [%s] and [%s]", "one");
+        log.Error("%d", "not a number");
         Assert.Equal(["E [LogTests] needs [%s] and [%s] [one]", "E [LogTests] %d [not a number]"], backend.Lines);
     }
 
     [Fact]
     public void DebugAndErrorCarryTheCallingClassAsTag()
     {
-        Log.Debug("hello %s", "world");
-        Log.Error("bad %d", 3);
-        Log.Debug("no args: 100% safe");
+        log.Debug("hello %s", "world");
+        log.Error("bad %d", 3);
+        log.Debug("no args: 100% safe");
         Assert.Equal(["D [LogTests] hello world", "E [LogTests] bad 3", "D [LogTests] no args: 100% safe"], backend.Lines);
     }
 
     [Fact]
     public void ThrowablesAreAppended()
     {
-        Log.Error("failed", new InvalidOperationException("boom"));
+        log.Error("failed", new InvalidOperationException("boom"));
         Assert.Single(backend.Lines);
         Assert.StartsWith("E [LogTests] failed | System.InvalidOperationException: boom", backend.Lines[0], StringComparison.Ordinal);
     }
@@ -138,14 +125,14 @@ public class LogTests : IDisposable
     {
         int calls = 0;
         Func<object?> expensive = () => { calls++; return "value"; };
-        Log.Debug("x=%s", expensive);
+        log.Debug("x=%s", expensive);
         Assert.Equal(1, calls);
         Assert.Equal(["D [LogTests] x=value"], backend.Lines);
 
         backend.IsRelease = true;
-        Log.Debug("x=%s", expensive);
+        log.Debug("x=%s", expensive);
         Assert.Equal(1, calls);
-        Log.Error("x=%s", expensive); // errors always log
+        log.Error("x=%s", expensive); // errors always log
         Assert.Equal(2, calls);
         Assert.Equal(2, backend.Lines.Count);
     }
@@ -153,23 +140,23 @@ public class LogTests : IDisposable
     [Fact]
     public void TagFiltersFollowDisableAndEnableLists()
     {
-        Log.DisableLogsFrom.Add("Log"); // matches the tag "LogTests" by containment
-        Log.Debug("hidden");
+        log.DisableLogsFrom.Add("Log"); // matches the tag "LogTests" by containment
+        log.Debug("hidden");
         Assert.Empty(backend.Lines);
-        Log.Debug(new Tag("Other"), "shown");
-        Log.DisableLogsFrom.Clear();
-        Log.EnableLogsFrom.Add("Only");
-        Log.Debug("hidden by onlyLog");
-        Log.Debug(new Tag("OnlyThis"), "shown too");
-        Log.Error(new Tag("Whatever"), "errors are filtered by nothing: %s", "yes");
+        log.Debug(new Tag("Other"), "shown");
+        log.DisableLogsFrom.Clear();
+        log.EnableLogsFrom.Add("Only");
+        log.Debug("hidden by onlyLog");
+        log.Debug(new Tag("OnlyThis"), "shown too");
+        log.Error(new Tag("Whatever"), "errors are filtered by nothing: %s", "yes");
         Assert.Equal(["D [Other] shown", "D [OnlyThis] shown too", "E [Whatever] errors are filtered by nothing: yes"], backend.Lines);
     }
 
     [Fact]
     public void SoftRequireLogsAnErrorAndReturnsTheCondition()
     {
-        Assert.True(Log.SoftRequire(true, "never %s", "logged"));
-        Assert.False(Log.SoftRequire(false, "input %s must be positive", -1));
+        Assert.True(log.SoftRequire(true, "never %s", "logged"));
+        Assert.False(log.SoftRequire(false, "input %s must be positive", -1));
         Assert.Equal(["E [LogTests] input -1 must be positive"], backend.Lines);
     }
 
@@ -178,21 +165,21 @@ public class LogTests : IDisposable
     {
         new Nested().Say(backend);
         Assert.Equal(["D [LogTests$Nested] from nested", "D [LogTests$Nested] from closure"], backend.Lines);
-        Log.Backend = NullLogBackend.Instance;
-        Log.Debug("dropped");
-        Log.Error("dropped");
+        log.Backend = NullLogBackend.Instance;
+        log.Debug("dropped");
+        log.Error("dropped");
         Assert.Equal(2, backend.Lines.Count);
-        Assert.False(Log.ShouldLog(new Tag("X")));
-        Assert.Equal("", Log.GetSystemInfo());
+        Assert.False(log.ShouldLog(new Tag("X")));
+        Assert.Equal("", log.GetSystemInfo());
     }
 
     private sealed class Nested
     {
         public void Say(CapturingBackend capture)
         {
-            Log.Backend = capture;
-            Log.Debug("from nested");
-            Func<int> closure = () => { Log.Debug("from closure"); return 1; };
+            var nestedLog = new Log(capture);
+            nestedLog.Debug("from nested");
+            Func<int> closure = () => { nestedLog.Debug("from closure"); return 1; };
             closure();
         }
     }

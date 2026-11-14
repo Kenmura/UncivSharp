@@ -67,26 +67,50 @@ public class ConsoleLogBackend : ILogBackend
     public virtual string GetSystemInfo() => "";
 }
 
-public static class Log
+public sealed class Log
 {
     private static readonly ImmutableArray<string> DefaultDisabledLogs =
         ["Battle", "Music", "Sounds", "Translations", "WorkerAutomation", "assignRegions", "RoadBetweenCitiesAutomation", "StageMouseOverDebug", "DiplomacyAutomation"];
+
+    /// <summary>Shared no-op logger instance for callers that do not supply a scoped <see cref="Log"/>.</summary>
+    public static Log Null { get; } = new(NullLogBackend.Instance, readOnly: true);
+
+    private readonly bool readOnly;
+    private ILogBackend backend;
+
+    public Log(ILogBackend? backend = null) : this(backend ?? NullLogBackend.Instance, readOnly: false)
+    {
+    }
+
+    private Log(ILogBackend backend, bool readOnly)
+    {
+        this.backend = backend;
+        this.readOnly = readOnly;
+    }
 
     /// <summary>
     /// Log tags (= class names) <b>containing</b> one of these strings are not logged (the Kotlin <c>-DnoLog</c>; replace the content to change the list,
     /// an empty set disables the default exclusions).
     /// </summary>
-    public static HashSet<string> DisableLogsFrom { get; } = new(DefaultDisabledLogs, StringComparer.Ordinal);
+    public HashSet<string> DisableLogsFrom { get; } = new(DefaultDisabledLogs, StringComparer.Ordinal);
 
     /// <summary>
     /// If not empty, only tags <b>containing</b> one of these strings are logged (the Kotlin <c>-DonlyLog</c>). <see cref="DisableLogsFrom"/> is still
     /// respected. Use a string that matches nothing, such as <c>~~~</c>, to disable all logging.
     /// </summary>
-    public static HashSet<string> EnableLogsFrom { get; } = new(StringComparer.Ordinal);
+    public HashSet<string> EnableLogsFrom { get; } = new(StringComparer.Ordinal);
 
-    public static ILogBackend Backend { get; set; } = NullLogBackend.Instance;
+    public ILogBackend Backend
+    {
+        get => backend;
+        set
+        {
+            if (readOnly) throw new InvalidOperationException("Cannot modify Log.Null.");
+            backend = value;
+        }
+    }
 
-    public static bool ShouldLog(Tag? tag = null) =>
+    public bool ShouldLog(Tag? tag = null) =>
         !Backend.IsRelease && !IsTagDisabled(tag ?? GetTag());
 
     /// <summary>
@@ -94,7 +118,7 @@ public static class Log
     /// Only does something when logging is enabled. A tag equal to the name of the calling class is added.
     /// The args can contain <see cref="Func{TResult}"/> of object: they are invoked and their value is used instead.
     /// </summary>
-    public static void Debug(string msg, params object?[] args)
+    public void Debug(string msg, params object?[] args)
     {
         if (Backend.IsRelease)
         {
@@ -104,7 +128,7 @@ public static class Log
         Debug(GetTag(), msg, args);
     }
 
-    public static void Debug(Tag tag, string msg, params object?[] args)
+    public void Debug(Tag tag, string msg, params object?[] args)
     {
         if (!ShouldLog(tag))
         {
@@ -115,7 +139,7 @@ public static class Log
     }
 
     /// <summary>Logs the given exception by appending it to <paramref name="msg"/>.</summary>
-    public static void Debug(string msg, Exception throwable)
+    public void Debug(string msg, Exception throwable)
     {
         if (Backend.IsRelease)
         {
@@ -125,7 +149,7 @@ public static class Log
         Debug(GetTag(), msg, throwable);
     }
 
-    public static void Debug(Tag tag, string msg, Exception throwable)
+    public void Debug(Tag tag, string msg, Exception throwable)
     {
         if (!ShouldLog(tag))
         {
@@ -136,26 +160,26 @@ public static class Log
     }
 
     /// <summary>Like <see cref="Debug(string, object?[])"/>, but always logs, even in release builds.</summary>
-    public static void Error(string msg, params object?[] args) =>
+    public void Error(string msg, params object?[] args) =>
         Error(GetTag(), msg, args);
 
-    public static void Error(Tag tag, string msg, params object?[] args) =>
+    public void Error(Tag tag, string msg, params object?[] args) =>
         DoLog(Backend.Error, tag, msg, ReplaceLambdasWithValues(args));
 
-    public static void Error(string msg, Exception throwable) =>
+    public void Error(string msg, Exception throwable) =>
         Error(GetTag(), msg, throwable);
 
-    public static void Error(Tag tag, string msg, Exception throwable) =>
+    public void Error(Tag tag, string msg, Exception throwable) =>
         DoLog(Backend.Error, tag, BuildThrowableMessage(msg, throwable), []);
 
     /// <summary>Get string information about operation system.</summary>
-    public static string GetSystemInfo() => Backend.GetSystemInfo();
+    public string GetSystemInfo() => Backend.GetSystemInfo();
 
     /// <summary>
     /// If <paramref name="condition"/> is met, returns true. Otherwise, logs an error and returns false.
-    /// Usage: <c>if (!Log.SoftRequire(input > 0, "input %s must be positive", input)) return;</c>
+    /// Usage: <c>if (!log.SoftRequire(input > 0, "input %s must be positive", input)) return;</c>
     /// </summary>
-    public static bool SoftRequire(bool condition, string msg, params object?[] args)
+    public bool SoftRequire(bool condition, string msg, params object?[] args)
     {
         if (condition)
         {
@@ -172,7 +196,7 @@ public static class Log
         logger(tag, $"thread-{Environment.CurrentManagedThreadId}", formatted);
     }
 
-    private static bool IsTagDisabled(Tag tag) =>
+    private bool IsTagDisabled(Tag tag) =>
         DisableLogsFrom.Any(part => tag.Name.Contains(part, StringComparison.Ordinal))
         || (EnableLogsFrom.Count > 0 && !EnableLogsFrom.Any(part => tag.Name.Contains(part, StringComparison.Ordinal)));
 

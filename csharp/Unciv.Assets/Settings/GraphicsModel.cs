@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+
 namespace Unciv.GodotClient.Settings;
 
 /// <summary>C097: the graphics quality levels (design/ULTRA-GRAPHICS.md). Stored by name in <see cref="ClientSettings.GraphicsLevel"/>.</summary>
@@ -48,7 +50,7 @@ public static class GraphicsModel
     /// <summary>The flat ambient light energy of today's look; <c>MapMaterials.Backdrop</c> and the Low preset share it so Low cannot drift from the old picture.</summary>
     public const float LowAmbientEnergy = 0.55f;
 
-    private static readonly string[] SoftwareAdapters = ["llvmpipe", "lavapipe", "swiftshader", "software", "softpipe"];
+    private static readonly ImmutableArray<string> SoftwareAdapters = ["llvmpipe", "lavapipe", "swiftshader", "software", "softpipe"];
 
     /// <summary>The level table. Low is today's look (exposure and ambient exactly as <c>MapMaterials.Backdrop</c> has them) and must stay identity so goldens do not move.
     /// Ultra's exposure, ambient and saturation were calibrated on a real GPU (T271, design/ULTRA-GRAPHICS.md section 7): Forward+ renders the same scene about 40% brighter and paler than the compatibility renderer, so Ultra is pulled down to the brightness of High (within about 6% at the mid and coast views) and its saturation raised. High's own values are the uncalibrated first guess: on the compatibility renderer it is about 45% brighter than Low by design of the film tone map.</summary>

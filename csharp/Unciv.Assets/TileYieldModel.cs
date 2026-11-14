@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Unciv.Models.Ruleset;
 using Unciv.Models.Ruleset.Tile;
 using Unciv.Models.StatTypes;
@@ -21,7 +22,7 @@ public static class TileYieldModel
 
     private const string CityCentre = "City center";
 
-    private static readonly Stat[] Order = [Stat.Food, Stat.Production, Stat.Gold, Stat.Science, Stat.Culture, Stat.Faith, Stat.Happiness];
+    private static readonly ImmutableArray<Stat> Order = [Stat.Food, Stat.Production, Stat.Gold, Stat.Science, Stat.Culture, Stat.Faith, Stat.Happiness];
 
     /// <summary>The tile's base yield stats; zero stats stay zero.</summary>
     public static Stats BaseStats(Ruleset ruleset, TileDto tile)

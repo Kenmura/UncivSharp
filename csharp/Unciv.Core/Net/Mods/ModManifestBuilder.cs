@@ -15,7 +15,7 @@ public sealed class RulesetCacheModFolders : IModFolders
 {
     public static RulesetCacheModFolders Instance { get; } = new();
 
-    public IRulesetFolder? FolderOf(string modName) => RulesetCache.Get(modName)?.FolderLocation is { IsDirectory: true } folder ? folder : null;
+    public IRulesetFolder? FolderOf(string modName) => RulesetCache.Current.Get(modName)?.FolderLocation is { IsDirectory: true } folder ? folder : null;
 }
 
 /// <summary>Builds and checks the per-mod checksum manifest (T247). Reads only the allowed ruleset files (<see cref="ModSyncRules.AllowedFiles"/>) and enforces the size caps.</summary>

@@ -5,7 +5,7 @@ namespace Unciv.Relay;
 /// <summary>PROXY protocol v1 and v2 headers (what nginx <c>proxy_protocol on</c> sends first): only the client address is taken from it.</summary>
 public static class ProxyProtocol
 {
-    private static readonly byte[] V2Signature = [0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A];
+    private static ReadOnlySpan<byte> V2Signature => [0x0D, 0x0A, 0x0D, 0x0A, 0x00, 0x0D, 0x0A, 0x51, 0x55, 0x49, 0x54, 0x0A];
 
     /// <summary>Reads one header; the client address, or null for a header that carries none (v1 UNKNOWN, v2 LOCAL). Throws <see cref="InvalidDataException"/> for anything else.</summary>
     public static async Task<IPAddress?> ReadAsync(Stream stream, CancellationToken cancellationToken)
@@ -13,10 +13,10 @@ public static class ProxyProtocol
         var head = new byte[6];
         await ReadExactAsync(stream, head, cancellationToken).ConfigureAwait(false);
         if (head.AsSpan().SequenceEqual("PROXY "u8)) return await ReadV1Async(stream, cancellationToken).ConfigureAwait(false);
-        if (!head.AsSpan().SequenceEqual(V2Signature.AsSpan(0, 6))) throw new InvalidDataException("not a PROXY header");
+        if (!head.AsSpan().SequenceEqual(V2Signature[..6])) throw new InvalidDataException("not a PROXY header");
         var rest = new byte[10]; // signature tail (6), version/command, family, length (2)
         await ReadExactAsync(stream, rest, cancellationToken).ConfigureAwait(false);
-        if (!rest.AsSpan(0, 6).SequenceEqual(V2Signature.AsSpan(6, 6))) throw new InvalidDataException("bad PROXY v2 signature");
+        if (!rest.AsSpan(0, 6).SequenceEqual(V2Signature[6..12])) throw new InvalidDataException("bad PROXY v2 signature");
         var versionCommand = rest[6];
         var family = rest[7];
         var length = (rest[8] << 8) | rest[9];

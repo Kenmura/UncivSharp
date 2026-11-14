@@ -15,9 +15,9 @@ public static class RulesetLocator
     public static Ruleset LoadDefault()
     {
         System.IO.Directory.CreateDirectory(UserPaths.Mods);
-        RulesetCache.Clear();
-        RulesetCache.LoadRulesets(FileSource());
-        return RulesetCache.Get(BaseRuleset.Civ_V_BNW.FullName())
+        RulesetCache.Current.Clear();
+        RulesetCache.Current.LoadRulesets(FileSource());
+        return RulesetCache.Current.Get(BaseRuleset.Civ_V_BNW.FullName())
             ?? throw new InvalidOperationException("The default ruleset " + BaseRuleset.Civ_V_BNW.FullName() + " did not load");
     }
 

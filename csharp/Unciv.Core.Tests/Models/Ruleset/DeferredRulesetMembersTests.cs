@@ -241,7 +241,7 @@ public class DeferredRulesetMembersTests
     [Fact]
     public void GnkMaritimeCityStateTypeHasCoastStartBiasUnique()
     {
-        var ruleset = RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName())!;
+        var ruleset = RulesetCache.Current.Get(BaseRuleset.Civ_V_GnK.FullName())!;
         var maritime = ruleset.CityStateTypes["Maritime"];
         Assert.Contains(maritime.UniqueMap.GetMatchingUniques(UniqueType.StartBias, GameContext.IgnoreConditionalsState),
             it => it.Params[0] == "Coast");

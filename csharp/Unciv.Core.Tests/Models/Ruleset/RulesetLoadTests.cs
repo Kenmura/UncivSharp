@@ -14,12 +14,11 @@ namespace Unciv.Core.Tests.Models.Ruleset;
 [Collection("RulesetCache")]
 public sealed class RulesetLoadTests : IDisposable
 {
-    public RulesetLoadTests() => RulesetCache.Clear();
+    public RulesetLoadTests() => RulesetCache.Current.Clear();
 
     public void Dispose()
     {
-        RulesetCache.Clear();
-        RulesetClass.IsUniqueValid = (_, _) => true;
+        RulesetCache.Current.Clear();
     }
 
     // region in-memory files
@@ -65,9 +64,10 @@ public sealed class RulesetLoadTests : IDisposable
 
     private static MemoryFolder Folder(Dictionary<string, object> files) => new("jsons", files);
 
-    private static RulesetClass Load(Dictionary<string, object> files, string name = "Test", IRulesetFolder? global = null)
+    private static RulesetClass Load(Dictionary<string, object> files, string name = "Test", IRulesetFolder? global = null, Func<RulesetClass, string, bool>? isUniqueValid = null)
     {
         var ruleset = new RulesetClass { Name = name };
+        if (isUniqueValid != null) ruleset.IsUniqueValid = isUniqueValid;
         ruleset.Load(Folder(files), global);
         return ruleset;
     }
@@ -90,7 +90,7 @@ public sealed class RulesetLoadTests : IDisposable
     private static RulesetClass PutVanilla()
     {
         var vanilla = Load(VanillaFiles(), BaseRuleset.Civ_V_Vanilla.FullName());
-        RulesetCache.Put(vanilla.Name, vanilla);
+        RulesetCache.Current.Put(vanilla.Name, vanilla);
         return vanilla;
     }
 
@@ -291,8 +291,10 @@ public sealed class RulesetLoadTests : IDisposable
     public void FallbackCityStateTypesKeepOnlyUniquesThePolicyAccepts()
     {
         PutVanilla();
-        RulesetClass.IsUniqueValid = (_, unique) => unique.Contains("[+5 Culture]", StringComparison.Ordinal);
-        var ruleset = Load(new() { ["ModOptions.json"] = """{ "isBaseRuleset": true }""" }, "MyBase");
+        var ruleset = Load(
+            new() { ["ModOptions.json"] = """{ "isBaseRuleset": true }""" },
+            "MyBase",
+            isUniqueValid: (_, unique) => unique.Contains("[+5 Culture]", StringComparison.Ordinal));
 
         var cultured = ruleset.CityStateTypes["Cultured"];
         Assert.Equal([1, 2, 3], cultured.Color);
@@ -649,7 +651,7 @@ public sealed class RulesetLoadTests : IDisposable
     public void ToStringAndSummary()
     {
         PutVanilla();
-        var combined = RulesetCache.GetComplexRuleset(new LinkedHashSet<string>());
+        var combined = RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>());
         Assert.Equal("", combined.Name);
         Assert.Equal(BaseRuleset.Civ_V_Vanilla.FullName(), combined.ToString()); // one base ruleset
         var two = new RulesetClass();
@@ -712,24 +714,24 @@ public sealed class RulesetLoadTests : IDisposable
             ["readme.txt"] = "not a folder",
             ["OtherBase"] = new Dictionary<string, object> { ["jsons"] = BaseFiles("Other Unit") },
         };
-        RulesetCache.Put("Stale", new RulesetClass { Name = "Stale" });
+        RulesetCache.Current.Put("Stale", new RulesetClass { Name = "Stale" });
 
-        var errors = RulesetCache.LoadRulesets(new MemorySource(builtins, mods));
+        var errors = RulesetCache.Current.LoadRulesets(new MemorySource(builtins, mods));
 
         Assert.Equal("Exception loading mod 'Broken':", errors[0]);
         Assert.StartsWith("  ", errors[1]);
         Assert.True(errors.Count >= 2); // the cause is added when its message mentions a line, even when it is the exception itself (as upstream)
-        Assert.False(RulesetCache.ContainsKey("Stale")); // replaced as a whole
-        Assert.False(RulesetCache.ContainsKey("Broken"));
-        Assert.False(RulesetCache.ContainsKey(".hidden"));
-        Assert.False(RulesetCache.ContainsKey("readme.txt"));
-        Assert.Equal(6, RulesetCache.Count);
-        Assert.Equal(["Vanilla Unit"], RulesetCache.Get(BaseRuleset.Civ_V_Vanilla.FullName())!.Units.Keys);
-        var alpha = RulesetCache.Get("Alpha")!;
+        Assert.False(RulesetCache.Current.ContainsKey("Stale")); // replaced as a whole
+        Assert.False(RulesetCache.Current.ContainsKey("Broken"));
+        Assert.False(RulesetCache.Current.ContainsKey(".hidden"));
+        Assert.False(RulesetCache.Current.ContainsKey("readme.txt"));
+        Assert.Equal(6, RulesetCache.Current.Count);
+        Assert.Equal(["Vanilla Unit"], RulesetCache.Current.Get(BaseRuleset.Civ_V_Vanilla.FullName())!.Units.Keys);
+        var alpha = RulesetCache.Current.Get("Alpha")!;
         Assert.Equal("Alpha", alpha.Name);
         Assert.NotNull(alpha.FolderLocation);
-        Assert.Null(RulesetCache.Get(BaseRuleset.Civ_V_Vanilla.FullName())!.FolderLocation);
-        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Civ V - Brave New World", "OtherBase"], RulesetCache.GetSortedBaseRulesets());
+        Assert.Null(RulesetCache.Current.Get(BaseRuleset.Civ_V_Vanilla.FullName())!.FolderLocation);
+        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Civ V - Brave New World", "OtherBase"], RulesetCache.Current.GetSortedBaseRulesets());
     }
 
     [Fact]
@@ -741,10 +743,10 @@ public sealed class RulesetLoadTests : IDisposable
             [BaseRuleset.Civ_V_GnK.FullName()] = BaseFiles("G"),
             [BaseRuleset.Civ_V_BNW.FullName()] = BaseFiles("B"),
         };
-        Assert.Empty(RulesetCache.LoadRulesets(new MemorySource(builtins, []), noMods: true));
-        Assert.Equal(3, RulesetCache.Count);
-        Assert.Equal(["B"], RulesetCache.Get(BaseRuleset.Civ_V_BNW.FullName())!.Units.Keys);
-        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Civ V - Brave New World"], RulesetCache.GetSortedBaseRulesets());
+        Assert.Empty(RulesetCache.Current.LoadRulesets(new MemorySource(builtins, []), noMods: true));
+        Assert.Equal(3, RulesetCache.Current.Count);
+        Assert.Equal(["B"], RulesetCache.Current.Get(BaseRuleset.Civ_V_BNW.FullName())!.Units.Keys);
+        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Civ V - Brave New World"], RulesetCache.Current.GetSortedBaseRulesets());
     }
 
     [Fact]
@@ -757,8 +759,8 @@ public sealed class RulesetLoadTests : IDisposable
             [BaseRuleset.Civ_V_BNW.FullName()] = BaseFiles("B"),
         };
         var mods = new Dictionary<string, object> { ["Alpha"] = new Dictionary<string, object> { ["jsons"] = new Dictionary<string, object>() } };
-        Assert.Empty(RulesetCache.LoadRulesets(new MemorySource(builtins, mods), noMods: true));
-        Assert.Equal(3, RulesetCache.Count);
+        Assert.Empty(RulesetCache.Current.LoadRulesets(new MemorySource(builtins, mods), noMods: true));
+        Assert.Equal(3, RulesetCache.Current.Count);
     }
 
     [Fact]
@@ -771,28 +773,28 @@ public sealed class RulesetLoadTests : IDisposable
             ["file"] = "x",
         };
         var source = new MemorySource([], mods);
-        RulesetCache.Put("Alpha", new RulesetClass { Name = "Alpha" });
+        RulesetCache.Current.Put("Alpha", new RulesetClass { Name = "Alpha" });
 
-        Assert.Equal(["No such mod"], RulesetCache.ReloadSingleRuleset(source, "Missing"));
-        Assert.Equal(["No such mod"], RulesetCache.ReloadSingleRuleset(source, "file"));
-        Assert.Empty(RulesetCache.ReloadSingleRuleset(source, "Alpha"));
-        Assert.Equal(["A2"], RulesetCache.Get("Alpha")!.Buildings.Keys);
-        Assert.NotEmpty(RulesetCache.ReloadSingleRuleset(source, "Bad"));
-        Assert.False(RulesetCache.ContainsKey("Bad"));
+        Assert.Equal(["No such mod"], RulesetCache.Current.ReloadSingleRuleset(source, "Missing"));
+        Assert.Equal(["No such mod"], RulesetCache.Current.ReloadSingleRuleset(source, "file"));
+        Assert.Empty(RulesetCache.Current.ReloadSingleRuleset(source, "Alpha"));
+        Assert.Equal(["A2"], RulesetCache.Current.Get("Alpha")!.Buildings.Keys);
+        Assert.NotEmpty(RulesetCache.Current.ReloadSingleRuleset(source, "Bad"));
+        Assert.False(RulesetCache.Current.ContainsKey("Bad"));
     }
 
     [Fact]
     public void SortedBaseRulesetsPutBuiltinsFirstThenAlphabetical()
     {
-        Assert.Empty(RulesetCache.GetSortedBaseRulesets());
+        Assert.Empty(RulesetCache.Current.GetSortedBaseRulesets());
         void Add(string name, bool isBase) =>
-            RulesetCache.Put(name, new RulesetClass { Name = name, ModOptions = { IsBaseRuleset = isBase } });
+            RulesetCache.Current.Put(name, new RulesetClass { Name = name, ModOptions = { IsBaseRuleset = isBase } });
         Add("Zed", true);
         Add("Civ V - Gods & Kings", true);
         Add("Mod", false);
         Add("Abc", true);
         Add("Civ V - Vanilla", true);
-        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Abc", "Zed"], RulesetCache.GetSortedBaseRulesets());
+        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Abc", "Zed"], RulesetCache.Current.GetSortedBaseRulesets());
     }
 
     [Fact]
@@ -800,7 +802,7 @@ public sealed class RulesetLoadTests : IDisposable
     {
         var vanilla = Base();
         vanilla.Name = BaseRuleset.Civ_V_Vanilla.FullName();
-        RulesetCache.Put(vanilla.Name, vanilla);
+        RulesetCache.Current.Put(vanilla.Name, vanilla);
         var modA = Load(new()
         {
             ["Buildings.json"] = """[ { "name": "Library", "requiredTech": "Writing" }, { "name": "Colossus", "isWonder": true, "requiredTech": "Masonry" }, { "name": "Fixed", "cost": 77, "requiredTech": "Masonry" }, { "name": "Free" } ]""",
@@ -808,11 +810,11 @@ public sealed class RulesetLoadTests : IDisposable
         }, "ModA");
         var modB = Load(new() { ["Buildings.json"] = """[ { "name": "Library", "cost": 5 } ]""" }, "ModB");
         var otherBase = Load(new() { ["ModOptions.json"] = """{ "isBaseRuleset": true }""" }, "OtherBase");
-        RulesetCache.Put("ModA", modA);
-        RulesetCache.Put("ModB", modB);
-        RulesetCache.Put("OtherBase", otherBase);
+        RulesetCache.Current.Put("ModA", modA);
+        RulesetCache.Current.Put("ModB", modB);
+        RulesetCache.Current.Put("OtherBase", otherBase);
 
-        var combined = RulesetCache.GetComplexRuleset(new LinkedHashSet<string>(["ModA", "Unloaded", "OtherBase", "ModB"]), "Nonexistent base");
+        var combined = RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>(["ModA", "Unloaded", "OtherBase", "ModB"]), "Nonexistent base");
 
         Assert.Equal("", combined.Name);
         Assert.Equal([BaseRuleset.Civ_V_Vanilla.FullName(), "ModA", "ModB"], combined.Mods); // the fallback base, then the mods; OtherBase and Unloaded are dropped
@@ -832,18 +834,18 @@ public sealed class RulesetLoadTests : IDisposable
     {
         PutVanilla();
         var gnk = Load(new() { ["ModOptions.json"] = """{ "isBaseRuleset": true, "tileset": "GnkTiles" }""", ["Buildings.json"] = """[ { "name": "Shrine" } ]""" }, BaseRuleset.Civ_V_GnK.FullName());
-        RulesetCache.Put(gnk.Name, gnk);
+        RulesetCache.Current.Put(gnk.Name, gnk);
         var mod = Load(new() { ["Buildings.json"] = """[ { "name": "Modded" } ]""" }, "Mod");
-        RulesetCache.Put("Mod", mod);
+        RulesetCache.Current.Put("Mod", mod);
 
         var parameters = new GameParameters { BaseRuleset = gnk.Name, Mods = new LinkedHashSet<string>(["Mod"]) };
-        var combined = RulesetCache.GetComplexRuleset(parameters);
+        var combined = RulesetCache.Current.GetComplexRuleset(parameters);
         Assert.Equal(["Shrine", "Modded"], combined.Buildings.Keys);
         Assert.Equal("GnkTiles", combined.ModOptions.Tileset);
         Assert.Equal([gnk.Name, "Mod"], combined.Mods);
 
         // A "mod" that is a base ruleset is not a valid base either: falls back to vanilla
-        var fallback = RulesetCache.GetComplexRuleset(new LinkedHashSet<string>(), "Mod");
+        var fallback = RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>(), "Mod");
         Assert.Equal([BaseRuleset.Civ_V_Vanilla.FullName()], fallback.Mods);
     }
 
@@ -851,7 +853,7 @@ public sealed class RulesetLoadTests : IDisposable
     public void GetVanillaRulesetIsAClone()
     {
         var vanilla = PutVanilla();
-        var clone = RulesetCache.GetVanillaRuleset();
+        var clone = RulesetCache.Current.GetVanillaRuleset();
         Assert.NotSame(vanilla, clone);
         Assert.Equal(vanilla.Name, clone.Name);
         Assert.True(clone.ModOptions.IsBaseRuleset);
@@ -860,7 +862,7 @@ public sealed class RulesetLoadTests : IDisposable
     [Fact]
     public void ThresholdDefault()
     {
-        Assert.Equal(0.15, RulesetCache.UniqueMisspellingThreshold);
+        Assert.Equal(0.15, RulesetCache.Current.UniqueMisspellingThreshold);
     }
 
     // endregion
@@ -880,12 +882,12 @@ public sealed class RulesetLoadTests : IDisposable
     [Fact]
     public void ShippedRulesetsLoadAndCombine()
     {
-        var errors = RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(JsonsPath(), Path.Combine(JsonsPath(), "no mods here")));
+        var errors = RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(JsonsPath(), Path.Combine(JsonsPath(), "no mods here")));
         Assert.Empty(errors);
 
-        var vanilla = RulesetCache.Get(BaseRuleset.Civ_V_Vanilla.FullName())!;
-        var gnk = RulesetCache.Get(BaseRuleset.Civ_V_GnK.FullName())!;
-        var bnw = RulesetCache.Get(BaseRuleset.Civ_V_BNW.FullName())!;
+        var vanilla = RulesetCache.Current.Get(BaseRuleset.Civ_V_Vanilla.FullName())!;
+        var gnk = RulesetCache.Current.Get(BaseRuleset.Civ_V_GnK.FullName())!;
+        var bnw = RulesetCache.Current.Get(BaseRuleset.Civ_V_BNW.FullName())!;
         Assert.Equal(74, vanilla.Technologies.Count);
         Assert.Equal(["Ancient era", "Classical era", "Medieval era", "Renaissance era", "Industrial era", "Modern era", "Atomic era", "Information era", "Future era"], vanilla.Eras.Keys);
         Assert.Equal(Enumerable.Range(0, vanilla.Eras.Count), vanilla.Eras.Values.Select(it => it.EraNumber));
@@ -897,10 +899,10 @@ public sealed class RulesetLoadTests : IDisposable
         Assert.True(vanilla.Policies.ContainsKey("Tradition Complete"));
         Assert.NotNull(vanilla.RoadImprovement);
         Assert.NotNull(vanilla.RailroadImprovement);
-        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Civ V - Brave New World"], RulesetCache.GetSortedBaseRulesets());
+        Assert.Equal(["Civ V - Vanilla", "Civ V - Gods & Kings", "Civ V - Brave New World"], RulesetCache.Current.GetSortedBaseRulesets());
         Assert.NotNull(vanilla.AllHappinessLevelsThatAffectUniques);
 
-        var combined = RulesetCache.GetComplexRuleset(new GameParameters());
+        var combined = RulesetCache.Current.GetComplexRuleset(new GameParameters());
         Assert.Equal(bnw.Name, combined.Mods.Single());
         Assert.Equal(bnw.Buildings.Keys, combined.Buildings.Keys);
         // building costs are filled from the tech columns
@@ -928,6 +930,20 @@ public sealed class RulesetLoadTests : IDisposable
             ["Policies.json"] = """[ { "name": "Tradition", "era": "Ancient era", "policies": [ { "name": "Aristocracy" } ] } ]""",
         }));
         Assert.Equal(0, ruleset.PolicyBranches["Tradition"].Priorities["Cultural"]);
+    }
+
+    [Fact]
+    public void RulesetCacheUseScopesCurrentAndRestoresPreviousOnDispose()
+    {
+        var outer = RulesetCache.Current;
+        var scoped = new RulesetCache();
+        scoped.Put("Custom", new RulesetClass { Name = "Custom" });
+        using (RulesetCache.Use(scoped))
+        {
+            Assert.Same(scoped, RulesetCache.Current);
+            Assert.True(RulesetCache.Current.ContainsKey("Custom"));
+        }
+        Assert.Same(outer, RulesetCache.Current);
     }
 
     // endregion

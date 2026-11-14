@@ -16,7 +16,7 @@ internal sealed class BaseRulesetValidator : RulesetValidator
 {
     // for UnitTypes fallback, used only if a mod fails to provide
     // the UnitTypes entirely (ruleset.unitTypes.isEmpty() is true).
-    private readonly KotlinLazy<Ruleset> vanillaRuleset = new(RulesetCache.GetVanillaRuleset);
+    private readonly KotlinLazy<Ruleset> vanillaRuleset = new(RulesetCache.Current.GetVanillaRuleset);
 
     /// <summary>Collects known technology prerequisite paths: key is the technology name, value a Set of its prerequisites including indirect ones</summary>
     private readonly Dictionary<string, HashSet<string>> prereqsHashMap = [];

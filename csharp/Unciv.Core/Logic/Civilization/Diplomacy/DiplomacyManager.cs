@@ -756,10 +756,10 @@ public class DiplomacyManager : IsPartOfGameInfoSerialization
     private void ActivateDenounceEffects()
     {
         // This shows the relationship at the point of denouncing
-        Log.Debug("%s (opinion: %.1f, smoothed opinion change: %.1f) decided to denounce %s because...", CivInfo.CivName,
+        Log.Null.Debug("%s (opinion: %.1f, smoothed opinion change: %.1f) decided to denounce %s because...", CivInfo.CivName,
             (Func<object?>)(() => OpinionOfOtherCiv()), (Func<object?>)(() => SmoothedOpinionDelta()), OtherCivName);
         foreach (var (modifier, value) in DiplomaticModifiers)
-            Log.Debug("- %s: %.1f", modifier, value);
+            Log.Null.Debug("- %s: %.1f", modifier, value);
 
         // the other civ's opinion of us will drop by 35 if we are the only civ to denounce them
         // if they have already been denounced by many others, our denouncement will not surprise / anger them quite as much
@@ -767,7 +767,7 @@ public class DiplomacyManager : IsPartOfGameInfoSerialization
         int activeDenunciationsAgainstOtherCiv = OtherCiv.GetKnownCivs().Count(
             it => it.GetDiplomacyManager(OtherCiv).NotNull().HasFlag(DiplomacyFlags.Denunciation));
         float otherCivOpinionChangeFromBeingDenounced = InitialOpinionChangeWhenDenounced * KotlinMath.Pow(2f, -0.5f * activeDenunciationsAgainstOtherCiv);
-        Log.Debug("%s is upset that %s denounced them: %.1f opinion", OtherCivName, CivInfo.CivName, otherCivOpinionChangeFromBeingDenounced);
+        Log.Null.Debug("%s is upset that %s denounced them: %.1f opinion", OtherCivName, CivInfo.CivName, otherCivOpinionChangeFromBeingDenounced);
         OtherCivDiplomacy().SetModifier(Modifier.Denunciation, otherCivOpinionChangeFromBeingDenounced);
 
         // denouncements are active for 30 turns

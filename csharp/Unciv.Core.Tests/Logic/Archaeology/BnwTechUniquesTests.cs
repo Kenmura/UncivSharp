@@ -13,9 +13,9 @@ namespace Unciv.Core.Tests.Logic.Archaeology;
 [Collection("RulesetCache")]
 public sealed class BnwTechUniquesTests : IDisposable
 {
-    public BnwTechUniquesTests() => RulesetCache.Clear();
+    public BnwTechUniquesTests() => RulesetCache.Current.Clear();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static GameInfo NewBnwGame()
     {

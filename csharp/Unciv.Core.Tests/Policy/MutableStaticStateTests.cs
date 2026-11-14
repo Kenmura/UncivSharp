@@ -5,42 +5,36 @@ using Unciv.Mathematics;
 
 namespace Unciv.Core.Tests.Policy;
 
-// Policy (T117): Unciv.Core must not hold shared mutable static state; it breaks determinism and makes parallel tests
+// Policy (T117, T424): Unciv.Core and Unciv.Assets must not hold shared mutable static state; it breaks determinism and makes parallel tests
 // flaky. Flagged: non-readonly/non-const static fields, public static properties with setters, and static readonly
-// fields of mutable collection types. Legitimate exceptions go in MutableStaticStateAllowlist with a JUSTIFY reason.
+// fields of mutable collection types.
 public class MutableStaticStateTests
 {
     private static readonly Assembly CoreAssembly = typeof(Vector2).Assembly;
+    private static readonly Assembly AssetsAssembly = typeof(Unciv.Assets.Localization.ClientLocalization).Assembly;
 
     private const BindingFlags AllStatics = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
     [Fact]
-    public void CoreHasNoUnlistedMutableStaticState()
+    public void CoreHasNoMutableStaticState()
     {
-        var violations = FindViolations().Where(v => !MutableStaticStateAllowlist.Entries.ContainsKey(v.Key)).Select(v => $"{v.Key}: {v.Reason}").ToList();
+        var violations = FindViolations(CoreAssembly).Select(v => $"{v.Key}: {v.Reason}").ToList();
         Assert.True(violations.Count == 0,
-            "Mutable static state in Unciv.Core (make it instance state, immutable, or add to MutableStaticStateAllowlist with a JUSTIFY reason):\n" + string.Join("\n", violations));
+            "Mutable static state in Unciv.Core (make it instance state or immutable):\n" + string.Join("\n", violations));
     }
 
     [Fact]
-    public void AllowlistEntriesAreJustifiedAndStillNeeded()
+    public void AssetsHasNoMutableStaticState()
     {
-        var found = FindViolations().Select(v => v.Key).ToHashSet(StringComparer.Ordinal);
-        var problems = new List<string>();
-        foreach (var (key, reason) in MutableStaticStateAllowlist.Entries)
-        {
-            if (string.IsNullOrWhiteSpace(reason) || !reason.StartsWith("JUSTIFY:", StringComparison.Ordinal))
-                problems.Add($"{key}: reason must start with 'JUSTIFY:'");
-            if (!found.Contains(key))
-                problems.Add($"{key}: stale allowlist entry (no longer a violation)");
-        }
-        Assert.True(problems.Count == 0, string.Join("\n", problems));
+        var violations = FindViolations(AssetsAssembly).Select(v => $"{v.Key}: {v.Reason}").ToList();
+        Assert.True(violations.Count == 0,
+            "Mutable static state in Unciv.Assets (make it instance state or immutable):\n" + string.Join("\n", violations));
     }
 
-    private static List<(string Key, string Reason)> FindViolations()
+    public static List<(string Key, string Reason)> FindViolations(Assembly assembly)
     {
         var result = new List<(string, string)>();
-        foreach (var type in CoreAssembly.GetTypes())
+        foreach (var type in assembly.GetTypes())
         {
             if (type.GetCustomAttribute<CompilerGeneratedAttribute>() != null || type.FullName?.StartsWith('<') == true) continue;
             if (IsInsideCompilerGeneratedType(type)) continue;

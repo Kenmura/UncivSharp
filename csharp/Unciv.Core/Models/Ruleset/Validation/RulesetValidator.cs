@@ -685,7 +685,7 @@ public class RulesetValidator
 
     protected static List<string> GetPossibleMisspellings(string originalText, IEnumerable<string> possibleMisspellings) =>
         possibleMisspellings.Where(it =>
-            TextSimilarity.GetRelativeTextDistance(it, originalText) <= RulesetCache.UniqueMisspellingThreshold).ToList();
+            TextSimilarity.GetRelativeTextDistance(it, originalText) <= RulesetCache.Current.UniqueMisspellingThreshold).ToList();
 
     private static void CheckContrasts(EngineColor innerColor, EngineColor outerColor, RulesetObject nation, RulesetErrorList lines)
     {

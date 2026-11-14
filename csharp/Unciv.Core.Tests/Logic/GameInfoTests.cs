@@ -22,13 +22,13 @@ public sealed class GameInfoTests : IDisposable
 
     public GameInfoTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {
@@ -523,7 +523,7 @@ public sealed class GameInfoTests : IDisposable
     [Fact]
     public void SetTransients_RenamesModsWithOuterBlanksAndFixesDashedNames()
     {
-        RulesetCache.Put("Dash Mod", new RulesetClass { Name = "Dash Mod" });
+        RulesetCache.Current.Put("Dash Mod", new RulesetClass { Name = "Dash Mod" });
         var game = NewGame(("Babylon", PlayerType.Human));
         game.GameParameters.Mods.Add("Dash-Mod");
         game.SetTransients();
@@ -535,8 +535,8 @@ public sealed class GameInfoTests : IDisposable
     public void SetTransients_FixesADashedBaseRuleset()
     {
         var game = NewGame(("Babylon", PlayerType.Human));
-        var copy = RulesetCache.GetVanillaRuleset();
-        RulesetCache.Put("My Base", copy);
+        var copy = RulesetCache.Current.GetVanillaRuleset();
+        RulesetCache.Current.Put("My Base", copy);
         game.GameParameters.BaseRuleset = "My-Base";
         // the combined ruleset cannot name the base "My Base" here, so only the parameter fix is observable
         try { game.SetTransients(); }

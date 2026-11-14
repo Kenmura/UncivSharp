@@ -625,10 +625,10 @@ public static class DiplomacyAutomation
         }
 
         // debugging: records every civ's opinion of every other civ
-        Log.Debug(civView.CivName);
+        Log.Null.Debug(civView.CivName);
         void Debug(DiplomacyManager diplomacy, int numberOfActiveDenouncements)
         {
-            Log.Debug(
+            Log.Null.Debug(
                 "-> %s: %.1f (%.1f), %.1f / %.1f",
                 diplomacy.OtherCivName,
                 (Func<object?>)(() => diplomacy.OpinionOfOtherCiv()),

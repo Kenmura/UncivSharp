@@ -46,7 +46,7 @@ public sealed class UnitSheetScenario : Scenario
         float yaw = float.TryParse(GpuBenchScenario.Bench("UNCIV_SHEET_YAW"), NumberStyles.Float, CultureInfo.InvariantCulture, out float yw) ? yw : 0f;
         var ruleset = session.Game.Ruleset;
         var registry = AssetRegistry.ForRuleset(ruleset);
-        var gods = RulesetCache.Get("Civ V - Gods & Kings") ?? ruleset;
+        var gods = RulesetCache.Current.Get("Civ V - Gods & Kings") ?? ruleset;
         RulesetClass Of(string unit) => ruleset.Units.ContainsKey(unit) ? ruleset : gods;
         var colours = new[] { PlaceholderPalette.AttackTint, PlaceholderPalette.ReachableTint };
         var nations = (GpuBenchScenario.Bench("UNCIV_SHEET_NATIONS") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Where(n => ruleset.Nations.ContainsKey(n)).ToArray();

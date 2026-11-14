@@ -515,15 +515,15 @@ public class MapRegions(Ruleset ruleset)
 
     private void LogAssignRegion(bool success, BiasTypes startBiasType, IMapRegionsCivilization civ, Region? region = null)
     {
-        if (Log.Backend.IsRelease) return;
+        if (Log.Null.Backend.IsRelease) return;
 
         var bias = civ.GetStartBias(Ruleset);
         var logCiv = civ.CivName + " " + "(" + string.Join(",", bias) + ")";
         var msg = success ? "(%s): %s to %s" : "no region (%s) found for %s";
         if (success)
-            Log.Debug(new Tag("assignRegions"), msg, startBiasType, logCiv, region);
+            Log.Null.Debug(new Tag("assignRegions"), msg, startBiasType, logCiv, region);
         else
-            Log.Debug(new Tag("assignRegions"), msg, startBiasType, logCiv);
+            Log.Null.Debug(new Tag("assignRegions"), msg, startBiasType, logCiv);
     }
 
     private void AssignCivToRegion(IMapRegionsCivilization civ, Region region)

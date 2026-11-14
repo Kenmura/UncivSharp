@@ -23,12 +23,12 @@ public sealed partial class DedicatedServerTests : IDisposable
     public DedicatedServerTests()
     {
         var jsons = Path.Combine(RepoRoot(), "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
     public void Dispose()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         try { Directory.Delete(root, recursive: true); } catch (IOException) { }
     }
 
@@ -198,7 +198,7 @@ public sealed partial class DedicatedServerTests : IDisposable
         var jsons = Path.Combine(RepoRoot(), "data", "jsons");
         foreach (var args in new[] { new[] { "--jsons", jsons }, [] }) // explicit folder, then the search upward from the working folder
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
             var sink = new Sink();
             using var stop = new CancellationTokenSource();
             var errors = new StringWriter();

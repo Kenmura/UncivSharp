@@ -80,7 +80,7 @@ public static class ViewDeltaBuilder
 
     public static ViewMark Capture(GameInfo gameInfo, CivilizationClass viewer)
     {
-        using (TurnProbe.Measure("View.Capture")) return CaptureCore(gameInfo, viewer);
+        using (TurnProbe.Measure(gameInfo.TurnProbe, "View.Capture")) return CaptureCore(gameInfo, viewer);
     }
 
     private static ViewMark CaptureCore(GameInfo gameInfo, CivilizationClass viewer)
@@ -164,11 +164,11 @@ public static class ViewDeltaBuilder
         IEnumerable<EngineEvent> events, long seq, TurnStatusDto turnStatus)
     {
         ClientSnapshot after;
-        using (TurnProbe.Measure("View.Snapshot")) after = SnapshotBuilder.Build(gameInfo, viewer, seq, turnStatus);
+        using (TurnProbe.Measure(gameInfo.TurnProbe, "View.Snapshot")) after = SnapshotBuilder.Build(gameInfo, viewer, seq, turnStatus);
         SnapshotDiff diff;
-        using (TurnProbe.Measure("View.Diff")) diff = SnapshotDiff.Compute(before, after);
+        using (TurnProbe.Measure(gameInfo.TurnProbe, "View.Diff")) diff = SnapshotDiff.Compute(before, after);
         ViewDelta built;
-        using (TurnProbe.Measure("View.Events")) built = Build(gameInfo, viewer, mark, events, seq);
+        using (TurnProbe.Measure(gameInfo.TurnProbe, "View.Events")) built = Build(gameInfo, viewer, mark, events, seq);
         var delta = built with { Diff = SnapshotBuilder.ToElement(diff), ViewHash = after.ViewHash };
         return (delta, after);
     }

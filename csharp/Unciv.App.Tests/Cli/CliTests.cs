@@ -14,7 +14,7 @@ public sealed class CliTests : IDisposable
 
     public void Dispose()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         Directory.Delete(dir, recursive: true);
     }
 

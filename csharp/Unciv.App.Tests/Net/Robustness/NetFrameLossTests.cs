@@ -24,10 +24,10 @@ public sealed class NetFrameLossTests : IDisposable
     public NetFrameLossTests()
     {
         var jsons = Path.Combine(RepoRoot(), "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string RepoRoot()
     {
@@ -83,9 +83,9 @@ public sealed class NetFrameLossTests : IDisposable
             new GameSetupInfo(
                 new GameParameters
                 {
-                    BaseRuleset = RulesetCache.GetVanillaRuleset().Name,
+                    BaseRuleset = RulesetCache.Current.GetVanillaRuleset().Name,
                     NumberOfCityStates = 0,
-                    VictoryTypes = RulesetCache.GetVanillaRuleset().Victories.Keys.ToList(),
+                    VictoryTypes = RulesetCache.Current.GetVanillaRuleset().Victories.Keys.ToList(),
                     Players = [new("Babylon", PlayerType.Human), new("Greece", PlayerType.AI)],
                 },
                 new MapParameters { Type = MapType.Pangaea, Shape = MapShape.Rectangular, Seed = 3, MapSize = MapSize.Tiny }),
@@ -131,7 +131,7 @@ public sealed class NetFrameLossTests : IDisposable
         await NextAsync(session, it => it is SnapshotReplaced);
 
         var tech = game.GetCivilization("Babylon").Tech;
-        var techs = RulesetCache.GetVanillaRuleset().Technologies.Values
+        var techs = RulesetCache.Current.GetVanillaRuleset().Technologies.Values
             .Where(t => !tech.IsResearched(t.Name) && !tech.IsUnresearchable(t) && t.Prerequisites.All(tech.IsResearched))
             .Select(t => t.Name).Take(4).ToList();
         Assert.Equal(4, techs.Count);

@@ -26,7 +26,7 @@ public static partial class NextTurnAutomation
         var unitsAtStart = civView.GetUnits();
         List<MapUnitView> UnitsInPriorityOrder()
         {
-            using (TurnProbe.Measure("AI.UnitPriorityOrder"))
+            using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.UnitPriorityOrder"))
                 return unitsAtStart.OrderBy(unit => GetUnitPriority(unit, isAtWar, cache)).ToList();
         }
 
@@ -86,20 +86,20 @@ public static partial class NextTurnAutomation
     {
         var civInfo = civView.GetCiv();
         HashSet<int> marching;
-        using (TurnProbe.Measure("AI.Operations")) marching = Civ5AiDriver.RunOperations(civInfo);   // T235: armies on their way are moved by their operation only
-        using (TurnProbe.Measure("AI.Tactical")) Civ5AiDriver.RunTactical(civInfo);
+        using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.Operations")) marching = Civ5AiDriver.RunOperations(civInfo);   // T235: armies on their way are moved by their operation only
+        using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.Tactical")) Civ5AiDriver.RunTactical(civInfo);
 
         void Automate(MapUnitView unit)
         {
             if (!IsStillOurUnit(unit, civView)) return;
             civInfo.GameInfo.ClientState.BeforeUnitMoves?.Invoke(unit);
-            using (TurnProbe.Measure("AI.AutomateUnitMoves")) UnitAutomation.AutomateUnitMoves(unit, cache);
+            using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.AutomateUnitMoves")) UnitAutomation.AutomateUnitMoves(unit, cache);
         }
 
         var ordered = unitsInPriorityOrder().Where(it => !marching.Contains(it.Unwrap().Id)).ToList();
         var byUnit = ordered.ToDictionary(it => it.Unwrap());   // lookup only, never iterated
         HashSet<MapUnitClass> handled;
-        using (TurnProbe.Measure("AI.Homeland")) handled = Civ5AiDriver.RunHomeland(civInfo, ordered.Select(it => it.Unwrap()).ToList(), unit => Automate(byUnit[unit]));
+        using (TurnProbe.Measure(civInfo.GameInfo.TurnProbe, "AI.Homeland")) handled = Civ5AiDriver.RunHomeland(civInfo, ordered.Select(it => it.Unwrap()).ToList(), unit => Automate(byUnit[unit]));
         if (civView.Cities().Count != 0) AutomateSettlerEscorting(civView);
         foreach (var unit in ordered)
         {

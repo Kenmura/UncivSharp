@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+using System.Collections.Immutable;
 using Unciv.Assets;
 
 namespace Unciv.GodotClient.Settings;
@@ -110,7 +112,7 @@ public enum HotkeyAction
 /// </summary>
 public static class Hotkeys
 {
-    private static readonly string[] ModifierOrder = ["Ctrl", "Alt", "Shift"];
+    private static readonly ImmutableArray<string> ModifierOrder = ["Ctrl", "Alt", "Shift"];
 
     /// <summary>The default key of every action.</summary>
     public static readonly IReadOnlyDictionary<HotkeyAction, string> Defaults = new Dictionary<HotkeyAction, string>
@@ -176,7 +178,7 @@ public static class Hotkeys
     };
 
     /// <summary>Keys that can never be bound (they close screens or are the always-on arrow pan keys).</summary>
-    private static readonly HashSet<string> Reserved = new(["Escape", "Left", "Right", "Up", "Down"], StringComparer.Ordinal);
+    private static readonly FrozenSet<string> Reserved = new[] { "Escape", "Left", "Right", "Up", "Down" }.ToFrozenSet(StringComparer.Ordinal);
 
     /// <summary>The canonical text of a key, or null when it is empty, only a modifier, reserved or malformed. Key names compare case-insensitively; a single letter is upper-cased.</summary>
     public static string? Normalize(string? text)

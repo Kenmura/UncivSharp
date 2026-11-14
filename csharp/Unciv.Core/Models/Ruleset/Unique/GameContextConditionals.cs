@@ -21,6 +21,8 @@ public interface IGameContextRuleset : IRulesetParameterView
     IReadOnlyList<string> DifficultyNames { get; }
     /// <summary><c>ruleset.buildings.values.filter { it.matchesFilter(filter) }.map { it.name }</c>, in ruleset order.</summary>
     IEnumerable<string> GetBuildingNamesMatchingFilter(string filter);
+    /// <summary>Cached set of building names matching <paramref name="filter"/> for this ruleset instance.</summary>
+    IReadOnlySet<string> GetCachedBuildingNamesMatchingFilter(string filter);
     /// <summary><c>ruleset.tileResources.values.filter { it.matchesFilter(filter, state) }.map { it.name }</c>, in ruleset order.</summary>
     IEnumerable<string> GetTileResourceNamesMatchingFilter(string filter, GameContext state);
     /// <summary><c>ruleset.technologies[techName]?.matchesFilter(filter, state)</c>; <c>null</c> when there is no such technology.</summary>

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
@@ -185,13 +186,13 @@ public sealed record RelayOptions
     /// <summary>How often the background sweep runs (expiry, idle splices, file reload); tests call the sweep themselves.</summary>
     public int SweepIntervalMillis { get; init; } = 1000;
 
-    private static readonly string[] Flags = ["self-signed", "proxy-protocol", "no-http", "http-tls", "metrics", "no-log-files"];
+    private static readonly ImmutableArray<string> Flags = ["self-signed", "proxy-protocol", "no-http", "http-tls", "metrics", "no-log-files"];
 
-    private static readonly string[] Texts =
+    private static readonly ImmutableArray<string> Texts =
         ["data-dir", "config", "bind", "tls", "cert", "key", "public-name", "trusted-proxy", "http-bind", "listing", "name", "contact", "motd", "log-level"];
 
     /// <summary>Numeric options: name, minimum, maximum. The maximum keeps arithmetic on them overflow-free.</summary>
-    private static readonly (string Name, long Min, long Max)[] Numbers =
+    private static readonly ImmutableArray<(string Name, long Min, long Max)> Numbers =
     [
         ("tunnel-port", 0, 65535), ("http-port", 0, 65535), ("max-rooms", 1, 100_000), ("max-splices", 1, 1_000_000), ("max-control-per-network", 1, 1000),
         ("max-rooms-per-network", 1, 1000), ("max-connections-per-network", 1, 100_000), ("max-joiners-per-room", 1, 1000), ("max-pending-per-room", 1, 1000),

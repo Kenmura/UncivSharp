@@ -456,7 +456,7 @@ public static class BenchRunner
         result.HostFromTurn = hostTurns > 0 ? hostFrom : 0;
         var host = hostTurns > 0 ? new HostMeasurement(game, probe, options.Recipients, result, options.HostParallel, options.HostIncrementalViews) : null;
         var total = Timestamp();
-        TurnProbe.Current = options.Probe ? probe : null;
+        game.TurnProbe = options.Probe ? probe : null;
         try
         {
             for (var played = 1; played <= turns; played++)
@@ -503,7 +503,7 @@ public static class BenchRunner
         }
         finally
         {
-            TurnProbe.Current = null;
+            game.TurnProbe = null;
         }
         // The checkpoint hash of the final state, split (the checkpoints stop when the scripted human is gone, so the per-turn numbers can hide it).
         probe.Paused = true;
@@ -610,16 +610,25 @@ public static class BenchRunner
         /// <summary>Runs work(0..recipients-1) like GameHost.BuildPerRecipient (strided over at most <c>parallel</c> tasks, the caller blocks until all end).</summary>
         private T[] Fan<T>(Func<int, T> work)
         {
-            var results = new T[recipients.Count];
-            var workers = Math.Min(parallel, recipients.Count);
-            // JUSTIFY: T297 bench of the host's optional parallel view building; read-only on the game, one recipient per index, the engine is idle meanwhile.
-            var tasks = Enumerable.Range(0, workers).Select(w => Task.Run(() =>
+            var savedProbe = game.TurnProbe;
+            game.TurnProbe = null;
+            try
             {
-                for (var i = w; i < results.Length; i += workers) results[i] = work(i);
-                return 0;
-            })).ToArray();
-            Task.WaitAll(tasks);
-            return results;
+                var results = new T[recipients.Count];
+                var workers = Math.Min(parallel, recipients.Count);
+                // JUSTIFY: T297 bench of the host's optional parallel view building; read-only on the game, one recipient per index, the engine is idle meanwhile.
+                var tasks = Enumerable.Range(0, workers).Select(w => Task.Run(() =>
+                {
+                    for (var i = w; i < results.Length; i += workers) results[i] = work(i);
+                    return 0;
+                })).ToArray();
+                Task.WaitAll(tasks);
+                return results;
+            }
+            finally
+            {
+                game.TurnProbe = savedProbe;
+            }
         }
 
         private void Before() => Measure(() =>

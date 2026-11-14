@@ -16,14 +16,13 @@ namespace Unciv.Core.Tests.Fixtures;
 [Collection("RulesetCache")]
 public sealed class GameSerializationFixtureTests : IDisposable
 {
-    private readonly bool saveZippedBackup = UncivFiles.SaveZipped;
     private readonly GameInfo game;
 
     public GameSerializationFixtureTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
 
         // Must be 1 human otherwise GameInfo.SetTransients crashes on the `if (currentPlayer == "")` line
         var param = new GameParameters
@@ -52,8 +51,7 @@ public sealed class GameSerializationFixtureTests : IDisposable
 
     public void Dispose()
     {
-        UncivFiles.SaveZipped = saveZippedBackup;
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
     }
 
     private static string JsonsPath()
@@ -103,7 +101,7 @@ public sealed class GameSerializationFixtureTests : IDisposable
         }
     }
 
-    private static UncivFiles NewFiles() => new(new MemFile(""));
+    private static UncivFiles NewFiles(SaveOptions saveOptions = default) => new(new MemFile(""), saveOptions);
 
     [Fact]
     public void CanSerializeGame()
@@ -116,12 +114,12 @@ public sealed class GameSerializationFixtureTests : IDisposable
     public void CanSaveAndLoadUncompressedGame()
     {
         var saveFile = new MemFile("save");
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         game.Turns = 123;
         game.Version = CompatibilityVersion.FirstWithout;
 
-        NewFiles().SaveGame(game, saveFile);
-        var loadedGame = NewFiles().LoadGameFromFile(saveFile);
+        files.SaveGame(game, saveFile);
+        var loadedGame = files.LoadGameFromFile(saveFile);
 
         Assert.StartsWith("{", saveFile.Text, StringComparison.Ordinal);
         Assert.Equal(game.GameId, loadedGame.GameId);
@@ -136,11 +134,11 @@ public sealed class GameSerializationFixtureTests : IDisposable
     public void CanSaveAndLoadCompressedGame()
     {
         var saveFile = new MemFile("save");
-        UncivFiles.SaveZipped = true;
+        var files = NewFiles(new SaveOptions(Zipped: true));
         game.Turns = 123;
 
-        NewFiles().SaveGame(game, saveFile);
-        var loadedGame = NewFiles().LoadGameFromFile(saveFile);
+        files.SaveGame(game, saveFile);
+        var loadedGame = files.LoadGameFromFile(saveFile);
 
         Assert.DoesNotContain("{", saveFile.Text, StringComparison.Ordinal);
         Assert.Equal(game.GameId, loadedGame.GameId);
@@ -151,10 +149,9 @@ public sealed class GameSerializationFixtureTests : IDisposable
     [Fact]
     public void UncompressedSaveWritesDirectlyToFile()
     {
-        UncivFiles.SaveZipped = false;
         var saveFile = new MemFile("writer-only");
 
-        NewFiles().SaveGame(game, saveFile);
+        NewFiles(new SaveOptions(Zipped: false)).SaveGame(game, saveFile);
         var loadedGame = UncivFiles.GameInfoFromString(saveFile.Text);
 
         Assert.Equal(game.GameId, loadedGame.GameId);
@@ -163,10 +160,9 @@ public sealed class GameSerializationFixtureTests : IDisposable
     [Fact]
     public void SuccessfulSaveReportsCompletion()
     {
-        UncivFiles.SaveZipped = false;
         var calls = new List<Exception?>();
 
-        NewFiles().SaveGame(game, new MemFile("save"), calls.Add);
+        NewFiles(new SaveOptions(Zipped: false)).SaveGame(game, new MemFile("save"), calls.Add);
 
         Assert.Single(calls);
         Assert.Null(calls[0]);
@@ -175,10 +171,9 @@ public sealed class GameSerializationFixtureTests : IDisposable
     [Fact]
     public void FailedSaveReportsException()
     {
-        UncivFiles.SaveZipped = false;
         var calls = new List<Exception?>();
 
-        NewFiles().SaveGame(game, new MemFile("dir") { Directory = true }, calls.Add);
+        NewFiles(new SaveOptions(Zipped: false)).SaveGame(game, new MemFile("dir") { Directory = true }, calls.Add);
 
         Assert.Single(calls);
         Assert.NotNull(calls[0]);

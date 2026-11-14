@@ -85,7 +85,7 @@ public class RiverGenerator(TileMap tileMap, MapGenerationRandomness randomness,
             // Move on
             riverCoordinate = newCoordinate;
         }
-        Log.Debug("River reached max length!");
+        Log.Null.Debug("River reached max length!");
     }
 
     /// <summary>Describes a _Vertex_ on our hexagonal grid via a neighboring hex and clock direction, normalized

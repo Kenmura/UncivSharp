@@ -16,12 +16,12 @@ public sealed class TextPlaceholderGuardTests : IDisposable
 
     public TextPlaceholderGuardTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = Path.Combine(Path.GetDirectoryName(ClientFolder)!, "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string FindClientFolder()
     {
@@ -62,7 +62,7 @@ public sealed class TextPlaceholderGuardTests : IDisposable
     [InlineData(BaseRuleset.Civ_V_BNW)]
     public void EveryBaseRulesetObjectHasPackArtOrPerObjectPictogram(BaseRuleset baseRuleset)
     {
-        var ruleset = RulesetCache.Get(baseRuleset.FullName())!;
+        var ruleset = RulesetCache.Current.Get(baseRuleset.FullName())!;
         var resolver = new AssetResolver(new DiskFiles(), RulesetAssetKeys.FallbacksFor(ruleset), basePack: AssetResolver.BundledPack);
         var unresolved = BaseKeys(ruleset).Where(k => resolver.Resolve(k).Source != AssetSourceKind.Pack).ToList();
         var missing = unresolved.Where(k => !ObjectPictograms.Has(k)).Select(k => k.ToString()).Order().ToList();
@@ -91,7 +91,7 @@ public sealed class TextPlaceholderGuardTests : IDisposable
     [Fact]
     public void ResolvedPackFilesAreNotTheCategoryDefault()
     {
-        var ruleset = RulesetCache.GetVanillaRuleset();
+        var ruleset = RulesetCache.Current.GetVanillaRuleset();
         var resolver = new AssetResolver(new DiskFiles(), RulesetAssetKeys.FallbacksFor(ruleset), basePack: AssetResolver.BundledPack);
         Assert.Equal("icon/resource/Iron", resolver.Resolve(AssetKey.Of(RulesetAssetKeys.ResourceIcon, "Iron")).Matched.ToString());
         Assert.Equal("icon/promotion/Accuracy", resolver.Resolve(AssetKey.Of(RulesetAssetKeys.PromotionIcon, "Accuracy II")).Matched.ToString());

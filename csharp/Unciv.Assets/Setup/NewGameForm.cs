@@ -241,7 +241,7 @@ public sealed class NewGameForm
     /// <summary>The colours a nation is shown in (background, then text on it) from the current ruleset; null for a name the ruleset does not have (and for <see cref="Constants.Random"/>).</summary>
     public (Rgb Background, Rgb Text)? NationColours(string nation)
     {
-        colourRuleset ??= RulesetCache.GetComplexRuleset(new LinkedHashSet<string>(mods), BaseRuleset);
+        colourRuleset ??= RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>(mods), BaseRuleset);
         if (!colourRuleset.Nations.TryGetValue(nation, out var found)) return null;
         return (ToRgb(found.GetOuterColor()), ToRgb(found.GetInnerColor()));
     }
@@ -249,7 +249,7 @@ public sealed class NewGameForm
     /// <summary>C072: the detail of a nation of the current ruleset; null for a name it does not have (and for <see cref="Constants.Random"/>).</summary>
     public NationDetail? DescribeNation(string nation)
     {
-        colourRuleset ??= RulesetCache.GetComplexRuleset(new LinkedHashSet<string>(mods), BaseRuleset);
+        colourRuleset ??= RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>(mods), BaseRuleset);
         if (!colourRuleset.Nations.TryGetValue(nation, out var found)) return null;
         var avoids = found.StartBias.Where(it => it.StartsWith("Avoid ", StringComparison.Ordinal)).Select(it => it["Avoid ".Length..].Trim('[', ']')).ToList();
         var prefers = found.StartBias.Where(it => !it.StartsWith("Avoid ", StringComparison.Ordinal)).Select(it => it.Trim('[', ']')).ToList();

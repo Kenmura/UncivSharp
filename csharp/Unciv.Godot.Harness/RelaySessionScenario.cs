@@ -266,7 +266,7 @@ public sealed class RelaySessionScenario : Scenario
             {
                 Host.Visible = false;
                 Friend.Visible = false;
-                var ruleset = RulesetCache.GetComplexRuleset(new LinkedHashSet<string>(nations.Mods), nations.BaseRuleset);
+                var ruleset = RulesetCache.Current.GetComplexRuleset(new LinkedHashSet<string>(nations.Mods), nations.BaseRuleset);
                 net = new NetGameSession(friend.NotNull(), ruleset);
                 game = new GameScreen { NowMs = () => 5000 };
                 root.AddChild(game);

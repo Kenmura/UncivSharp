@@ -27,15 +27,15 @@ public sealed class NetPersistenceTests : IDisposable
 
     public NetPersistenceTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
     }
 
     public void Dispose()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         Directory.Delete(root, recursive: true);
     }
 

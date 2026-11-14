@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Globalization;
 
 namespace Unciv.Models.Ruleset.Unique.Expressions;
@@ -227,10 +228,10 @@ internal sealed class Parentheses : IOperator
 
 internal static class Operator
 {
-    private static readonly Dictionary<string, IOperator> Cache = BuildCache();
+    private static readonly FrozenDictionary<string, IOperator> Cache = BuildCache();
 
     // Entries later in the sequence overwrite earlier ones with the same symbol (Kotlin associateBy), e.g. UnaryOrBinary Minus replaces Negation and Subtraction.
-    private static Dictionary<string, IOperator> BuildCache()
+    private static FrozenDictionary<string, IOperator> BuildCache()
     {
         var cache = new Dictionary<string, IOperator>(StringComparer.Ordinal);
         foreach (var entry in UnaryOperators.Entries) cache[entry.Symbol] = entry;
@@ -239,7 +240,7 @@ internal static class Operator
         foreach (var entry in Functions.Entries) cache[entry.Symbol] = entry;
         foreach (var entry in NamedConstants.Entries) cache[entry.Symbol] = entry;
         foreach (var entry in Parentheses.Entries) cache[entry.Symbol] = entry;
-        return cache;
+        return cache.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
     public static IOperator? Of(string symbol) => Cache.GetValueOrDefault(symbol);

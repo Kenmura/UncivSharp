@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Unciv.Logic.Map;
 using Unciv.Net.Visibility;
 
@@ -50,7 +51,7 @@ public static class AccessibilityModel
         Math.Clamp(MathF.Round((ClampTextScale(current) + direction * TextScaleStep) * 100f, MidpointRounding.AwayFromZero) / 100f, MinTextScale, MaxTextScale);
 
     // Okabe-Ito / Tol-inspired colourblind-safe (Outer, Inner) pairs with strong luminance separation.
-    private static readonly (Unciv.Assets.Rgb Outer, Unciv.Assets.Rgb Inner)[] RedGreenSafe =
+    private static readonly ImmutableArray<(Unciv.Assets.Rgb Outer, Unciv.Assets.Rgb Inner)> RedGreenSafe =
     [
         (new(0x00, 0x72, 0xB2), new(0xFF, 0xFF, 0xFF)), // blue / white
         (new(0xE6, 0x9F, 0x00), new(0x11, 0x11, 0x11)), // orange / near-black
@@ -62,7 +63,7 @@ public static class AccessibilityModel
         (new(0x33, 0x22, 0x88), new(0xF4, 0xF1, 0xDE)), // indigo / cream
     ];
 
-    private static readonly (Unciv.Assets.Rgb Outer, Unciv.Assets.Rgb Inner)[] BlueYellowSafe =
+    private static readonly ImmutableArray<(Unciv.Assets.Rgb Outer, Unciv.Assets.Rgb Inner)> BlueYellowSafe =
     [
         (new(0xCC, 0x33, 0x11), new(0xFF, 0xFF, 0xFF)), // crimson / white
         (new(0x00, 0x99, 0x88), new(0xFF, 0xFF, 0xFF)), // teal / white
@@ -74,7 +75,7 @@ public static class AccessibilityModel
         (new(0x66, 0x11, 0x00), new(0xFF, 0xE6, 0xCC)), // maroon / peach
     ];
 
-    private static readonly (Unciv.Assets.Rgb Outer, Unciv.Assets.Rgb Inner)[] HighContrastPalette =
+    private static readonly ImmutableArray<(Unciv.Assets.Rgb Outer, Unciv.Assets.Rgb Inner)> HighContrastPalette =
     [
         (new(0x00, 0x5A, 0xB5), new(0xFF, 0xFF, 0xFF)),
         (new(0xDC, 0x32, 0x20), new(0xFF, 0xFF, 0xFF)),
@@ -109,7 +110,7 @@ public static class AccessibilityModel
             hash ^= ch;
             hash *= 16777619u;
         }
-        return palette[hash % (uint)palette.Length];
+        return palette[(int)(hash % (uint)palette.Length)];
     }
 
     /// <summary>Non-colour ownership/diplomacy cue for units and cities so relation is never conveyed by colour alone.</summary>

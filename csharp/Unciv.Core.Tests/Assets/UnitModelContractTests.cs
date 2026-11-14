@@ -121,12 +121,12 @@ public sealed class UnitModelContractTests
     [Fact]
     public void EveryHumanoidAndMountedUnitHasAModel()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = Path.Combine(ClientFolder, "..", "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         try
         {
-            var ruleset = RulesetCache.Get("Civ V - Gods & Kings")!;
+            var ruleset = RulesetCache.Current.Get("Civ V - Gods & Kings")!;
             var keys = UnitsManifestKeys().EnumerateObject().Select(it => it.Name).ToHashSet();
             var wanted = ruleset.Units.Values
                 .Where(it => !it.Name.StartsWith("SS ", StringComparison.Ordinal)).Select(it => it.Name).Order(StringComparer.Ordinal).ToList();
@@ -144,7 +144,7 @@ public sealed class UnitModelContractTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 
@@ -200,12 +200,12 @@ public sealed class UnitModelContractTests
     [Fact]
     public void RigidModelsHaveNoClipsAndArmourExposesItsTurret()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = Path.Combine(ClientFolder, "..", "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
         try
         {
-            var ruleset = RulesetCache.Get("Civ V - Gods & Kings")!;
+            var ruleset = RulesetCache.Current.Get("Civ V - Gods & Kings")!;
             var rigid = GeneratedRigidUnits();
             Assert.Equal(45, rigid.Count);
             foreach (var name in rigid.Where(it => it != "Battering Ram")) // T307: the ram is generated too, but its unit is no Gods & Kings one (TheBatteringRamIsARigidModel covers it)
@@ -230,7 +230,7 @@ public sealed class UnitModelContractTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 

@@ -160,7 +160,7 @@ public partial class GameInfo
 
         // Start our turn immediately before the player can make decisions - affects
         // whether our units can commit automated actions and then be attacked immediately etc.
-        using (TurnProbe.Measure("StartCivTurn.NotifyOfCloseEnemyUnits")) NotifyOfCloseEnemyUnits(player);
+        using (Utils.TurnProbe.Measure(TurnProbe, "StartCivTurn.NotifyOfCloseEnemyUnits")) NotifyOfCloseEnemyUnits(player);
 
         // This would belong at the end of TurnManager.startTurn, but needs to come after notifyOfCloseEnemyUnits
         player.NotificationCountAtStartTurn = player.Notifications.Count;
@@ -175,7 +175,7 @@ public partial class GameInfo
     /// </summary>
     internal void RefreshTransientCaches()
     {
-        using (TurnProbe.Measure("RefreshTransientCaches")) RefreshTransientCachesCore();
+        using (Utils.TurnProbe.Measure(TurnProbe, "RefreshTransientCaches")) RefreshTransientCachesCore();
     }
 
     private void RefreshTransientCachesCore()
@@ -239,7 +239,7 @@ public partial class GameInfo
                     if (!ReferenceEquals(tile.GetOwner(), civInfo))
                         city.StopWorkingTile(tile);
         // The tail of SetTransients: vision, civ-wide caches, then city and civ stats (Civ.Stats is not serialised, a load recomputes it).
-        using (TurnProbe.Measure("Refresh.UpdateCivilizationState")) UpdateCivilizationState();
+        using (Utils.TurnProbe.Measure(TurnProbe, "Refresh.UpdateCivilizationState")) UpdateCivilizationState();
         // A civ without cities is never reached by the city stat updates above: its Stats keep the value of its last update while a load starts
         // them at zero. Recompute them so both agree.
         foreach (var civInfo in Civilizations.Where(it => it.Cities.Count == 0))
@@ -253,11 +253,11 @@ public partial class GameInfo
         if (playerIndex == 0)
         {
             RefreshTransientCaches(); // T218: the stats the ranking history reads are canonical (a mid-round reload recomputes them)
-            using (TurnProbe.Measure("RecordRankingStats")) RecordRankingStats();
-            using (TurnProbe.Measure("ProcessLeagueTurn")) ProcessLeagueTurn();
+            using (Utils.TurnProbe.Measure(TurnProbe, "RecordRankingStats")) RecordRankingStats();
+            using (Utils.TurnProbe.Measure(TurnProbe, "ProcessLeagueTurn")) ProcessLeagueTurn();
             Turns++;
             if (EngineOptions.SimulateUntilTurn != 0)
-                Log.Debug("Starting simulation of turn %s", Turns);
+                Log.Null.Debug("Starting simulation of turn %s", Turns);
         }
         return playerIndex;
     }

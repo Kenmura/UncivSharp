@@ -60,11 +60,11 @@ public partial class AssetSheet : Node3D
             }
         }
         if (dir == null) throw new System.IO.DirectoryNotFoundException("csharp/data/jsons not found; pass --jsons=DIR");
-        RulesetCache.Clear();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(dir, System.IO.Path.Combine(dir, "no mods here")), noMods: true);
+        RulesetCache.Current.Clear();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(dir, System.IO.Path.Combine(dir, "no mods here")), noMods: true);
         // T363: deliberate Vanilla coverage, not a default choice. The sheet proves every key of the oldest (smallest) ruleset resolves;
         // the scenario game itself now plays Brave New World.
-        ruleset = RulesetCache.GetVanillaRuleset();
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
     }
 
     private int ResolveEveryKey()

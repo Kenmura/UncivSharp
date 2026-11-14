@@ -32,7 +32,7 @@ public class SetupQueryTests
     public void OptionsListNationsInRulesetOrderAndMarkChoosable()
     {
         var options = new NewGameOptionsQuery().Run();
-        var ruleset = Unciv.Models.Ruleset.RulesetCache.GetComplexRuleset(new Unciv.Utils.LinkedHashSet<string>(), options.BaseRuleset);
+        var ruleset = Unciv.Models.Ruleset.RulesetCache.Current.GetComplexRuleset(new Unciv.Utils.LinkedHashSet<string>(), options.BaseRuleset);
         Assert.Equal(ruleset.Nations.Values.Where(it => !it.IsBarbarian).Select(it => it.Name), options.Nations.Select(it => it.Name));
         Assert.Contains(options.Nations, it => it is { Name: "Germany", Choosable: true, IsMajorCiv: true });
         Assert.DoesNotContain(options.Nations, it => it.Name == "Barbarians");
@@ -60,7 +60,7 @@ public class SetupQueryTests
     public void OptionsFallBackToVanillaForUnknownBase()
     {
         var options = new NewGameOptionsQuery("No such ruleset", ["No such mod"]).Run();
-        Assert.Equal(Unciv.Models.Ruleset.RulesetCache.GetVanillaRuleset().Name, options.BaseRuleset);
+        Assert.Equal(Unciv.Models.Ruleset.RulesetCache.Current.GetVanillaRuleset().Name, options.BaseRuleset);
         Assert.Empty(options.Mods);
     }
 

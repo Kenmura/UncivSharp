@@ -53,12 +53,12 @@ public sealed class TestGame
         // Create a new ruleset we can easily edit, and set the important variables of gameInfo
         lock (RulesetLoadLock)
         {
-            if (RulesetCache.Count == 0)
+            if (RulesetCache.Current.Count == 0)
             {
                 var jsons = JsonsPath();
-                RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+                RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
             }
-            Ruleset = RulesetCache.Get(baseRuleset.FullName())!.Clone();
+            Ruleset = RulesetCache.Current.Get(baseRuleset.FullName())!.Clone();
         }
         Ruleset.AddGlobalUniques(addGlobalUniques);
 

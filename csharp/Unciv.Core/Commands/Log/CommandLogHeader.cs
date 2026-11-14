@@ -90,7 +90,7 @@ public sealed record CommandLogHeader
     /// <summary>FNV hash over the names of the rules the combined ruleset (base plus mods) defines, in their loaded order.</summary>
     public static string RulesetHashOf(GameParameters parameters)
     {
-        var ruleset = RulesetCache.GetComplexRuleset(parameters);
+        var ruleset = RulesetCache.Current.GetComplexRuleset(parameters);
         var hash = StateHasher.ComputeHash(h =>
         {
             h.Add(ruleset.Name);

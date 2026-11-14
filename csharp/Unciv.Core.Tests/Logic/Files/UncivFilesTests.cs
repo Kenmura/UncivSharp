@@ -23,21 +23,19 @@ namespace Unciv.Core.Tests.Logic.Files;
 [Collection("RulesetCache")]
 public sealed class UncivFilesTests : IDisposable
 {
-    private readonly bool zippedBackup = UncivFiles.SaveZipped;
     private readonly RulesetClass ruleset;
 
     public UncivFilesTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
     }
 
     public void Dispose()
     {
-        UncivFiles.SaveZipped = zippedBackup;
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
     }
 
     private static string JsonsPath()
@@ -109,7 +107,7 @@ public sealed class UncivFilesTests : IDisposable
     }
 
     private long tick;
-    private UncivFiles NewFiles() => new(new MemFile(null, "", () => ++tick));
+    private UncivFiles NewFiles(SaveOptions saveOptions = default) => new(new MemFile(null, "", () => ++tick), saveOptions);
 
     private GameInfo NewGame(int turns = 123)
     {
@@ -194,8 +192,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void BusyGameRoundTripsThroughAFileAndKeepsItsStateHash()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = true;
+        var files = NewFiles(new SaveOptions(Zipped: true));
         var game = BusyGame();
         var before = HashOf(game);
 
@@ -225,8 +222,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void GameRoundTripsAfterEveryOfSeveralTurns()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = true;
+        var files = NewFiles(new SaveOptions(Zipped: true));
         var game = BusyGame();
         for (var turn = 0; turn < 6; turn++)
         {
@@ -263,8 +259,7 @@ public sealed class UncivFilesTests : IDisposable
     [InlineData(true)]
     public void SavedGameWithCivsRoundTripsThroughAFile(bool zipped)
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = zipped;
+        var files = NewFiles(new SaveOptions(Zipped: zipped));
         var game = StartedGame();
         var before = HashOf(game);
 
@@ -283,8 +278,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void SaveUncompressedWritesPlainJson_WithTheCurrentVersion()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         var game = NewGame();
         game.Version = CompatibilityVersion.FirstWithout;
 
@@ -302,8 +296,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void SaveCompressedWritesGzipBase64()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = true;
+        var files = NewFiles(new SaveOptions(Zipped: true));
         var game = NewGame();
 
         var file = files.SaveGame(game, "slot");
@@ -317,8 +310,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void SuccessfulSaveReportsCompletion()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         var calls = new List<Exception?>();
         files.SaveGame(NewGame(), "slot", calls.Add);
         Assert.Single(calls);
@@ -328,8 +320,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void FailedSaveReportsException_AndRethrowsByDefault()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         var game = NewGame();
         ((MemFile)files.GetSave("dir")).MakeDirs();
         var calls = new List<Exception?>();
@@ -376,8 +367,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void NewerVersionIsIncompatible()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         var game = NewGame();
         game.Version = CompatibilityVersion.CurrentCompatibilityVersion;
         var json = UncivJson.Serialize(game).Replace($"\"number\":{CompatibilityVersion.CurrentCompatibilityNumber}", "\"number\":99", StringComparison.Ordinal);
@@ -393,8 +383,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void OlderVersionStillLoads()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         var game = NewGame();
         game.Version = CompatibilityVersion.CurrentCompatibilityVersion;
         var json = UncivJson.Serialize(game).Replace($"\"number\":{CompatibilityVersion.CurrentCompatibilityNumber}", $"\"number\":{CompatibilityVersion.CurrentCompatibilityNumber - 1}", StringComparison.Ordinal);
@@ -422,12 +411,10 @@ public sealed class UncivFilesTests : IDisposable
         Assert.NotEqual("", game.Checksum);
         Assert.Equal(game.Checksum, UncivJson.Deserialize<GameInfo>(FileConversions.Unzip(zipped))!.Checksum);
         Assert.Equal(game.GameId, UncivFiles.GameInfoFromString("  " + zipped.Insert(10, "\r\n") + "\n").GameId);
-        UncivFiles.SaveZipped = false;
         var plain = UncivFiles.GameInfoToString(game);
         Assert.StartsWith("{", plain, StringComparison.Ordinal);
         Assert.Equal(game.GameId, UncivFiles.GameInfoFromString(plain).GameId);
-        UncivFiles.SaveZipped = true;
-        Assert.DoesNotContain("{", UncivFiles.GameInfoToString(game), StringComparison.Ordinal);
+        Assert.DoesNotContain("{", UncivFiles.GameInfoToString(game, forceZip: true), StringComparison.Ordinal);
         Assert.StartsWith("{", UncivFiles.GameInfoToString(game, forceZip: false), StringComparison.Ordinal);
     }
 
@@ -470,8 +457,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void AutoSave_WithoutNextTurnWritesOnlyTheUnnumberedFile()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         Assert.False(files.Autosaves.AutosaveExists());
         files.Autosaves.AutoSave(NewGame(), 3);
         Assert.True(files.Autosaves.AutosaveExists());
@@ -482,8 +468,7 @@ public sealed class UncivFilesTests : IDisposable
     [Fact]
     public void AutoSave_NextTurnKeepsTheYoungestMaxPlusOneFiles()
     {
-        var files = NewFiles();
-        UncivFiles.SaveZipped = false;
+        var files = NewFiles(new SaveOptions(Zipped: false));
         for (var turn = 1; turn <= 5; turn++)
             files.Autosaves.AutoSave(NewGame(turn), 2, nextTurn: true);
         Assert.Equal(["Autosave", "Autosave-Babylon-4", "Autosave-Babylon-5"], files.GetSaves().Select(it => it.Name));

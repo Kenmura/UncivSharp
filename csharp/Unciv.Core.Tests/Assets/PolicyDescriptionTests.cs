@@ -12,13 +12,13 @@ public sealed class PolicyDescriptionTests : IDisposable
 
     public PolicyDescriptionTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         string jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.Get("Civ V - Brave New World")!;
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.Get("Civ V - Brave New World")!;
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {

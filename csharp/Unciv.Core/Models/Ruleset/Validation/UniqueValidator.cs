@@ -180,7 +180,7 @@ public class UniqueValidator(Ruleset ruleset, bool tryFixUnknownUniques = false)
         string toReturn = text;
         var similarParameters = complianceError.AcceptableParameterTypes
             .SelectMany(it => it.GetKnownValuesForAutocomplete(Ruleset))
-            .Where(it => TextSimilarity.GetRelativeTextDistance(it, complianceError.ParameterName) <= RulesetCache.UniqueMisspellingThreshold)
+            .Where(it => TextSimilarity.GetRelativeTextDistance(it, complianceError.ParameterName) <= RulesetCache.Current.UniqueMisspellingThreshold)
             .ToList();
         if (similarParameters.Count != 0)
             toReturn += " May be a misspelling of: " + string.Join(", ", similarParameters.Select(it => $"\"{it}\""));
@@ -253,7 +253,7 @@ public class UniqueValidator(Ruleset ruleset, bool tryFixUnknownUniques = false)
                 " which is of an unknown type!";
 
             var similarConditionals = UniqueTypeExtensions.Entries.Where(it =>
-                TextSimilarity.GetRelativeTextDistance(it.PlaceholderText(), modifier.PlaceholderText) <= RulesetCache.UniqueMisspellingThreshold).ToList();
+                TextSimilarity.GetRelativeTextDistance(it.PlaceholderText(), modifier.PlaceholderText) <= RulesetCache.Current.UniqueMisspellingThreshold).ToList();
             if (similarConditionals.Count != 0)
                 text += " May be a misspelling of \"" + string.Join("\", or \"", similarConditionals.Select(it => it.Text())) + "\"";
             rulesetErrors.Add(
@@ -455,7 +455,7 @@ public class UniqueValidator(Ruleset ruleset, bool tryFixUnknownUniques = false)
     private RulesetErrorList TryFixUnknownUnique(UniqueObject unique, IHasUniques? uniqueContainer, string prefix)
     {
         var similarUniques = UniqueTypeExtensions.Entries.Where(it =>
-            TextSimilarity.GetRelativeTextDistance(it.PlaceholderText(), unique.PlaceholderText) <= RulesetCache.UniqueMisspellingThreshold).ToList();
+            TextSimilarity.GetRelativeTextDistance(it.PlaceholderText(), unique.PlaceholderText) <= RulesetCache.Current.UniqueMisspellingThreshold).ToList();
         var equalUniques = similarUniques.Where(it => it.PlaceholderText() == unique.PlaceholderText).ToList();
         if (equalUniques.Count != 0)
             // This should only ever happen if a bug is or has been introduced that prevents Unique.type from being set for a valid UniqueType, I think.

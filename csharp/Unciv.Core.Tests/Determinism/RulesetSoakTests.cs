@@ -39,14 +39,14 @@ public sealed class RulesetSoakTests : IDisposable
         modsFolder = Directory.CreateTempSubdirectory("unciv-soak-mods-").FullName;
         CopyDirectory(Fixture("Determinism", "golden-mod"), Path.Combine(modsFolder, "golden-mod"));
         CopyDirectory(Fixture("Models", "Ruleset", "ModLoading", "Mods", "LateMod"), Path.Combine(modsFolder, "LateMod"));
-        RulesetCache.Clear();
-        var errors = RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(SoakTests.JsonsPath(), modsFolder));
+        RulesetCache.Current.Clear();
+        var errors = RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(SoakTests.JsonsPath(), modsFolder));
         Assert.Empty(errors);
     }
 
     public void Dispose()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         try { Directory.Delete(modsFolder, recursive: true); } catch (Exception e) when (e is IOException or UnauthorizedAccessException) { /* best effort: the test result does not depend on it */ }
     }
 
@@ -97,7 +97,7 @@ public sealed class RulesetSoakTests : IDisposable
 
     private GameInfo NewGame(RulesetSoakConfig config)
     {
-        var ruleset = RulesetCache.Get(config.Ruleset).NotNull();
+        var ruleset = RulesetCache.Current.Get(config.Ruleset).NotNull();
         var parameters = new GameParameters
         {
             BaseRuleset = config.Ruleset,

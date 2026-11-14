@@ -15,37 +15,56 @@ namespace Unciv.Models.Ruleset;
 // - the files come from an IRulesetFileSource instead of Gdx.files / UncivGame.Current.files; console mode is a source without a global jsons folder.
 
 /// <summary>Loading mods is expensive, so let's only do it once and save all of the loaded rulesets somewhere for later use</summary>
-public static class RulesetCache
+public sealed class RulesetCache
 {
-    private static JavaHashMap<string, Ruleset> Cache = new();
+    private static readonly RulesetCache DefaultInstance = new();
+    private static readonly AsyncLocal<RulesetCache?> ScopedCurrent = new();
+
+    private sealed class CurrentScope(RulesetCache? previous) : IDisposable
+    {
+        public void Dispose() => ScopedCurrent.Value = previous;
+    }
+
+    /// <summary>The active <see cref="RulesetCache"/> for the current async/call chain, or the process default.</summary>
+    public static RulesetCache Current => ScopedCurrent.Value ?? DefaultInstance;
+
+    /// <summary>Scopes <see cref="Current"/> to <paramref name="cache"/> for the running async/call chain until the returned handle is disposed.</summary>
+    public static IDisposable Use(RulesetCache cache)
+    {
+        var previous = ScopedCurrent.Value;
+        ScopedCurrent.Value = cache;
+        return new CurrentScope(previous);
+    }
+
+    private readonly JavaHashMap<string, Ruleset> cache = new();
 
     /// <summary>
     /// Similarity below which an untyped unique can be considered a potential misspelling.
     /// Roughly corresponds to the fraction of the Unique placeholder text that can be different/misspelled, but with some extra room for getRelativeTextDistance idiosyncrasies.
     /// Tweak as needed. Simple misspellings seem to be around 0.025, so would mostly be caught by 0.05. IMO 0.1 would be good, but raising to 0.15 also seemed to catch what may be an outdated Unique.
     /// </summary>
-    public static double UniqueMisspellingThreshold { get; set; } = 0.15;
+    public double UniqueMisspellingThreshold { get; set; } = 0.15;
 
     // region the HashMap<String, Ruleset> API
-    public static Ruleset? Get(string name) => Cache.TryGetValue(name, out var ruleset) ? ruleset : null;
+    public Ruleset? Get(string name) => cache.TryGetValue(name, out var ruleset) ? ruleset : null;
 
-    public static void Put(string name, Ruleset ruleset) => Cache.Put(name, ruleset);
+    public void Put(string name, Ruleset ruleset) => cache.Put(name, ruleset);
 
-    public static bool ContainsKey(string? name) => name != null && Cache.ContainsKey(name);
+    public bool ContainsKey(string? name) => name != null && cache.ContainsKey(name);
 
-    public static bool Remove(string name) => Cache.Remove(name);
+    public bool Remove(string name) => cache.Remove(name);
 
-    public static void Clear() => Cache.Clear();
+    public void Clear() => cache.Clear();
 
-    public static int Count => Cache.Count;
+    public int Count => cache.Count;
 
-    public static IEnumerable<string> Keys => Cache.Keys;
+    public IEnumerable<string> Keys => cache.Keys;
 
-    public static IEnumerable<Ruleset> Values => Cache.Values;
+    public IEnumerable<Ruleset> Values => cache.Values;
     // endregion
 
     /// <summary>Returns error lines from loading the rulesets, so we can display the errors to users</summary>
-    public static List<string> LoadRulesets(IRulesetFileSource files, bool noMods = false)
+    public List<string> LoadRulesets(IRulesetFileSource files, bool noMods = false)
     {
         var newRulesets = new LinkedHashMap<string, Ruleset>();
 
@@ -73,7 +92,7 @@ public static class RulesetCache
                 var modRuleset = LoadSingleRuleset(modFolder, errorLines, files);
                 if (modRuleset != null) newRulesets[modRuleset.Name] = modRuleset;
             }
-            if (Log.ShouldLog()) foreach (var line in errorLines) Log.Debug(line);
+            if (Log.Null.ShouldLog()) foreach (var line in errorLines) Log.Null.Debug(line);
         }
 
         // We save the 'old' cache values until we're ready to replace everything, so that the cache isn't empty while we try to load ruleset files
@@ -84,9 +103,9 @@ public static class RulesetCache
         return errorLines;
     }
 
-    private static void PutAll(IEnumerable<KeyValuePair<string, Ruleset>> rulesets)
+    private void PutAll(IEnumerable<KeyValuePair<string, Ruleset>> rulesets)
     {
-        foreach (var (name, ruleset) in rulesets) Cache.Put(name, ruleset);
+        foreach (var (name, ruleset) in rulesets) cache.Put(name, ruleset);
     }
 
     private static Ruleset? LoadSingleRuleset(IRulesetFolder modFolder, List<string> errorLines, IRulesetFileSource files)
@@ -96,7 +115,7 @@ public static class RulesetCache
             var modRuleset = new Ruleset { Name = modFolder.Name };
             modRuleset.Load(modFolder.Child("jsons"), files.GlobalJsonsFolder);
             modRuleset.FolderLocation = modFolder;
-            Log.Debug("Mod loaded successfully: %s", modRuleset.Name);
+            Log.Null.Debug("Mod loaded successfully: %s", modRuleset.Name);
             return modRuleset;
         }
         catch (Exception ex)
@@ -114,7 +133,7 @@ public static class RulesetCache
         }
     }
 
-    public static List<string> ReloadSingleRuleset(IRulesetFileSource files, string modName)
+    public List<string> ReloadSingleRuleset(IRulesetFileSource files, string modName)
     {
         var modFolder = files.ModsFolder.Child(modName);
         if (!modFolder.Exists || !modFolder.IsDirectory) return ["No such mod"]; // No translation template - shouldn't ever happen?
@@ -125,9 +144,9 @@ public static class RulesetCache
     }
 
     /// <summary>Safeguard, so no-one edits the base ruleset by mistake: a clone.</summary>
-    public static Ruleset GetVanillaRuleset() => Get(BaseRuleset.Civ_V_Vanilla.FullName()).NotNull().Clone();
+    public Ruleset GetVanillaRuleset() => Get(BaseRuleset.Civ_V_Vanilla.FullName()).NotNull().Clone();
 
-    public static List<string> GetSortedBaseRulesets()
+    public List<string> GetSortedBaseRulesets()
     {
         var baseRulesets = Values
             .Where(it => it.ModOptions.IsBaseRuleset)
@@ -146,11 +165,11 @@ public static class RulesetCache
     }
 
     /// <summary>Creates a combined <see cref="Ruleset"/> from a list of mods contained in <paramref name="parameters"/>.</summary>
-    public static Ruleset GetComplexRuleset(MapParameters parameters) =>
+    public Ruleset GetComplexRuleset(MapParameters parameters) =>
         GetComplexRuleset(parameters.Mods, parameters.BaseRuleset);
 
     /// <summary>Creates a combined <see cref="Ruleset"/> from a list of mods contained in <paramref name="parameters"/>.</summary>
-    public static Ruleset GetComplexRuleset(GameParameters parameters) =>
+    public Ruleset GetComplexRuleset(GameParameters parameters) =>
         GetComplexRuleset(parameters.Mods, parameters.BaseRuleset);
 
     /// <summary>
@@ -158,7 +177,7 @@ public static class RulesetCache
     /// If no baseRuleset is passed in <paramref name="optionalBaseRuleset"/> (or a non-existing one), then the vanilla Ruleset is included automatically.
     /// Any mods in the <paramref name="mods"/> parameter marked as base ruleset (or not loaded in <see cref="RulesetCache"/>) are ignored.
     /// </summary>
-    public static Ruleset GetComplexRuleset(LinkedHashSet<string> mods, string? optionalBaseRuleset = null)
+    public Ruleset GetComplexRuleset(LinkedHashSet<string> mods, string? optionalBaseRuleset = null)
     {
         var baseRuleset =
             ContainsKey(optionalBaseRuleset) && Get(optionalBaseRuleset.NotNull()).NotNull().ModOptions.IsBaseRuleset
@@ -201,7 +220,7 @@ public static class RulesetCache
     }
 
     /// <summary>Runs <c>Ruleset.GetErrorList</c> on a temporary <see cref="GetComplexRuleset(LinkedHashSet{string}, string?)">combined Ruleset</see> for a list of <paramref name="mods"/></summary>
-    public static (Ruleset? Ruleset, RulesetErrorList Errors) CheckCombinedModLinks(
+    public (Ruleset? Ruleset, RulesetErrorList Errors) CheckCombinedModLinks(
         LinkedHashSet<string> mods,
         string? baseRuleset = null,
         bool tryFixUnknownUniques = false)

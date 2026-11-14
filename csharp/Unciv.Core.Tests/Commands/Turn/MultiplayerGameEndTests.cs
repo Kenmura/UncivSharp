@@ -23,13 +23,13 @@ public sealed class MultiplayerGameEndTests : IDisposable
 
     public MultiplayerGameEndTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = Path.Combine(RepoRoot(), "data", "jsons");
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string RepoRoot()
     {
@@ -40,7 +40,7 @@ public sealed class MultiplayerGameEndTests : IDisposable
 
     private GameInfo NewGame(bool simultaneous = true, string? baseRuleset = null)
     {
-        var rules = baseRuleset == null ? ruleset : RulesetCache.Get(baseRuleset).NotNull();
+        var rules = baseRuleset == null ? ruleset : RulesetCache.Current.Get(baseRuleset).NotNull();
         var game = GameStarter.StartNewGame(
             new GameSetupInfo(
                 new GameParameters

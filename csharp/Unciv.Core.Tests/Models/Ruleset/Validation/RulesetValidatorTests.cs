@@ -16,7 +16,7 @@ public sealed class RulesetValidatorTests : IDisposable
 {
     private readonly ValidatorTestRuleset game = new();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private Personality AddPersonality(string name, params string[] uniques)
     {

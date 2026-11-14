@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using Unciv.Models;
 
 namespace Unciv.Assets;
@@ -32,7 +33,7 @@ public static class ProceduralSounds
     private const float PeakGain = 0.8f;
     private const int AttackMs = 5;
 
-    private static readonly Dictionary<string, SoundNote[]> Presets = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, SoundNote[]> Presets = new Dictionary<string, SoundNote[]>(StringComparer.Ordinal)
     {
         ["bombard"] = [new(SoundWave.Noise, 0, 0, 300, 0.7f), new(SoundWave.Sine, 70, 0, 300, 0.7f)],
         ["chimes"] = [new(SoundWave.Sine, 880, 0, 600, 0.35f), new(SoundWave.Sine, 1320, 120, 600, 0.3f), new(SoundWave.Sine, 1760, 240, 700, 0.25f)],
@@ -52,16 +53,16 @@ public static class ProceduralSounds
         ["swap"] = [new(SoundWave.Sine, 500, 0, 60, 0.5f), new(SoundWave.Sine, 700, 60, 60, 0.5f)],
         ["upgrade"] = [new(SoundWave.Sine, 330, 0, 100, 0.4f), new(SoundWave.Sine, 440, 100, 100, 0.4f), new(SoundWave.Sine, 554, 200, 100, 0.4f), new(SoundWave.Sine, 659, 300, 250, 0.4f)],
         ["whoosh"] = [new(SoundWave.Noise, 0, 0, 350, 0.4f, Swell: true)],
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     // C086: the combat presentation's own sounds (not UncivSound presets, so not in PresetNames): a swish, a twang, a thud with a crack, a falling groan
-    private static readonly Dictionary<string, SoundNote[]> CombatSounds = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, SoundNote[]> CombatSounds = new Dictionary<string, SoundNote[]>(StringComparer.Ordinal)
     {
         [CombatEffects.SwingSound] = [new(SoundWave.Noise, 0, 0, 220, 0.35f, Swell: true), new(SoundWave.Sine, 420, 0, 200, 0.12f)],
         [CombatEffects.ShootSound] = [new(SoundWave.Square, 260, 0, 70, 0.3f), new(SoundWave.Sine, 130, 0, 160, 0.45f), new(SoundWave.Noise, 0, 0, 90, 0.3f)],
         [CombatEffects.HitSound] = [new(SoundWave.Noise, 0, 0, 90, 0.7f), new(SoundWave.Sine, 90, 0, 180, 0.7f), new(SoundWave.Square, 1500, 0, 25, 0.25f)],
         [CombatEffects.DeathSound] = [new(SoundWave.Sine, 220, 0, 450, 0.4f), new(SoundWave.Sine, 110, 150, 450, 0.4f), new(SoundWave.Noise, 0, 0, 120, 0.25f)],
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>The file names of the sounds with a hand-made table entry (all <see cref="UncivSound"/> presets except Silent).</summary>
     public static IReadOnlyCollection<string> PresetNames => Presets.Keys;

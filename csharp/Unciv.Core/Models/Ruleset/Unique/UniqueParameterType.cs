@@ -362,7 +362,7 @@ public static class UniqueParameterTypeExtensions
     private static readonly IReadOnlySet<string> UnitTriggerTargetStatic = SetOf(
         Constants.ThisUnit, Constants.TargetUnit);
 
-    public static ICountablesParameterProvider CountablesProvider { get; set; } = CountablesParameterProvider.Instance;
+    private static ICountablesParameterProvider CountablesProvider => CountablesParameterProvider.Instance;
 
     public static string ParameterName(this UniqueParameterType type) => type switch
     {

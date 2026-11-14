@@ -14,8 +14,6 @@ namespace Unciv.Models.Translations;
 /// </summary>
 public static class TranslationCache
 {
-    private static LanguageCache? CachedLangData;
-
     /// <summary>
     /// Mods active in the current game, or set by MainMenuScreen via <see cref="Translations.TranslationActiveMods"/>.
     /// </summary>
@@ -39,22 +37,23 @@ public static class TranslationCache
 
     public static LanguageCache GetLangData()
     {
-        string setting = Translations.Current.CurrentLanguage;
-        var data = CachedLangData;
+        var current = Translations.Current;
+        string setting = current.CurrentLanguage;
+        var data = current.CachedLangData;
         if (data != null && data.Language == setting)
         {
             return data;
         }
 
         var newData = LanguageCache.Create(setting);
-        CachedLangData = newData;
+        current.CachedLangData = newData;
         return newData;
     }
 
     /// <summary>Call this when updating translation tables.</summary>
     public static void InvalidateLanguage()
     {
-        CachedLangData = null;
+        Translations.Current.CachedLangData = null;
     }
 
     /// <summary>Uncached, bypassing the cached language, for unit tests.</summary>

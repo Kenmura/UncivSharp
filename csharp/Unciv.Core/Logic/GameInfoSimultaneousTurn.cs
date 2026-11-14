@@ -201,11 +201,11 @@ public partial class GameInfo
     {
         var state = Expect(new ResolveStep.StartNextTurn());
         RefreshTransientCaches(); // T218: as AdvancePlayerIndex does at the wrap of the sequential cycle
-        using (TurnProbe.Measure("RecordRankingStats")) RecordRankingStats();
-        using (TurnProbe.Measure("ProcessLeagueTurn")) ProcessLeagueTurn();
+        using (Utils.TurnProbe.Measure(TurnProbe, "RecordRankingStats")) RecordRankingStats();
+        using (Utils.TurnProbe.Measure(TurnProbe, "ProcessLeagueTurn")) ProcessLeagueTurn();
         Turns++;
         if (EngineOptions.SimulateUntilTurn != 0)
-            Log.Debug("Starting simulation of turn %s", Turns);
+            Log.Null.Debug("Starting simulation of turn %s", Turns);
         state.Stage = ResolveStage.BeginTurns;
         state.Next = 0;
         CompleteRoundIfDone(state);

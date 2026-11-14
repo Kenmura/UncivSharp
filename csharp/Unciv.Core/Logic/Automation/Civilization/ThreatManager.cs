@@ -20,7 +20,7 @@ public static class ThreatManager
     /// </summary>
     public static int GetDistanceToClosestEnemyUnit(CivView civ, AutomationCache cache, TileView tile, int maxDist, bool takeLargerValues = true)
     {
-        using (TurnProbe.Measure("Threat.DistanceToClosestEnemy"))
+        using (TurnProbe.Measure(civ.Unwrap().GameInfo.TurnProbe, "Threat.DistanceToClosestEnemy"))
             return GetDistanceToClosestEnemyUnitCore(civ, cache, tile, maxDist, takeLargerValues);
     }
 
@@ -145,7 +145,7 @@ public static class ThreatManager
 
     public static LinkedHashSet<TileView> GetDangerousTiles(AutomationCache cache, MapUnitView unitView, int distance = 3)
     {
-        using (TurnProbe.Measure("Threat.DangerousTiles"))
+        using (TurnProbe.Measure(unitView.Unwrap().Civ.GameInfo.TurnProbe, "Threat.DangerousTiles"))
             return GetDangerousTilesCore(cache, unitView, distance);
     }
 

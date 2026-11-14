@@ -329,7 +329,7 @@ public class TechScreenModelTests
     [Fact]
     public void Unlocks_ListUnitsBuildingsWondersAndImprovementsOfTheTechByKindThenName()
     {
-        var ruleset = Unciv.Models.Ruleset.RulesetCache.GetVanillaRuleset();
+        var ruleset = Unciv.Models.Ruleset.RulesetCache.Current.GetVanillaRuleset();
         var unlocks = TechScreenModel.Unlocks(ruleset, "Bronze Working");
         Assert.Contains(unlocks, it => it.Kind == "Unit" && it.Name == "Spearman");
         Assert.All(unlocks, it => Assert.Contains(it.Kind, new[] { "Unit", "Building", "Wonder", "Improvement" }));

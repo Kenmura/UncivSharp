@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace Unciv.Assets;
 
 /// <summary>
@@ -14,16 +16,16 @@ public static class PropSpecs
     /// <summary>Features that get a prop; other features only tint the terrain.</summary>
     public static bool HasFeatureProp(string feature) => feature is "Forest" or "Jungle" or "Marsh";
 
-    private static readonly Dictionary<string, (Rgb Colour, float Scale)> Herds = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, (Rgb Colour, float Scale)> Herds = new Dictionary<string, (Rgb Colour, float Scale)>(StringComparer.Ordinal)
     {
         ["Horses"] = (PlaceholderPalette.HorseBrown, 1f),
         ["Cattle"] = (new Rgb(235, 225, 205), 0.95f),
         ["Sheep"] = (new Rgb(245, 245, 240), 0.7f),
         ["Deer"] = (new Rgb(175, 125, 75), 0.85f),
         ["Bison"] = (new Rgb(95, 65, 45), 1f),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
-    private static readonly Dictionary<string, Rgb> Crops = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, Rgb> Crops = new Dictionary<string, Rgb>(StringComparer.Ordinal)
     {
         ["Wheat"] = new(225, 190, 70),
         ["Bananas"] = new(235, 215, 80),
@@ -37,9 +39,9 @@ public static class PropSpecs
         ["Truffles"] = new(115, 95, 75),
         ["Incense"] = new(205, 175, 105),
         ["Silk"] = new(230, 200, 230),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
-    private static readonly Dictionary<string, Rgb> Ores = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, Rgb> Ores = new Dictionary<string, Rgb>(StringComparer.Ordinal)
     {
         ["Iron"] = new(115, 95, 95),
         ["Coal"] = new(45, 45, 50),
@@ -53,15 +55,15 @@ public static class PropSpecs
         ["Oil"] = new(35, 35, 40),
         ["Aluminum"] = new(170, 180, 200),
         ["Uranium"] = new(110, 210, 90),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
-    private static readonly Dictionary<string, Rgb> Sea = new(StringComparer.Ordinal)
+    private static readonly FrozenDictionary<string, Rgb> Sea = new Dictionary<string, Rgb>(StringComparer.Ordinal)
     {
         ["Fish"] = new(90, 150, 200),
         ["Whales"] = new(70, 90, 135),
         ["Pearls"] = new(240, 235, 245),
         ["Crab"] = new(210, 90, 60),
-    };
+    }.ToFrozenDictionary(StringComparer.Ordinal);
 
     /// <summary>The designed model for <paramref name="key"/> (<c>feature/...</c> or <c>resource/...</c>), or null when the key has no design.</summary>
     public static ModelSpec? TryBuild(AssetKey key)

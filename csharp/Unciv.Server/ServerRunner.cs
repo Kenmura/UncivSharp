@@ -21,7 +21,10 @@ namespace Unciv.Server;
 /// </summary>
 public static class ServerRunner
 {
-    private static int PendingHandshakes;
+    private sealed class HandshakeCounter
+    {
+        public int Count;
+    }
 
     private static readonly TimeSpan InviteLifetime = TimeSpan.FromHours(24);
     /// <summary>Exit code: the saved game under <c>--game-id</c> cannot be loaded (see <see cref="ServerOptions.HelpText"/>).</summary>
@@ -347,7 +350,7 @@ public static class ServerRunner
     private static void LoadRulesets(ServerOptions options, ServerLog log)
     {
         // Embedded in-process (tests): somebody already loaded them and no explicit folder asks for another set.
-        if (options.Jsons == null && options.ModsDir == null && RulesetCache.ContainsKey(BaseRuleset.Civ_V_Vanilla.FullName()))
+        if (options.Jsons == null && options.ModsDir == null && RulesetCache.Current.ContainsKey(BaseRuleset.Civ_V_Vanilla.FullName()))
         {
             log.Debug("rulesets already loaded");
             return;
@@ -355,8 +358,8 @@ public static class ServerRunner
         var jsons = options.Jsons ?? FindJsons();
         if (!File.Exists(Path.Combine(jsons, "ModCategories.json"))) throw new ServerUsageException($"'{jsons}' is not a rulesets folder (no ModCategories.json); pass --jsons DIR");
         if (options.ModsDir != null && !Directory.Exists(options.ModsDir)) throw new ServerUsageException($"--mods-dir '{options.ModsDir}' is not a folder");
-        RulesetCache.Clear();
-        var errors = RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, options.ModsDir ?? Path.Combine(jsons, "no mods here")), noMods: options.ModsDir == null);
+        RulesetCache.Current.Clear();
+        var errors = RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, options.ModsDir ?? Path.Combine(jsons, "no mods here")), noMods: options.ModsDir == null);
         if (errors.Count != 0) throw new IOException("the rulesets have errors: " + string.Join("; ", errors));
         log.Info($"rulesets loaded from {jsons}");
     }
@@ -395,6 +398,7 @@ public static class ServerRunner
 
     private static async Task AcceptLoopAsync(TcpTlsListener tcp, ServerLobby lobby, ServerLog log, CancellationToken token)
     {
+        var pendingHandshakes = new HandshakeCounter();
         while (!token.IsCancellationRequested)
         {
             System.Net.Sockets.TcpClient client;
@@ -404,20 +408,20 @@ public static class ServerRunner
             }
             catch (Exception e) when (token.IsCancellationRequested || e is ObjectDisposedException) { return; }
             catch (Exception e) { log.Debug("accept failed: " + e.Message); continue; }
-            if (Volatile.Read(ref PendingHandshakes) >= MaxPendingHandshakes)
+            if (Volatile.Read(ref pendingHandshakes.Count) >= MaxPendingHandshakes)
             {
                 log.Debug("too many connections in the handshake: dropped one");
                 client.Dispose();
                 continue;
             }
-            _ = HandshakeAndAttachAsync(tcp, client, lobby, log, token); // per connection: a client that sends nothing must not stall the others
+            _ = HandshakeAndAttachAsync(tcp, client, lobby, pendingHandshakes, log, token); // per connection: a client that sends nothing must not stall the others
         }
     }
 
-    private static async Task HandshakeAndAttachAsync(TcpTlsListener tcp, System.Net.Sockets.TcpClient client, ServerLobby lobby, ServerLog log, CancellationToken token)
+    private static async Task HandshakeAndAttachAsync(TcpTlsListener tcp, System.Net.Sockets.TcpClient client, ServerLobby lobby, HandshakeCounter pendingHandshakes, ServerLog log, CancellationToken token)
     {
         ITransport transport;
-        Interlocked.Increment(ref PendingHandshakes);
+        Interlocked.Increment(ref pendingHandshakes.Count);
         try
         {
             transport = await tcp.HandshakeAsync(client, token).ConfigureAwait(false);
@@ -429,7 +433,7 @@ public static class ServerRunner
         }
         finally
         {
-            Interlocked.Decrement(ref PendingHandshakes);
+            Interlocked.Decrement(ref pendingHandshakes.Count);
         }
         log.Debug("connection accepted");
         await lobby.AttachConnectionAsync(transport, token).ConfigureAwait(false);

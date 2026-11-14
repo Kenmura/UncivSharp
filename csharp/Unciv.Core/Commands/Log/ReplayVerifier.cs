@@ -20,11 +20,11 @@ public static class ReplayVerifier
     /// <summary>The T102 state hash: FNV over the serialised <see cref="GameInfo"/>.</summary>
     public static ulong FullHash(GameInfo game)
     {
-        using (TurnProbe.Measure("Hash.FullHash"))
+        using (TurnProbe.Measure(game.TurnProbe, "Hash.FullHash"))
         {
             string text;
-            using (TurnProbe.Measure("Hash.Serialize")) text = UncivFiles.GameInfoToString(game, forceZip: false);
-            using (TurnProbe.Measure("Hash.Digest")) return StateHasher.ComputeHash(h => h.Add(text));
+            using (TurnProbe.Measure(game.TurnProbe, "Hash.Serialize")) text = UncivFiles.GameInfoToString(game, forceZip: false);
+            using (TurnProbe.Measure(game.TurnProbe, "Hash.Digest")) return StateHasher.ComputeHash(h => h.Add(text));
         }
     }
 

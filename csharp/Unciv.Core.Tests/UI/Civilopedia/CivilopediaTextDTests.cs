@@ -558,14 +558,14 @@ public class CivilopediaTextDTests
     [Fact]
     public void AllICivilopediaTextRealRulesetsHaveNoDuplicateReferencesAndRender()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         string jsons = ValidatorTestRuleset.JsonsPath();
-        Assert.Empty(RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true));
+        Assert.Empty(RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true));
         try
         {
             foreach (var baseRuleset in Enum.GetValues<BaseRuleset>())
             {
-                var ruleset = RulesetCache.Get(baseRuleset.FullName())!;
+                var ruleset = RulesetCache.Current.Get(baseRuleset.FullName())!;
                 var context = Ctx(ruleset);
                 var all = ruleset.AllICivilopediaText().ToList();
                 Assert.Equal(all.Count, all.Distinct(ReferenceEqualityComparer.Instance).Count());
@@ -581,7 +581,7 @@ public class CivilopediaTextDTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 
@@ -614,7 +614,7 @@ public class CivilopediaTextDTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 
@@ -634,7 +634,7 @@ public class CivilopediaTextDTests
         }
         finally
         {
-            RulesetCache.Clear();
+            RulesetCache.Current.Clear();
         }
     }
 

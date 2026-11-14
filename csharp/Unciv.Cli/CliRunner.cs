@@ -118,8 +118,8 @@ public static class CliRunner
         var modsDir = cli.Get("mods-dir");
         if (!File.Exists(Path.Combine(jsons, "ModCategories.json"))) throw new UsageException($"'{jsons}' is not a rulesets folder (no ModCategories.json); pass --jsons DIR");
         if (modsDir != null && !Directory.Exists(modsDir)) throw new UsageException($"--mods-dir '{modsDir}' is not a folder");
-        RulesetCache.Clear();
-        var errors = RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, modsDir ?? Path.Combine(jsons, "no mods here")), noMods: modsDir == null);
+        RulesetCache.Current.Clear();
+        var errors = RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, modsDir ?? Path.Combine(jsons, "no mods here")), noMods: modsDir == null);
         if (errors.Count != 0) throw new IOException("the rulesets have errors: " + string.Join("; ", errors));
     }
 
@@ -199,14 +199,14 @@ public static class CliRunner
         LoadRulesets(cli);
         cli.RejectUnknown();
 
-        if (!RulesetCache.ContainsKey(baseName) || !RulesetCache.Get(baseName)!.ModOptions.IsBaseRuleset)
-            throw new UsageException($"--ruleset '{baseName}' is not one of: {string.Join(", ", RulesetCache.GetSortedBaseRulesets())}");
+        if (!RulesetCache.Current.ContainsKey(baseName) || !RulesetCache.Current.Get(baseName)!.ModOptions.IsBaseRuleset)
+            throw new UsageException($"--ruleset '{baseName}' is not one of: {string.Join(", ", RulesetCache.Current.GetSortedBaseRulesets())}");
         foreach (var mod in modNames)
-            if (!RulesetCache.ContainsKey(mod) || RulesetCache.Get(mod)!.ModOptions.IsBaseRuleset)
+            if (!RulesetCache.Current.ContainsKey(mod) || RulesetCache.Current.Get(mod)!.ModOptions.IsBaseRuleset)
                 throw new UsageException($"--mods: '{mod}' is not a loaded mod (pass --mods-dir DIR)");
         if (modNames.Distinct(StringComparer.Ordinal).Count() != modNames.Length) throw new UsageException("--mods lists a mod twice");
         var parameters = new GameParameters { BaseRuleset = baseName, Mods = new LinkedHashSet<string>(modNames) };
-        var ruleset = RulesetCache.GetComplexRuleset(parameters);
+        var ruleset = RulesetCache.Current.GetComplexRuleset(parameters);
 
         if (nations.Length == 0) throw new UsageException("--nations needs at least one nation");
         if (nations.Distinct(StringComparer.Ordinal).Count() != nations.Length) throw new UsageException("--nations lists a nation twice");

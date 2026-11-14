@@ -564,19 +564,13 @@ public class ConditionalsTests
     [Fact]
     public void TutorialConditionalsReadTheSettingsSeam()
     {
-        var previous = Conditionals.Settings;
-        try
+        Assert.False(Applies("if tutorials are enabled", GameContext.EmptyState)); // default: no client settings
+        Assert.False(Applies("if tutorial [Done] is completed", GameContext.EmptyState));
+        using (Conditionals.UseSettings(new FakeSettings(true, "Done")))
         {
-            Assert.False(Applies("if tutorials are enabled", GameContext.EmptyState)); // default: no client settings
-            Assert.False(Applies("if tutorial [Done] is completed", GameContext.EmptyState));
-            Conditionals.Settings = new FakeSettings(true, "Done");
             Assert.True(Applies("if tutorials are enabled", GameContext.EmptyState));
             Assert.True(Applies("if tutorial [Done] is completed", GameContext.EmptyState));
             Assert.False(Applies("if tutorial [Other] is completed", GameContext.EmptyState));
-        }
-        finally
-        {
-            Conditionals.Settings = previous;
         }
     }
 

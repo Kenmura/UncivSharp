@@ -16,14 +16,16 @@ namespace Unciv.Logic.Files;
 // - The default saveGame callback "rethrow" is an optional Action: null rethrows, like Kotlin's ::rethrowIfNotNull.
 // - GameInfo/GameInfoPreview JSON is the System.Text.Json shape (UncivJson); the on-disk container (optional gzip+base64) is Kotlin's.
 
-public class UncivFiles(IUncivFileHandle dataFolder)
+public readonly record struct SaveOptions(bool Zipped = false);
+
+public class UncivFiles(IUncivFileHandle dataFolder, SaveOptions saveOptions = default)
 {
     public const string SaveFilesFolder = "SaveFiles";
     public const string MultiplayerFilesFolder = "MultiplayerGames";
     public const string AutosaveFileName = "Autosave";
 
     /// <summary>Kotlin <c>UncivFiles.saveZipped</c>: whether new saves are written gzip+base64.</summary>
-    public static bool SaveZipped { get; set; }
+    public SaveOptions SaveOptions { get; set; } = saveOptions;
 
     private Autosaves? autosaves;
 
@@ -71,7 +73,7 @@ public class UncivFiles(IUncivFileHandle dataFolder)
     /// <summary>Only use this with a handle obtained by one of the methods of this class!</summary>
     public bool DeleteSave(IUncivFileHandle file)
     {
-        Log.Debug("Deleting save %s", file.Name);
+        Log.Null.Debug("Deleting save %s", file.Name);
         return file.Delete();
     }
 
@@ -91,9 +93,9 @@ public class UncivFiles(IUncivFileHandle dataFolder)
         var callback = saveCompletionCallback ?? RethrowIfNotNull;
         try
         {
-            Log.Debug("Saving GameInfo %s to %s", game.GameId, file.Name);
+            Log.Null.Debug("Saving GameInfo %s to %s", game.GameId, file.Name);
             game.Version = CompatibilityVersion.CurrentCompatibilityVersion;
-            FileConversions.WriteJson(file, game, SaveZipped);
+            FileConversions.WriteJson(file, game, SaveOptions.Zipped);
         }
         catch (Exception ex)
         {
@@ -117,7 +119,7 @@ public class UncivFiles(IUncivFileHandle dataFolder)
         var callback = saveCompletionCallback ?? RethrowIfNotNull;
         try
         {
-            Log.Debug("Saving GameInfoPreview %s to %s", game.GameId, file.Name);
+            Log.Null.Debug("Saving GameInfoPreview %s to %s", game.GameId, file.Name);
             using var stream = file.Write(false);
             stream.Write(System.Text.Encoding.UTF8.GetBytes(UncivJson.Serialize(game)));
         }
@@ -154,7 +156,7 @@ public class UncivFiles(IUncivFileHandle dataFolder)
         }
         catch (Exception ex)
         {
-            Log.Error("Exception while deserializing GameInfo JSON", ex);
+            Log.Null.Error("Exception while deserializing GameInfo JSON", ex);
             var onlyVersion = FileConversions.ReadJson<GameInfoSerializationVersion>(gameFile).NotNull();
             throw new IncompatibleGameInfoVersionException(onlyVersion.Version, ex);
         }
@@ -205,7 +207,7 @@ public class UncivFiles(IUncivFileHandle dataFolder)
         }
         catch (Exception ex)
         {
-            Log.Error("Exception while deserializing GameInfo JSON", ex);
+            Log.Null.Error("Exception while deserializing GameInfo JSON", ex);
             var onlyVersion = UncivJson.Deserialize<GameInfoSerializationVersion>(unzippedJson).NotNull();
             throw new IncompatibleGameInfoVersionException(onlyVersion.Version, ex);
         }
@@ -224,7 +226,7 @@ public class UncivFiles(IUncivFileHandle dataFolder)
         return preview;
     }
 
-    /// <summary>Serialization of <paramref name="game"/>, optionally gzipped (<paramref name="forceZip"/> overrides <see cref="SaveZipped"/>).</summary>
+    /// <summary>Serialization of <paramref name="game"/>, optionally gzipped.</summary>
     public static string GameInfoToString(GameInfo game, bool? forceZip = null, bool updateChecksum = false)
     {
         game.Version = CompatibilityVersion.CurrentCompatibilityVersion;
@@ -232,7 +234,7 @@ public class UncivFiles(IUncivFileHandle dataFolder)
         if (updateChecksum) game.Checksum = game.CalculateChecksum();
         var plainJson = UncivJson.Serialize(game);
 
-        return forceZip ?? SaveZipped ? FileConversions.Zip(plainJson) : plainJson;
+        return forceZip ?? false ? FileConversions.Zip(plainJson) : plainJson;
     }
 
     /// <summary>Gzipped serialization of preview <paramref name="game"/>.</summary>
@@ -259,7 +261,7 @@ public class Autosaves(UncivFiles files)
         }
         catch (OutOfMemoryException oom)
         {
-            Log.Error("Ran out of memory during autosave", oom);
+            Log.Null.Error("Ran out of memory during autosave", oom);
             return; // not much we can do here
         }
 

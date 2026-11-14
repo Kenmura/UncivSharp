@@ -34,10 +34,10 @@ public sealed class ConsoleCommandTests : IDisposable
 
     public ConsoleCommandTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        ruleset = RulesetCache.Current.GetVanillaRuleset();
         game = GameStarter.StartNewGame(Setup(godMode: true), 7L, 1000L);
         foreach (string name in new[] { "Babylon", "Greece" })
         {
@@ -51,7 +51,7 @@ public sealed class ConsoleCommandTests : IDisposable
         onCity = new ConsoleSelection(city.GetCenterTile().Position);
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {

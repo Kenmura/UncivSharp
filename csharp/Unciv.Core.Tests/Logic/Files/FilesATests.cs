@@ -259,7 +259,7 @@ public class FilesATests
         var maps = MapSaver.GetMaps(path => path == "maps" ? root.Child("maps") : throw new InvalidOperationException(path));
         Assert.Equal(["a", "b"], maps.Select(it => it.Name));
         Assert.Equal("maps", MapSaver.MapsFolder);
-        Assert.True(MapSaver.SaveZipped);
+        Assert.True(MapSaver.DefaultSaveOptions.Zipped);
     }
 
     [Fact]

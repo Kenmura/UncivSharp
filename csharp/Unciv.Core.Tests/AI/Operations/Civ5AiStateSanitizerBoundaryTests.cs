@@ -21,10 +21,10 @@ public sealed class Civ5AiStateSanitizerBoundaryTests : IDisposable
 
     public Civ5AiStateSanitizerBoundaryTests()
     {
-        RulesetCache.Clear();
+        RulesetCache.Current.Clear();
         var jsons = JsonsPath();
-        RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
-        RulesetClass ruleset = RulesetCache.GetVanillaRuleset();
+        RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(jsons, Path.Combine(jsons, "no mods here")), noMods: true);
+        RulesetClass ruleset = RulesetCache.Current.GetVanillaRuleset();
         var setup = new GameSetupInfo(
             new GameParameters
             {
@@ -38,7 +38,7 @@ public sealed class Civ5AiStateSanitizerBoundaryTests : IDisposable
         civ = game.Civilizations.First(c => c.IsAI() && !c.IsBarbarian);
     }
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -67,8 +68,8 @@ public sealed class SaveStore(string folder)
     public const long MaxSaveBytes = 256L * 1024 * 1024;
 
     private const string TempSuffix = ".tmp";
-    private static readonly char[] ForbiddenChars = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
-    private static readonly string[] ReservedNames = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
+    private static readonly ImmutableArray<char> ForbiddenChars = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+    private static readonly ImmutableArray<string> ReservedNames = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"];
 
     private readonly Dictionary<string, (long Size, long Ticks, SaveInfo? Info, string? Problem)> metadataCache = new(StringComparer.Ordinal);
 
@@ -83,7 +84,7 @@ public sealed class SaveStore(string folder)
         if (name.Length > MaxNameLength) return $"The name is longer than {MaxNameLength.ToString(CultureInfo.InvariantCulture)} characters";
         if (name != name.Trim() || name.EndsWith('.')) return "The name may not start or end with a space, or end with a dot";
         if (name.Any(char.IsControl)) return "The name contains a control character";
-        if (name.IndexOfAny(ForbiddenChars) >= 0) return "The name may not contain \\ / : * ? \" < > |";
+        if (name.AsSpan().IndexOfAny(ForbiddenChars.AsSpan()) >= 0) return "The name may not contain \\ / : * ? \" < > |";
         if (name.EndsWith(TempSuffix, StringComparison.OrdinalIgnoreCase)) return "The name may not end with .tmp";
         if (name.StartsWith('.')) return "The name may not start with a dot";
         if (ReservedNames.Contains(name.Split('.')[0], StringComparer.OrdinalIgnoreCase)) return "That name is reserved by the operating system";

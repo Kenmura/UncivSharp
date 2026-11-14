@@ -9,9 +9,9 @@ namespace Unciv.Core.Tests.Models.Ruleset;
 [Collection("RulesetCache")]
 public sealed class BnwRulesetTests : IDisposable
 {
-    public BnwRulesetTests() => RulesetCache.Clear();
+    public BnwRulesetTests() => RulesetCache.Current.Clear();
 
-    public void Dispose() => RulesetCache.Clear();
+    public void Dispose() => RulesetCache.Current.Clear();
 
     private static string JsonsPath()
     {
@@ -25,9 +25,9 @@ public sealed class BnwRulesetTests : IDisposable
 
     internal static Unciv.Models.Ruleset.Ruleset LoadBnw()
     {
-        var errors = RulesetCache.LoadRulesets(new DirectoryRulesetFileSource(JsonsPath(), Path.Combine(JsonsPath(), "no mods here")), noMods: true);
+        var errors = RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(JsonsPath(), Path.Combine(JsonsPath(), "no mods here")), noMods: true);
         Assert.Empty(errors);
-        return RulesetCache.Get(BaseRuleset.Civ_V_BNW.FullName())!;
+        return RulesetCache.Current.Get(BaseRuleset.Civ_V_BNW.FullName())!;
     }
 
     [Fact]
@@ -93,9 +93,9 @@ public sealed class BnwRulesetTests : IDisposable
     public void BnwCombinesAsABaseRulesetAndCanBeRemovedFromTheCache()
     {
         LoadBnw();
-        var combined = RulesetCache.GetComplexRuleset(new Unciv.Logic.Map.MapParameters { BaseRuleset = BaseRuleset.Civ_V_BNW.FullName() });
+        var combined = RulesetCache.Current.GetComplexRuleset(new Unciv.Logic.Map.MapParameters { BaseRuleset = BaseRuleset.Civ_V_BNW.FullName() });
         Assert.Contains("Caravansary", combined.Buildings.Keys);
-        Assert.True(RulesetCache.Remove(BaseRuleset.Civ_V_BNW.FullName()));
-        Assert.False(RulesetCache.ContainsKey(BaseRuleset.Civ_V_BNW.FullName()));
+        Assert.True(RulesetCache.Current.Remove(BaseRuleset.Civ_V_BNW.FullName()));
+        Assert.False(RulesetCache.Current.ContainsKey(BaseRuleset.Civ_V_BNW.FullName()));
     }
 }

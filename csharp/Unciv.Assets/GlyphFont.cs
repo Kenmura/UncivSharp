@@ -1,3 +1,4 @@
+using System.Collections.Frozen;
 using System.Text;
 
 namespace Unciv.Assets;
@@ -8,7 +9,7 @@ public static class GlyphFont
     public const int Width = 5;
     public const int Height = 7;
 
-    private static readonly Dictionary<char, string> GlyphTable = new()
+    private static readonly FrozenDictionary<char, string> GlyphTable = new Dictionary<char, string>()
     {
         ['A'] = ".###.#...##...#######...##...##...#",
         ['B'] = "####.#...##...#####.#...##...#####.",
@@ -47,7 +48,7 @@ public static class GlyphFont
         ['8'] = ".###.#...##...#.###.#...##...#.###.",
         ['9'] = ".###.#...##...#.####....#....#.###.",
         ['?'] = ".###.#...#....#...#...#.........#..",
-    };
+    }.ToFrozenDictionary();
 
     /// <summary>Rows of '#'/'.' for <paramref name="c"/> (letters case-insensitive; unknown characters draw '?'). Exactly <see cref="Height"/> rows of <see cref="Width"/>.</summary>
     public static string[] Rows(char c)
