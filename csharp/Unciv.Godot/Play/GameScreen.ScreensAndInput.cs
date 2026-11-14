@@ -1,25 +1,14 @@
-using System.Globalization;
 using Godot;
 using Unciv.Assets;
-using Unciv.Commands;
-using Unciv.Commands.Events;
 using Unciv.Commands.Turn;
-using Unciv.Commands.Units;
-using Unciv.GodotClient.Assets;
-using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Map;
 using Unciv.GodotClient.Settings;
-using Unciv.GodotClient.Setup;
 using Unciv.GodotClient.Ui;
-using Unciv.Logic;
-using Unciv.Logic.Civilization;
 using Unciv.Logic.Map;
 using Unciv.Models;
 using Unciv.Models.Translations;
 using Unciv.Net;
 using Unciv.Net.Visibility;
-using Unciv.Queries.Empire;
-using Unciv.Queries.Units;
 using Unciv.Utils;
 
 namespace Unciv.GodotClient.Play;
