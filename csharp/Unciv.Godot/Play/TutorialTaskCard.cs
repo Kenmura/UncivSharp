@@ -125,7 +125,8 @@ public partial class TutorialTaskCard : Control
         float clampedTop = Math.Min(top, Math.Max(margin, screen.Y - height - margin));
         panel.Position = new Vector2((screen.X - panel.Size.X) / 2f, clampedTop);
         collapsedButton.Size = collapsedButton.GetCombinedMinimumSize();
-        collapsedButton.Position = new Vector2((screen.X - collapsedButton.Size.X) / 2f, top);
+        float collapsedTop = Math.Min(top, Math.Max(margin, screen.Y - collapsedButton.Size.Y - margin));
+        collapsedButton.Position = new Vector2((screen.X - collapsedButton.Size.X) / 2f, collapsedTop);
         Position = Vector2.Zero;
         Size = screen;
     }
@@ -148,7 +149,7 @@ public partial class TutorialTaskCard : Control
         collapsedButton.Visible = Collapsed;
         if (Collapsed || task == null) return;
         // A wrapping label reports a huge minimum height until it knows its width, so give it one (the panel's width less its padding)
-        float labelWidth = CardWidth(GetViewportRect().Size.X) - (theme?.Px(24) ?? 24);
+        float labelWidth = Math.Max(0f, CardWidth(GetViewportRect().Size.X) - (theme?.Px(24) ?? 24));
         foreach (var line in task.Lines.Where(it => it.Text.Length != 0))
         {
             column.AddChild(new Label

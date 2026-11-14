@@ -164,9 +164,12 @@ public static class PediaModel
     /// <summary>Trims the leading production or science cost from a <c>{Cost}: ...</c> line when already shown as a card chip; null when nothing remains.</summary>
     public static PediaLine? WithoutHeaderCost(PediaLine line)
     {
+        ArgumentNullException.ThrowIfNull(line);
         if (!line.Text.StartsWith("{Cost}: ", StringComparison.Ordinal)) return line;
         int slash = line.Text.IndexOf('/', StringComparison.Ordinal);
-        return slash < 0 ? null : line with { Text = "{Cost}: " + line.Text[(slash + 1)..] };
+        if (slash < 0) return null;
+        string rest = line.Text[(slash + 1)..];
+        return string.IsNullOrWhiteSpace(rest) ? null : line with { Text = "{Cost}: " + rest };
     }
 
     /// <summary>

@@ -130,7 +130,9 @@ public partial class OverviewScreen : PanelContainer
     public IReadOnlyList<StatChip> StatChips() => pages[OverviewModel.Stats].FindChildren("*", "", true, false).OfType<StatChip>().ToList();
 
     /// <summary>The <see cref="DataTable"/> controls of a page, in the order of <see cref="Tables"/> (a table without rows shows an empty state instead and has no control).</summary>
-    public IReadOnlyList<DataTable> DataTables(string tab) => dataTables.TryGetValue(tab, out var list) ? list : [];
+    public IReadOnlyList<DataTable> DataTables(string tab) =>
+        tab == OverviewModel.Espionage ? (spyBoard?.SpyTable is { } table ? [table] : []) :
+        dataTables.TryGetValue(tab, out var list) ? list : [];
 
     /// <summary>The notice a page shows instead of data (a refused query), or null.</summary>
     public string? Notice(string tab) => notices.GetValueOrDefault(tab);
@@ -161,6 +163,7 @@ public partial class OverviewScreen : PanelContainer
     /// <summary>Shows the screen and fills every page from the engine's current answers.</summary>
     public async Task OpenAsync(string? tab = null)
     {
+        if (spyBoard != null) spyBoard.SelectedSpy = null;
         Visible = true;
         if (tab != null) tabs.Select(Math.Max(0, OverviewModel.Tabs.ToList().IndexOf(tab)));
         await RefreshAsync();
@@ -363,6 +366,41 @@ public partial class OverviewScreen : PanelContainer
         itemRow.Add(new Label { Text = "Build item".Tr(), VerticalAlignment = VerticalAlignment.Center }, item, queue, buy);
         bulkBody.AddChild(itemRow);
 
+        var (templates, apply, save) = BuildBulkTemplateRows(table, bulkBody);
+
+        var result = new Label { Name = "BulkResult", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = bulkResult, Visible = bulkResult.Length > 0 };
+        bulkBody.AddChild(result);
+        bool hadSelection = selectedCities.Count > 0;
+        void Update()
+        {
+            selectedCities.Clear();
+            foreach (int row in data.SelectedRows) selectedCities.Add(table.Rows[row].Key);
+            count.Text = $"{"Selected".Tr()}: {selectedCities.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            bool any = selectedCities.Count > 0;
+            if (any && !hadSelection) bulkExpanded = true;
+            hadSelection = any;
+            clear.Visible = any;
+            bulkBody.Visible = bulkExpanded;
+            bulkToggle.Text = (bulkExpanded ? "Hide actions" : "Show actions").Tr() + (bulkExpanded ? " ▼" : " ▶");
+            focusApply.Disabled = !any;
+            queue.Disabled = !any || choices.Count == 0;
+            buy.Disabled = !any;
+            apply.Disabled = !any || templates.Count == 0;
+            save.Disabled = !any || settings == null;
+        }
+        bulkToggle.Pressed += () =>
+        {
+            bulkExpanded = !bulkExpanded;
+            Update();
+        };
+        data.SelectionChanged += Update;
+        Update();
+        panel.AddChild(box);
+        return panel;
+    }
+
+    private (IReadOnlyList<BuildTemplate> Templates, Button Apply, Button Save) BuildBulkTemplateRows(OverviewTable table, VBoxContainer bulkBody)
+    {
         var templates = settings?.Current.BuildTemplates ?? [];
         var templateRow = new BulkRow(theme);
         var template = new OptionButton { Name = "BulkTemplate" };
@@ -401,34 +439,7 @@ public partial class OverviewScreen : PanelContainer
         };
         saveRow.Add(name, save);
         bulkBody.AddChild(saveRow);
-
-        var result = new Label { Name = "BulkResult", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = bulkResult, Visible = bulkResult.Length > 0 };
-        bulkBody.AddChild(result);
-        void Update()
-        {
-            selectedCities.Clear();
-            foreach (int row in data.SelectedRows) selectedCities.Add(table.Rows[row].Key);
-            count.Text = $"{"Selected".Tr()}: {selectedCities.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
-            bool any = selectedCities.Count > 0;
-            clear.Visible = any;
-            bool showBody = bulkExpanded || any || bulkResult.Length > 0;
-            bulkBody.Visible = showBody;
-            bulkToggle.Text = (showBody ? "Hide actions" : "Show actions").Tr() + (showBody ? " ▼" : " ▶");
-            focusApply.Disabled = !any;
-            queue.Disabled = !any || choices.Count == 0;
-            buy.Disabled = !any;
-            apply.Disabled = !any || templates.Count == 0;
-            save.Disabled = !any || settings == null;
-        }
-        bulkToggle.Pressed += () =>
-        {
-            bulkExpanded = !bulkBody.Visible;
-            Update();
-        };
-        data.SelectionChanged += Update;
-        Update();
-        panel.AddChild(box);
-        return panel;
+        return (templates, apply, save);
     }
 
     /// <summary>A wrapping row of the bulk panel.</summary>
@@ -537,12 +548,7 @@ public partial class OverviewScreen : PanelContainer
         string? notice = spyBoard.Render(spies, showHeader: false);
         pages[OverviewModel.Espionage].AddChild(spyBoard.Root);
         if (notice != null)
-        {
             notices[OverviewModel.Espionage] = notice;
-            return;
-        }
-        if (spyBoard.SpyTable != null)
-            dataTables[OverviewModel.Espionage] = [spyBoard.SpyTable];
     }
 
     /// <summary>The coup button of a spy row: the short text ("Coup 35%") with the whole sentence as its tooltip; staging a coup (the command stages it) is a danger button, calling it off a plain one. Clipped, so a long translation cannot widen the table.</summary>

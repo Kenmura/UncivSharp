@@ -175,8 +175,11 @@ public static class DecisionPickerModel
     public static PickerSpec? DiplomaticVote(DiplomaticVoteResult vote, Func<string, string> civName)
     {
         if (!vote.CanVote) return null;
-        var options = vote.Candidates.Select(it => new PickerOption(it, civName(it), "", Icon: AssetKey.Of(RulesetAssetKeys.NationIcon, it)))
-            .Append(new PickerOption(Abstain, "Abstain", "Vote for nobody")).ToList();
+        var options = vote.Candidates.Select(it =>
+        {
+            string name = civName(it);
+            return new PickerOption(it, name, "", Icon: AssetKey.Of(RulesetAssetKeys.NationIcon, name));
+        }).Append(new PickerOption(Abstain, "Abstain", "Vote for nobody")).ToList();
         return new PickerSpec(PickerKind.DiplomaticVote, "World Congress", "Vote for the civilization that should lead the world.", [new PickerSlot("civ", "Vote for", options)],
             "Vote", choice => [new VoteDiplomatic { CivId = choice.Selected[0] is { Length: > 0 } id ? id : null }]);
     }

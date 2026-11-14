@@ -281,7 +281,8 @@ public class DecisionPickerModelTests
         Assert.Equal([AssetKey.Of(RulesetAssetKeys.UiIcon, "Spy"), AssetKey.Of(RulesetAssetKeys.NationIcon, "Rome"), AssetKey.Of(RulesetAssetKeys.UiIcon, "Cities")],
             spies.Slots[0].Options.Select(it => it.Icon));
 
-        var vote = DecisionPickerModel.DiplomaticVote(new DiplomaticVoteResult(true, ["Rome"]), it => it)!;
+        var vote = DecisionPickerModel.DiplomaticVote(new DiplomaticVoteResult(true, ["civ-rome"]), id => id == "civ-rome" ? "Rome" : id)!;
+        Assert.Equal(["Rome", "Abstain"], vote.Slots[0].Options.Select(it => it.Label));
         Assert.Equal([AssetKey.Of(RulesetAssetKeys.NationIcon, "Rome"), null], vote.Slots[0].Options.Select(it => it.Icon));
 
         var promo = DecisionPickerModel.Promotion(new PromotionChoicesResult(7, 15, 30, true, false, [new PromotionChoice("Shock I", true, [], [])]), "Warrior")!;

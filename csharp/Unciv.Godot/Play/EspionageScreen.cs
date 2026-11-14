@@ -8,11 +8,10 @@ using Unciv.Queries.Empire;
 namespace Unciv.GodotClient.Play;
 
 /// <summary>
-/// C051, redesigned in C074: the espionage screen (Kotlin <c>EspionageScreen</c>) in a <see cref="ScreenFrame"/>. Above, a <see cref="DataTable"/> of the viewer's spies (rank, location, action) whose
-/// trailing cell holds the row's Move button and, when the engine allows a coup, a coup button ("Coup 35%", the whole sentence as its tooltip); below, a table of the places a spy can be (the
-/// hideout, the cities the engine offers, with the viewer's spies in them). Pressing Move on a spy turns the places it may go to into "Move here" buttons (the button now says Cancel); "Assign spies"
-/// in the footer asks the owner to open the multi-spy picker (<see cref="DecisionPickerModel.MoveSpies"/>). Every list is <see cref="EspionageModel"/> over the engine's
-/// <see cref="SpyDestinationsQuery"/> answer, which only ever describes the viewer's own spies. The screen's only change to the world is the spy command it sends through the <see cref="IGameSession"/>.
+/// C051, redesigned in C074 and T415: the espionage screen (Kotlin <c>EspionageScreen</c>) in a <see cref="ScreenFrame"/>, backed by the shared
+/// <see cref="EspionageBoard"/> component. It shows the viewer's spies with their rank, location, action, Move button, and conditional coup button;
+/// pressing Move expands valid inline destination rows under the moving spy (Move becomes Cancel). Every list comes from <see cref="EspionageModel"/>
+/// over <see cref="SpyDestinationsQuery"/> and sends only spy commands through <see cref="IGameSession"/>.
 /// </summary>
 public partial class EspionageScreen : PanelContainer
 {
