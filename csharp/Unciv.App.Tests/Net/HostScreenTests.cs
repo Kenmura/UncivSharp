@@ -329,6 +329,21 @@ public sealed class HostScreenTests : IDisposable
         Assert.StartsWith("This saved game cannot be hosted", e.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Resume_WhenPortIsInUse_ThrowsHostingException()
+    {
+        using var host = ClientIdentity.Generate();
+        using var friend = ClientIdentity.Generate();
+        var directory = await SaveHostedGameAsync("port-in-use", host, friend);
+        using var cert = HostCertificate.Generate();
+        using var occupied = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Any, 0);
+        occupied.Start();
+        var port = ((System.Net.IPEndPoint)occupied.LocalEndpoint).Port;
+
+        var e = await Assert.ThrowsAsync<HostingException>(() => HostingSession.ResumeAsync(directory, host, cert, port));
+        Assert.Contains($"Port {port} cannot be used", e.Message, StringComparison.Ordinal);
+    }
+
     // ---- new lobby
 
     [Fact]

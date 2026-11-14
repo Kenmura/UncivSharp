@@ -239,4 +239,30 @@ public sealed class RulesetValidatorTests : IDisposable
 
         Assert.False(HasRecursiveResourceUniqueError("for every [Cities]"));
     }
+
+    [Fact]
+    public void UniqueValidatorChecksUnknownMisspelledAndInvalidModifiers()
+    {
+        var validator = new Unciv.Models.Ruleset.Validation.UniqueValidator(game.Ruleset);
+        validator.PopulateFilteringUniqueHashsets();
+
+        var building = game.CreateBuilding("Foo <bar", "[+1 Foodd] <during a Golden Age>", "TotallyUnknownUniqueXYZ");
+        var checkErrors = new Unciv.Models.Ruleset.Validation.RulesetErrorList();
+        validator.CheckUniques(building, checkErrors, reportRulesetSpecificErrors: true);
+        Assert.Contains(checkErrors, e => e.ErrorSeverityToReport == Unciv.Models.Ruleset.Validation.RulesetErrorSeverity.Warning);
+        Assert.Contains(checkErrors, e => e.Text.Contains("[+1 Foodd]", StringComparison.Ordinal));
+
+        Assert.Contains(validator.CheckUnique(new Unciv.Models.Ruleset.Unique.Unique("Diplomatic relationships cannot change <during a Golden Age>"), null),
+            e => e.ErrorSeverityToReport == Unciv.Models.Ruleset.Validation.RulesetErrorSeverity.Error);
+        Assert.Contains(validator.CheckUnique(new Unciv.Models.Ruleset.Unique.Unique("[+1 Food] <during a Golden Agee>"), null),
+            e => e.Text.Contains("unknown type", StringComparison.Ordinal));
+        Assert.Contains(validator.CheckUnique(new Unciv.Models.Ruleset.Unique.Unique("[+1 Food] <[+1 Gold]>"), null),
+            e => e.Text.Contains("not a modifier", StringComparison.Ordinal));
+
+        game.Ruleset.Mods.Add("SomeMod");
+        var modBuilding = game.CreateBuilding("[+1 Food] <if [OtherMod] is enabled>", "[+1 Food] <if [SomeMod] is not enabled>");
+        var modErrors = new Unciv.Models.Ruleset.Validation.RulesetErrorList();
+        validator.CheckUniques(modBuilding, modErrors, reportRulesetSpecificErrors: true);
+        Assert.Empty(modErrors);
+    }
 }

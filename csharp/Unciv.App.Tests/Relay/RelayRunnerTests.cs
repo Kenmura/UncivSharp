@@ -108,4 +108,28 @@ public sealed class RelayRunnerTests : IDisposable
         Assert.Equal(2, code);
         Assert.Contains("--public-name", error.Text, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void ProgramMainAndSignalHandlersWork()
+    {
+        var output = new Lines();
+        var error = new Lines();
+        Assert.Equal(0, Unciv.Relay.Program.RunWithStreams(["--help"], output, error));
+        Assert.Contains("Usage:", output.Text, StringComparison.Ordinal);
+        Assert.Equal(0, Unciv.Relay.Program.Main(["--help"]));
+
+        using var cts = new CancellationTokenSource();
+        var stopCtx = new System.Runtime.InteropServices.PosixSignalContext(System.Runtime.InteropServices.PosixSignal.SIGINT);
+        Unciv.Relay.Program.HandleStop(stopCtx, cts);
+        Assert.True(stopCtx.Cancel);
+        Assert.True(cts.IsCancellationRequested);
+        cts.Dispose();
+        Unciv.Relay.Program.HandleStop(stopCtx, cts); // ObjectDisposedException is swallowed
+
+        var reload = new ReloadSignal();
+        var reloadCtx = new System.Runtime.InteropServices.PosixSignalContext(System.Runtime.InteropServices.PosixSignal.SIGHUP);
+        Unciv.Relay.Program.HandleReload(reloadCtx, reload);
+        Assert.True(reloadCtx.Cancel);
+        Assert.True(reload.WaitAsync(CancellationToken.None).IsCompleted);
+    }
 }

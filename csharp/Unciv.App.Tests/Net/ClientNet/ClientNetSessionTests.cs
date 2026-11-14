@@ -1472,4 +1472,25 @@ public sealed class ClientNetSessionTests
         Assert.True((await join).Joined);
         Assert.Equal(Unciv.Net.Standby.StandbyNotice.Generic, rig.Session.BackupHostNotice);
     }
+
+    [Fact]
+    public async Task Delta_BeforeSnapshot_RequestsResyncWithNoSnapshotReason()
+    {
+        await using var rig = new ClientNetRig();
+        var host = rig.NewConnection();
+        var join = rig.Session.JoinAsync();
+        await host.ReceiveAsync<Hello>();
+        await host.SendAsync(new Welcome { Protocol = ProtocolVersion.Current, SessionId = "s", Challenge = "c", HostKeyFingerprint = ClientNetRig.Fingerprint, RequiresPassword = false });
+        await host.ReceiveAsync<Join>();
+        await host.ReceiveAsync<Auth>();
+        await host.SendAsync(new JoinOk());
+        Assert.True((await join).Joined);
+
+        var s5 = ClientNetRig.Snap(5, 1);
+        var s6 = ClientNetRig.Snap(6, 1, 2);
+        await host.SendAsync(ClientNetRig.Delta(s5, s6));
+        var desync = await rig.NextAsync<Desynchronized>();
+        Assert.Equal("delta-before-snapshot", desync.Reason);
+        await host.ReceiveAsync<ResyncRequest>();
+    }
 }

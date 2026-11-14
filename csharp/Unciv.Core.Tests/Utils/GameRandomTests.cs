@@ -139,5 +139,21 @@ public class GameRandomTests
         Assert.Throws<ArgumentException>(() => new GameRandom(0, 0, 0, 0, 0, 0));
         Assert.Throws<ArgumentException>(() => new GameRandom(42).NextInt(5, 5));
         Assert.Throws<ArgumentException>(() => new GameRandom(42).NextInt(10, 5));
+        Assert.Throws<ArgumentException>(() => new GameRandom(42).NextLong(5, 5));
+        Assert.Throws<ArgumentException>(() => new GameRandom(42).NextDouble(5.0, 5.0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new GameRandom(42).NextBytes(new byte[4], -1, 2));
+    }
+
+    [Fact]
+    public void NextLongAndNextDoubleRangesProduceInRangeValues()
+    {
+        var r = new GameRandom(123);
+        Assert.InRange(r.NextLong(16L), 0L, 15L); // power of 2
+        Assert.InRange(r.NextLong(0L, 1L << 32), 0L, (1L << 32) - 1); // nHigh == 1
+        Assert.InRange(r.NextLong(0L, 1L << 40), 0L, (1L << 40) - 1); // nHigh > 1
+        Assert.InRange(r.NextLong(0L, 100L), 0L, 99L); // non-power-of-2
+        Assert.InRange(r.NextLong(long.MinValue, long.MaxValue), long.MinValue, long.MaxValue - 1); // full 64-bit
+        Assert.InRange(r.NextDouble(5.0), 0.0, 5.0);
+        Assert.InRange(r.NextDouble(-1e308, 1e308), -1e308, 1e308);
     }
 }

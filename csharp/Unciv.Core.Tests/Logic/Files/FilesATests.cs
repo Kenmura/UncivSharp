@@ -269,4 +269,26 @@ public class FilesATests
         Assert.NotNull(MapSaver.LoadMapPreview(file));
         Assert.IsType<TileMap.Preview>(MapSaver.LoadMapPreview(file));
     }
+
+    [Fact]
+    public void MediaFindersExposeFoldersExtensionsAndInternalNames()
+    {
+        var env = new FakeEnv();
+        var music = new Music(env);
+        var voices = new Voices(env);
+        var images = new Images(env);
+
+        Assert.Same(env, music.Environment);
+        Assert.Equal("music", music.MediaSubFolderName);
+        Assert.Equal(MediaFinderDefaults.AudioExtensions, music.SupportedMediaExtensions);
+        Assert.Contains("Thatched Villagers - Ambient", music.GetInternalMediaNames(env.Internal));
+
+        Assert.Same(env, voices.Environment);
+        Assert.Equal("voices", voices.MediaSubFolderName);
+        Assert.Equal(MediaFinderDefaults.AudioExtensions, voices.SupportedMediaExtensions);
+
+        Assert.Same(env, images.Environment);
+        Assert.Equal("ExtraImages", images.MediaSubFolderName);
+        Assert.Equal(MediaFinderDefaults.ImageExtensions, images.SupportedMediaExtensions);
+    }
 }

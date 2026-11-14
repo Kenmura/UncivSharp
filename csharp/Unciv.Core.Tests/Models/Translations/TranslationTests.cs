@@ -566,4 +566,17 @@ public class TranslationTests : IDisposable
         gameInfo.GameParameters.Mods.Clear();
         Assert.Equal("CustomBuilding", "CustomBuilding".Tr());
     }
+
+    [Fact]
+    public void TranslationFileHandlesExposeMetadataAndMissingThrows()
+    {
+        var strHandle = new Unciv.Models.Translations.StringTranslationFileHandle("en.properties", "a = b");
+        Assert.True(strHandle.Exists);
+        Assert.Equal("en.properties", strHandle.Name);
+        var child = strHandle.Child("sub.properties");
+        Assert.False(child.Exists);
+        Assert.Equal("sub.properties", child.Name);
+        Assert.Throws<FileNotFoundException>(() => child.OpenReader());
+        Assert.False(child.Child("nested").Exists);
+    }
 }

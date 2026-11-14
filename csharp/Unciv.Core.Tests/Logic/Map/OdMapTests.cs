@@ -300,4 +300,23 @@ public sealed class OdMapTests : IDisposable
         png[8 + 8 + 12] = 1; // IHDR interlace byte
         Assert.Throws<InvalidDataException>(() => OdMapPng.Decode(png));
     }
+
+    [Fact]
+    public void OdMapPathFileRoundTripsBytes()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"odmap-test-{Environment.ProcessId}.bin");
+        try
+        {
+            var file = new OdMapPathFile(path);
+            using (var w = file.OpenWrite()) w.Write([1, 2, 3, 4]);
+            using var r = file.OpenRead();
+            var buf = new byte[4];
+            Assert.Equal(4, r.Read(buf, 0, buf.Length));
+            Assert.Equal([1, 2, 3, 4], buf);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
 }

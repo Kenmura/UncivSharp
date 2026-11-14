@@ -448,4 +448,83 @@ public class UniqueTriggerTests
         Assert.Equal(2, MapUnitAction.Of([unitA, unitB]).Count());
         Assert.Empty(MapUnitAction.Of(Array.Empty<Unciv.Logic.Map.MapUnits.MapUnit>()));
     }
+
+    [Fact]
+    public void RemoveAndSellBuildingTriggersWork()
+    {
+        city.CityConstructions.AddBuilding("Monument");
+        Assert.True(city.CityConstructions.IsBuilt("Monument"));
+
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique("Sell [Monument] buildings [in this city]"), city));
+        Assert.False(city.CityConstructions.IsBuilt("Monument"));
+
+        city.CityConstructions.AddBuilding("Monument");
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique("Remove [Monument] [in this city]"), city));
+        Assert.False(city.CityConstructions.IsBuilt("Monument"));
+    }
+
+    [Fact]
+    public void UnitMovementStatusAndPromotionTriggersWork()
+    {
+        var unit = game.AddUnit("Warrior", civ, game.TileMap[1, 0]);
+        unit.UseMovementPoints(unit.CurrentMovement);
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique("[This Unit] gains [2] movement"), unit));
+        Assert.Equal(2f, unit.CurrentMovement);
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique("[This Unit] loses [1] movement"), unit));
+        Assert.Equal(1f, unit.CurrentMovement);
+
+        var statusPromo = game.CreateUnitPromotion();
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique($"[This Unit] gains the [{statusPromo.Name}] status for [2] turn(s)"), unit));
+        Assert.True(unit.HasStatus(statusPromo.Name));
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique($"[This Unit] loses the [{statusPromo.Name}] status"), unit));
+        Assert.False(unit.HasStatus(statusPromo.Name));
+
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique("[This Unit] gains the [Drill I] promotion"), unit));
+        Assert.True(unit.Promotions.Promotions.Contains("Drill I"));
+        Assert.True(UniqueTriggerActivation.TriggerUnique(new Unique("[This Unit] loses the [Drill I] promotion"), unit));
+        Assert.False(unit.Promotions.Promotions.Contains("Drill I"));
+    }
+
+    [Fact]
+    public void RemoveImprovementFromTileTriggerWorks()
+    {
+        var tile = game.TileMap[2, 0];
+        game.SetTileTerrain(tile.Position, "Grassland");
+        tile.SetImprovement("Farm");
+        Assert.True(Trigger("Remove [Farm] improvements from this tile", tile));
+        Assert.Null(tile.Improvement);
+    }
+
+    [Fact]
+    public void ResourceStatRangeFaithTechAndPolicyTriggersWork()
+    {
+        var resource = game.CreateResource("Stockpiled");
+        Assert.True(Trigger($"Instantly provides [5] [{resource.Name}]"));
+        Assert.Equal(5, civ.GetResourceAmount(resource.Name));
+        Assert.True(Trigger($"Instantly consumes [2] [{resource.Name}]"));
+        Assert.Equal(3, civ.GetResourceAmount(resource.Name));
+
+        int goldBefore = civ.Gold;
+        Assert.True(Trigger("Gain [10]-[20] [Gold]"));
+        Assert.InRange(civ.Gold, goldBefore + 10, goldBefore + 20);
+
+        Assert.True(Trigger("Gain enough Faith for a Pantheon"));
+        Assert.True(Trigger("Gain enough Faith for [50]% of a Great Prophet"));
+        Assert.True(Trigger("Research [50]% of [Pottery]", notification: "Research boost"));
+
+        Assert.True(Trigger("[1] Free Social Policies"));
+        Assert.Equal(1, civ.Policies.FreePolicies);
+
+        var branch = game.Ruleset.PolicyBranches.Values.First();
+        var policy = branch.Policies.First();
+        civ.Policies.FreePolicies += 3;
+        civ.Policies.Adopt(branch);
+        civ.Policies.Adopt(policy);
+        Assert.True(Trigger($"Remove [{policy.Name}] and refund [50]% of its cost"));
+        Assert.False(civ.Policies.IsAdopted(policy.Name));
+        civ.Policies.FreePolicies += 1;
+        civ.Policies.Adopt(policy);
+        Assert.True(Trigger($"Remove [{policy.Name}]"));
+        Assert.False(civ.Policies.IsAdopted(policy.Name));
+    }
 }

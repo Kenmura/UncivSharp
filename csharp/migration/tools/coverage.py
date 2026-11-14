@@ -10,11 +10,11 @@ changed file already meets its baseline there the full run is skipped, otherwise
 --update-baseline always use the full report (a partial one would show false uncovered ranges). Runs through distrobox
 `dotnet-dev` automatically when `dotnet` is not on PATH.
 
-  --check            Gate. Exit 1 if, for any checked file, line coverage fell below its baseline, or a file with no
-                     baseline entry has < 80% line coverage and is not excused. Prints the per-file table.
+  --check            Gate. Exit 1 if, for any checked file, line coverage is below 80% or fell below its baseline.
+                     Prints the per-file table.
   --report           Same table for the checked files plus uncovered line ranges; never fails (for the Review step).
   --update-baseline  Raise/add baseline entries for the checked files (never lowers one; a lowered file must be
-                     fixed with tests, or excused). With --all: regenerate EVERY entry from the current tree, lowering
+                     fixed with tests). With --all: regenerate EVERY entry from the current tree, lowering
                      included (only for fixing a stale baseline, with a ticket for the lost coverage).
                      Writes migration/coverage-baseline.json.
   --run              Force a fresh FULL coverage run even if the cached report is current.
@@ -26,11 +26,7 @@ changed file already meets its baseline there the full run is skipped, otherwise
   --since REV        Changed set relative to REV instead of csharp-migration (reviewers use the implementation's parent).
   FILE...            Explicit files (relative to csharp/) to check instead of the changed set.
 
---update-baseline --all grandfathers every existing file at its current coverage; afterwards only files born later
-face the 80% rule.
-
-Excusing a new file below 80% (declarations only, platform glue, ...): add it to "excused" in the baseline file with a
-reason naming a ticket; files with no executable lines are skipped automatically.
+Every file with executable lines faces the 80% line-coverage minimum; files with no executable lines are skipped automatically.
 """
 import argparse
 import glob
@@ -209,18 +205,17 @@ def changed_files(since=None):
 
 def load_baseline():
     if not os.path.exists(BASELINE):
-        return {"files": {}, "excused": {}}
+        return {"files": {}}
     with open(BASELINE) as fh:
         return json.load(fh)
 
 
 def save_baseline(b):
     # one entry per line, sorted: parallel tickets touch different lines, so rebases merge cleanly
-    def block(name, d, fmt):
-        rows = ",\n".join('    %s: %s' % (json.dumps(k), fmt(v)) for k, v in sorted(d.items()))
-        return '  "%s": {\n%s\n  }' % (name, rows) if rows else '  "%s": {}' % name
-    text = "{\n%s,\n%s\n}\n" % (block("files", b["files"], lambda v: json.dumps(v, sort_keys=True)),
-                                block("excused", b["excused"], json.dumps))
+    rows = ",\n".join('    %s: %s' % (json.dumps(k), json.dumps(v, sort_keys=True))
+                      for k, v in sorted(b["files"].items()))
+    files_block = '  "files": {\n%s\n  }' % rows if rows else '  "files": {}'
+    text = "{\n%s\n}\n" % files_block
     with open(BASELINE, "w") as fh:
         fh.write(text)
 
@@ -305,12 +300,13 @@ def evaluate(report, wanted, baseline):
             if cur["line"] + 1e-9 < base["line"]:
                 status = "REGRESSED from %.2f%%" % base["line"]
                 problems.append("%s: line coverage %.2f%% < baseline %.2f%%" % (fn, cur["line"], base["line"]))
-        elif fn in baseline["excused"]:
-            status = "excused: " + baseline["excused"][fn]
+            elif cur["line"] < NEW_FILE_MIN:
+                status = "below %d%%" % NEW_FILE_MIN
+                problems.append("%s: line coverage %.2f%% < %d%% minimum" % (fn, cur["line"], NEW_FILE_MIN))
         elif cur["line"] < NEW_FILE_MIN:
             status = "NEW below %d%%" % NEW_FILE_MIN
-            problems.append("%s: new file at %.2f%% line coverage (< %d%%; add tests or excuse it in %s with a reason)"
-                            % (fn, cur["line"], NEW_FILE_MIN, os.path.basename(BASELINE)))
+            problems.append("%s: new file at %.2f%% line coverage (< %d%%; add tests)"
+                            % (fn, cur["line"], NEW_FILE_MIN))
         else:
             status = "new"
         rows.append((fn, cur, base, status))
@@ -320,9 +316,6 @@ def evaluate(report, wanted, baseline):
 
 def finish(a, rows, problems, baseline):
     if a.update_baseline:
-        # --all regenerates the whole baseline from reality: pre-existing files below 80% are grandfathered at their level
-        if a.all:
-            problems = []
         if problems:
             print("\n".join(problems))
             sys.exit("coverage: refusing to update the baseline while checks fail")
