@@ -19,7 +19,7 @@ Work is completed phase by phase (`phases.txt`; `ticket.py ready`/`next` list ea
 
 | Phase | Done | Remaining | Ready | In flight | Remaining tickets |
 |---|---|---|---|---|---|
-| Phase 1: CLI (headless engine) | 238/249 | 11 | 6 | 1 | [T404](backlog/T404.md) [T417](backlog/T417.md) [T418](backlog/T418.md) [T419](backlog/T419.md) [T420](backlog/T420.md) [T422](backlog/T422.md) [T423](backlog/T423.md) [T424](backlog/T424.md) [T425](backlog/T425.md) [T426](backlog/T426.md) [T427](backlog/T427.md) |
+| Phase 1: CLI (headless engine) | 239/249 | 10 | 6 | 0 | [T404](backlog/T404.md) [T417](backlog/T417.md) [T418](backlog/T418.md) [T419](backlog/T419.md) [T422](backlog/T422.md) [T423](backlog/T423.md) [T424](backlog/T424.md) [T425](backlog/T425.md) [T426](backlog/T426.md) [T427](backlog/T427.md) |
 | Phase 2: single player (Godot client) | 57/57 | 0 | 0 | 0 | complete |
 | Phase 3: multiplayer | 76/79 | 3 | 0 | 0 | [T355](backlog/T355.md) [T357](backlog/T357.md) [T394](backlog/T394.md) |
 | Phase 4: queued plans (UI redesign, unit models, BNW) | 82/82 | 0 | 0 | 0 | complete |
@@ -103,7 +103,6 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T422 T423 T424 T425 T426 T427
-- in review: T420
 - blocked: T290 T355 T357 T394 T404
 - waiting: T313 T332 T362
 
@@ -125,7 +124,7 @@ xychart-beta
     y-axis "Tickets" 0 --> 40
     line [5, 39, 9, 14, 37, 32, 32, 26, 26, 20, 12, 18]
     line [0, 0, 1, 1, 1, 5, 5, 5, 5, 5, 5, 5]
-    line [1, 6, 2, 5, 5, 4, 4, 0, 0, 2, 4, 1]
+    line [1, 6, 2, 5, 5, 4, 4, 0, 0, 2, 4, 0]
 ```
 
 ## Progress and scope over time
@@ -141,7 +140,7 @@ xychart-beta
     title "Done vs total scope"
     x-axis ["Oct 24 00:00", "Oct 26 00:00", "Oct 28 00:00", "Oct 30 00:00", "Nov 01 00:00", "Nov 03 00:00", "Nov 05 00:00", "Nov 07 00:00", "Nov 09 00:00", "Nov 11 00:00", "Nov 13 00:00", "Nov 15 00:00"]
     y-axis "Tickets" 0 --> 570
-    line [0, 246, 297, 413, 488, 503, 503, 514, 514, 522, 529, 543]
+    line [0, 246, 297, 413, 488, 503, 503, 514, 514, 522, 529, 544]
     line [6, 291, 309, 433, 531, 544, 544, 545, 545, 549, 550, 567]
 ```
 
@@ -172,4 +171,3 @@ xychart-beta
 | T404 | Blocked | T301 | 0 | T301 follow-up: window maximize/resize on Wayland-native, Windows, macOS and with UiScale != 1 in the real app |
 | T418 | Available (waiting on T417) | T416, T417 | 0 | Clean cutover docs: rewrite root README.md, archive legacy changelog, and update contributor/modding docs for C#/.NET + Godot |
 | T419 | Available (waiting on T325, T330) | T325, T330, T280, T416 | 0 | Automated releases: one-click version bump, changelog generation, optional Android release signing, and main-branch workflow alignment |
-| T420 | Needs-Review [Antigravity] | none | 0 | Coverage ratchet cleanup: raise all 23 below-80% files and retire coverage-baseline excused and grandfathering exceptions |
