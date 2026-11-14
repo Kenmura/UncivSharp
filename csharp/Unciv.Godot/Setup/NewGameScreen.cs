@@ -32,7 +32,8 @@ public partial class NewGameScreen : Control
     private readonly List<Button> slotNationButtons = [];
     private readonly List<Button> slotHumanButtons = [];
     private readonly Dictionary<string, ChoiceRow> rows = [];
-    private LineEdit seedField = null!; // JUSTIFY: C015 assigned by FillMap, which the constructor runs
+    private ReadyRef<LineEdit> seedFieldRef;
+    private LineEdit seedField => seedFieldRef.Value;
     private int selectedSlot;
     private bool starting;
 
@@ -275,7 +276,7 @@ public partial class NewGameScreen : Control
 
     private void FillGame() => SetupTabs.FillGame(gamePage, theme, Form, rows, Change);
 
-    private void FillMap() => seedField = SetupTabs.FillMap(mapPage, theme, Form, rows, Change, ShowProblems);
+    private void FillMap() => seedFieldRef.Set(SetupTabs.FillMap(mapPage, theme, Form, rows, Change, ShowProblems));
 
     private void FillRules() => SetupTabs.FillRules(rulesPage, theme, Form, rows, Change, "Mods");
 

@@ -49,16 +49,17 @@ public sealed partial class RelayServer
                 room.Pending[pending.Id] = pending;
             }
         }
-        if (pending == null)
+        if (pending == null || control == null)
         {
-            await conn.TrySendAsync(Error(refusal!)).ConfigureAwait(false);
-            Log.Info("join-refused", room: room.Display, peer: peer, reason: refusal, ip: conn.Ip);
+            var reason = refusal ?? "host-gone";
+            await conn.TrySendAsync(Error(reason)).ConfigureAwait(false);
+            Log.Info("join-refused", room: room.Display, peer: peer, reason: reason, ip: conn.Ip);
             return;
         }
 
         try
         {
-            try { await control!.Conn.SendAsync(new JsonObject { ["ev"] = "incoming", ["id"] = pending.Id, ["peer"] = peer }, stopping.Token).ConfigureAwait(false); }
+            try { await control.Conn.SendAsync(new JsonObject { ["ev"] = "incoming", ["id"] = pending.Id, ["peer"] = peer }, stopping.Token).ConfigureAwait(false); }
             catch (Exception e) when (e is IOException or ObjectDisposedException or OperationCanceledException)
             {
                 await conn.TrySendAsync(Error("host-gone")).ConfigureAwait(false);

@@ -453,7 +453,7 @@
     "Unciv.Core/Logic/GameInfoSimultaneousTurn.cs": {"branch": 90.55, "line": 98.1},
     "Unciv.Core/Logic/GameInfoTurn.cs": {"branch": 97.73, "line": 100.0},
     "Unciv.Core/Logic/GameInfoTurnPhases.cs": {"branch": 95.65, "line": 100.0},
-    "Unciv.Core/Logic/GameStarter.cs": {"branch": 80.8, "line": 89.11},
+    "Unciv.Core/Logic/GameStarter.cs": {"branch": 80.8, "line": 89.09},
     "Unciv.Core/Logic/GreatWorks/GreatWorkInstance.cs": {"branch": 100.0, "line": 100.0},
     "Unciv.Core/Logic/GreatWorks/GreatWorkRules.cs": {"branch": 96.59, "line": 100.0},
     "Unciv.Core/Logic/HolidayDates.cs": {"branch": 95.16, "line": 98.81},

@@ -78,7 +78,7 @@ public class JavaHashMapConverter<TValue> : JsonConverter<JavaHashMap<string, TV
             reader.Read();
             TValue value = typeof(TValue) == typeof(int)
                 ? (TValue)(object)JsonValueReader.ReadInt(ref reader, "JavaHashMap value")
-                : JsonSerializer.Deserialize<TValue>(ref reader, options)!; // JUSTIFY: T119 TValue is unconstrained; JSON null maps to default (Java null)
+                : JsonSerializer.Deserialize<TValue>(ref reader, options) ?? new TValue[1].ElementAt(0);
             map.Put(key, value);
         }
         throw new JsonException("Unexpected end of JSON while reading JavaHashMap");

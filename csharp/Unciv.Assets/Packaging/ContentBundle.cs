@@ -48,7 +48,7 @@ public static class ContentBundle
                 if (entry.FullName.EndsWith('/')) continue;
                 var target = Path.GetFullPath(Path.Combine(work, entry.FullName));
                 if (!target.StartsWith(root, StringComparison.Ordinal)) throw new InvalidDataException($"Content bundle entry escapes the target folder: {entry.FullName}");
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+                if (Path.GetDirectoryName(target) is { } parent) Directory.CreateDirectory(parent);
                 entry.ExtractToFile(target, true);
             }
             File.WriteAllText(Path.Combine(work, StampFile), version);

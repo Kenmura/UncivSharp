@@ -60,7 +60,7 @@ public static class ProceduralAssets
             positions[i] = new Vector3(data.Positions[i * 3], data.Positions[i * 3 + 1], data.Positions[i * 3 + 2]);
             normals[i] = new Vector3(data.Normals[i * 3], data.Normals[i * 3 + 1], data.Normals[i * 3 + 2]);
             uvs[i] = new Vector2(data.Uvs[i * 2], data.Uvs[i * 2 + 1]);
-            if (colours != null) colours[i] = new Color(data.Colors![i * 4], data.Colors[i * 4 + 1], data.Colors[i * 4 + 2], data.Colors[i * 4 + 3]);
+            if (colours != null && data.Colors is { } srcColors) colours[i] = new Color(srcColors[i * 4], srcColors[i * 4 + 1], srcColors[i * 4 + 2], srcColors[i * 4 + 3]);
         }
         var arrays = new Godot.Collections.Array();
         arrays.Resize((int)Mesh.ArrayType.Max);

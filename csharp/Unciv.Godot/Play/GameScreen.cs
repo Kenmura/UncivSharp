@@ -29,13 +29,20 @@ public partial class GameScreen : Control
     private const float HudMargin = 12f;
 
     private readonly Dictionary<int, UnitNode> unitNodes = [];
-    private IGameSession session = null!; // JUSTIFY: C010 assigned by Start before the screen is used
-    private AssetRegistry assets = null!; // JUSTIFY: C010 assigned by Start before the screen is used
-    private GameQueries queries = null!; // JUSTIFY: C010 assigned by Start before the screen is used
-    private Node3D unitLayer = null!; // JUSTIFY: C010 assigned in _Ready before any use
-    private Node3D dotLayer = null!; // JUSTIFY: C010 assigned in _Ready before any use
-    private Label statusLabel = null!; // JUSTIFY: C010 assigned in _Ready before any use
-    private PanelContainer statusPanel = null!; // JUSTIFY: C068 assigned in _Ready before any use
+    private ReadyRef<IGameSession> sessionRef;
+    private IGameSession session => sessionRef.Value;
+    private ReadyRef<AssetRegistry> assetsRef;
+    private AssetRegistry assets => assetsRef.Value;
+    private ReadyRef<GameQueries> queriesRef;
+    private GameQueries queries => queriesRef.Value;
+    private ReadyRef<Node3D> unitLayerRef;
+    private Node3D unitLayer => unitLayerRef.Value;
+    private ReadyRef<Node3D> dotLayerRef;
+    private Node3D dotLayer => dotLayerRef.Value;
+    private ReadyRef<Label> statusLabelRef;
+    private Label statusLabel => statusLabelRef.Value;
+    private ReadyRef<PanelContainer> statusPanelRef;
+    private PanelContainer statusPanel => statusPanelRef.Value;
     private string statusText = "";
     private int statusFrames;
     private const int StatusFrames = 240; // frames, not seconds: captures must not depend on machine speed
@@ -45,7 +52,8 @@ public partial class GameScreen : Control
     private int bannerTurn = -1;
     private int rivalsTurn = -1;
     private int rivalsRequest;
-    private ClientSnapshot snapshot = null!; // JUSTIFY: C010 assigned by Refresh in Start
+    private ReadyRef<ClientSnapshot> snapshotRef;
+    private ClientSnapshot snapshot => snapshotRef.Value;
     private int previewRequest;
     private PathPreviewResult? preview;
     private bool mapLoaded;
@@ -53,44 +61,57 @@ public partial class GameScreen : Control
     private HashSet<(int X, int Y)> attackTiles = [];
     private (string Kind, HexCoord Target)? pendingAttack;
 
-    public MapView Map { get; private set; } = null!; // JUSTIFY: C010 assigned in _Ready before any use
+    private ReadyRef<MapView> mapRef;
+    public MapView Map => mapRef.Value;
 
-    public WorldHud World { get; private set; } = null!; // JUSTIFY: C067 assigned in _Ready before any use
+    private ReadyRef<WorldHud> worldRef;
+    public WorldHud World => worldRef.Value;
 
-    public HudView Hud { get; private set; } = null!; // JUSTIFY: C011 assigned in _Ready before any use
+    private ReadyRef<HudView> hudRef;
+    public HudView Hud => hudRef.Value;
 
-    public MinimapView Minimap { get; private set; } = null!; // JUSTIFY: C014 assigned in _Ready before any use
+    private ReadyRef<MinimapView> minimapRef;
+    public MinimapView Minimap => minimapRef.Value;
 
     private TileOwnerMemoryStore? ownerStore;
     private readonly TileOwnerMemory ownerMemory = new(); // what this screen has seen of tile ownership, so fogged tiles keep their last-known owner (T298)
 
+    private ReadyRef<MapOverlayLayer> overlaysRef;
     /// <summary>Cities, borders, roads and improvements drawn on the map (C041).</summary>
-    public MapOverlayLayer Overlays { get; private set; } = null!; // JUSTIFY: C041 assigned in _Ready before any use
+    public MapOverlayLayer Overlays => overlaysRef.Value;
 
-    public UnitPanelView Panel { get; private set; } = null!; // JUSTIFY: C012 assigned in _Ready before any use
+    private ReadyRef<UnitPanelView> panelRef;
+    public UnitPanelView Panel => panelRef.Value;
 
-    public CombatPreviewView CombatPreview { get; private set; } = null!; // JUSTIFY: C012 assigned in _Ready before any use
+    private ReadyRef<CombatPreviewView> combatPreviewRef;
+    public CombatPreviewView CombatPreview => combatPreviewRef.Value;
 
-    public TileOverlay ReachableOverlay { get; private set; } = null!; // JUSTIFY: C012 assigned in _Ready before any use
+    private ReadyRef<TileOverlay> reachableOverlayRef;
+    public TileOverlay ReachableOverlay => reachableOverlayRef.Value;
 
+    private ReadyRef<TileOverlay> siteOverlayRef;
     /// <summary>C088: the work radius of the city site under the pointer while a unit that can found a city is selected.</summary>
-    public TileOverlay SiteOverlay { get; private set; } = null!; // JUSTIFY: C088 assigned in _Ready before any use
+    public TileOverlay SiteOverlay => siteOverlayRef.Value;
 
+    private ReadyRef<MapMarkerLayer> markerLayerRef;
     /// <summary>C089: the player's private map markers (pins and labels), drawn from the client settings only.</summary>
-    public MapMarkerLayer MarkerLayer { get; private set; } = null!; // JUSTIFY: C089 assigned in _Ready before any use
+    public MapMarkerLayer MarkerLayer => markerLayerRef.Value;
 
     /// <summary>C089: the marker editor and list (built again for every game started on this screen).</summary>
     public MapMarkerView? MarkerEditor { get; private set; }
 
+    private ReadyRef<MapMarkerMenuView> markerMenuRef;
     /// <summary>C089: the context menu a right-click on a tile opens when no unit is selected.</summary>
-    public MapMarkerMenuView MarkerMenu { get; private set; } = null!; // JUSTIFY: C089 assigned in _Ready before any use
+    public MapMarkerMenuView MarkerMenu => markerMenuRef.Value;
 
+    private ReadyRef<MapPingLayer> pingLayerRef;
     /// <summary>C090: the allies' map pings (rings, a column and the sender's name), shown for <see cref="MapPingModel.Lifetime"/> seconds. Never stored or sent anywhere.</summary>
-    public MapPingLayer PingLayer { get; private set; } = null!; // JUSTIFY: C090 assigned in _Ready before any use
+    public MapPingLayer PingLayer => pingLayerRef.Value;
 
     private bool foundsCities;
 
-    public TileOverlay AttackOverlay { get; private set; } = null!; // JUSTIFY: C012 assigned in _Ready before any use
+    private ReadyRef<TileOverlay> attackOverlayRef;
+    public TileOverlay AttackOverlay => attackOverlayRef.Value;
 
     /// <summary>C033: plays the movement and combat events of every command on the map. Off until a host turns <see cref="CombatPresenter.Enabled"/> on.</summary>
     public CombatPresenter Presenter { get; } = new() { Name = "Presenter" };
@@ -105,37 +126,46 @@ public partial class GameScreen : Control
     public IReadOnlyList<int> GroupUnitIds => extraGroupIds.Count == 0 || SelectedUnitId is not { } primary ? [] : [primary, .. extraGroupIds];
 
     /// <summary>C091: the escort pairs of the viewer.</summary>
-    public IReadOnlyList<EscortPair> Escorts => escorts.TryGetValue(session?.ViewerCivId ?? "", out var list) ? list : [];
+    public IReadOnlyList<EscortPair> Escorts => escorts.TryGetValue(sessionRef.OrNull?.ViewerCivId ?? "", out var list) ? list : [];
 
+    private ReadyRef<NotificationListView> notificationsRef;
     /// <summary>C013: the clickable notification list.</summary>
-    public NotificationListView Notifications { get; private set; } = null!; // JUSTIFY: C013 assigned in _Ready before any use
+    public NotificationListView Notifications => notificationsRef.Value;
 
+    private ReadyRef<AlertPopupView> alertsRef;
     /// <summary>C013: the modal popup for the first pending alert.</summary>
-    public AlertPopupView Alerts { get; private set; } = null!; // JUSTIFY: C013 assigned in _Ready before any use
+    public AlertPopupView Alerts => alertsRef.Value;
 
+    private ReadyRef<TradeProposalView> proposalsRef;
     /// <summary>C039: the modal popup for the first incoming trade or peace proposal.</summary>
-    public TradeProposalView Proposals { get; private set; } = null!; // JUSTIFY: C039 assigned in _Ready before any use
+    public TradeProposalView Proposals => proposalsRef.Value;
 
+    private ReadyRef<TutorialPopupView> tutorialsRef;
     /// <summary>C026: the tutorial popup; it shows only while the screen follows client settings (<see cref="BindSettings"/>) that have tutorials on.</summary>
-    public TutorialPopupView Tutorials { get; private set; } = null!; // JUSTIFY: C026 assigned in _Ready before any use
+    public TutorialPopupView Tutorials => tutorialsRef.Value;
 
+    private ReadyRef<VoteResultScreen> voteResultRef;
     /// <summary>C053: the World Congress result, above the world and below the victory screen.</summary>
-    public VoteResultScreen VoteResult { get; private set; } = null!; // JUSTIFY: C053 assigned in _Ready before any use
+    public VoteResultScreen VoteResult => voteResultRef.Value;
 
+    private ReadyRef<GameOverScreen> gameOverRef;
     /// <summary>C024: the victory/defeat screen, above everything else.</summary>
-    public GameOverScreen GameOver { get; private set; } = null!; // JUSTIFY: C024 assigned in _Ready before any use
+    public GameOverScreen GameOver => gameOverRef.Value;
 
     /// <summary>Raised when the player leaves the finished (or any) game from the game-over screen or the menu; the composition root shows the main menu.</summary>
     public event Action? MainMenuRequested;
 
+    private ReadyRef<GameMenuView> gameMenuRef;
     /// <summary>C044: the in-game menu (Escape or the Menu button).</summary>
-    public GameMenuView GameMenu { get; private set; } = null!; // JUSTIFY: C044 assigned in _Ready before any use
+    public GameMenuView GameMenu => gameMenuRef.Value;
 
+    private ReadyRef<VictoryStatusView> victoryStatusRef;
     /// <summary>C044: the menu's "Victory status" page.</summary>
-    public VictoryStatusView VictoryStatus { get; private set; } = null!; // JUSTIFY: C044 assigned in _Ready before any use
+    public VictoryStatusView VictoryStatus => victoryStatusRef.Value;
 
+    private ReadyRef<ConsoleView> consolePopupRef;
     /// <summary>C046: the developer console (the console hotkey); it does not block the map, so tiles and units can be selected for the next line.</summary>
-    public ConsoleView ConsolePopup { get; private set; } = null!; // JUSTIFY: C046 assigned in _Ready before any use
+    public ConsoleView ConsolePopup => consolePopupRef.Value;
 
     public Button MenuButton => World.Menu;
 
@@ -156,8 +186,9 @@ public partial class GameScreen : Control
 
     private bool resigned;
 
+    private ReadyRef<AutoPlayMenuView> autoPlayMenuRef;
     /// <summary>C047: the menu of the AutoPlay button.</summary>
-    public AutoPlayMenuView AutoPlayMenu { get; private set; } = null!; // JUSTIFY: C047 assigned in _Ready before any use
+    public AutoPlayMenuView AutoPlayMenu => autoPlayMenuRef.Value;
 
     /// <summary>C047: the running AutoPlay as the client tracks it, null while idle.</summary>
     public AutoPlayRun? AutoPlay { get; private set; }
@@ -173,17 +204,20 @@ public partial class GameScreen : Control
     /// <summary>T376: what the running AutoPlay animates (fixed when the run starts).</summary>
     private AutoPlayAnimations autoPlayAnimations;
 
+    private ReadyRef<NextTurnProgressView> turnOverlayRef;
     /// <summary>C040/T345: the overlay shown (after a delay) while End turn is processed off the UI thread.</summary>
-    public NextTurnProgressView TurnOverlay { get; private set; } = null!; // JUSTIFY: C040 assigned in _Ready before any use
+    public NextTurnProgressView TurnOverlay => turnOverlayRef.Value;
 
     /// <summary>C040/T345: True from pressing Next turn until the host answered; a turn can be cancelled (Esc) but the map, camera and menus stay usable.</summary>
     public bool IsEndingTurn => turnCancellation != null;
 
+    private ReadyRef<TurnBarView> turnBarRef;
     /// <summary>C036: the multiplayer turn bar (who ended, deadline, connection marks, toasts); hidden unless the session is a simultaneous game (<see cref="ITurnRoster"/>).</summary>
-    public TurnBarView TurnBar { get; private set; } = null!; // JUSTIFY: C036 assigned in _Ready before any use
+    public TurnBarView TurnBar => turnBarRef.Value;
 
+    private ReadyRef<SocialView> socialRef;
     /// <summary>C045: the players-and-chat panel of a hosted game (the Players button toggles it); the button is hidden unless the session is an <see cref="IGameSocial"/>.</summary>
-    public SocialView Social { get; private set; } = null!; // JUSTIFY: C045 assigned in _Ready before any use
+    public SocialView Social => socialRef.Value;
 
     public Button PlayersButton => World.Players;
 
@@ -262,8 +296,9 @@ public partial class GameScreen : Control
     private int gameOverCheck;
     private int gameOverTurn = -1;
 
+    private ReadyRef<DecisionPickerView> pickerRef;
     /// <summary>C038: the modal decision picker (free great person, religion, spies, vote, promotion).</summary>
-    public DecisionPickerView Picker { get; private set; } = null!; // JUSTIFY: C038 assigned in _Ready before any use
+    public DecisionPickerView Picker => pickerRef.Value;
 
     /// <summary>C038: opens the promotion picker for the selected unit while the engine offers a promotion.</summary>
     public Button PromoteButton { get; } = new() { Name = "PromoteButton", Text = "Promote".Tr(), Visible = false };
@@ -277,20 +312,23 @@ public partial class GameScreen : Control
     /// <summary>The city whose screen (<see cref="City"/>) is open: the hook that tells which city.</summary>
     public CityDto? OpenCity { get; private set; }
 
+    private ReadyRef<CityScreen> cityRef;
     /// <summary>The city screen (C017); created by <see cref="Start"/>.</summary>
-    public CityScreen City { get; private set; } = null!; // JUSTIFY: C017 assigned in Start before any use
+    public CityScreen City => cityRef.Value;
 
     public bool IsCityPanelVisible => City.Visible;
 
+    private ReadyRef<DiplomacyScreen> diplomacyRef;
     /// <summary>C021: the diplomacy screen, opened by the Diplomacy button.</summary>
-    public DiplomacyScreen Diplomacy { get; private set; } = null!; // JUSTIFY: C021 assigned in Start before any use
+    public DiplomacyScreen Diplomacy => diplomacyRef.Value;
 
     public bool IsDiplomacyVisible => Diplomacy.Visible;
 
     public Button DiplomacyButton => World.Diplomacy;
 
+    private ReadyRef<PolicyScreen> policiesRef;
     /// <summary>C020: the policy screen, opened by the Policies button or the "Pick a policy" decision.</summary>
-    public PolicyScreen Policies { get; private set; } = null!; // JUSTIFY: C020 assigned in Start before any use
+    public PolicyScreen Policies => policiesRef.Value;
 
     public bool IsPolicyScreenVisible => Policies.Visible;
 
@@ -330,37 +368,37 @@ public partial class GameScreen : Control
 
     private void CreateWorldLayers()
     {
-        Map = new MapView { Name = "Map" };
+        mapRef.Set(new MapView { Name = "Map" });
         AddChild(Map);
-        Overlays = new MapOverlayLayer { Name = "Overlays" };
+        overlaysRef.Set(new MapOverlayLayer { Name = "Overlays" });
         AddChild(Overlays);
-        unitLayer = new Node3D { Name = "Units" };
+        unitLayerRef.Set(new Node3D { Name = "Units" });
         AddChild(unitLayer);
         Presenter.PlaySound = name => PlaySound?.Invoke(name);
         AddChild(Presenter);
-        dotLayer = new Node3D { Name = "PathDots" };
+        dotLayerRef.Set(new Node3D { Name = "PathDots" });
         AddChild(dotLayer);
-        ReachableOverlay = new TileOverlay(PlaceholderPalette.ReachableTint) { Name = "ReachableOverlay" };
-        AttackOverlay = new TileOverlay(PlaceholderPalette.AttackTint) { Name = "AttackOverlay" };
-        SiteOverlay = new TileOverlay(PlaceholderPalette.SiteTint) { Name = "SiteOverlay" };
+        reachableOverlayRef.Set(new TileOverlay(PlaceholderPalette.ReachableTint) { Name = "ReachableOverlay" });
+        attackOverlayRef.Set(new TileOverlay(PlaceholderPalette.AttackTint) { Name = "AttackOverlay" });
+        siteOverlayRef.Set(new TileOverlay(PlaceholderPalette.SiteTint) { Name = "SiteOverlay" });
         AddChild(ReachableOverlay);
         AddChild(AttackOverlay);
         AddChild(SiteOverlay);
-        MarkerLayer = new MapMarkerLayer { Name = "MarkerLayer" };
+        markerLayerRef.Set(new MapMarkerLayer { Name = "MarkerLayer" });
         AddChild(MarkerLayer);
-        PingLayer = new MapPingLayer { Name = "PingLayer" };
+        pingLayerRef.Set(new MapPingLayer { Name = "PingLayer" });
         AddChild(PingLayer);
     }
 
     private void CreateHudWidgets()
     {
-        statusLabel = new Label { Name = "StatusLabel" };
-        statusPanel = new PanelContainer { Name = "StatusPanel", Visible = false, MouseFilter = MouseFilterEnum.Ignore, ThemeTypeVariation = UiVariants.PanelTooltip };
+        statusLabelRef.Set(new Label { Name = "StatusLabel" });
+        statusPanelRef.Set(new PanelContainer { Name = "StatusPanel", Visible = false, MouseFilter = MouseFilterEnum.Ignore, ThemeTypeVariation = UiVariants.PanelTooltip });
         statusLabel.MouseFilter = MouseFilterEnum.Ignore;
         statusPanel.AddChild(statusLabel);
         AddChild(statusPanel);
-        Hud = new HudView { Name = "Hud" };
-        World = new WorldHud();
+        hudRef.Set(new HudView { Name = "Hud" });
+        worldRef.Set(new WorldHud());
         AddChild(World);
         World.Requested += OnNav;
         World.Rivals.ExpandedChanged += _ => Run(RefreshRivals(snapshot.Turn, force: true));
@@ -368,26 +406,26 @@ public partial class GameScreen : Control
         Hud.ActionRequested += OnHudAction;
         Hud.EndTurnRequested += OnNextTurn;
         Hud.AutoPlayRequested += OnAutoPlayButton;
-        AutoPlayMenu = new AutoPlayMenuView();
+        autoPlayMenuRef.Set(new AutoPlayMenuView());
         AddChild(AutoPlayMenu);
         AutoPlayMenu.Chosen += kind => Run(StartAutoPlayAsync(kind));
-        Notifications = new NotificationListView();
+        notificationsRef.Set(new NotificationListView());
         Notifications.Resized += () => World.LayoutOverlays();
         Notifications.Chosen += OnNotificationChosen;
         Notifications.ReviewRequested += () => Run(ReviewAlerts());
-        TaskCard = new TutorialTaskCard();
+        taskCardRef.Set(new TutorialTaskCard());
         AddChild(TaskCard);
         TaskCard.ChoiceChosen += (eventName, index) => Run(ChooseTaskChoice(eventName, index));
-        Panel = new UnitPanelView();
+        panelRef.Set(new UnitPanelView());
         AddChild(Panel);
         Panel.EntryChosen += OnMenuEntry;
         Panel.Confirmed += entry => Run(ExecuteEntry(entry, confirmed: true));
         Panel.PopoverOpened += () => Hud.HideBanner();
-        CombatPreview = new CombatPreviewView();
+        combatPreviewRef.Set(new CombatPreviewView());
         AddChild(CombatPreview);
         CombatPreview.ConfirmRequested += () => Run(ConfirmAttack());
         CombatPreview.CancelRequested += ClearAttackPreview;
-        Minimap = new MinimapView { Name = "Minimap" };
+        minimapRef.Set(new MinimapView { Name = "Minimap" });
         Minimap.Attach(Map);
         World.Mount(Hud, Notifications, Minimap);
         Panel.SetPromoteChip(PromoteButton);
@@ -396,11 +434,11 @@ public partial class GameScreen : Control
 
     private void CreatePopups()
     {
-        Picker = new DecisionPickerView();
+        pickerRef.Set(new DecisionPickerView());
         AddChild(Picker);
         Picker.Confirmed += (spec, commands) => Run(ConfirmPicker(spec, commands));
         Picker.Dismissed += spec => Run(DismissPicker(spec));
-        Alerts = new AlertPopupView();
+        alertsRef.Set(new AlertPopupView());
         AddChild(Alerts);
         Alerts.Answered += (popup, answer) => Run(AnswerAlert(popup, answer));
         Alerts.Deferred += popup =>
@@ -409,7 +447,7 @@ public partial class GameScreen : Control
             Alerts.Close();
             Run(RefreshHud());
         };
-        Proposals = new TradeProposalView();
+        proposalsRef.Set(new TradeProposalView());
         AddChild(Proposals);
         Proposals.Answered += (popup, answer) => Run(AnswerProposal(popup, answer));
         Proposals.Deferred += popup =>
@@ -418,35 +456,35 @@ public partial class GameScreen : Control
             Proposals.Close();
             Run(RefreshHud());
         };
-        TurnBar = new TurnBarView();
+        turnBarRef.Set(new TurnBarView());
         AddChild(TurnBar);
-        Social = new SocialView();
+        socialRef.Set(new SocialView());
         AddChild(Social);
         Social.ChatSubmitted += text => Run(SendChat(text));
         Social.KickRequested += civ => Run(Admin(civ, null));
         Social.RebindRequested += (civ, key) => Run(Admin(civ, key));
-        TurnOverlay = new NextTurnProgressView();
+        turnOverlayRef.Set(new NextTurnProgressView());
         AddChild(TurnOverlay);
-        VoteResult = new VoteResultScreen();
+        voteResultRef.Set(new VoteResultScreen());
         AddChild(VoteResult);
         VoteResult.Continued += () => Run(AcknowledgeVoteResult());
-        GameOver = new GameOverScreen();
+        gameOverRef.Set(new GameOverScreen());
         AddChild(GameOver);
-        Tutorials = new TutorialPopupView();
+        tutorialsRef.Set(new TutorialPopupView());
         AddChild(Tutorials);
         Tutorials.Dismissed += DismissTutorial;
         Tutorials.NeverShowRequested += NeverShowTutorials;
         TaskCard.NeverShowRequested += NeverShowTutorials;
         GameOver.Chosen += kind => Run(OnGameOverChosen(kind));
-        VictoryStatus = new VictoryStatusView();
+        victoryStatusRef.Set(new VictoryStatusView());
         AddChild(VictoryStatus);
-        GameMenu = new GameMenuView();
+        gameMenuRef.Set(new GameMenuView());
         AddChild(GameMenu);
         GameMenu.Chosen += kind => Run(OnMenuChosen(kind));
-        ConsolePopup = new ConsoleView();
+        consolePopupRef.Set(new ConsoleView());
         AddChild(ConsolePopup);
         ConsolePopup.StateChanged += (history, keepOpen) => boundSettings?.Update(s => s with { ConsoleHistory = [.. history], KeepConsoleOpen = keepOpen });
-        MarkerMenu = new MapMarkerMenuView();
+        markerMenuRef.Set(new MapMarkerMenuView());
         AddChild(MarkerMenu);
         MarkerMenu.Chosen += OnMarkerMenuChosen;
     }
@@ -535,16 +573,16 @@ public partial class GameScreen : Control
         if (boundSettings != null) boundSettings.Changed -= ApplySettings; // T343: a freed screen must not keep answering settings changes
         ui?.Unbind(); // C079: a freed screen must not keep receiving the window's resizes through its theme
         turnCancellation?.Cancel(); // a turn still being processed stops after the civ it is playing; nothing waits for it
-        if (session != null)
+        if (sessionRef.OrNull is { } activeSession)
         {
-            session.SnapshotChanged -= OnSnapshotChanged;
-            session.EventsReceived -= OnEventsReceived;
-            if (session is NetGameSession oldNet)
+            activeSession.SnapshotChanged -= OnSnapshotChanged;
+            activeSession.EventsReceived -= OnEventsReceived;
+            if (activeSession is NetGameSession oldNet)
             {
                 oldNet.HostRolledBack -= OnHostRolledBack;
                 oldNet.HostChangedNotice -= OnHostChangedNotice;
             }
-            if (session is ITurnRoster roster) roster.RosterChanged -= RefreshTurnBar;
+            if (activeSession is ITurnRoster roster) roster.RosterChanged -= RefreshTurnBar;
             BindSocial(null);
         }
     }
@@ -555,10 +593,10 @@ public partial class GameScreen : Control
         if (statusFrames > 0 && --statusFrames == 0) statusPanel.Visible = false;
         else if (statusPanel.Visible && StatusLayoutStale()) LayoutStatus(); // T363: the HUD's rebuilt containers may only get their rect in a later frame
         // the countdowns move with the clock, not with snapshots
-        if (session is not ITurnRoster || TurnBar.Data == null) return;
+        if (sessionRef.OrNull is not ITurnRoster || TurnBar.Data == null) return;
         var now = NowMs();
-        var soonestGrace = TurnBar.Data.Rows.Where(it => !it.Ended && it.GraceEndsAt != null).Select(it => it.GraceEndsAt!.Value).DefaultIfEmpty(0).Min();
-        if (TurnBarModel.Countdown(snapshot?.TurnStatus.Deadline, now) != shownCountdown
+        var soonestGrace = TurnBar.Data.Rows.Where(it => !it.Ended && it.GraceEndsAt != null).Select(it => it.GraceEndsAt ?? 0).DefaultIfEmpty(0).Min();
+        if (TurnBarModel.Countdown(snapshotRef.OrNull?.TurnStatus.Deadline, now) != shownCountdown
             || (soonestGrace != 0 && TurnBarModel.Countdown(soonestGrace, now) != shownGrace))
             RefreshTurnBar();
     }
@@ -570,14 +608,14 @@ public partial class GameScreen : Control
     /// <summary>Connects the screen to a game and draws it, centred on the human's first unit. Call after the screen entered the tree; calling it again switches to another game (C016: load).</summary>
     public void Start(IGameSession gameSession, AssetRegistry registry)
     {
-        if (session != null) DetachPreviousSession();
-        if (session != gameSession) ownerMemory.Clear(); // T298: what one game or viewer saw must never colour another's fog (hotseat hand-over, load)
-        if (session != gameSession) sessionMarkers = ClientSettings.Default; // C089: in-memory markers belong to one game
-        var previousSession = session;
-        session = gameSession;
-        if (session != previousSession) RestoreOwnerMemory(); // T378: a new session of a game this viewer played before (load, reconnect, restart) starts from what it saw
-        assets = registry;
-        queries = new GameQueries(session);
+        if (sessionRef.IsSet) DetachPreviousSession();
+        var previousSession = sessionRef.OrNull;
+        if (previousSession != gameSession) ownerMemory.Clear(); // T298: what one game or viewer saw must never colour another's fog (hotseat hand-over, load)
+        if (previousSession != gameSession) sessionMarkers = ClientSettings.Default; // C089: in-memory markers belong to one game
+        sessionRef.Set(gameSession);
+        if (gameSession != previousSession) RestoreOwnerMemory(); // T378: a new session of a game this viewer played before (load, reconnect, restart) starts from what it saw
+        assetsRef.Set(registry);
+        queriesRef.Set(new GameQueries(session));
         ui?.Unbind();
         var theme = new UiTheme(registry);
         ui = theme;
@@ -646,7 +684,7 @@ public partial class GameScreen : Control
         Tutorials.Close();
         TaskCard.Init(theme);
         reportedTasks.Clear();
-        tutorialQueue = new TutorialQueue(session.Ruleset);
+        tutorialQueueRef.Set(new TutorialQueue(session.Ruleset));
         TaskCard.ResetClosed();
         GameOver.Close();
         VictoryStatus.Init(theme);
@@ -678,7 +716,7 @@ public partial class GameScreen : Control
 
     private void RebuildChildScreens(UiTheme theme)
     {
-        City = new CityScreen(session, theme);
+        cityRef.Set(new CityScreen(session, theme));
         City.ConfirmDestructive = ConfirmDestructive; // T343
         AddChild(City);
         City.CommandAccepted += Refresh;
@@ -687,47 +725,47 @@ public partial class GameScreen : Control
             if (TutorialTaskModel.FromCommand(command) is { } task) ReportTaskDone(task);
         };
         City.Closed += () => ShowCity(null);
-        if (Diplomacy != null)
+        if (diplomacyRef.OrNull is { } oldDiplomacy)
         {
-            RemoveChild(Diplomacy);
-            Diplomacy.QueueFree();
+            RemoveChild(oldDiplomacy);
+            oldDiplomacy.QueueFree();
         }
-        Diplomacy = new DiplomacyScreen(session, theme);
+        diplomacyRef.Set(new DiplomacyScreen(session, theme));
         Diplomacy.ConfirmDestructive = ConfirmDestructive; // T343
         AddChild(Diplomacy);
         Diplomacy.CommandAccepted += Refresh;
-        if (Tech != null)
+        if (techRef.OrNull is { } oldTech)
         {
-            RemoveChild(Tech);
-            Tech.QueueFree();
+            RemoveChild(oldTech);
+            oldTech.QueueFree();
         }
-        if (Trade != null)
+        if (tradeRef.OrNull is { } oldTrade)
         {
-            RemoveChild(Trade);
-            Trade.QueueFree();
+            RemoveChild(oldTrade);
+            oldTrade.QueueFree();
         }
-        Trade = new TradeScreen(session, theme);
+        tradeRef.Set(new TradeScreen(session, theme));
         AddChild(Trade);
         Trade.CommandAccepted += Refresh;
         Trade.Closed += () => Run(RefreshHud());
         Trade.Retracting += offerTracker.NoteRetracted;
-        Tech = new TechScreen(session, theme);
+        techRef.Set(new TechScreen(session, theme));
         AddChild(Tech);
         Tech.CommandAccepted += Refresh;
-        if (Policies != null)
+        if (policiesRef.OrNull is { } oldPolicies)
         {
-            RemoveChild(Policies);
-            Policies.QueueFree();
+            RemoveChild(oldPolicies);
+            oldPolicies.QueueFree();
         }
-        Policies = new PolicyScreen(session, theme);
+        policiesRef.Set(new PolicyScreen(session, theme));
         AddChild(Policies);
         Policies.CommandAccepted += Refresh;
-        if (Overview != null)
+        if (overviewRef.OrNull is { } oldOverview)
         {
-            RemoveChild(Overview);
-            Overview.QueueFree();
+            RemoveChild(oldOverview);
+            oldOverview.QueueFree();
         }
-        Overview = new OverviewScreen(session, theme);
+        overviewRef.Set(new OverviewScreen(session, theme));
         AddChild(Overview);
         Overview.CommandAccepted += Refresh;
         Overview.CityChosen += JumpToCity;
@@ -745,12 +783,12 @@ public partial class GameScreen : Control
         MarkerEditor.GoTo += OnMarkerGoTo;
         MarkerMenu.Init(theme);
         MarkerMenu.Close();
-        if (Tooltips != null)
+        if (tooltipsRef.OrNull is { } oldTooltips)
         {
-            RemoveChild(Tooltips);
-            Tooltips.QueueFree();
+            RemoveChild(oldTooltips);
+            oldTooltips.QueueFree();
         }
-        Tooltips = new TooltipHost(theme) { Name = "Tooltips", TopInset = () => World.BarBottom };
+        tooltipsRef.Set(new TooltipHost(theme) { Name = "Tooltips", TopInset = () => World.BarBottom });
         Tooltips.PointEnded += () =>
         {
             // C100: a touch tile tip ended by itself (next press, timeout): the tile it described and the site overlay go with it
@@ -760,19 +798,19 @@ public partial class GameScreen : Control
         };
         HoveredTile = null;
         HoverTip = "";
-        if (Pedia != null)
+        if (pediaRef.OrNull is { } oldPedia)
         {
-            RemoveChild(Pedia);
-            Pedia.QueueFree();
+            RemoveChild(oldPedia);
+            oldPedia.QueueFree();
         }
-        Pedia = new PediaScreen(session.Ruleset, theme, Tooltips);
+        pediaRef.Set(new PediaScreen(session.Ruleset, theme, Tooltips));
         AddChild(Pedia);
-        if (Espionage != null)
+        if (espionageRef.OrNull is { } oldEspionage)
         {
-            RemoveChild(Espionage);
-            Espionage.QueueFree();
+            RemoveChild(oldEspionage);
+            oldEspionage.QueueFree();
         }
-        Espionage = new EspionageScreen(session, theme);
+        espionageRef.Set(new EspionageScreen(session, theme));
         AddChild(Espionage);
         Espionage.CommandAccepted += Refresh;
         foreach (Control screen in new Control[] { City, Diplomacy, Trade, Tech, Overview, Policies, Pedia, Espionage, MarkerEditor })
@@ -799,18 +837,18 @@ public partial class GameScreen : Control
     public void BindOwnerMemory(TileOwnerMemoryStore store)
     {
         ownerStore = store;
-        if (session == null) return;
+        if (!sessionRef.IsSet) return;
         bool restored = RestoreOwnerMemory();
         if (ownerMemory.Remember(session.Snapshot.Tiles)) SaveOwnerMemory(); // the first look at this game, before the store was known
         if (restored) Refresh();
     }
 
     private bool RestoreOwnerMemory() =>
-        ownerStore != null && session is { OwnerMemoryKey: { } key } && ownerStore.Load(key, session.ViewerCivId, session.Snapshot.Turn, session.Snapshot.Tiles, ownerMemory);
+        ownerStore != null && sessionRef.OrNull is { OwnerMemoryKey: { } key } s && ownerStore.Load(key, s.ViewerCivId, s.Snapshot.Turn, s.Snapshot.Tiles, ownerMemory);
 
     private void SaveOwnerMemory()
     {
-        if (ownerStore != null && session is { OwnerMemoryKey: { } key }) ownerStore.Save(key, session.ViewerCivId, session.Snapshot.Turn, session.Snapshot.Tiles, ownerMemory);
+        if (ownerStore != null && sessionRef.OrNull is { OwnerMemoryKey: { } key } s) ownerStore.Save(key, s.ViewerCivId, s.Snapshot.Turn, s.Snapshot.Tiles, ownerMemory);
     }
 
     /// <summary>Redraws everything from the session's current snapshot (the screen does this itself after its own commands; a caller that changed the game another way calls it).</summary>
@@ -818,7 +856,7 @@ public partial class GameScreen : Control
     {
         FullRefreshCount++;
         autoPlayStale = false;
-        snapshot = session.Snapshot;
+        snapshotRef.Set(session.Snapshot);
         Map.Load(assets, snapshot.Tiles, keepCamera: mapLoaded);
         mapLoaded = true;
         Minimap.Update(snapshot.Tiles, OwnerColour);
@@ -939,7 +977,7 @@ public partial class GameScreen : Control
     {
         if (IsEndingTurn) return; // T345: the camera still pans and zooms, but no order starts while the worker owns the engine gate
         MarkerMenu.Close();
-        if (DisplayProfile.Current.Touch && Tooltips != null) ShowTileTip(coord, Map.ClickAt); // C100: tile info without hover
+        if (DisplayProfile.Current.Touch && tooltipsRef.IsSet) ShowTileTip(coord, Map.ClickAt); // C100: tile info without hover
         if (coord is not { } tile)
         {
             Deselect();
@@ -994,27 +1032,25 @@ public partial class GameScreen : Control
     private ClientSettings sessionMarkers = ClientSettings.Default;
     private HexCoord? markerTile;
 
-    private string? MarkerKey => MapMarkerModel.Key(session?.GameId, session?.ViewerCivId ?? "");
+    private string? MarkerKey => MapMarkerModel.Key(sessionRef.OrNull?.GameId, sessionRef.OrNull?.ViewerCivId ?? "");
 
-    private bool MarkersPersist => boundSettings != null && MarkerKey != null;
+    private ClientSettings MarkerSettings => boundSettings != null && MarkerKey != null ? boundSettings.Current : sessionMarkers;
 
-    private ClientSettings MarkerSettings => MarkersPersist ? boundSettings!.Current : sessionMarkers;
-
-    private string StoreKey => MarkersPersist ? MarkerKey! : SessionMarkerKey;
+    private string StoreKey => boundSettings != null && MarkerKey is { } key ? key : SessionMarkerKey;
 
     /// <summary>The viewer's markers of this game, in the order they were placed.</summary>
     public IReadOnlyList<MapMarker> Markers => MapMarkerModel.For(MarkerSettings, StoreKey);
 
     private void RefreshMarkers()
     {
-        if (MarkerLayer == null || session == null) return;
+        if (!markerLayerRef.IsSet || !sessionRef.IsSet) return;
         MarkerLayer.Show([.. Markers.Where(it => Map.TileNodeAt(new HexCoord(it.X, it.Y)) != null)], TileTopAt); // a marker off this map (stale or hand-edited) stays in the file but is not drawn
     }
 
     private void ChangeMarkers(Func<ClientSettings, string, ClientSettings> change)
     {
         string key = StoreKey;
-        if (MarkersPersist) boundSettings!.Update(it => change(it, key)); // Changed redraws the layer
+        if (boundSettings is { } settings && MarkerKey != null) settings.Update(it => change(it, key)); // Changed redraws the layer
         else
         {
             sessionMarkers = change(sessionMarkers, key);
@@ -1026,7 +1062,7 @@ public partial class GameScreen : Control
     /// <summary>Opens the marker editor on a tile (the list only when null).</summary>
     public void OpenMarkerEditor(HexCoord? tile)
     {
-        if (session == null || MarkerEditor == null) return;
+        if (!sessionRef.IsSet || MarkerEditor == null) return;
         MarkerMenu.Close();
         var existing = tile is { } at ? MapMarkerModel.At(MarkerSettings, StoreKey, at.X, at.Y) : null;
         MarkerEditor.Open(tile, existing, Markers);

@@ -206,7 +206,7 @@ public static class UnitOrdersModel
         var attacker = preview.Attacker == null ? null : Fighter(preview.Attacker, damage ? preview.DamageToAttackerMin : 0, damage ? preview.DamageToAttackerMax : 0);
         var defender = preview.Defender == null ? null : Fighter(preview.Defender, damage ? preview.DamageToDefenderMin : 0, damage ? preview.DamageToDefenderMax : 0);
         var outcome = new List<string>();
-        if (battle) AddBattleOutcome(outcome, preview, preview.Attacker!, preview.Defender!, withHealthLine: false); // the card's predicted-health bars show it
+        if (preview.Kind == "battle" && preview.Attacker is { } battleAttacker && preview.Defender is { } battleDefender) AddBattleOutcome(outcome, preview, battleAttacker, battleDefender, withHealthLine: false); // the card's predicted-health bars show it
         if (!preview.CanAttack) outcome.Add("Cannot attack right now");
         return new CombatCard(attacker, defender, outcome);
     }

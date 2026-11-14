@@ -14,7 +14,7 @@ public sealed partial class RelayServer
     /// <summary>The optional read-only HTTP listener: GET only, no request bodies, a rate limit per client network (RELAY.md section 7, A13).</summary>
     private async Task HandleHttpAsync(TcpClient tcp)
     {
-        var remote = (IPEndPoint)tcp.Client.RemoteEndPoint!;
+        var remote = tcp.Client.RemoteEndPoint as IPEndPoint ?? throw new InvalidOperationException("Expected IPEndPoint");
         using var conn = new RelayConn(tcp, remote.Address);
         lock (gate) liveConnections.Add(conn);
         string? counted = null;

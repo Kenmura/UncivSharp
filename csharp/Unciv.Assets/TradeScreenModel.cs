@@ -4,6 +4,7 @@ using Unciv.Logic.Civilization;
 using Unciv.Logic.Civilization.Diplomacy;
 using Unciv.Net.Visibility;
 using Unciv.Queries.Empire;
+using Unciv.Utils;
 
 namespace Unciv.Assets;
 
@@ -125,7 +126,7 @@ public sealed class TradeBuilder
 
     /// <summary>The staged offers of one column, in the order they were staged.</summary>
     public IReadOnlyList<TradeChoice> StagedChoices(TradeSide side) =>
-        staged.Where(it => it.Side == side).Select(it => ChoiceOf(side, Find(side, it.Type, it.Name)!)).ToList();
+        staged.Where(it => it.Side == side).Select(it => ChoiceOf(side, Find(side, it.Type, it.Name).NotNull())).ToList();
 
     /// <summary>
     /// Stages the offer, or takes it off when it is staged already. Refused (false) for an offer the engine lists as not tradable, or one that is not on the column.

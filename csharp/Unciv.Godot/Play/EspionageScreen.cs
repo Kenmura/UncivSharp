@@ -18,10 +18,14 @@ public partial class EspionageScreen : PanelContainer
     private readonly IGameSession session;
     private readonly GameQueries queries;
     private readonly UiTheme theme;
-    private ScreenFrame frame = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
-    private Label message = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
-    private ScrollContainer scroll = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
-    private EspionageBoard board = null!; // JUSTIFY: T415 assigned by BuildFrame in the constructor
+    private ReadyRef<ScreenFrame> frameRef;
+    private ReadyRef<Label> messageRef;
+    private ReadyRef<ScrollContainer> scrollRef;
+    private ReadyRef<EspionageBoard> boardRef;
+    private ScreenFrame frame => frameRef.Value;
+    private Label message => messageRef.Value;
+    private ScrollContainer scroll => scrollRef.Value;
+    private EspionageBoard board => boardRef.Value;
     private SpyDestinationsResult? result;
     private string? notice;
     private string messageText = "";
@@ -53,21 +57,22 @@ public partial class EspionageScreen : PanelContainer
     private void BuildFrame()
     {
         string? keepSelected = board?.SelectedSpy;
-        if (frame != null)
+        if (frameRef.OrNull is { } oldFrame)
         {
-            RemoveChild(frame); // at once: a queued free would leave the old frame in the layout until the frame ends
-            frame.QueueFree();
+            RemoveChild(oldFrame); // at once: a queued free would leave the old frame in the layout until the frame ends
+            oldFrame.QueueFree();
         }
-        frame = new ScreenFrame(theme, "Espionage", closeLabel: "Close espionage");
+        frameRef.Set(new ScreenFrame(theme, "Espionage", closeLabel: "Close espionage"));
         frame.CloseRequested += Close;
         AddChild(frame);
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
-        message = new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = messageText, Visible = messageText.Length > 0 };
+        messageRef.Set(new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = messageText, Visible = messageText.Length > 0 });
         column.AddChild(message);
-        scroll = new ScrollContainer { Name = "EspionageScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Auto, SizeFlagsVertical = SizeFlags.ExpandFill };
-        board = new EspionageBoard(theme, command => Fire(Send(command)), SetMessage) { SelectedSpy = keepSelected };
-        scroll.AddChild(board.Root);
+        scrollRef.Set(new ScrollContainer { Name = "EspionageScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Auto, SizeFlagsVertical = SizeFlags.ExpandFill });
+        var nextBoard = new EspionageBoard(theme, command => Fire(Send(command)), SetMessage) { SelectedSpy = keepSelected };
+        boardRef.Set(nextBoard);
+        scroll.AddChild(nextBoard.Root);
         column.AddChild(scroll);
         frame.SetContent(column);
     }

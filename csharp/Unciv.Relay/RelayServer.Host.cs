@@ -65,7 +65,8 @@ public sealed partial class RelayServer
                 Log.Info("host-refused", reason: failure, ip: conn.Ip);
                 return;
             }
-            if (!ReferenceEquals(room!.Key, key)) key.Dispose(); // an existing room keeps its own (identical) key object
+            if (room == null || control == null) throw new InvalidOperationException("Register succeeded without room or control channel");
+            if (!ReferenceEquals(room.Key, key)) key.Dispose(); // an existing room keeps its own (identical) key object
             if (old != null) _ = old.CloseAsync("superseded");
             try
             {
@@ -77,7 +78,7 @@ public sealed partial class RelayServer
                         ["fp"] = room.FingerprintHex,
                         ["limits"] = new JsonObject { ["idleSeconds"] = limits.IdleSeconds, ["maxJoiners"] = limits.MaxJoinersPerRoom, ["spliceRate"] = limits.SpliceRate, ["maxPending"] = limits.MaxPendingPerRoom },
                         ["ttl"] = limits.ControlSilenceSeconds,
-                    }, control!.Cancel.Token).ConfigureAwait(false);
+                    }, control.Cancel.Token).ConfigureAwait(false);
                 Log.Info("host", room: room.Display, fp: room.FingerprintHex, ip: conn.Ip, reason: old != null ? "superseded-old" : null);
                 await ControlLoopAsync(room, control, conn).ConfigureAwait(false);
             }
@@ -85,7 +86,7 @@ public sealed partial class RelayServer
             {
                 lock (gate)
                 {
-                    controls.Remove(control!);
+                    controls.Remove(control);
                     if (ReferenceEquals(room.Control, control))
                     {
                         room.Control = null;
@@ -94,7 +95,7 @@ public sealed partial class RelayServer
                     }
                 }
                 Log.Info("host-gone", room: room.Display, fp: room.FingerprintHex);
-                await control!.Cancel.CancelAsync().ConfigureAwait(false);
+                await control.Cancel.CancelAsync().ConfigureAwait(false);
             }
         }
         finally

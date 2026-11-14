@@ -77,11 +77,16 @@ public sealed class JavaHashMap<TKey, TValue> : IEnumerable<KeyValuePair<TKey, T
 
     public bool ContainsKey(TKey key) => FindNode(key) != null;
 
-    public bool TryGetValue(TKey key, out TValue value)
+    public bool TryGetValue(TKey key, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out TValue value)
     {
         var node = FindNode(key);
-        value = node != null ? node.Value : default!; // JUSTIFY: T119 default of an unconstrained V on a miss, as Java null
-        return node != null;
+        if (node != null)
+        {
+            value = node.Value;
+            return true;
+        }
+        value = default;
+        return false;
     }
 
     /// <summary>Put; returns true if the key was new. An existing key keeps its position.</summary>

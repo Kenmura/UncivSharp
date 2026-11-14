@@ -3,6 +3,7 @@ using Unciv.Net;
 using Unciv.Net.Persistence;
 using Unciv.Net.Standby;
 using Unciv.Server.Transport;
+using Unciv.Utils;
 
 namespace Unciv.Server;
 
@@ -126,7 +127,8 @@ public sealed partial class GameHost
         var lag = 0;
         try
         {
-            lag = (int)Math.Min(int.MaxValue, Math.Max(0, store!.LastSeq - Math.Max(stream.AckedSeq, 0)));
+            if (store is { } activeStore)
+                lag = (int)Math.Min(int.MaxValue, Math.Max(0, activeStore.LastSeq - Math.Max(stream.AckedSeq, 0)));
         }
         catch (Exception e) when (e is GameStoreException or IOException or ObjectDisposedException or InvalidOperationException)
         {
@@ -191,7 +193,7 @@ public sealed partial class GameHost
     private bool CanContinue(IReplicationSource source, StandbySubscribe subscribe)
     {
         var have = subscribe.HaveSeq;
-        var last = store!.LastSeq;
+        var last = store.NotNull().LastSeq;
         if (have < 0 || have > last || last - have > Standby.Limits.MaxLagEntries) return false;
         if (have == 0) return subscribe.HaveLineSha256 == null;
         if (subscribe.HaveLineSha256 is not { Length: 64 } claimed) return false;
@@ -216,7 +218,7 @@ public sealed partial class GameHost
         }
         else
         {
-            if (ack.Seq < stream.AckedSeq || ack.Seq > Math.Min(stream.SentSeq, store!.LastSeq))
+            if (ack.Seq < stream.AckedSeq || ack.Seq > Math.Min(stream.SentSeq, store.NotNull().LastSeq))
             {
                 await FailStandbyStreamAsync(stream, "ack");
                 return;
@@ -231,9 +233,10 @@ public sealed partial class GameHost
 
     private async Task SendStandbyMetaAsync(StandbyStream stream, bool withHeader)
     {
-        var source = (IReplicationSource)store!;
+        var activeStore = store.NotNull();
+        var source = (IReplicationSource)activeStore;
         // game.json as the successor keeps it: not this host's own bookkeeping (what it has seen from peers, who it designated).
-        var text = UncivJson.Serialize(store!.ReadMeta() with { SeenEpoch = 0, Standby = null });
+        var text = UncivJson.Serialize(activeStore.ReadMeta() with { SeenEpoch = 0, Standby = null });
         if (!withHeader && string.Equals(text, stream.LastMeta, StringComparison.Ordinal)) return;
         stream.LastMeta = text;
         await SafeSendAsync(stream.Target, new StandbyMeta { Epoch = stream.Epoch, Header = withHeader ? source.ReadHeaderLine() : null, Meta = text });
@@ -302,8 +305,9 @@ public sealed partial class GameHost
 
     private bool IsLagging(StandbyStream stream, long now)
     {
-        var acked = stream.AwaitingResetAck ? (stream.ResetSeq >= 0 ? stream.ResetSeq : store!.LastSeq) : stream.AckedSeq;
-        if (store!.LastSeq - Math.Max(acked, 0) > Standby.Limits.MaxLagEntries) return true;
+        var lastSeq = store.NotNull().LastSeq;
+        var acked = stream.AwaitingResetAck ? (stream.ResetSeq >= 0 ? stream.ResetSeq : lastSeq) : stream.AckedSeq;
+        if (lastSeq - Math.Max(acked, 0) > Standby.Limits.MaxLagEntries) return true;
         var outstanding = stream.AwaitingResetAck ? stream.Phase != StreamPhase.Snapshot : stream.SentSeq > stream.AckedSeq;
         return outstanding && now - stream.LastProgressMillis > Standby.Limits.MaxLagMillis;
     }
@@ -313,7 +317,7 @@ public sealed partial class GameHost
         if (stream.SnapBytes == null)
         {
             var newest = source.ReadNewestSnapshot();
-            if (newest == null && store!.TrySnapshot(session.Game)) newest = source.ReadNewestSnapshot();
+            if (newest == null && store.NotNull().TrySnapshot(session.Game)) newest = source.ReadNewestSnapshot();
             if (newest == null)
             {
                 PostStandbyStepLater(TimeSpan.FromMilliseconds(500)); // not a safe moment to snapshot (a round is resolving): try again
@@ -328,7 +332,7 @@ public sealed partial class GameHost
             if (stream.SnapReset) stream.ResetSeq = newest.Value.Seq;
         }
 
-        var bytes = stream.SnapBytes!;
+        var bytes = stream.SnapBytes.NotNull();
         var chunk = Standby.Limits.SnapshotChunkBytes;
         var offset = stream.SnapNext * chunk;
         var length = Math.Min(chunk, bytes.Length - offset);
@@ -422,8 +426,9 @@ public sealed partial class GameHost
             StreamPhase.Snapshot => StandbyStates.Syncing,
             _ => stream.Synced ? StandbyStates.Ready : StandbyStates.Syncing,
         };
-        var acked = stream.AwaitingResetAck ? (stream.ResetSeq >= 0 ? stream.ResetSeq : store!.LastSeq) : Math.Max(stream.AckedSeq, 0);
-        if (!Standby.SetReplication(state, (int)Math.Min(int.MaxValue, Math.Max(0, store!.LastSeq - acked)))) return;
+        var lastSeq = store.NotNull().LastSeq;
+        var acked = stream.AwaitingResetAck ? (stream.ResetSeq >= 0 ? stream.ResetSeq : lastSeq) : Math.Max(stream.AckedSeq, 0);
+        if (!Standby.SetReplication(state, (int)Math.Min(int.MaxValue, Math.Max(0, lastSeq - acked)))) return;
         await SafeSendAsync(stream.Target, StatusMessage());
         await AnnounceSuccessorAsync();
     }

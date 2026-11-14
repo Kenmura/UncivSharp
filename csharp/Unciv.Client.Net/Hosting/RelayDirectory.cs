@@ -126,6 +126,6 @@ public static class RelayDirectoryClient
         if (reply?["ok"] is JsonValue ok && ok.TryGetValue<bool>(out var accepted) && !accepted && reply["code"] is JsonValue code && code.TryGetValue<string>(out var wire) && wire == "not-found" && path.StartsWith("/v1/games", StringComparison.Ordinal))
             throw new RelayException(RelayCodes.ListingOff, "This relay does not offer a game directory.", "not-found");
         RelayChannel.ThrowIfRefused(reply, "asking for the game list");
-        return reply!["data"] as JsonObject ?? throw new RelayException(RelayCodes.Failed, "The relay answered without data.");
+        return reply?["data"] as JsonObject ?? throw new RelayException(RelayCodes.Failed, "The relay answered without data.");
     }
 }

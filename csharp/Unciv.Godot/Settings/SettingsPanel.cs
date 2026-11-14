@@ -105,8 +105,8 @@ public partial class SettingsPanel : HBoxContainer
     private readonly Label nameLabel = new() { ThemeTypeVariation = UiVariants.LabelSecondary };
     private DataTable? keyTable;
     private Button? tutorialsButton;
-    private Stepper scaleStepper = null!; // JUSTIFY: C075 assigned by BuildDisplay, which the constructor runs
-    private Stepper textScaleStepper = null!; // JUSTIFY: T352 assigned by BuildDisplay, which the constructor runs
+    private ReadyRef<Stepper> scaleStepper;
+    private ReadyRef<Stepper> textScaleStepper;
     private ScrollContainer? currentPage;
     private bool refreshing;
 
@@ -168,10 +168,10 @@ public partial class SettingsPanel : HBoxContainer
     public Button GraphicsRestartButton => graphicsRestart;
 
     /// <summary>The UI scale stepper (percent).</summary>
-    public Stepper ScaleStepper => scaleStepper;
+    public Stepper ScaleStepper => scaleStepper.Value;
 
     /// <summary>T352: the independent text scale stepper (percent).</summary>
-    public Stepper TextScaleStepper => textScaleStepper;
+    public Stepper TextScaleStepper => textScaleStepper.Value;
 
     /// <summary>T352: the colourblind mode picker.</summary>
     public OptionButton ColorblindModePicker => colorblindPicker;
@@ -296,21 +296,23 @@ public partial class SettingsPanel : HBoxContainer
     {
         var page = AddPage("Display", "Star");
         page.AddChild(nameLabel);
-        scaleStepper = new Stepper(theme, (int)(OptionsModel.MinUiScale * 100), (int)(OptionsModel.MaxUiScale * 100), 100, (int)(OptionsModel.UiScaleStep * 100), "Smaller UI", "Bigger UI", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "UiScaleStepper" };
-        scaleStepper.Changed += v =>
+        var uiStepper = new Stepper(theme, (int)(OptionsModel.MinUiScale * 100), (int)(OptionsModel.MaxUiScale * 100), 100, (int)(OptionsModel.UiScaleStep * 100), "Smaller UI", "Bigger UI", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "UiScaleStepper" };
+        uiStepper.Changed += v =>
         {
             if (!refreshing) service.Update(s => s with { UiScale = v / 100f });
         };
-        AddRow(page, "UI scale", scaleStepper);
-        textScaleStepper = new Stepper(theme, (int)MathF.Round(AccessibilityModel.MinTextScale * 100f, MidpointRounding.AwayFromZero), (int)MathF.Round(AccessibilityModel.MaxTextScale * 100f, MidpointRounding.AwayFromZero), 100, (int)MathF.Round(AccessibilityModel.TextScaleStep * 100f, MidpointRounding.AwayFromZero), "Smaller text", "Bigger text", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "TextScaleStepper" };
-        textScaleStepper.Changed += v =>
+        scaleStepper.Set(uiStepper);
+        AddRow(page, "UI scale", uiStepper);
+        var txtStepper = new Stepper(theme, (int)MathF.Round(AccessibilityModel.MinTextScale * 100f, MidpointRounding.AwayFromZero), (int)MathF.Round(AccessibilityModel.MaxTextScale * 100f, MidpointRounding.AwayFromZero), 100, (int)MathF.Round(AccessibilityModel.TextScaleStep * 100f, MidpointRounding.AwayFromZero), "Smaller text", "Bigger text", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "TextScaleStepper" };
+        txtStepper.Changed += v =>
         {
             if (refreshing) return;
             float next = v / 100f;
             theme.SetTextScale(next);
             service.Update(s => s with { TextScale = next });
         };
-        AddRow(page, "Text scale", textScaleStepper);
+        textScaleStepper.Set(txtStepper);
+        AddRow(page, "Text scale", txtStepper);
         foreach (var mode in AccessibilityModel.Modes) colorblindPicker.AddItem(AccessibilityModel.Label(mode).Tr());
         colorblindPicker.ItemSelected += index =>
         {
@@ -487,7 +489,8 @@ public partial class SettingsPanel : HBoxContainer
             tutorialList.RemoveChild(child);
             child.QueueFree();
         }
-        foreach (var entry in TutorialModel.List(tutorialRuleset!, service.Current))
+        if (tutorialRuleset == null) return;
+        foreach (var entry in TutorialModel.List(tutorialRuleset, service.Current))
         {
             var text = new Label { Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = entry.Text.TrText() }.FitMin(theme, 260);
             var title = entry.Name.Tr();
@@ -617,8 +620,8 @@ public partial class SettingsPanel : HBoxContainer
         foreach (var refresh in refreshers) refresh();
         var s = service.Current;
         nameLabel.Text = $"{"Player".Tr()}: {s.PlayerName}";
-        scaleStepper.Value = (int)MathF.Round(s.UiScale * 100f, MidpointRounding.AwayFromZero);
-        textScaleStepper.Value = (int)MathF.Round(s.TextScale * 100f, MidpointRounding.AwayFromZero);
+        scaleStepper.Value.Value = (int)MathF.Round(s.UiScale * 100f, MidpointRounding.AwayFromZero);
+        textScaleStepper.Value.Value = (int)MathF.Round(s.TextScale * 100f, MidpointRounding.AwayFromZero);
         colorblindPicker.Select((int)AccessibilityModel.ParseColorblindMode(s.ColorblindMode));
         windowMode.Select(Math.Max(0, IndexOf(OptionsModel.WindowModes, s.WindowMode)));
         packPicker.Select(Math.Max(0, IndexOf(packNames, s.AssetPack)));

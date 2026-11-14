@@ -112,7 +112,7 @@ public sealed partial class RelayServer : IAsyncDisposable
         publicNames.AddRange(options.PublicNames);
         if (mode == RelayTlsMode.Certificate)
         {
-            certificate = RelayCertificates.LoadPem(options.CertFile!, options.KeyFile!);
+            certificate = RelayCertificates.LoadPem(options.CertFile ?? "", options.KeyFile ?? "");
             certificateStamp = CertificateStamp();
             if (publicNames.Count == 0) publicNames.AddRange(RelayCertificates.DnsNames(certificate));
             if (publicNames.Count == 0) throw new RelayUsageException("the certificate has no DNS names: give --public-name");
@@ -245,7 +245,7 @@ public sealed partial class RelayServer : IAsyncDisposable
 
     private async Task HandleTunnelAsync(TcpClient tcp)
     {
-        var remote = (IPEndPoint)tcp.Client.RemoteEndPoint!;
+        var remote = (IPEndPoint)(tcp.Client.RemoteEndPoint ?? new IPEndPoint(IPAddress.None, 0));
         using var conn = new RelayConn(tcp, remote.Address);
         if (StreamWrapper != null) conn.Stream = StreamWrapper(conn.Stream);
         lock (gate) liveConnections.Add(conn);

@@ -26,16 +26,25 @@ namespace Unciv.GodotClient;
 /// </summary>
 public partial class App : Node
 {
-    private ScreenManager screens = null!; // JUSTIFY: C015 assigned in _Ready before any use
-    private UiTheme theme = null!; // JUSTIFY: C015 assigned in _Ready before any use
-    private ClientSettingsService settings = null!; // JUSTIFY: C015 assigned in _Ready before any use
-    private ClientLocalization localization = null!; // JUSTIFY: C025 assigned in _Ready before any use
-    private SoundPlayer sounds = null!; // JUSTIFY: C030 assigned in _Ready before any use
-    private SaveStore store = null!; // JUSTIFY: C015 assigned in _Ready before any use
-    private SaveController menuSaves = null!; // JUSTIFY: C015 assigned in _Ready before any use
-    private MainMenu menu = null!; // JUSTIFY: C015 assigned in _Ready before any use
+    private ReadyRef<ScreenManager> screensRef;
+    private ReadyRef<UiTheme> themeRef;
+    private ReadyRef<ClientSettingsService> settingsRef;
+    private ReadyRef<ClientLocalization> localizationRef;
+    private ReadyRef<SoundPlayer> soundsRef;
+    private ReadyRef<SaveStore> storeRef;
+    private ReadyRef<SaveController> menuSavesRef;
+    private ReadyRef<MainMenu> menuRef;
+    private ReadyRef<Unciv.Models.Ruleset.Ruleset> baseRulesetRef;
 
-    private Unciv.Models.Ruleset.Ruleset baseRuleset = null!; // JUSTIFY: C026 assigned in _Ready before any use
+    private ScreenManager screens => screensRef.Value;
+    private UiTheme theme => themeRef.Value;
+    private ClientSettingsService settings => settingsRef.Value;
+    private ClientLocalization localization => localizationRef.Value;
+    private SoundPlayer sounds => soundsRef.Value;
+    private SaveStore store => storeRef.Value;
+    private SaveController menuSaves => menuSavesRef.Value;
+    private MainMenu menu => menuRef.Value;
+    private Unciv.Models.Ruleset.Ruleset baseRuleset => baseRulesetRef.Value;
 
     public override void _Ready()
     {
@@ -47,14 +56,14 @@ public partial class App : Node
         }
         GetWindow().Title = UserProfile.WindowTitle(UserPaths.Profile);
         // T363: the menu theme and sounds use the default game ruleset (Brave New World), not a Vanilla pin.
-        baseRuleset = RulesetLocator.LoadDefault();
-        theme = new UiTheme(AssetRegistry.ForRuleset(baseRuleset));
-        settings = new ClientSettingsService(new ClientSettingsStore(UserPaths.Settings));
+        baseRulesetRef.Set(RulesetLocator.LoadDefault());
+        themeRef.Set(new UiTheme(AssetRegistry.ForRuleset(baseRuleset)));
+        settingsRef.Set(new ClientSettingsService(new ClientSettingsStore(UserPaths.Settings)));
         if (GraphicsRuntime.StartupCheck(settings)) return; // C097: restarting into the renderer the graphics setting wants; nothing else is built in this process
-        localization = Loc.Init(settings, GetWindow());
+        localizationRef.Set(Loc.Init(settings, GetWindow()));
         ClientSettingsApplier.Apply(settings.Current, GetWindow(), theme: theme);
         var applied = settings.Current;
-        sounds = new SoundPlayer(AssetRegistry.ForRuleset(baseRuleset, OptionsModel.RegistryPack(settings.Current.AssetPack)));
+        soundsRef.Set(new SoundPlayer(AssetRegistry.ForRuleset(baseRuleset, OptionsModel.RegistryPack(settings.Current.AssetPack))));
         sounds.ApplyVolumes(settings.Current.EffectsVolume, settings.Current.MusicVolume);
         AddChild(sounds);
         settings.Changed += changed =>
@@ -70,13 +79,13 @@ public partial class App : Node
         {
             if (node is BaseButton button) button.Pressed += () => sounds.Play(UncivSound.Click);
         };
-        store = new SaveStore(UserPaths.Saves);
-        screens = new ScreenManager(theme);
+        storeRef.Set(new SaveStore(UserPaths.Saves));
+        screensRef.Set(new ScreenManager(theme));
         screens.BindLocalization(localization);
         screens.CanQuitOnBack = () => activeSession == null && !menuSaves.IsDialogOpen; // C099: in a game back is Escape (the game menu); only the main menu leaves the app
         AddChild(screens);
 
-        menuSaves = new SaveController(store, settings, theme, text => LocalHost.FromSave(text, WallClockMillis), ShowGame);
+        menuSavesRef.Set(new SaveController(store, settings, theme, text => LocalHost.FromSave(text, WallClockMillis), ShowGame));
         menuSaves.StatusChanged += text => { if (GodotObject.IsInstanceValid(menu)) menu.SetStatus(text); };
         screens.AddChild(menuSaves);
         ShowMenu(first: true);
@@ -92,7 +101,7 @@ public partial class App : Node
         sounds.PlayMusic(MusicMood.Menu);
         activeSaves = null;
         activeSession = null;
-        menu = new MainMenu(theme, UserPaths.Profile);
+        menuRef.Set(new MainMenu(theme, UserPaths.Profile));
         menu.NewGameRequested += OpenNewGame;
         menu.ResumeRequested += () => _ = menuSaves.ResumeLastAsync();
         menu.LoadRequested += menuSaves.OpenDialog;
@@ -303,9 +312,9 @@ public partial class App : Node
         // C029: hotseat. The cover sits above the game screen and everything it owns (the save dialog included), and the controller swaps the viewer.
         var cover = new HandOverView();
         cover.Init(new UiTheme(registry));
-        HotseatController hotseat = null!; // JUSTIFY: C029 assigned before any callback can run
+        HotseatController? hotseat = null;
         var saves = new SaveController(store, settings, new UiTheme(registry),
-            text => LocalHost.FromSave(text, WallClockMillis), loaded => hotseat.Present(loaded));
+            text => LocalHost.FromSave(text, WallClockMillis), loaded => hotseat.NotNull().Present(loaded));
         screen.SharedThemeChanged += saves.UseTheme; // T405: the dialog takes the game UI's bound theme (scale and breakpoint), also after a load or hotseat hand-over
         root.AddChild(saves);
         root.AddChild(cover);
@@ -369,7 +378,7 @@ public partial class App : Node
     {
         if (what == NotificationApplicationPaused) _ = activeSaves?.AutosaveNowAsync();
         else if (what == NotificationApplicationResumed && activeSession != null) _ = activeSession.ResyncAsync();
-        if (sounds == null || settings == null) return;
+        if (!soundsRef.IsSet || !settingsRef.IsSet) return;
         if (what == NotificationApplicationFocusOut)
             sounds.SetFocusMuted(settings.Current.MuteOnFocusLoss);
         else if (what == NotificationApplicationFocusIn)

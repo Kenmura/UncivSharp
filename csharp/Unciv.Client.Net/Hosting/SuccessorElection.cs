@@ -190,11 +190,14 @@ public sealed class SuccessorElection(StandbyPromotion promotion, X509Certificat
         var running = listener;
         listener = null;
         if (running == null) return;
-        await acceptStop!.CancelAsync().ConfigureAwait(false);
+        if (acceptStop != null) await acceptStop.CancelAsync().ConfigureAwait(false);
         running.Stop();
-        try { await acceptLoop!.ConfigureAwait(false); }
-        catch (OperationCanceledException) { }
-        acceptStop.Dispose();
+        if (acceptLoop != null)
+        {
+            try { await acceptLoop.ConfigureAwait(false); }
+            catch (OperationCanceledException) { }
+        }
+        acceptStop?.Dispose();
         acceptStop = null;
     }
 

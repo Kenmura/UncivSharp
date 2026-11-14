@@ -1,5 +1,6 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.Utils;
 
 namespace Unciv.GodotClient.Map;
 
@@ -166,7 +167,7 @@ public partial class FarPropLayer : Node3D
                 var normals = data[(int)Mesh.ArrayType.Normal].VariantType == Variant.Type.Nil ? [] : data[(int)Mesh.ArrayType.Normal].AsVector3Array();
                 var indices = data[(int)Mesh.ArrayType.Index].VariantType == Variant.Type.Nil ? [] : data[(int)Mesh.ArrayType.Index].AsInt32Array();
                 if (indices.Length == 0) indices = [.. Enumerable.Range(0, positions.Length)];
-                var colour = MaterialOf(instance, surface)!.AlbedoColor.SrgbToLinear();
+                var colour = MaterialOf(instance, surface).NotNull().AlbedoColor.SrgbToLinear();
                 var offset = bake.Positions.Count;
                 for (var v = 0; v < positions.Length; v++)
                 {

@@ -179,7 +179,7 @@ public sealed class RelayListener : IAsyncDisposable
                 await control.SendAsync(HostPreamble(control.Challenge), token).ConfigureAwait(false);
                 var reply = await control.ReadAsync(token).ConfigureAwait(false);
                 RelayChannel.ThrowIfRefused(reply, "registering the room");
-                var code = reply!["room"]?.GetValue<string>() ?? throw new RelayException(RelayCodes.Failed, "The relay did not name the room.");
+                var code = reply?["room"]?.GetValue<string>() ?? throw new RelayException(RelayCodes.Failed, "The relay did not name the room.");
                 closingCode = null;
                 var changed = !string.Equals(Room, code, StringComparison.Ordinal);
                 Volatile.Write(ref room, code);

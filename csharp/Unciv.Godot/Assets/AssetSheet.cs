@@ -1,5 +1,6 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.GodotClient.Ui;
 using Unciv.Models.Ruleset;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 
@@ -15,8 +16,10 @@ public partial class AssetSheet : Node3D
 {
     private string outDir = "user://";
     private string? jsonsDir;
-    private AssetRegistry registry = null!; // JUSTIFY: C007 assigned in _Ready before first use
-    private RulesetClass ruleset = null!; // JUSTIFY: C007 assigned in _Ready before first use
+    private ReadyRef<AssetRegistry> registryRef;
+    private ReadyRef<RulesetClass> rulesetRef;
+    private AssetRegistry Registry => registryRef.Value;
+    private RulesetClass Ruleset => rulesetRef.Value;
     private readonly List<string> failures = [];
 
     public override async void _Ready()
@@ -30,7 +33,7 @@ public partial class AssetSheet : Node3D
         try
         {
             LoadRuleset();
-            registry = AssetRegistry.ForRuleset(ruleset);
+            registryRef.Set(AssetRegistry.ForRuleset(Ruleset));
             var keyCount = ResolveEveryKey();
             BuildSheet();
             for (var i = 0; i < 4; i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -64,26 +67,26 @@ public partial class AssetSheet : Node3D
         RulesetCache.Current.LoadRulesets(new DirectoryRulesetFileSource(dir, System.IO.Path.Combine(dir, "no mods here")), noMods: true);
         // T363: deliberate Vanilla coverage, not a default choice. The sheet proves every key of the oldest (smallest) ruleset resolves;
         // the scenario game itself now plays Brave New World.
-        ruleset = RulesetCache.Current.GetVanillaRuleset();
+        rulesetRef.Set(RulesetCache.Current.GetVanillaRuleset());
     }
 
     private int ResolveEveryKey()
     {
-        var keys = RulesetAssetKeys.KeysFor(ruleset);
+        var keys = RulesetAssetKeys.KeysFor(Ruleset);
         foreach (var key in keys)
         {
             try
             {
-                if (registry.Resolve(key).Source != AssetSourceKind.Procedural) failures.Add($"{key}: expected the procedural source");
+                if (Registry.Resolve(key).Source != AssetSourceKind.Procedural) failures.Add($"{key}: expected the procedural source");
                 var ok = AssetKinds.Of(key) switch
                 {
-                    AssetKind.TerrainMaterial => registry.Get<Material>(key) != null && registry.Get<Texture2D>(key) != null,
-                    AssetKind.Mesh => registry.Get<Mesh>(key) != null,
-                    AssetKind.UnitBlock or AssetKind.Prop => FreeAfter(registry.Get<Node3D>(key)),
-                    AssetKind.Icon => registry.Get<Texture2D>(key) != null,
-                    AssetKind.Theme => registry.Get<Theme>(key) != null,
-                    AssetKind.StyleBox => registry.Get<StyleBox>(key) != null,
-                    AssetKind.Font => registry.Get<Font>(key) != null,
+                    AssetKind.TerrainMaterial => Registry.Get<Material>(key) != null && Registry.Get<Texture2D>(key) != null,
+                    AssetKind.Mesh => Registry.Get<Mesh>(key) != null,
+                    AssetKind.UnitBlock or AssetKind.Prop => FreeAfter(Registry.Get<Node3D>(key)),
+                    AssetKind.Icon => Registry.Get<Texture2D>(key) != null,
+                    AssetKind.Theme => Registry.Get<Theme>(key) != null,
+                    AssetKind.StyleBox => Registry.Get<StyleBox>(key) != null,
+                    AssetKind.Font => Registry.Get<Font>(key) != null,
                     _ => false,
                 };
                 if (!ok) failures.Add($"{key}: not resolved");
@@ -93,7 +96,7 @@ public partial class AssetSheet : Node3D
                 failures.Add($"{key}: {e.GetType().Name} {e.Message}");
             }
         }
-        if (registry.Diagnostics.Count > 0) failures.Add("registry diagnostics: " + string.Join("; ", registry.Diagnostics));
+        if (Registry.Diagnostics.Count > 0) failures.Add("registry diagnostics: " + string.Join("; ", Registry.Diagnostics));
         return keys.Count;
     }
 
@@ -119,8 +122,8 @@ public partial class AssetSheet : Node3D
         var sun = new DirectionalLight3D { LightEnergy = 0.9f, RotationDegrees = new Vector3(-60f, 30f, 0f) };
         AddChild(sun);
 
-        var hex = registry.Get<Mesh>(RulesetAssetKeys.HexMesh);
-        var terrains = ruleset.Terrains.Values
+        var hex = Registry.Get<Mesh>(RulesetAssetKeys.HexMesh);
+        var terrains = Ruleset.Terrains.Values
             .Where(t => t.Type is Unciv.Models.Ruleset.Tile.TerrainType.Land or Unciv.Models.Ruleset.Tile.TerrainType.Water or Unciv.Models.Ruleset.Tile.TerrainType.TerrainFeature)
             .ToList();
         const int perRow = 8;
@@ -129,15 +132,15 @@ public partial class AssetSheet : Node3D
         {
             var key = AssetKey.Of(RulesetAssetKeys.Terrain, terrains[i].Name);
             var position = new Vector3((i % perRow) * step, 0f, (i / perRow) * step);
-            AddChild(new MeshInstance3D { Mesh = hex, MaterialOverride = registry.Get<Material>(key), Position = position });
+            AddChild(new MeshInstance3D { Mesh = hex, MaterialOverride = Registry.Get<Material>(key), Position = position });
             AddChild(Label(terrains[i].Name, position + new Vector3(0f, 0.3f, 0.95f)));
         }
 
-        var unitTypes = ruleset.UnitTypes.Keys.ToList();
+        var unitTypes = Ruleset.UnitTypes.Keys.ToList();
         var terrainRows = (terrains.Count + perRow - 1) / perRow;
         for (var i = 0; i < unitTypes.Count; i++)
         {
-            var block = registry.Get<Node3D>(AssetKey.Of(RulesetAssetKeys.UnitType, unitTypes[i]));
+            var block = Registry.Get<Node3D>(AssetKey.Of(RulesetAssetKeys.UnitType, unitTypes[i]));
             block.Position = new Vector3((i % perRow) * step, 0f, (terrainRows + i / perRow) * step);
             AddChild(block);
             AddChild(Label(unitTypes[i], block.Position + new Vector3(0f, 0.01f, 0.7f)));
@@ -166,20 +169,20 @@ public partial class AssetSheet : Node3D
     private void BuildOverlay()
     {
         var layer = new CanvasLayer();
-        var root = new Control { Theme = registry.Get<Theme>(RulesetAssetKeys.UiTheme) };
+        var root = new Control { Theme = Registry.Get<Theme>(RulesetAssetKeys.UiTheme) };
         root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         root.MouseFilter = Control.MouseFilterEnum.Ignore;
 
         var icons = new HBoxContainer { Position = new Vector2(8f, 8f) };
         var iconKeys = Enum.GetNames<Unciv.Models.StatTypes.Stat>().Select(n => AssetKey.Of(RulesetAssetKeys.StatIcon, n))
-            .Concat(ruleset.Technologies.Keys.Take(2).Select(n => AssetKey.Of(RulesetAssetKeys.TechIcon, n)))
-            .Concat(ruleset.Policies.Keys.Take(1).Select(n => AssetKey.Of(RulesetAssetKeys.PolicyIcon, n)))
-            .Concat(ruleset.UnitPromotions.Keys.Take(1).Select(n => AssetKey.Of(RulesetAssetKeys.PromotionIcon, n)))
-            .Concat(ruleset.TileResources.Keys.Take(1).Select(n => AssetKey.Of(RulesetAssetKeys.ResourceIcon, n)))
+            .Concat(Ruleset.Technologies.Keys.Take(2).Select(n => AssetKey.Of(RulesetAssetKeys.TechIcon, n)))
+            .Concat(Ruleset.Policies.Keys.Take(1).Select(n => AssetKey.Of(RulesetAssetKeys.PolicyIcon, n)))
+            .Concat(Ruleset.UnitPromotions.Keys.Take(1).Select(n => AssetKey.Of(RulesetAssetKeys.PromotionIcon, n)))
+            .Concat(Ruleset.TileResources.Keys.Take(1).Select(n => AssetKey.Of(RulesetAssetKeys.ResourceIcon, n)))
             .ToList();
         foreach (var key in iconKeys)
         {
-            icons.AddChild(new TextureRect { Texture = registry.Get<Texture2D>(key), CustomMinimumSize = new Vector2(48f, 48f), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered });
+            icons.AddChild(new TextureRect { Texture = Registry.Get<Texture2D>(key), CustomMinimumSize = new Vector2(48f, 48f), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered });
         }
         root.AddChild(icons);
 

@@ -3,6 +3,7 @@ using Unciv.Assets;
 using Unciv.Net.Identity;
 using Unciv.Net.Mods;
 using Unciv.Net.Relay;
+using Unciv.Utils;
 
 namespace Unciv.GodotClient.Setup;
 
@@ -18,7 +19,7 @@ public sealed record JoinTarget(string Host, int Port, string? Fingerprint, stri
     /// <summary>T338: the relay of a relay target, without a certificate pin (the settings' relay carries it: see <c>RelaySettings.Choose</c>).</summary>
     public RelayEndpoint? Relay => IsRelay ? new RelayEndpoint(Host, Port) : null;
 
-    public string Address => IsRelay ? Unciv.Net.Identity.KnownHosts.RelayAddress(Relay!.Key, Room!) : DirectAddress;
+    public string Address => IsRelay ? Unciv.Net.Identity.KnownHosts.RelayAddress(Relay.NotNull().Key, Room.NotNull()) : DirectAddress;
 
     private string DirectAddress => (Host.Contains(':', StringComparison.Ordinal) ? $"[{Host}]" : Host).ToLowerInvariant() + ":" + Port.ToString(CultureInfo.InvariantCulture);
 }

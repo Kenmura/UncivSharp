@@ -50,14 +50,17 @@ public partial class MapView : Node3D
     private const int PickSteps = 24;
 
     private readonly Dictionary<HexCoord, TileNode> tiles = [];
-    private Node3D tileRoot = null!; // JUSTIFY: C009 assigned in _Ready before any use
-    private TileHighlight highlight = null!; // JUSTIFY: C009 assigned in _Ready before any use
+    private ReadyRef<Node3D> tileRootRef;
+    private ReadyRef<TileHighlight> highlightRef;
+    private Node3D tileRoot => tileRootRef.Value;
+    private TileHighlight highlight => highlightRef.Value;
     private Vector3 focus;
     private float zoom = DefaultZoom;
     private float tilt = TiltDegrees;
     private float yaw;
     private MultiMeshInstance3D? vegetation;
-    private TerrainChunkLayer terrain = null!; // JUSTIFY: C031 assigned in _Ready before any use
+    private ReadyRef<TerrainChunkLayer> terrainRef;
+    private TerrainChunkLayer terrain => terrainRef.Value;
     private FarPropLayer? farProps; // T287: made in _Ready
     private Vector2 lastViewportSize;
     private Vector2? pressAt;
@@ -67,7 +70,8 @@ public partial class MapView : Node3D
     private bool longPressed;
     private double pressHeld;
 
-    public Camera3D Camera { get; private set; } = null!; // JUSTIFY: C009 assigned in _Ready before any use
+    private ReadyRef<Camera3D> cameraRef;
+    public Camera3D Camera => cameraRef.Value;
 
     public HexCoord? Selected { get; private set; }
 
@@ -113,7 +117,7 @@ public partial class MapView : Node3D
     public bool IsChunkVisibleAt(Vector3 ground) => terrain.IsChunkVisibleAt(ground);
 
     /// <summary>C098: the material the terrain chunks wear (a ShaderMaterial at Ultra, else the plain chunk material); null before the first Load.</summary>
-    public Material? TerrainMaterial => terrain?.ChunkMaterial;
+    public Material? TerrainMaterial => terrainRef.OrNull?.ChunkMaterial;
 
     public int TileCount => tiles.Count;
 
@@ -125,8 +129,10 @@ public partial class MapView : Node3D
 
     public Vector3 HighlightPosition => highlight.Position;
 
-    private Godot.Environment environment = null!; // JUSTIFY: C097 assigned in _Ready before any use
-    private DirectionalLight3D sun = null!; // JUSTIFY: C097 assigned in _Ready before any use
+    private ReadyRef<Godot.Environment> environmentRef;
+    private ReadyRef<DirectionalLight3D> sunRef;
+    private Godot.Environment environment => environmentRef.Value;
+    private DirectionalLight3D sun => sunRef.Value;
 
     /// <summary>C097: the preset in effect (Low until <see cref="ApplyGraphics"/> is given another).</summary>
     public Unciv.GodotClient.Settings.GraphicsPreset Graphics { get; private set; } = Unciv.GodotClient.Settings.GraphicsModel.Preset(Unciv.GodotClient.Settings.GraphicsQuality.Low);
@@ -163,20 +169,20 @@ public partial class MapView : Node3D
 
     public override void _Ready()
     {
-        environment = MapMaterials.Backdrop();
-        sun = new DirectionalLight3D { LightEnergy = 0.8f, RotationDegrees = new Vector3(-60f, 30f, 0f), DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel4Splits };
+        environmentRef.Set(MapMaterials.Backdrop());
+        sunRef.Set(new DirectionalLight3D { LightEnergy = 0.8f, RotationDegrees = new Vector3(-60f, 30f, 0f), DirectionalShadowMode = DirectionalLight3D.ShadowMode.Parallel4Splits });
         AddChild(new WorldEnvironment { Environment = environment });
         AddChild(sun);
         ApplyGraphics(Unciv.GodotClient.Settings.GraphicsModel.Preset(Unciv.GodotClient.Settings.GraphicsQuality.Low));
-        terrain = new TerrainChunkLayer { Name = "Terrain" };
+        terrainRef.Set(new TerrainChunkLayer { Name = "Terrain" });
         AddChild(terrain);
-        tileRoot = new Node3D { Name = "Tiles" };
+        tileRootRef.Set(new Node3D { Name = "Tiles" });
         AddChild(tileRoot);
         farProps = new FarPropLayer { Name = "FarProps" };
         AddChild(farProps);
-        highlight = new TileHighlight { Name = "Highlight" };
+        highlightRef.Set(new TileHighlight { Name = "Highlight" });
         AddChild(highlight);
-        Camera = new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal, Far = 200f, Current = true };
+        cameraRef.Set(new Camera3D { Projection = Camera3D.ProjectionType.Orthogonal, Far = 200f, Current = true });
         AddChild(Camera);
         UpdateCamera();
     }
@@ -350,7 +356,7 @@ public partial class MapView : Node3D
 
     private void UpdateCamera()
     {
-        if (Camera == null) return;
+        if (!cameraRef.IsSet) return;
         Camera.RotationDegrees = new Vector3(-tilt, yaw, 0f);
         Camera.Size = zoom;
         Camera.Position = focus + Camera.Basis.Z * CameraDistance;
@@ -360,7 +366,7 @@ public partial class MapView : Node3D
     /// <summary>C031: hides the terrain chunks outside the camera's ground footprint (the four screen corners projected onto the ground).</summary>
     private void UpdateCulling()
     {
-        if (Camera == null || !Camera.IsInsideTree()) return;
+        if (!cameraRef.IsSet || !Camera.IsInsideTree()) return;
         var size = Camera.GetViewport().GetVisibleRect().Size;
         lastViewportSize = size;
         var corners = new[] { new Vector2(0f, 0f), new Vector2(size.X, 0f), new Vector2(size.X, size.Y), new Vector2(0f, size.Y) }.Select(it => PickGround(it, 0f)).ToList();
@@ -369,8 +375,9 @@ public partial class MapView : Node3D
             propsMerged = MergedPropsDrawn;
             ApplyResourceVisibility();
         }
-        VisibleGround = corners.Any(it => it == null) ? null : GroundRect.Around([.. corners.Select(it => (it!.Value.X, it.Value.Z))]);
-        terrain?.Cull(VisibleGround);
+        var groundCorners = corners.OfType<Vector3>().Select(it => (it.X, it.Z)).ToList();
+        VisibleGround = groundCorners.Count != corners.Count ? null : GroundRect.Around(groundCorners);
+        terrainRef.OrNull?.Cull(VisibleGround);
         ViewChanged?.Invoke();
     }
 
@@ -487,7 +494,7 @@ public partial class MapView : Node3D
             {
                 var resource = prop.Name == ResourcePropName;
                 var shown = !resource || showResources;
-                prop.Visible = shown && !(merged && farProps!.Merged.Contains(prop)); // T287: a merged prop is drawn by the far layer instead
+                prop.Visible = shown && !(merged && farProps != null && farProps.Merged.Contains(prop)); // T287: a merged prop is drawn by the far layer instead
             }
         }
         farProps?.Apply(merged, showResources);

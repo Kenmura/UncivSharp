@@ -1,4 +1,5 @@
 using System.Globalization;
+using Unciv.Utils;
 
 namespace Unciv.Server;
 
@@ -163,7 +164,7 @@ public sealed record ServerOptions
         if (seen.Contains("relay-fingerprint") && !seen.Contains("relay")) throw new ServerUsageException("--relay-fingerprint needs --relay");
         if (seen.Contains("list") && !seen.Contains("relay")) throw new ServerUsageException("--list needs --relay: the directory is the relay's");
         if (seen.Contains("list-name") && !seen.Contains("list")) throw new ServerUsageException("--list-name needs --list");
-        if (result.RelayFingerprint != null) result = result with { Relay = result.Relay! with { Fingerprint = result.RelayFingerprint } };
+        if (result.RelayFingerprint != null) result = result with { Relay = result.Relay.NotNull() with { Fingerprint = result.RelayFingerprint } };
         if (seen.Contains("password") && seen.Contains("password-file")) throw new ServerUsageException("--password and --password-file exclude each other");
         return result;
     }

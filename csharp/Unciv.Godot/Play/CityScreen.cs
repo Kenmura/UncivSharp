@@ -8,6 +8,7 @@ using Unciv.GodotClient.Ui;
 using Unciv.Logic.City;
 using Unciv.Models.Translations;
 using Unciv.Net.Visibility;
+using Unciv.Utils;
 using Unciv.Queries.Cities;
 
 namespace Unciv.GodotClient.Play;
@@ -73,8 +74,8 @@ public partial class CityScreen : PanelContainer
         frame.SetContent(column);
         var top = new HBoxContainer();
         top.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
-        tabs.ButtonFor("Citizens")!.Name = "ShowCitizens";
-        tabs.ButtonFor("Production")!.Name = "ShowProduction";
+        tabs.ButtonFor("Citizens").NotNull().Name = "ShowCitizens";
+        tabs.ButtonFor("Production").NotNull().Name = "ShowProduction";
         tabs.Chosen += option => SetProduction(option == "Production");
         top.AddChild(tabs);
         top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore });
@@ -162,8 +163,8 @@ public partial class CityScreen : PanelContainer
         middle.Visible = !production;
         meters.Visible = !production && Panel != null && !Phone;
         productionView.Visible = production;
-        tabs.ButtonFor("Citizens")!.SetPressedNoSignal(!production);
-        tabs.ButtonFor("Production")!.SetPressedNoSignal(production);
+        tabs.ButtonFor("Citizens").NotNull().SetPressedNoSignal(!production);
+        tabs.ButtonFor("Production").NotNull().SetPressedNoSignal(production);
         SetMessage(production || Panel == null ? "" : Hint);
     }
 
@@ -289,7 +290,7 @@ public partial class CityScreen : PanelContainer
         tabs.Visible = visible;
     }
 
-    private static string Id(CityDto city) => city.Own!.Id;
+    private static string Id(CityDto city) => city.Own.NotNull().Id;
 
     private void ShowForeign(CityDto city)
     {

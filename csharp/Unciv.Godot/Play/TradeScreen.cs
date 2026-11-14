@@ -24,20 +24,34 @@ public partial class TradeScreen : PanelContainer
     private readonly UiTheme theme;
     private readonly Dictionary<string, ListRow> partnerButtons = [];
     private readonly Dictionary<string, Button> controls = [];
-    private ScreenFrame frame = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label message = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private VBoxContainer partnerList = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private VBoxContainer incoming = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private VBoxContainer giveColumn = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private VBoxContainer askColumn = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label summary = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label hint = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private PanelContainer hintPill = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label hintPillText = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label pending = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Button propose = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Button clear = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Button retract = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
+    private ReadyRef<ScreenFrame> frameRef;
+    private ReadyRef<Label> messageRef;
+    private ReadyRef<VBoxContainer> partnerListRef;
+    private ReadyRef<VBoxContainer> incomingRef;
+    private ReadyRef<VBoxContainer> giveColumnRef;
+    private ReadyRef<VBoxContainer> askColumnRef;
+    private ReadyRef<Label> summaryRef;
+    private ReadyRef<Label> hintRef;
+    private ReadyRef<PanelContainer> hintPillRef;
+    private ReadyRef<Label> hintPillTextRef;
+    private ReadyRef<Label> pendingRef;
+    private ReadyRef<Button> proposeRef;
+    private ReadyRef<Button> clearRef;
+    private ReadyRef<Button> retractRef;
+    private ScreenFrame frame => frameRef.Value;
+    private Label message => messageRef.Value;
+    private VBoxContainer partnerList => partnerListRef.Value;
+    private VBoxContainer incoming => incomingRef.Value;
+    private VBoxContainer giveColumn => giveColumnRef.Value;
+    private VBoxContainer askColumn => askColumnRef.Value;
+    private Label summary => summaryRef.Value;
+    private Label hint => hintRef.Value;
+    private PanelContainer hintPill => hintPillRef.Value;
+    private Label hintPillText => hintPillTextRef.Value;
+    private Label pending => pendingRef.Value;
+    private Button propose => proposeRef.Value;
+    private Button clear => clearRef.Value;
+    private Button retract => retractRef.Value;
     private string messageText = "";
     private int generation;
     private int hintRequest;
@@ -71,23 +85,23 @@ public partial class TradeScreen : PanelContainer
 
     private void BuildFrame()
     {
-        if (frame != null)
+        if (frameRef.OrNull is { } oldFrame)
         {
-            RemoveChild(frame); // at once: a queued free would leave the old frame in the layout until the frame ends
-            frame.QueueFree();
+            RemoveChild(oldFrame); // at once: a queued free would leave the old frame in the layout until the frame ends
+            oldFrame.QueueFree();
         }
         partnerButtons.Clear(); // the controls of the old frame are gone; the next redraw fills them again
         controls.Clear();
-        frame = new ScreenFrame(theme, "Trade", closeLabel: "Close trade");
+        frameRef.Set(new ScreenFrame(theme, "Trade", closeLabel: "Close trade"));
         frame.CloseRequested += Close;
         AddChild(frame);
         int gap = theme.Px(UiTokens.S2);
 
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", gap);
-        message = new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, Text = messageText, Visible = messageText.Length > 0 };
+        messageRef.Set(new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, Text = messageText, Visible = messageText.Length > 0 });
         column.AddChild(message);
-        incoming = new VBoxContainer { Name = "Incoming" };
+        incomingRef.Set(new VBoxContainer { Name = "Incoming" });
         incoming.AddThemeConstantOverride("separation", gap);
         // a small window cannot hold the cards and both columns: the body scrolls and the footer actions stay in view
         var body = new ScrollContainer { Name = "Body", SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
@@ -101,7 +115,7 @@ public partial class TradeScreen : PanelContainer
         stack.AddChild(middle);
 
         var partnerScroll = new ScrollContainer { CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 150 : 220), 0f), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        partnerList = new VBoxContainer { Name = "PartnerList", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        partnerListRef.Set(new VBoxContainer { Name = "PartnerList", SizeFlagsHorizontal = SizeFlags.ExpandFill });
         partnerList.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
         partnerScroll.AddChild(partnerList);
         middle.AddChild(partnerScroll);
@@ -112,28 +126,28 @@ public partial class TradeScreen : PanelContainer
         var columns = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         columns.AddThemeConstantOverride("separation", gap);
         detail.AddChild(columns);
-        giveColumn = new VBoxContainer { Name = "GiveColumn" };
-        askColumn = new VBoxContainer { Name = "AskColumn" };
+        giveColumnRef.Set(new VBoxContainer { Name = "GiveColumn" });
+        askColumnRef.Set(new VBoxContainer { Name = "AskColumn" });
         columns.AddChild(Scrolling("You give", giveColumn));
         columns.AddChild(Scrolling("You ask for", askColumn));
-        pending = new Label { Name = "Pending", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(100f, 0f) };
+        pendingRef.Set(new Label { Name = "Pending", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(100f, 0f) });
         detail.AddChild(pending);
         var verdict = new HBoxContainer { Name = "Verdict" };
         verdict.AddThemeConstantOverride("separation", gap);
-        summary = new Label { Name = "Summary", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(100f, 0f), SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        summaryRef.Set(new Label { Name = "Summary", AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(100f, 0f), SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter });
         verdict.AddChild(summary);
-        hintPillText = new Label { Name = "HintBadge", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelSmall };
-        hintPill = new PanelContainer { Name = "HintPill", Visible = false, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        hintPillTextRef.Set(new Label { Name = "HintBadge", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelSmall });
+        hintPillRef.Set(new PanelContainer { Name = "HintPill", Visible = false, SizeFlagsVertical = SizeFlags.ShrinkCenter });
         hintPill.AddChild(hintPillText);
         verdict.AddChild(hintPill);
         detail.AddChild(verdict);
-        hint = new Label { Name = "Hint", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(100f, 0f) };
+        hintRef.Set(new Label { Name = "Hint", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(100f, 0f) });
         detail.AddChild(hint);
         frame.SetContent(column);
 
-        propose = new Button { Name = "Propose", Text = "Propose trade".Tr() };
-        clear = new Button { Name = "ClearTrade", Text = "Clear".Tr() };
-        retract = new Button { Name = "Retract", Text = "Retract offer".Tr() };
+        proposeRef.Set(new Button { Name = "Propose", Text = "Propose trade".Tr() });
+        clearRef.Set(new Button { Name = "ClearTrade", Text = "Clear".Tr() });
+        retractRef.Set(new Button { Name = "Retract", Text = "Retract offer".Tr() });
         propose.Pressed += () => Fire(ProposeAsync());
         clear.Pressed += () =>
         {

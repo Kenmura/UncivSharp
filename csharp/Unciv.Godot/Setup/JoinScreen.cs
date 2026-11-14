@@ -461,8 +461,7 @@ public partial class JoinScreen : Control
             ShowPanel(modPanel);
             messageLabel.Text = "";
         }
-        if (context == null) Callable.From(Show).CallDeferred();
-        else context.Post(static state => ((Action)state!)(), (Action)Show);
+        PostToUi(Show);
         return answer.Task;
     }
 
@@ -479,8 +478,7 @@ public partial class JoinScreen : Control
             ShowPanel(relayPanel);
             messageLabel.Text = "";
         }
-        if (context == null) Callable.From(Show).CallDeferred();
-        else context.Post(static state => ((Action)state!)(), (Action)Show);
+        PostToUi(Show);
         return answer.Task;
     }
 
@@ -518,8 +516,7 @@ public partial class JoinScreen : Control
             modProgressBar.SetProgress(done, total);
             messageLabel.Text = JoinModel.ModDownloadProgressText(progress.CompletedFiles, progress.TotalFiles, progress.CompletedBytes, progress.TotalBytes, progress.ModName, static s => s.Tr());
         }
-        if (context == null) Callable.From(Apply).CallDeferred();
-        else context.Post(static state => ((Action)state!)(), (Action)Apply);
+        PostToUi(Apply);
     }
 
     // The session asks from its own thread; the answer waits for the player's button on the main thread.
@@ -535,8 +532,7 @@ public partial class JoinScreen : Control
             ShowPanel(trustPanel);
             messageLabel.Text = "";
         }
-        if (context == null) Callable.From(Show).CallDeferred();
-        else context.Post(static state => ((Action)state!)(), (Action)Show);
+        PostToUi(Show);
         return answer.Task;
     }
 
@@ -562,9 +558,14 @@ public partial class JoinScreen : Control
             ShowPanel(backupNoticePanel);
             messageLabel.Text = "";
         }
-        if (context == null) Callable.From(Show).CallDeferred();
-        else context.Post(static state => ((Action)state!)(), (Action)Show);
+        PostToUi(Show);
         return answer.Task;
+    }
+
+    private void PostToUi(Action action)
+    {
+        if (context == null) Callable.From(action).CallDeferred();
+        else context.Post(static state => (state as Action)?.Invoke(), action);
     }
 
     private void AnswerBackupNotice(bool proceed)

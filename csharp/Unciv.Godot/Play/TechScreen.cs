@@ -28,16 +28,26 @@ public partial class TechScreen : PanelContainer
     private readonly Dictionary<string, TechNodeCard> nodeButtons = [];
     private readonly Dictionary<string, Button> actionButtons = [];
     private readonly List<Control> eraBands = [];
-    private ScreenFrame frame = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private Label message = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private Label header = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private LineEdit search = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private ScrollContainer scroll = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private Control bandRow = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private EdgeCanvas canvas = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private VBoxContainer detail = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
-    private PanelContainer side = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
-    private Button sideToggle = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
+    private ReadyRef<ScreenFrame> frameRef;
+    private ReadyRef<Label> messageRef;
+    private ReadyRef<Label> headerRef;
+    private ReadyRef<LineEdit> searchRef;
+    private ReadyRef<ScrollContainer> scrollRef;
+    private ReadyRef<Control> bandRowRef;
+    private ReadyRef<EdgeCanvas> canvasRef;
+    private ReadyRef<VBoxContainer> detailRef;
+    private ReadyRef<PanelContainer> sideRef;
+    private ReadyRef<Button> sideToggleRef;
+    private ScreenFrame frame => frameRef.Value;
+    private Label message => messageRef.Value;
+    private Label header => headerRef.Value;
+    private LineEdit search => searchRef.Value;
+    private ScrollContainer scroll => scrollRef.Value;
+    private Control bandRow => bandRowRef.Value;
+    private EdgeCanvas canvas => canvasRef.Value;
+    private VBoxContainer detail => detailRef.Value;
+    private PanelContainer side => sideRef.Value;
+    private Button sideToggle => sideToggleRef.Value;
     private bool compactSideOpen;
     private string titleText = "";
     private string stateText = "";
@@ -182,20 +192,20 @@ public partial class TechScreen : PanelContainer
 
     private void BuildFrame()
     {
-        if (frame != null)
+        if (frameRef.OrNull is { } oldFrame)
         {
-            RemoveChild(frame); // at once: a queued free would leave the old frame in the layout until the frame ends
-            frame.QueueFree();
+            RemoveChild(oldFrame); // at once: a queued free would leave the old frame in the layout until the frame ends
+            oldFrame.QueueFree();
         }
         nodeButtons.Clear();
         actionButtons.Clear();
         eraBands.Clear();
-        frame = new ScreenFrame(theme, "Technology", closeLabel: "Close technology");
+        frameRef.Set(new ScreenFrame(theme, "Technology", closeLabel: "Close technology"));
         frame.CloseRequested += Close;
         AddChild(frame);
 
-        header = new Label { Name = "Header", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center, Text = headerText };
-        search = new LineEdit
+        headerRef.Set(new Label { Name = "Header", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center, Text = headerText });
+        searchRef.Set(new LineEdit
         {
             Name = "TechSearch",
             PlaceholderText = "Search".Tr(),
@@ -203,14 +213,14 @@ public partial class TechScreen : PanelContainer
             Text = searchText,
             CustomMinimumSize = new Vector2(theme.Px(140), 0f),
             TooltipText = "Search technologies by name, by what they unlock, or by a stat".Tr(),
-        };
+        });
         search.TextChanged += text =>
         {
             searchText = text;
             ApplySearch(true);
         };
         var strip = new HBoxContainer();
-        sideToggle = new Button { Name = "SideToggle", ThemeTypeVariation = UiVariants.ButtonSecondary };
+        sideToggleRef.Set(new Button { Name = "SideToggle", ThemeTypeVariation = UiVariants.ButtonSecondary });
         sideToggle.Pressed += () => SetCompactSide(!compactSideOpen);
         strip.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
         strip.AddChild(header);
@@ -222,11 +232,11 @@ public partial class TechScreen : PanelContainer
         body.AddThemeConstantOverride("separation", theme.Px(UiTokens.S3));
         var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         left.AddThemeConstantOverride("separation", 0);
-        bandRow = new Control { Name = "EraBands", ClipContents = true, CustomMinimumSize = new Vector2(0f, theme.Px(BandHeight)) };
+        bandRowRef.Set(new Control { Name = "EraBands", ClipContents = true, CustomMinimumSize = new Vector2(0f, theme.Px(BandHeight)) });
         left.AddChild(bandRow);
         var treeFrame = new PanelContainer { ThemeTypeVariation = UiVariants.PanelInset, SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        scroll = new ScrollContainer { Name = "TreeScroll", SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
-        canvas = new EdgeCanvas { Name = "TreeCanvas", Pan = delta => { scroll.ScrollHorizontal -= (int)delta.X; scroll.ScrollVertical -= (int)delta.Y; } };
+        scrollRef.Set(new ScrollContainer { Name = "TreeScroll", SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill });
+        canvasRef.Set(new EdgeCanvas { Name = "TreeCanvas", Pan = delta => { scroll.ScrollHorizontal -= (int)delta.X; scroll.ScrollVertical -= (int)delta.Y; } });
         scroll.AddChild(canvas);
         scroll.GetHScrollBar().ValueChanged += _ => LayoutBands();
         scroll.GetHScrollBar().Resized += LayoutBands;
@@ -234,9 +244,9 @@ public partial class TechScreen : PanelContainer
         left.AddChild(treeFrame);
         body.AddChild(left);
 
-        side = new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) };
+        sideRef.Set(new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) });
         var sideScroll = new ScrollContainer { Name = "SideScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
-        detail = new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        detailRef.Set(new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = SizeFlags.ExpandFill });
         detail.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
         sideScroll.AddChild(detail);
         side.AddChild(sideScroll);
@@ -426,7 +436,7 @@ public partial class TechScreen : PanelContainer
             unlockText = "";
             frame.SetFooter([]);
             AddQueue(queueLines);
-            message = NewMessage();
+            messageRef.Set(NewMessage());
             detail.AddChild(message);
             return;
         }
@@ -448,7 +458,7 @@ public partial class TechScreen : PanelContainer
         var unlocks = new StatText(theme, string.Join("\n", lines.Select(it => it.TrText()))) { Name = "Unlocks", AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         detail.AddChild(unlocks);
         AddQueue(queueLines);
-        message = NewMessage();
+        messageRef.Set(NewMessage());
         detail.AddChild(message);
 
         current = TechScreenModel.Actions(Tree, node.Name);

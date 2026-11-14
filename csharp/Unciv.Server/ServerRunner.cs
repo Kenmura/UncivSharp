@@ -157,9 +157,9 @@ public static class ServerRunner
         var listing = relay != null && options.List ? PublishListingAsync(relay, lobby, settings, options, run.Token) : Task.CompletedTask;
         var watch = (resumed != null ? RunGameAsync(resumed, log, run.Token) : WatchLobbyAsync(lobby, options, log, run.Token)).ContinueWith(t =>
         {
-            if (t.IsFaulted)
+            if (t.IsFaulted && t.Exception != null)
             {
-                failure = t.Exception!.GetBaseException();
+                failure = t.Exception.GetBaseException();
                 log.Error("lobby watcher failed: " + failure.Message);
                 run.Cancel();
             }

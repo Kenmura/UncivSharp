@@ -126,7 +126,7 @@ public partial class GameScreen
 
     private string DescribeSelected()
     {
-        var unit = unitNodes[SelectedUnitId!.Value].Unit;
+        var unit = unitNodes[SelectedUnitId.NotNull()].Unit;
         string moves = (unit.Own?.CurrentMovement ?? 0f).ToString("0.##", CultureInfo.InvariantCulture);
         return $"{unit.Name}   moves {moves}   health {(unit.Own?.Health ?? 0).ToString(CultureInfo.InvariantCulture)}";
     }
@@ -135,7 +135,7 @@ public partial class GameScreen
     {
         ClearPreview();
         int request = ++previewRequest;
-        var unitNode = unitNodes[SelectedUnitId!.Value];
+        var unitNode = unitNodes[SelectedUnitId.NotNull()];
         if (unitNode.Unit.Own?.CurrentMovement is not > 0f)
         {
             SetHint("(no movement left)");
@@ -831,7 +831,7 @@ public partial class GameScreen
     /// </summary>
     private void RefreshTurnBar()
     {
-        if (session is not ITurnRoster roster || snapshot == null)
+        if (sessionRef.OrNull is not ITurnRoster roster || !snapshotRef.IsSet)
         {
             TurnBar.Show(null);
             TurnOverlay.LayoutIn(Size, OverlayTop());
@@ -875,7 +875,7 @@ public partial class GameScreen
 
     private void OnSnapshotChanged(ClientSnapshot changed)
     {
-        snapshot = changed;
+        snapshotRef.Set(changed);
         RefreshTurnBar();
         Run(RefreshHud());
     }

@@ -12,6 +12,7 @@ using Unciv.Net.Remote;
 using Unciv.Net.Standby;
 using Unciv.Net.Turns;
 using Unciv.Queries;
+using Unciv.Utils;
 using CommandResult = Unciv.Net.CommandResult;
 
 namespace Unciv.Client.Net.Session;
@@ -611,24 +612,25 @@ public sealed partial class ClientSession : IAsyncDisposable
         var route = options.ConnectRelay != null && options.ConfirmRelay != null ? RelayRoutes.Normalize(successor.Relay) : null;
         var slot = attempt % Math.Max(1, endpoints.Count + (route == null ? 0 : 1)); // the announced endpoints in turn, then the relay room
         expectedFingerprint = successor.Fingerprint;
-        if (slot < endpoints.Count)
+        if (slot < endpoints.Count && options.ConnectEndpoint is { } connectEndpoint)
         {
             hostAddress = endpoints[slot];
-            return await options.ConnectEndpoint!(endpoints[slot], token).ConfigureAwait(false);
+            return await connectEndpoint(endpoints[slot], token).ConfigureAwait(false);
         }
-        if (route == null) throw new InvalidOperationException("The successor announced nothing this session can dial");
+        if (route == null || options.ConnectRelay is not { } connectRelay) throw new InvalidOperationException("The successor announced nothing this session can dial");
         hostAddress = KnownHosts.RelayAddress(route.Relay, route.Room);
         // The relay was named by the successor (through the host): it is dialled only with the player's agreement, and the handshake clock stops while they are asked.
         if (!await ConfirmRelayAsync(route, handshakeTimer).ConfigureAwait(false))
             throw new Unciv.Server.Transport.RelayException(Unciv.Server.Transport.RelayCodes.Declined, "The relay the successor is reachable on was not agreed to.");
-        return await options.ConnectRelay!(route, successor.Fingerprint, token).ConfigureAwait(false);
+        return await connectRelay(route, successor.Fingerprint, token).ConfigureAwait(false);
     }
 
     private async Task<bool> ConfirmRelayAsync(RelayRoute route, CancellationTokenSource? timer)
     {
+        if (options.ConfirmRelay is not { } confirmRelay) return false;
         timer?.CancelAfter(Timeout.InfiniteTimeSpan);
         bool agreed;
-        try { agreed = await options.ConfirmRelay!(route).ConfigureAwait(false); }
+        try { agreed = await confirmRelay(route).ConfigureAwait(false); }
         catch (Exception e) when (e is not OperationCanceledException) { agreed = false; }
         timer?.CancelAfter(options.HandshakeTimeout);
         return agreed;
@@ -641,7 +643,7 @@ public sealed partial class ClientSession : IAsyncDisposable
     private async Task<bool> PrepareRedirectAsync(CancellationToken token)
     {
         redirectPrepared = true;
-        var handoff = redirect!;
+        var handoff = redirect.NotNull();
         hostAddress = handoff.Successor.Endpoints.Count > 0 ? handoff.Successor.Endpoints[0] : "";
         expectedFingerprint = handoff.Successor.Fingerprint;
         if (options.OnHandoff == null) return CanDial(handoff.Successor);
@@ -812,11 +814,11 @@ public sealed partial class ClientSession : IAsyncDisposable
         var relayAcceptable = handoff.Successor.Relay == null || (announcedRelay != null && RelayRoutes.Same(handoff.Successor.Relay, announcedRelay));
         var acceptable = (options.OnHandoff != null || CanDial(handoff.Successor))
             && relayAcceptable
-            && announced != null && Successor!.Epoch == connectionEpoch && handoff.Epoch == connectionEpoch + 1
+            && Successor is { Successor: { } announcedSuccessor } successorInfo && successorInfo.Epoch == connectionEpoch && handoff.Epoch == connectionEpoch + 1
             && (gameId == null || string.Equals(gameId, handoff.GameId, StringComparison.Ordinal))
             && handoff.GameId.Length is > 0 and <= 200
-            && string.Equals(announced.KeyId, handoff.Successor.KeyId, StringComparison.Ordinal) && HostKey.Matches(announced.Fingerprint, handoff.Successor.Fingerprint)
-            && (handoff.Successor.Endpoints.Count > 0 || handoff.Successor.Relay != null) && handoff.Successor.Endpoints.Count <= 8 && handoff.Successor.Endpoints.All(it => announced.Endpoints.Contains(it, StringComparer.Ordinal));
+            && string.Equals(announcedSuccessor.KeyId, handoff.Successor.KeyId, StringComparison.Ordinal) && HostKey.Matches(announcedSuccessor.Fingerprint, handoff.Successor.Fingerprint)
+            && (handoff.Successor.Endpoints.Count > 0 || handoff.Successor.Relay != null) && handoff.Successor.Endpoints.Count <= 8 && handoff.Successor.Endpoints.All(it => announcedSuccessor.Endpoints.Contains(it, StringComparer.Ordinal));
         if (!acceptable)
         {
             Emit(new ProtocolError(ErrorCodes.InvalidMessage));
@@ -1121,7 +1123,7 @@ public sealed partial class ClientSession : IAsyncDisposable
                 desyncAnnounced = false;
                 queries.FailAll(); // an answer computed against the old state must not be applied to the new one
                 SetState(ClientSessionState.InGame);
-                Emit(new SnapshotReplaced(Game.Snapshot!));
+                Emit(new SnapshotReplaced(Game.Snapshot.NotNull()));
                 if (message.RolledBack == true) Emit(new HostRolledBack(Math.Max(0, message.LostCommands ?? 0)));
                 lock (gate)
                 {
@@ -1163,7 +1165,7 @@ public sealed partial class ClientSession : IAsyncDisposable
         {
             case DeltaOutcome.Applied:
                 SettleResume();
-                Emit(new DeltaApplied(delta.Seq, delta.Events, Game.Snapshot!));
+                Emit(new DeltaApplied(delta.Seq, delta.Events, Game.Snapshot.NotNull()));
                 break;
             case DeltaOutcome.Duplicate:
                 SettleResume();

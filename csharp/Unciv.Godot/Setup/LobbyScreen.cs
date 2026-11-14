@@ -29,7 +29,8 @@ public partial class LobbyScreen : Control
     private readonly ClientSession? session;
     private readonly ServerLobby? hostControls;
     private readonly string ownKey;
-    private ScreenFrame frame = null!; // JUSTIFY: T318 assigned by Build, which every constructor runs
+    private ReadyRef<ScreenFrame> frameRef;
+    private ScreenFrame frame => frameRef.Value;
     private readonly VBoxContainer slotsBox = new() { Name = "Slots" };
     private readonly Label readySummaryLabel = new() { Name = "ReadySummary", ThemeTypeVariation = UiVariants.LabelSmall, Visible = false };
     private readonly ScrollContainer bodyScroll = new() { Name = "LobbyScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -94,17 +95,24 @@ public partial class LobbyScreen : Control
     /// <summary>The screen of a joiner the host refused: only the reason (<see cref="LobbyModel.RefusalText"/>) and Leave.</summary>
     public static LobbyScreen Refused(UiTheme theme, NewGameForm nations, string code) => new(theme, nations, LobbyModel.RefusalText(code));
 
-    public Button LeaveButton { get; private set; } = null!; // JUSTIFY: C035 assigned by Build, which every constructor runs
+    private ReadyRef<Button> leaveButtonRef;
+    private ReadyRef<Button> startButtonRef;
+    private ReadyRef<Button> readyButtonRef;
+    private ReadyRef<Button> nationToggleRef;
+    private ReadyRef<Button> sendButtonRef;
+    private ReadyRef<LineEdit> chatFieldRef;
 
-    public Button StartButton { get; private set; } = null!; // JUSTIFY: C035 assigned by Build, which every constructor runs
+    public Button LeaveButton => leaveButtonRef.Value;
 
-    public Button ReadyButton { get; private set; } = null!; // JUSTIFY: C035 assigned by Build, which every constructor runs
+    public Button StartButton => startButtonRef.Value;
 
-    public Button NationToggle { get; private set; } = null!; // JUSTIFY: C035 assigned by Build, which every constructor runs
+    public Button ReadyButton => readyButtonRef.Value;
 
-    public Button SendButton { get; private set; } = null!; // JUSTIFY: C035 assigned by Build, which every constructor runs
+    public Button NationToggle => nationToggleRef.Value;
 
-    public LineEdit ChatField { get; private set; } = null!; // JUSTIFY: C035 assigned by Build, which every constructor runs
+    public Button SendButton => sendButtonRef.Value;
+
+    public LineEdit ChatField => chatFieldRef.Value;
 
     /// <summary>Raised when the player presses Leave; the owner of the screen leaves the session (or stops hosting) and pops the screen.</summary>
     public event Action? LeaveRequested;
@@ -293,7 +301,7 @@ public partial class LobbyScreen : Control
         backdrop.Fill();
         AddChild(backdrop);
         // T318: the same frame as New game and Options: the lobby title in the header, the seats and picker in a scrolling body, Start/Leave in the footer
-        frame = new ScreenFrame(theme, "Lobby", closeButton: false);
+        frameRef.Set(new ScreenFrame(theme, "Lobby", closeButton: false));
         frame.Fill();
         AddChild(frame);
         var column = new VBoxContainer { Name = "LobbyColumn", SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
@@ -345,9 +353,9 @@ public partial class LobbyScreen : Control
 
         var seat = new HBoxContainer();
         seat.FitConstant(theme, "separation", UiTokens.S2);
-        ReadyButton = new Button { Text = "Ready".Tr(), Name = "ReadyButton", ToggleMode = true, Visible = false };
+        readyButtonRef.Set(new Button { Text = "Ready".Tr(), Name = "ReadyButton", ToggleMode = true, Visible = false });
         ReadyButton.Pressed += OnReady;
-        NationToggle = new Button { Text = "Pick nation".Tr(), Name = "NationToggle", ToggleMode = true, Visible = false };
+        nationToggleRef.Set(new Button { Text = "Pick nation".Tr(), Name = "NationToggle", ToggleMode = true, Visible = false });
         NationToggle.Pressed += () => ShowPicker(NationToggle.ButtonPressed);
         seat.AddChild(ReadyButton);
         seat.AddChild(NationToggle);
@@ -381,17 +389,17 @@ public partial class LobbyScreen : Control
         right.AddChild(chatScroll);
         var send = new HBoxContainer();
         send.FitConstant(theme, "separation", UiTokens.S1);
-        ChatField = new LineEdit { Name = "ChatField", PlaceholderText = "Say something".Tr(), SizeFlagsHorizontal = SizeFlags.ExpandFill, MaxLength = SocialModel.MaxChatChars };
+        chatFieldRef.Set(new LineEdit { Name = "ChatField", PlaceholderText = "Say something".Tr(), SizeFlagsHorizontal = SizeFlags.ExpandFill, MaxLength = SocialModel.MaxChatChars });
         ChatField.TextSubmitted += _ => SendChat();
-        SendButton = new Button { Text = "Send".Tr(), Name = "SendButton" };
+        sendButtonRef.Set(new Button { Text = "Send".Tr(), Name = "SendButton" });
         SendButton.Pressed += SendChat;
         send.AddChild(ChatField);
         send.AddChild(SendButton);
         right.AddChild(send);
 
-        StartButton = new Button { Text = "Start game".Tr(), Name = "StartGameButton", Visible = false, Disabled = true };
+        startButtonRef.Set(new Button { Text = "Start game".Tr(), Name = "StartGameButton", Visible = false, Disabled = true });
         StartButton.Pressed += () => _ = StartAsync();
-        LeaveButton = new Button { Text = "Leave".Tr(), Name = "LeaveButton" };
+        leaveButtonRef.Set(new Button { Text = "Leave".Tr(), Name = "LeaveButton" });
         LeaveButton.Pressed += () => LeaveRequested?.Invoke();
         frame.SetFooter([(LeaveButton, ChoiceRole.Ghost), (StartButton, ChoiceRole.Primary)]);
         column.AddChild(startHint);

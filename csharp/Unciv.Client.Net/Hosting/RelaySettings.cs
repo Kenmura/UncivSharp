@@ -27,7 +27,7 @@ public sealed class RelaySettings
     public const string DefaultUrl = "unciv-relay://civsharp.nickthorsen.com:47830";
 
     /// <summary>The built-in relay, <see cref="DefaultUrl"/> parsed.</summary>
-    public static RelayEndpoint DefaultEndpoint { get; } = RelayEndpoint.TryParse(DefaultUrl, out var builtIn) ? builtIn! : throw new InvalidOperationException("DefaultUrl is not a relay URL");
+    public static RelayEndpoint DefaultEndpoint { get; } = RelayEndpoint.TryParse(DefaultUrl, out var builtIn) && builtIn != null ? builtIn : throw new InvalidOperationException("DefaultUrl is not a relay URL");
 
     /// <summary><c>unciv-relay://host[:port][?fp=...]</c> the player set; null/empty means the built-in <see cref="DefaultUrl"/> is used.</summary>
     [JsonPropertyName("url")]
@@ -81,7 +81,7 @@ public sealed class RelaySettings
     public static (string Address, string Fingerprint) Split(string? url)
     {
         var text = url?.Trim() ?? "";
-        if (!RelayEndpoint.TryParse(text, out var endpoint) || endpoint!.Fingerprint == null) return (text, "");
+        if (!RelayEndpoint.TryParse(text, out var endpoint) || endpoint?.Fingerprint == null) return (text, "");
         var query = text.IndexOf('?', StringComparison.Ordinal);
         return (query >= 0 ? text[..query] : text, endpoint.Fingerprint);
     }

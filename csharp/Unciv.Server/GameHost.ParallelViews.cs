@@ -3,6 +3,7 @@ using Unciv.Commands.Events;
 using Unciv.Logic.Civilization;
 using Unciv.Net;
 using Unciv.Net.Visibility;
+using Unciv.Utils;
 
 namespace Unciv.Server;
 
@@ -86,7 +87,7 @@ public sealed partial class GameHost
             if (built[i].Error != null) { first ??= built[i].Error; continue; }
             var s = targets[i].Session;
             s.PreviousSnapshot = built[i].After;
-            _ = SendFrameAsync(s, built[i].Frame!);
+            _ = SendFrameAsync(s, built[i].Frame.NotNull());
         }
         if (first != null) ExceptionDispatchInfo.Capture(first).Throw();
     }

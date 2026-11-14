@@ -21,7 +21,8 @@ public partial class TurnBarView : Control
     private readonly VBoxContainer rows = new() { Name = "Players" };
     private readonly VBoxContainer toasts = new() { Name = "Toasts", MouseFilter = MouseFilterEnum.Ignore };
     private readonly List<(Label Label, int Left)> toastLabels = [];
-    private UiTheme theme = null!; // JUSTIFY: C036 assigned by Init before the first Show
+    private ReadyRef<UiTheme> themeRef;
+    private UiTheme theme => themeRef.Value;
     private TurnBarData? data;
 
     public TurnBarView()
@@ -57,7 +58,7 @@ public partial class TurnBarView : Control
 
     public void Init(UiTheme uiTheme)
     {
-        theme = uiTheme;
+        themeRef.Set(uiTheme);
         Theme = uiTheme.Theme;
     }
 

@@ -109,7 +109,7 @@ public sealed partial class GameHost
     private async Task SendStandbyHelloAsync(HostSession attached)
     {
         if (!Standby.IsDesignated(attached.PlayerKeyId)) return;
-        if (Standby.State == StandbyStates.Offered) await SafeSendAsync(attached, new StandbyOffer { KeyId = attached.PlayerKeyId! });
+        if (Standby.State == StandbyStates.Offered && attached.PlayerKeyId is { } keyId) await SafeSendAsync(attached, new StandbyOffer { KeyId = keyId });
         else await SafeSendAsync(attached, StatusMessage());
     }
 

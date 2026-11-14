@@ -30,9 +30,12 @@ public partial class HudView : Control
     private readonly HBoxContainer dockRow = new() { Name = "NextActionRow", MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
     private readonly Button actionButton = new() { Name = "NextAction", ThemeTypeVariation = UiVariants.ButtonPrimary };
     private readonly Dictionary<string, Control> entries = [];
-    private Button autoPlayButton = null!; // JUSTIFY: C067 assigned by Init before the HUD is used
-    private IconButton endTurnButton = null!; // JUSTIFY: C067 assigned by Init before the HUD is used
-    private UiTheme theme = null!; // JUSTIFY: C011 assigned by Init before the HUD is updated
+    private ReadyRef<Button> autoPlayButtonRef;
+    private ReadyRef<IconButton> endTurnButtonRef;
+    private ReadyRef<UiTheme> themeRef;
+    private Button autoPlayButton => autoPlayButtonRef.Value;
+    private IconButton endTurnButton => endTurnButtonRef.Value;
+    private UiTheme theme => themeRef.Value;
     private IReadOnlyList<HudStat> stats = [];
     private int bannerLeft;
     private bool endTurnWanted;
@@ -156,18 +159,24 @@ public partial class HudView : Control
 
     public void Init(UiTheme uiTheme)
     {
-        theme = uiTheme;
+        themeRef.Set(uiTheme);
         Theme = uiTheme.Theme;
         foreach (var node in new Control[] { bar, bannerPanel, dock }) node.Theme = uiTheme.Theme;
-        if (endTurnButton != null) dockRow.RemoveChild(endTurnButton);
-        endTurnButton?.QueueFree();
-        endTurnButton = new IconButton(uiTheme, AssetKey.Of(RulesetAssetKeys.UiIcon, "ForwardArrow"), HudModel.EndTurnLabel, hotkey: endTurnKey, variation: UiVariants.ButtonGhost) { Name = "EndTurn", Visible = false };
+        if (endTurnButtonRef.OrNull is { } oldEndTurn)
+        {
+            dockRow.RemoveChild(oldEndTurn);
+            oldEndTurn.QueueFree();
+        }
+        endTurnButtonRef.Set(new IconButton(uiTheme, AssetKey.Of(RulesetAssetKeys.UiIcon, "ForwardArrow"), HudModel.EndTurnLabel, hotkey: endTurnKey, variation: UiVariants.ButtonGhost) { Name = "EndTurn", Visible = false });
         endTurnButton.Pressed += () => EndTurnRequested?.Invoke();
         dockRow.AddChild(endTurnButton);
         dockRow.MoveChild(endTurnButton, 0);
-        if (autoPlayButton != null) dock.RemoveChild(autoPlayButton);
-        autoPlayButton?.QueueFree();
-        autoPlayButton = new Button { Name = "AutoPlayButton", Text = AutoPlayModel.ButtonLabel.TrText(), Visible = false, ThemeTypeVariation = UiVariants.ButtonSecondary };
+        if (autoPlayButtonRef.OrNull is { } oldAutoPlay)
+        {
+            dock.RemoveChild(oldAutoPlay);
+            oldAutoPlay.QueueFree();
+        }
+        autoPlayButtonRef.Set(new Button { Name = "AutoPlayButton", Text = AutoPlayModel.ButtonLabel.TrText(), Visible = false, ThemeTypeVariation = UiVariants.ButtonSecondary });
         autoPlayButton.Pressed += () => AutoPlayRequested?.Invoke();
         dock.AddChild(autoPlayButton);
         dock.MoveChild(autoPlayButton, 0);
@@ -210,7 +219,7 @@ public partial class HudView : Control
     /// <summary>T412: wraps the turn banner inside <paramref name="maxWidth"/> only when narrow space requires it so it never hits notifications.</summary>
     public void FitBannerWidth(float maxWidth)
     {
-        if (maxWidth <= 0f || theme == null) return;
+        if (maxWidth <= 0f || !themeRef.IsSet) return;
         banner.AutowrapMode = TextServer.AutowrapMode.Off;
         banner.CustomMinimumSize = Vector2.Zero;
         bannerPanel.ResetSize();

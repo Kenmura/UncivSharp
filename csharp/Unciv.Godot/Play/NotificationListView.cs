@@ -28,7 +28,8 @@ public partial class NotificationListView : VBoxContainer
     private readonly VBoxContainer items = new() { Name = "NotificationRows" };
     private readonly Label summary = new() { Name = "NotificationSummary", Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Dictionary<int, Button> buttons = [];
-    private UiTheme theme = null!; // JUSTIFY: C013 assigned by Init before the list is updated
+    private ReadyRef<UiTheme> themeRef;
+    private UiTheme theme => themeRef.Value;
     private IReadOnlyList<NotificationRow> rows = [];
     private int turn;
     private int deferred;
@@ -179,7 +180,7 @@ public partial class NotificationListView : VBoxContainer
 
     public void Init(UiTheme uiTheme)
     {
-        theme = uiTheme;
+        themeRef.Set(uiTheme);
         Theme = uiTheme.Theme;
         toggle.CustomMinimumSize = new Vector2(RowWidth + uiTheme.Px(UiTokens.S4) * 2, 0f); // as wide as the drop-down, so it stays on screen
         toggle.Text = NotificationsModel.ToggleLabel(rows.Count, IsOpen).TrText();

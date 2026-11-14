@@ -7,10 +7,14 @@ namespace Unciv.Utils;
 // is reentrant (recursive access is the caller's bug, as in Kotlin), and a fast volatile check avoids locking once initialized.
 public sealed class KotlinLazy<T>
 {
+    private sealed class Box(T value)
+    {
+        public readonly T Value = value;
+    }
+
     private readonly object syncRoot = new();
     private Func<T>? initializer;
-    private volatile bool initialized;
-    private T result = default!; // JUSTIFY: T119 unconstrained T, read only when initialized
+    private volatile Box? box;
 
     public KotlinLazy(Func<T> initializer)
     {
@@ -18,23 +22,24 @@ public sealed class KotlinLazy<T>
         this.initializer = initializer;
     }
 
-    public bool IsValueCreated => initialized;
+    public bool IsValueCreated => box != null;
 
     public T Value
     {
         get
         {
-            if (initialized) return result;
+            if (box is { } initializedBox) return initializedBox.Value;
             lock (syncRoot)
             {
-                if (initialized) return result;
-                result = initializer!(); // an exception propagates and nothing is cached; JUSTIFY: T119 initializer is non-null until initialized
-                initialized = true;      // publish (volatile write) after `result` is set
+                if (box is { } lockedBox) return lockedBox.Value;
+                var init = initializer ?? throw new InvalidOperationException("KotlinLazy initializer missing before initialization.");
+                var created = new Box(init()); // an exception propagates and nothing is cached
+                box = created;                  // publish (volatile write) after Value is set
                 initializer = null;
-                return result;
+                return created.Value;
             }
         }
     }
 
-    public override string ToString() => IsValueCreated ? result?.ToString() ?? "" : "Lazy value not initialized yet.";
+    public override string ToString() => box is { } initializedBox ? initializedBox.Value?.ToString() ?? "" : "Lazy value not initialized yet.";
 }

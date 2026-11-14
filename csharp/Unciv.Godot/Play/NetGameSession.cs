@@ -174,7 +174,11 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
     [
         .. lobby.Slots
             .Where(it => it.Kind == "Human" && !string.IsNullOrEmpty(it.Nation))
-            .Select(it => new TurnRosterEntry(it.Nation!, string.IsNullOrEmpty(it.PlayerName) ? it.Nation! : it.PlayerName, it.Connected ?? false, it.GraceEndsAt))
+            .Select(it =>
+            {
+                string nation = it.Nation ?? "";
+                return new TurnRosterEntry(nation, string.IsNullOrEmpty(it.PlayerName) ? nation : it.PlayerName, it.Connected ?? false, it.GraceEndsAt);
+            })
     ];
 
     private static TaskCompletionSource NewSignal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -309,7 +313,7 @@ public sealed class NetGameSession : IGameSession, ITurnRoster, IGameSocial, IAs
     private void Raise(Action handlers)
     {
         if (context == null) handlers();
-        else context.Post(static state => ((Action)state!)(), handlers);
+        else context.Post(static state => (state as Action)?.Invoke(), handlers);
     }
 
     private void Signal()

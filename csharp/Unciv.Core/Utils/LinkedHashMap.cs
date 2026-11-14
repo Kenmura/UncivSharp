@@ -29,14 +29,14 @@ public sealed class LinkedHashMap<TKey, TValue> : IReadOnlyDictionary<TKey, TVal
 
     public bool ContainsKey(TKey key) => lookup.ContainsKey(key);
 
-    public bool TryGetValue(TKey key, out TValue value)
+    public bool TryGetValue(TKey key, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out TValue value)
     {
         if (lookup.TryGetValue(key, out var node))
         {
             value = node.Value.Value;
             return true;
         }
-        value = default!; // JUSTIFY: T119 out value is unspecified when TryGetValue returns false
+        value = default;
         return false;
     }
 

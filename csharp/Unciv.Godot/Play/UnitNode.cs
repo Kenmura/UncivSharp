@@ -19,7 +19,7 @@ public partial class UnitNode : Node3D
     private const float IconSpacing = 0.3f;
     private const float IconPixelSize = 0.0042f;
 
-    public UnitDto Unit { get; set; } = null!; // JUSTIFY: C010 set by GameScreen right after construction
+    public required UnitDto Unit { get; set; }
 
     /// <summary>C033: where the unit stands when no animation moves it; set by the screen when it places the node, and what the presenter returns the node to.</summary>
     public Vector3 RestPosition { get; private set; }

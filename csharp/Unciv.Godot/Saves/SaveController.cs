@@ -445,9 +445,12 @@ public partial class SaveController : Control
         if (index < 0) selectedName = null;
         table.Select(index, notify: false);
         if (frame != null) frame.TitleLabel.Text = $"{(session != null ? "Saves" : "Load game").Tr()} ({entries.Count.ToString(CultureInfo.InvariantCulture)})";
-        scroller!.Visible = shown.Count > 0;
-        empty!.Visible = shown.Count == 0;
-        empty.SetMessage(entries.Count == 0 ? "No saves yet." : "No save matches the search.");
+        if (scroller != null) scroller.Visible = shown.Count > 0;
+        if (empty != null)
+        {
+            empty.Visible = shown.Count == 0;
+            empty.SetMessage(entries.Count == 0 ? "No saves yet." : "No save matches the search.");
+        }
         ShowDetails(index < 0 ? null : shown[index]);
         UpdateActions();
     }

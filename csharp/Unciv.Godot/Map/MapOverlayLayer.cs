@@ -10,7 +10,7 @@ namespace Unciv.GodotClient.Map;
 /// <summary>One city on the map: a block, and a banner above it; remembers the snapshot row it was drawn from so the screen and tests ask the view, not the engine.</summary>
 public partial class CityNode : Node3D
 {
-    public CityDto City { get; set; } = null!; // JUSTIFY: C041 set by MapOverlayLayer right after construction
+    public required CityDto City { get; init; }
 
     /// <summary>The banner text as drawn.</summary>
     public string BannerText => GetNodeOrNull<Label3D>("Banner")?.Text ?? "";

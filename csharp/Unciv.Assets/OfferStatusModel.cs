@@ -1,4 +1,5 @@
 using Unciv.Net.Visibility;
+using Unciv.Utils;
 
 namespace Unciv.Assets;
 
@@ -53,7 +54,7 @@ public sealed class OfferTracker
         var names = snapshot.Civs.GroupBy(it => it.CivId, StringComparer.Ordinal).ToDictionary(it => it.Key, it => it.First().Name, StringComparer.Ordinal);
         var nowIncoming = TradeScreenModel.Incoming(snapshot, nameOf).Select(it => (it.FromId, it.FromName)).ToList();
         var nowOutgoing = snapshot.PendingTrades.Where(it => it.From == snapshot.You).Select(it => it.To).Distinct(StringComparer.Ordinal)
-            .Select(it => (Id: it, Trade: TradeScreenModel.Outgoing(snapshot, it, nameOf)!)).ToList();
+            .Select(it => (Id: it, Trade: TradeScreenModel.Outgoing(snapshot, it, nameOf).NotNull())).ToList();
 
         foreach (var (id, text) in outgoing)
         {

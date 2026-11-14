@@ -434,7 +434,7 @@ public static class BenchRunner
         worker.Join();
 #pragma warning restore RS0030
         if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
-        return result!;
+        return result.NotNull();
     }
 
     private static ScenarioResult RunOnThread(Scenario scenario, Options options, TextWriter? log)
@@ -845,7 +845,7 @@ public static class BenchRunner
             row["totalMsPerTurn"] = R(turns == 0 ? 0 : TicksToMs(all) / turns, 3);
             return row;
         });
-        return new JsonArray(rows.OrderByDescending(it => (double)it["totalMsPerTurn"]!).ThenBy(it => (string)it["civ"]!, StringComparer.Ordinal).Select(it => (JsonNode)it).ToArray());
+        return new JsonArray(rows.OrderByDescending(it => (double)it["totalMsPerTurn"].NotNull()).ThenBy(it => (string?)it["civ"] ?? "", StringComparer.Ordinal).Select(it => (JsonNode)it).ToArray());
     }
 
     private static JsonObject ToJson(ScenarioRuns repeated)

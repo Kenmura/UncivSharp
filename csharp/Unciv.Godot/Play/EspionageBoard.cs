@@ -5,6 +5,7 @@ using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Translations;
 using Unciv.Queries.Empire;
+using Unciv.Utils;
 
 namespace Unciv.GodotClient.Play;
 
@@ -154,7 +155,7 @@ public sealed class EspionageBoard
             button.Pressed += () =>
             {
                 selectedSpy = null;
-                send(target!.Command);
+                send(target.NotNull().Command);
             };
             hereButtons[location.CityId ?? ""] = button;
             return button;

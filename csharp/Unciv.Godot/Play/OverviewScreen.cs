@@ -7,6 +7,7 @@ using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
 using Unciv.Logic.City;
 using Unciv.Models.Translations;
+using Unciv.Utils;
 using TabBar = Unciv.GodotClient.Ui.TabBar;
 
 namespace Unciv.GodotClient.Play;
@@ -29,9 +30,12 @@ public partial class OverviewScreen : PanelContainer
     private readonly Dictionary<string, List<DataTable>> dataTables = [];
     private readonly Dictionary<string, Button> jumpButtons = [];
     private readonly Dictionary<string, string> notices = [];
-    private ScreenFrame frame = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
-    private Label message = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
-    private TabBar tabs = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
+    private ReadyRef<ScreenFrame> frameRef;
+    private ReadyRef<Label> messageRef;
+    private ReadyRef<TabBar> tabsRef;
+    private ScreenFrame frame => frameRef.Value;
+    private Label message => messageRef.Value;
+    private TabBar tabs => tabsRef.Value;
     private string selectedTab = OverviewModel.Stats;
     private string messageText = "";
     private int generation;
@@ -73,24 +77,24 @@ public partial class OverviewScreen : PanelContainer
 
     private void BuildFrame()
     {
-        if (frame != null)
+        if (frameRef.OrNull is { } oldFrame)
         {
-            RemoveChild(frame); // at once: a queued free would leave the old frame in the layout until the frame ends
-            frame.QueueFree();
+            RemoveChild(oldFrame); // at once: a queued free would leave the old frame in the layout until the frame ends
+            oldFrame.QueueFree();
         }
         pages.Clear();
         jumpButtons.Clear(); // the controls of the old frame are gone; the next refresh fills them again
         tables.Clear();
         dataTables.Clear();
         notices.Clear();
-        frame = new ScreenFrame(theme, "Overview", closeLabel: "Close overview");
+        frameRef.Set(new ScreenFrame(theme, "Overview", closeLabel: "Close overview"));
         frame.CloseRequested += Close;
         AddChild(frame);
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
-        message = new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, Text = messageText, Visible = messageText.Length > 0 };
+        messageRef.Set(new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, Text = messageText, Visible = messageText.Length > 0 });
         column.AddChild(message);
-        tabs = new TabBar { Name = "OverviewTabs", SizeFlagsVertical = SizeFlags.ExpandFill };
+        tabsRef.Set(new TabBar { Name = "OverviewTabs", SizeFlagsVertical = SizeFlags.ExpandFill });
         column.AddChild(tabs);
         foreach (string tab in OverviewModel.Tabs)
         {
@@ -200,8 +204,9 @@ public partial class OverviewScreen : PanelContainer
         if (overview != null)
             foreach (var civ in overview.KnownCivs) politics.Add(new PoliticsEntry(civ, await queries.DiplomacyPanel(civ.CivName)));
         var bulk = new Dictionary<string, BulkCity>();
-        foreach (var city in snapshot.Cities.Where(it => it.Owner == snapshot.You && it.Own != null))
-            if (await queries.CityPanel(city.Own!.Id) is { } panel && await queries.ConstructionList(city.Own.Id) is { } list) bulk[city.Name] = new BulkCity(panel, list);
+        foreach (var city in snapshot.Cities)
+            if (city.Owner == snapshot.You && city.Own is { } own && await queries.CityPanel(own.Id) is { } panel && await queries.ConstructionList(own.Id) is { } list)
+                bulk[city.Name] = new BulkCity(panel, list);
         if (ticket != generation) return; // closed or refreshed meanwhile
         jumpButtons.Clear();
         tables.Clear();
@@ -497,7 +502,7 @@ public partial class OverviewScreen : PanelContainer
             var problems = plan.Skips.Select(it => $"{it.City} ({it.What}): {it.Skipped}").ToList();
             foreach (var step in plan.Commands)
             {
-                var result = await session.SubmitAsync(step.Command!);
+                var result = await session.SubmitAsync(step.Command.NotNull());
                 if (result.Accepted) applied++;
                 else problems.Add($"{step.City} ({step.What}): {result.Message}");
             }

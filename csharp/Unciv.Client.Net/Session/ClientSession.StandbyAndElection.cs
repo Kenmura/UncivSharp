@@ -3,6 +3,7 @@ using Unciv.Net;
 using Unciv.Net.Identity;
 using Unciv.Net.Relay;
 using Unciv.Net.Standby;
+using Unciv.Utils;
 
 namespace Unciv.Client.Net.Session;
 
@@ -237,7 +238,7 @@ public sealed partial class ClientSession
         }
 
         if (emit != null) Emit(new StandbyRejected(emit));
-        if (restartRequest) await SendAsync(new StandbySubscribe { GameId = id!, HaveSeq = -1 }, token).ConfigureAwait(false);
+        if (restartRequest) await SendAsync(new StandbySubscribe { GameId = id.NotNull(), HaveSeq = -1 }, token).ConfigureAwait(false);
         else if (ack != null) await SendAsync(new StandbyAck { Seq = ack.Value }, token).ConfigureAwait(false);
     }
 
@@ -297,7 +298,7 @@ public sealed partial class ClientSession
     }
 
     private HostLossInfo BuildLossInfo(SuccessorInfo info, bool forced) => new(
-        gameId!, connectionEpoch, info, Successor?.Roster ?? [],
+        gameId.NotNull(), connectionEpoch, info, Successor?.Roster ?? [],
         clock.NowMillis - lastFrameAt < options.Election.RosterMaxAgeSeconds * 1000L, StandbyHaveSeq, forced);
 
     private async Task ElectionStepAsync(CancellationToken token)
@@ -323,7 +324,8 @@ public sealed partial class ClientSession
             electionCts = CancellationTokenSource.CreateLinkedTokenSource(token);
             var load = BuildLossInfo(info, forced);
             var ct = electionCts.Token;
-            electionTask = Task.Run(() => options.OnHostLost!(load, ct), CancellationToken.None);
+            var onHostLost = options.OnHostLost.NotNull();
+            electionTask = Task.Run(() => onHostLost(load, ct), CancellationToken.None);
         }
         if (!electionTask.IsCompleted) return;
         var task = electionTask;
@@ -354,7 +356,7 @@ public sealed partial class ClientSession
 
     private void StartElectionRedirect(SuccessorInfo info, Func<CancellationToken, Task<ITransport>>? connector)
     {
-        redirect = new HostHandoff { GameId = gameId!, Epoch = connectionEpoch + 1, Successor = info, FinalSeq = -1, FinalHash = "" };
+        redirect = new HostHandoff { GameId = gameId.NotNull(), Epoch = connectionEpoch + 1, Successor = info, FinalSeq = -1, FinalHash = "" };
         redirectIsElection = true;
         electionHumans = Successor?.Roster.Count ?? 0; // T340: read before the new host's JoinOk can replace the announcement
         redirectPrepared = true;
@@ -465,13 +467,13 @@ public sealed partial class ClientSession
         {
             if (slot < endpoints.Count)
             {
-                probe = await options.ConnectEndpoint!(endpoints[slot], limit.Token).ConfigureAwait(false);
+                probe = await options.ConnectEndpoint.NotNull()(endpoints[slot], limit.Token).ConfigureAwait(false);
             }
             else
             {
                 // T401: dialing the successor's relay room requires the player's agreement, and the dial timeout pauses while they are asked.
-                if (!await ConfirmRelayAsync(route!, limit).ConfigureAwait(false)) return;
-                probe = await options.ConnectRelay!(route!, info.Fingerprint, limit.Token).ConfigureAwait(false);
+                if (!await ConfirmRelayAsync(route.NotNull(), limit).ConfigureAwait(false)) return;
+                probe = await options.ConnectRelay.NotNull()(route.NotNull(), info.Fingerprint, limit.Token).ConfigureAwait(false);
             }
             await probe.SendAsync(ProtocolCodec.Encode(BuildHello()), limit.Token).ConfigureAwait(false);
             var frame = await probe.ReceiveAsync(limit.Token).ConfigureAwait(false);
@@ -482,7 +484,7 @@ public sealed partial class ClientSession
                     votedEpoch = epoch;
                     votedCandidate = info.KeyId;
                     options.PersistVote?.Invoke(epoch, info.KeyId);
-                    var vote = options.Identity.SignLossVote(gameId!, epoch, info.KeyId, Game.Snapshot?.Seq ?? -1, challenge.Nonce);
+                    var vote = options.Identity.SignLossVote(gameId.NotNull(), epoch, info.KeyId, Game.Snapshot?.Seq ?? -1, challenge.Nonce);
                     await probe.SendAsync(ProtocolCodec.Encode(vote), limit.Token).ConfigureAwait(false);
                     var reply = await probe.ReceiveAsync(limit.Token).ConfigureAwait(false);
                     if (reply != null && ProtocolCodec.Decode(reply) is HostLossVoteResult result) Emit(new VoteCast(epoch, info.KeyId, result.Accepted));

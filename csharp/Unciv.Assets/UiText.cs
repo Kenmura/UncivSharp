@@ -113,7 +113,7 @@ public static class TableSorter
         {
             string x = Cell(a), y = Cell(b);
             if (x.Length == 0 || y.Length == 0) return x.Length == y.Length ? 0 : x.Length == 0 ? 1 : -1;
-            int c = numeric ? ParseNumber(x)!.Value.CompareTo(ParseNumber(y)!.Value) : string.CompareOrdinal(x, y);
+            int c = numeric && ParseNumber(x) is { } nx && ParseNumber(y) is { } ny ? nx.CompareTo(ny) : string.CompareOrdinal(x, y);
             return ascending ? c : -c;
         }
         return Enumerable.Range(0, rows.Count).OrderBy(i => i, Comparer<int>.Create((a, b) => Compare(a, b) is var c and not 0 ? c : a.CompareTo(b))).ToList();

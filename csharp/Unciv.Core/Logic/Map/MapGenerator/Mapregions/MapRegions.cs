@@ -92,7 +92,7 @@ public class MapRegions(Ruleset ruleset)
     public Ruleset Ruleset { get; } = ruleset;
 
     private readonly List<Region> regions = [];
-    private TileDataMap tileData = null!; // JUSTIFY: T119 Kotlin lateinit
+    private TileDataMap tileData = new(0);
 
     // Test/downstream access (Kotlin private/internal members shared inside the module)
     internal IReadOnlyList<Region> Regions => regions;

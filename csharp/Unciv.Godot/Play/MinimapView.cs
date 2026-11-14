@@ -2,6 +2,7 @@ using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Map;
+using Unciv.GodotClient.Ui;
 using Unciv.Logic.Map;
 using Unciv.Net.Visibility;
 
@@ -19,7 +20,8 @@ public partial class MinimapView : Control
     private const float FrameWidth = 2f;
     private const int MaxCell = 8;
 
-    private MapView map = null!; // JUSTIFY: C014 assigned by Attach before the minimap is used
+    private ReadyRef<MapView> mapRef;
+    private MapView map => mapRef.Value;
     private MinimapRaster? raster;
     private ImageTexture? texture;
     private Vector2 lastFocus = new(float.NaN, float.NaN);
@@ -39,7 +41,7 @@ public partial class MinimapView : Control
         ClipContents = true; // a map too big even for one-pixel cells is cropped to the dock, not drawn over the HUD
         CustomMinimumSize = size;
         Size = size;
-        if (lastTiles != null) Update(lastTiles, lastOwnerColour!);
+        if (lastTiles != null && lastOwnerColour != null) Update(lastTiles, lastOwnerColour);
     }
 
     private IReadOnlyList<TileDto>? lastTiles;
@@ -50,7 +52,7 @@ public partial class MinimapView : Control
 
     public void Attach(MapView mapView)
     {
-        map = mapView;
+        mapRef.Set(mapView);
         MouseFilter = MouseFilterEnum.Stop;
     }
 

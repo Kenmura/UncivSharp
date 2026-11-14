@@ -63,7 +63,9 @@ public sealed partial class RelayServer
         {
             try
             {
-                var fresh = RelayCertificates.LoadPem(options.CertFile!, options.KeyFile!);
+                var certFile = options.CertFile ?? throw new InvalidOperationException("CertFile missing in Certificate TLS mode");
+                var keyFile = options.KeyFile ?? throw new InvalidOperationException("KeyFile missing in Certificate TLS mode");
+                var fresh = RelayCertificates.LoadPem(certFile, keyFile);
                 var old = Interlocked.Exchange(ref certificate, fresh);
                 certificateStamp = CertificateStamp();
                 Log.Info("certificate-reloaded", reason: "ok");

@@ -24,7 +24,8 @@ public partial class TutorialTaskCard : Control
     private readonly Button closeButton = new() { Name = "TaskClose", ThemeTypeVariation = UiVariants.ButtonGhost };
     private readonly Button neverButton = new() { Name = "TaskNever" };
     private readonly Button collapsedButton = new() { Name = "TaskCollapsed", Text = "?", Visible = false };
-    private UiTheme theme = null!; // JUSTIFY: C054 assigned by Init before the card is shown
+    private ReadyRef<UiTheme> themeRef;
+    private UiTheme theme => themeRef.Value;
     private TutorialTaskResult? task;
 
     public TutorialTaskCard()
@@ -87,7 +88,7 @@ public partial class TutorialTaskCard : Control
 
     public void Init(UiTheme uiTheme)
     {
-        theme = uiTheme;
+        themeRef.Set(uiTheme);
         Theme = uiTheme.Theme;
         shell.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S1));
         column.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S1));

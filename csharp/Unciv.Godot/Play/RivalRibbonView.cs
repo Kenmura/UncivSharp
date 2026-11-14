@@ -18,7 +18,8 @@ public partial class RivalRibbonView : PanelContainer
     private readonly VBoxContainer body = new() { Name = "RivalRows", MouseFilter = MouseFilterEnum.Ignore };
     private readonly Dictionary<string, Control> names = [];
     private readonly Dictionary<string, Dictionary<string, Control>> figures = [];
-    private UiTheme theme = null!; // JUSTIFY: C087 assigned by Init before any use
+    private ReadyRef<UiTheme> themeRef;
+    private UiTheme theme => themeRef.Value;
     private Texture2D? arrowClosed;
     private Texture2D? arrowOpen;
     private IReadOnlyList<RivalRow> rows = [];
@@ -70,7 +71,7 @@ public partial class RivalRibbonView : PanelContainer
 
     public void Init(UiTheme uiTheme)
     {
-        theme = uiTheme;
+        themeRef.Set(uiTheme);
         Theme = uiTheme.Theme;
         arrowClosed = uiTheme.Icon(AssetKey.Of(RulesetAssetKeys.UiIcon, "ArrowRight"));
         var openImage = arrowClosed.GetImage();
@@ -113,7 +114,7 @@ public partial class RivalRibbonView : PanelContainer
         Visible = rows.Count > 0;
         body.Visible = expanded;
         UpdateToggle();
-        if (theme == null) return;
+        if (!themeRef.IsSet) return;
         bool compact = theme.Breakpoint == UiBreakpoint.Compact;
         foreach (var row in rows)
         {

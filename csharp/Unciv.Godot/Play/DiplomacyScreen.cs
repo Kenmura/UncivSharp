@@ -21,23 +21,40 @@ public partial class DiplomacyScreen : PanelContainer
     private readonly UiTheme theme;
     private readonly Dictionary<string, ListRow> civButtons = [];
     private readonly Dictionary<string, Button> actionButtons = [];
-    private ScreenFrame frame = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label message = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private VBoxContainer civList = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label title = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label status = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private PanelContainer statusPill = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private IconBadge flag = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Label info = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private InfluenceMeter influenceMeter = null!; // JUSTIFY: T413 assigned by BuildFrame in the constructor
-    private Label modifiers = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private HFlowContainer modifierChips = null!; // JUSTIFY: T413 assigned by BuildFrame in the constructor
-    private Label quests = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private VBoxContainer detail = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private Container actions = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private SectionHeader modifierHeader = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private SectionHeader questHeader = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private SectionHeader actionHeader = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
+    private ReadyRef<ScreenFrame> frameRef;
+    private ReadyRef<Label> messageRef;
+    private ReadyRef<VBoxContainer> civListRef;
+    private ReadyRef<Label> titleRef;
+    private ReadyRef<Label> statusRef;
+    private ReadyRef<PanelContainer> statusPillRef;
+    private ReadyRef<IconBadge> flagRef;
+    private ReadyRef<Label> infoRef;
+    private ReadyRef<InfluenceMeter> influenceMeterRef;
+    private ReadyRef<Label> modifiersRef;
+    private ReadyRef<HFlowContainer> modifierChipsRef;
+    private ReadyRef<Label> questsRef;
+    private ReadyRef<VBoxContainer> detailRef;
+    private ReadyRef<Container> actionsRef;
+    private ReadyRef<SectionHeader> modifierHeaderRef;
+    private ReadyRef<SectionHeader> questHeaderRef;
+    private ReadyRef<SectionHeader> actionHeaderRef;
+    private ScreenFrame frame => frameRef.Value;
+    private Label message => messageRef.Value;
+    private VBoxContainer civList => civListRef.Value;
+    private Label title => titleRef.Value;
+    private Label status => statusRef.Value;
+    private PanelContainer statusPill => statusPillRef.Value;
+    private IconBadge flag => flagRef.Value;
+    private Label info => infoRef.Value;
+    private InfluenceMeter influenceMeter => influenceMeterRef.Value;
+    private Label modifiers => modifiersRef.Value;
+    private HFlowContainer modifierChips => modifierChipsRef.Value;
+    private Label quests => questsRef.Value;
+    private VBoxContainer detail => detailRef.Value;
+    private Container actions => actionsRef.Value;
+    private SectionHeader modifierHeader => modifierHeaderRef.Value;
+    private SectionHeader questHeader => questHeaderRef.Value;
+    private SectionHeader actionHeader => actionHeaderRef.Value;
     private EmptyState? empty;
     private IReadOnlyList<DiplomacyButton> buttons = [];
     private string messageText = "";
@@ -69,70 +86,70 @@ public partial class DiplomacyScreen : PanelContainer
 
     private void BuildFrame()
     {
-        if (frame != null)
+        if (frameRef.OrNull is { } oldFrame)
         {
-            RemoveChild(frame); // at once: a queued free would leave the old frame in the layout until the frame ends
-            frame.QueueFree();
+            RemoveChild(oldFrame); // at once: a queued free would leave the old frame in the layout until the frame ends
+            oldFrame.QueueFree();
         }
         civButtons.Clear(); // the controls of the old frame are gone; the next open fills them again
         actionButtons.Clear();
         empty = null;
-        frame = new ScreenFrame(theme, "Diplomacy", closeLabel: "Close diplomacy");
+        frameRef.Set(new ScreenFrame(theme, "Diplomacy", closeLabel: "Close diplomacy"));
         frame.CloseRequested += Close;
         AddChild(frame);
         int gap = theme.Px(UiTokens.S2);
 
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", gap);
-        message = new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, Text = messageText, Visible = messageText.Length > 0 };
+        messageRef.Set(new Label { Name = "Message", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, Text = messageText, Visible = messageText.Length > 0 });
         column.AddChild(message);
         var middle = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         middle.AddThemeConstantOverride("separation", theme.Px(UiTokens.S4));
         column.AddChild(middle);
 
         var listScroll = new ScrollContainer { CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 190 : 240), 0f), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        civList = new VBoxContainer { Name = "CivList", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        civListRef.Set(new VBoxContainer { Name = "CivList", SizeFlagsHorizontal = SizeFlags.ExpandFill });
         civList.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
         listScroll.AddChild(civList);
         middle.AddChild(listScroll);
 
         var detailScroll = new ScrollContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        detail = new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        detailRef.Set(new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = SizeFlags.ExpandFill });
         detail.AddThemeConstantOverride("separation", gap);
         detailScroll.AddChild(detail);
         middle.AddChild(detailScroll);
 
         var head = new HBoxContainer { Name = "DetailHead" };
         head.AddThemeConstantOverride("separation", gap);
-        flag = new IconBadge(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy"), ProceduralAssets.ToColor(UiTokens.Surface3), ProceduralAssets.NeutralGlyph, UiTokens.S8) { Visible = false };
+        flagRef.Set(new IconBadge(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy"), ProceduralAssets.ToColor(UiTokens.Surface3), ProceduralAssets.NeutralGlyph, UiTokens.S8) { Visible = false });
         head.AddChild(flag);
-        title = new Label { Name = "Title", ThemeTypeVariation = UiVariants.LabelHeading, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center };
+        titleRef.Set(new Label { Name = "Title", ThemeTypeVariation = UiVariants.LabelHeading, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center });
         head.AddChild(title);
-        status = new Label { Name = "StatusText", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelSmall };
-        statusPill = new PanelContainer { Name = "StatusPill", Visible = false, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        statusRef.Set(new Label { Name = "StatusText", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelSmall });
+        statusPillRef.Set(new PanelContainer { Name = "StatusPill", Visible = false, SizeFlagsVertical = SizeFlags.ShrinkCenter });
         statusPill.AddChild(status);
         head.AddChild(statusPill);
         detail.AddChild(head);
-        info = Wrapped("Info", UiVariants.LabelBodyStrong);
+        infoRef.Set(Wrapped("Info", UiVariants.LabelBodyStrong));
         detail.AddChild(info);
-        influenceMeter = new InfluenceMeter(theme) { Name = "InfluenceMeter", Visible = false };
+        influenceMeterRef.Set(new InfluenceMeter(theme) { Name = "InfluenceMeter", Visible = false });
         detail.AddChild(influenceMeter);
-        modifierHeader = new SectionHeader("Modifiers") { Visible = false };
+        modifierHeaderRef.Set(new SectionHeader("Modifiers") { Visible = false });
         detail.AddChild(modifierHeader);
-        modifiers = Wrapped("Modifiers", UiVariants.LabelSecondary);
+        modifiersRef.Set(Wrapped("Modifiers", UiVariants.LabelSecondary));
         modifiers.Visible = false;
         detail.AddChild(modifiers);
-        modifierChips = new HFlowContainer { Name = "ModifierChips", Visible = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        modifierChipsRef.Set(new HFlowContainer { Name = "ModifierChips", Visible = false, SizeFlagsHorizontal = SizeFlags.ExpandFill });
         modifierChips.AddThemeConstantOverride("h_separation", gap);
         modifierChips.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S1));
         detail.AddChild(modifierChips);
-        questHeader = new SectionHeader("Quests") { Visible = false };
+        questHeaderRef.Set(new SectionHeader("Quests") { Visible = false });
         detail.AddChild(questHeader);
-        quests = Wrapped("Quests", UiVariants.LabelSecondary);
+        questsRef.Set(Wrapped("Quests", UiVariants.LabelSecondary));
         detail.AddChild(quests);
-        actionHeader = new SectionHeader("Actions") { Visible = false };
+        actionHeaderRef.Set(new SectionHeader("Actions") { Visible = false });
         detail.AddChild(actionHeader);
-        actions = new VBoxContainer { Name = "Actions", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        actionsRef.Set(new VBoxContainer { Name = "Actions", SizeFlagsHorizontal = SizeFlags.ExpandFill });
         actions.AddThemeConstantOverride("separation", gap);
         detail.AddChild(actions);
         frame.SetContent(column);

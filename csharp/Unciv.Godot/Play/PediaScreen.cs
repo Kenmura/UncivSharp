@@ -32,20 +32,34 @@ public partial class PediaScreen : PanelContainer
     private readonly List<ListRow> searchRows = [];
     private readonly List<RichTextLabel> labels = [];
     private readonly List<SectionHeader> headers = [];
-    private ScreenFrame frame = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private ScrollContainer entryScroll = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private ScrollContainer searchScroll = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private ScrollContainer pageScroll = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private VBoxContainer sidebar = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private VBoxContainer entryColumn = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private VBoxContainer searchColumn = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private VBoxContainer pageColumn = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private PanelContainer card = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private IconBadge cardIcon = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private Label cardName = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private Label cardCategory = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private HFlowContainer cardChips = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private VBoxContainer body = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
+    private ReadyRef<ScreenFrame> frameRef;
+    private ReadyRef<ScrollContainer> entryScrollRef;
+    private ReadyRef<ScrollContainer> searchScrollRef;
+    private ReadyRef<ScrollContainer> pageScrollRef;
+    private ReadyRef<VBoxContainer> sidebarRef;
+    private ReadyRef<VBoxContainer> entryColumnRef;
+    private ReadyRef<VBoxContainer> searchColumnRef;
+    private ReadyRef<VBoxContainer> pageColumnRef;
+    private ReadyRef<PanelContainer> cardRef;
+    private ReadyRef<IconBadge> cardIconRef;
+    private ReadyRef<Label> cardNameRef;
+    private ReadyRef<Label> cardCategoryRef;
+    private ReadyRef<HFlowContainer> cardChipsRef;
+    private ReadyRef<VBoxContainer> bodyRef;
+    private ScreenFrame frame => frameRef.Value;
+    private ScrollContainer entryScroll => entryScrollRef.Value;
+    private ScrollContainer searchScroll => searchScrollRef.Value;
+    private ScrollContainer pageScroll => pageScrollRef.Value;
+    private VBoxContainer sidebar => sidebarRef.Value;
+    private VBoxContainer entryColumn => entryColumnRef.Value;
+    private VBoxContainer searchColumn => searchColumnRef.Value;
+    private VBoxContainer pageColumn => pageColumnRef.Value;
+    private PanelContainer card => cardRef.Value;
+    private IconBadge cardIcon => cardIconRef.Value;
+    private Label cardName => cardNameRef.Value;
+    private Label cardCategory => cardCategoryRef.Value;
+    private HFlowContainer cardChips => cardChipsRef.Value;
+    private VBoxContainer body => bodyRef.Value;
     private PediaEntry? current;
 
     public PediaScreen(Ruleset gameRuleset, UiTheme uiTheme, TooltipHost tooltipHost)
@@ -82,13 +96,13 @@ public partial class PediaScreen : PanelContainer
 
     private void BuildFrame()
     {
-        if (frame != null)
+        if (frameRef.OrNull is { } oldFrame)
         {
             search.GetParent()?.RemoveChild(search);
             back.GetParent()?.RemoveChild(back);
             clear.GetParent()?.RemoveChild(clear);
-            RemoveChild(frame);
-            frame.QueueFree();
+            RemoveChild(oldFrame);
+            oldFrame.QueueFree();
         }
         categoryButtons.Clear();
         entryRows.Clear();
@@ -98,7 +112,7 @@ public partial class PediaScreen : PanelContainer
         Category = null;
         bool compact = theme.Breakpoint == UiBreakpoint.Compact;
         int gap = theme.Px(UiTokens.S3);
-        frame = new ScreenFrame(theme, "Civilopedia", closeLabel: "Close");
+        frameRef.Set(new ScreenFrame(theme, "Civilopedia", closeLabel: "Close"));
         frame.CloseRequested += Close;
         search.CustomMinimumSize = new Vector2(theme.Px(120), 0);
         if (theme.MinTargetPx > 0)
@@ -123,7 +137,7 @@ public partial class PediaScreen : PanelContainer
         middle.AddThemeConstantOverride("separation", gap);
 
         var sideScroll = new ScrollContainer { Name = "PediaSidebar", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = new Vector2(theme.Px(compact ? 44 : 180), 0) };
-        sidebar = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        sidebarRef.Set(new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         sidebar.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
         sideScroll.AddChild(sidebar);
         middle.AddChild(sideScroll);
@@ -151,35 +165,35 @@ public partial class PediaScreen : PanelContainer
         }
 
         var listWidth = new Vector2(theme.Px(compact ? 170 : 230), 0);
-        entryScroll = new ScrollContainer { Name = "PediaEntries", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = listWidth };
-        entryColumn = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        entryScrollRef.Set(new ScrollContainer { Name = "PediaEntries", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = listWidth });
+        entryColumnRef.Set(new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         entryColumn.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
         entryScroll.AddChild(entryColumn);
-        searchScroll = new ScrollContainer { Name = "PediaSearchResults", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = listWidth, Visible = false };
-        searchColumn = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        searchScrollRef.Set(new ScrollContainer { Name = "PediaSearchResults", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, CustomMinimumSize = listWidth, Visible = false });
+        searchColumnRef.Set(new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         searchColumn.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
         searchScroll.AddChild(searchColumn);
         middle.AddChild(entryScroll);
         middle.AddChild(searchScroll);
 
-        pageScroll = new ScrollContainer { Name = "PediaPageScroll", SizeFlagsHorizontal = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
-        pageColumn = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        pageScrollRef.Set(new ScrollContainer { Name = "PediaPageScroll", SizeFlagsHorizontal = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled });
+        pageColumnRef.Set(new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill });
         pageColumn.AddThemeConstantOverride("separation", gap);
         pageScroll.AddChild(pageColumn);
         middle.AddChild(pageScroll);
         pageColumn.AddChild(back);
         UpdateBackButton();
 
-        card = new PanelContainer { Name = "PediaCard", ThemeTypeVariation = UiVariants.PanelCard, Visible = false };
+        cardRef.Set(new PanelContainer { Name = "PediaCard", ThemeTypeVariation = UiVariants.PanelCard, Visible = false });
         var cardRow = new HBoxContainer();
         cardRow.AddThemeConstantOverride("separation", gap);
-        cardIcon = new IconBadge(theme, PediaModel.CategoryIcon(CivilopediaCategories.Unit), ProceduralAssets.ToColor(UiTokens.Surface3), ProceduralAssets.NeutralGlyph, compact ? 48 : 56) { SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        cardIconRef.Set(new IconBadge(theme, PediaModel.CategoryIcon(CivilopediaCategories.Unit), ProceduralAssets.ToColor(UiTokens.Surface3), ProceduralAssets.NeutralGlyph, compact ? 48 : 56) { SizeFlagsVertical = SizeFlags.ShrinkCenter });
         cardRow.AddChild(cardIcon);
         var texts = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         texts.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
-        cardName = new Label { Name = "PediaName", ThemeTypeVariation = UiVariants.LabelHeading, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis };
-        cardCategory = new Label { Name = "PediaCategoryLabel", ThemeTypeVariation = UiVariants.LabelSecondary };
-        cardChips = new HFlowContainer();
+        cardNameRef.Set(new Label { Name = "PediaName", ThemeTypeVariation = UiVariants.LabelHeading, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis });
+        cardCategoryRef.Set(new Label { Name = "PediaCategoryLabel", ThemeTypeVariation = UiVariants.LabelSecondary });
+        cardChipsRef.Set(new HFlowContainer());
         cardChips.AddThemeConstantOverride("h_separation", gap);
         texts.AddChild(cardName);
         texts.AddChild(cardCategory);
@@ -187,7 +201,7 @@ public partial class PediaScreen : PanelContainer
         cardRow.AddChild(texts);
         card.AddChild(cardRow);
         pageColumn.AddChild(card);
-        body = new VBoxContainer { Name = "PediaBody", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        bodyRef.Set(new VBoxContainer { Name = "PediaBody", SizeFlagsHorizontal = SizeFlags.ExpandFill });
         body.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
         pageColumn.AddChild(body);
         frame.SetContent(middle);

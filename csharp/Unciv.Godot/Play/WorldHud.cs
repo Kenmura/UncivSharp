@@ -49,10 +49,14 @@ public partial class WorldHud : Control
     private readonly VBoxContainer rightDock = new() { Name = "RightDock", MouseFilter = MouseFilterEnum.Ignore, Alignment = BoxContainer.AlignmentMode.End };
     private readonly PanelContainer minimapDock = new() { Name = "MinimapDock", MouseFilter = MouseFilterEnum.Ignore, ThemeTypeVariation = UiVariants.PanelCard, SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
     private readonly Control toastLayer = new() { Name = "ToastLayer", MouseFilter = MouseFilterEnum.Ignore };
-    private HudView hud = null!; // JUSTIFY: C067 assigned by Mount before any use
-    private NotificationListView notifications = null!; // JUSTIFY: C067 assigned by Mount before any use
-    private MinimapView minimap = null!; // JUSTIFY: C067 assigned by Mount before any use
-    private UiTheme theme = null!; // JUSTIFY: C067 assigned by Init before the layout is read
+    private ReadyRef<HudView> hudRef;
+    private ReadyRef<NotificationListView> notificationsRef;
+    private ReadyRef<MinimapView> minimapRef;
+    private ReadyRef<UiTheme> themeRef;
+    private HudView hud => hudRef.Value;
+    private NotificationListView notifications => notificationsRef.Value;
+    private MinimapView minimap => minimapRef.Value;
+    private UiTheme theme => themeRef.Value;
     private UiBreakpoint builtFor;
     private float builtScale;
     private bool playersShown;
@@ -92,29 +96,39 @@ public partial class WorldHud : Control
     /// <summary>C087: the collapsible rival stats ribbon, under the research pills.</summary>
     public RivalRibbonView Rivals { get; } = new();
 
-    public IconButton Diplomacy { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    private ReadyRef<IconButton> diplomacyRef;
+    private ReadyRef<IconButton> technologyRef;
+    private ReadyRef<IconButton> policiesRef;
+    private ReadyRef<IconButton> tradeRef;
+    private ReadyRef<IconButton> espionageRef;
+    private ReadyRef<IconButton> civilopediaRef;
+    private ReadyRef<IconButton> overviewRef;
+    private ReadyRef<IconButton> menuRef;
+    private ReadyRef<IconButton> playersRef;
 
-    public IconButton Technology { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Diplomacy => diplomacyRef.Value;
 
-    public IconButton Policies { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Technology => technologyRef.Value;
 
-    public IconButton Trade { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Policies => policiesRef.Value;
 
-    public IconButton Espionage { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Trade => tradeRef.Value;
 
-    public IconButton Civilopedia { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Espionage => espionageRef.Value;
 
-    public IconButton Overview { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Civilopedia => civilopediaRef.Value;
 
-    public IconButton Menu { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Overview => overviewRef.Value;
 
-    public IconButton Players { get; private set; } = null!; // JUSTIFY: C067 built by Init
+    public IconButton Menu => menuRef.Value;
+
+    public IconButton Players => playersRef.Value;
 
     /// <summary>A nav button was pressed.</summary>
     public event Action<NavTarget>? Requested;
 
     /// <summary>The minimap's slot size in pixels at the current breakpoint (never below 140x100).</summary>
-    public Vector2 MinimapSize => theme == null ? default : new Vector2(theme.Px(Compact ? CompactMinimapWidth : RegularMinimapWidth), theme.Px(Compact ? CompactMinimapHeight : RegularMinimapHeight));
+    public Vector2 MinimapSize => !themeRef.IsSet ? default : new Vector2(theme.Px(Compact ? CompactMinimapWidth : RegularMinimapWidth), theme.Px(Compact ? CompactMinimapHeight : RegularMinimapHeight));
 
     private bool Compact => theme.Breakpoint == UiBreakpoint.Compact;
 
@@ -135,9 +149,9 @@ public partial class WorldHud : Control
     /// <summary>Hands the layout the widgets it places. Call once, before <see cref="Init"/>.</summary>
     public void Mount(HudView content, NotificationListView notificationList, MinimapView minimapView)
     {
-        hud = content;
-        notifications = notificationList;
-        minimap = minimapView;
+        hudRef.Set(content);
+        notificationsRef.Set(notificationList);
+        minimapRef.Set(minimapView);
         AddChild(hud); // not a visual child: it owns the widgets and needs the tree for its frame counter
         column.AddChild(hud.Bar);
         column.MoveChild(hud.Bar, 0);
@@ -152,7 +166,7 @@ public partial class WorldHud : Control
     /// <summary>(Re)builds everything that depends on the theme: sizes, the nav buttons, the structure for the breakpoint. Call again to rebuild after the theme changed.</summary>
     public void Init(UiTheme uiTheme)
     {
-        theme = uiTheme;
+        themeRef.Set(uiTheme);
         Theme = uiTheme.Theme;
         builtFor = uiTheme.Breakpoint;
         builtScale = uiTheme.Scale;
@@ -181,7 +195,7 @@ public partial class WorldHud : Control
     /// <summary>T412: keeps the notification column clear of MinimapDock and centers the turn banner strictly inside the space free of Rivals and Notifications.</summary>
     public void LayoutOverlays()
     {
-        if (theme == null || Size.X <= 0f || Size.Y <= 0f) return;
+        if (!themeRef.IsSet || Size.X <= 0f || Size.Y <= 0f) return;
         float gap = Gap;
         if (minimapDock.Size.Y > 0f && notificationSlot.IsInsideTree())
         {
@@ -268,9 +282,9 @@ public partial class WorldHud : Control
             button.Pressed += () => Requested?.Invoke(target);
             return button;
         }
-        Menu = Make(NavTarget.Menu, Ui("Options"), "Menu", hotkey: "Esc");
+        menuRef.Set(Make(NavTarget.Menu, Ui("Options"), "Menu", hotkey: "Esc"));
         hud.Leading.AddChild(Menu);
-        Technology = Make(NavTarget.Technology, AssetKey.Of(RulesetAssetKeys.StatIcon, "Science"), "Technology", "Technology", variation: UiVariants.ButtonSecondary);
+        technologyRef.Set(Make(NavTarget.Technology, AssetKey.Of(RulesetAssetKeys.StatIcon, "Science"), "Technology", "Technology", variation: UiVariants.ButtonSecondary));
         technologyBar = new StatBar(theme, "Science", 0, 1)
         {
             Name = "TechnologyBar",
@@ -286,15 +300,15 @@ public partial class WorldHud : Control
             OffsetBottom = -1f,
         };
         Technology.AddChild(technologyBar);
-        Policies = Make(NavTarget.Policies, Ui("Policies"), "Policies", compact ? null : "Policies", variation: compact ? UiVariants.ButtonIcon : UiVariants.ButtonSecondary);
+        policiesRef.Set(Make(NavTarget.Policies, Ui("Policies"), "Policies", compact ? null : "Policies", variation: compact ? UiVariants.ButtonIcon : UiVariants.ButtonSecondary));
         navLeft.AddChild(Technology);
         navLeft.AddChild(Policies);
-        Diplomacy = Make(NavTarget.Diplomacy, Ui("Nations"), "Diplomacy");
-        Trade = Make(NavTarget.Trade, Ui("Resources"), "Trade");
-        Espionage = Make(NavTarget.Espionage, Ui("Espionage"), "Espionage");
-        Civilopedia = Make(NavTarget.Civilopedia, AssetKey.Of(RulesetAssetKeys.BuildingIcon, "Library"), "Civilopedia");
-        Overview = Make(NavTarget.Overview, Ui("Score"), "Overview");
-        Players = Make(NavTarget.Players, Ui("Multiplayer"), "Players");
+        diplomacyRef.Set(Make(NavTarget.Diplomacy, Ui("Nations"), "Diplomacy"));
+        tradeRef.Set(Make(NavTarget.Trade, Ui("Resources"), "Trade"));
+        espionageRef.Set(Make(NavTarget.Espionage, Ui("Espionage"), "Espionage"));
+        civilopediaRef.Set(Make(NavTarget.Civilopedia, AssetKey.Of(RulesetAssetKeys.BuildingIcon, "Library"), "Civilopedia"));
+        overviewRef.Set(Make(NavTarget.Overview, Ui("Score"), "Overview"));
+        playersRef.Set(Make(NavTarget.Players, Ui("Multiplayer"), "Players"));
         Players.Visible = playersShown;
         foreach (var button in new Control[] { Diplomacy, Trade, Espionage, Civilopedia, Overview, Players }) navRight.AddChild(button);
         foreach (var button in new[] { Technology, Policies, Diplomacy, Trade, Espionage, Civilopedia, Overview, Players, Menu }) button.Theme = theme.Theme;
@@ -309,7 +323,7 @@ public partial class WorldHud : Control
     public void SetKeys(Func<HotkeyAction, string> keys)
     {
         keyOf = keys;
-        if (Technology != null)
+        if (technologyRef.IsSet)
         {
             ApplyKeys();
             ApplyResearch();

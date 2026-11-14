@@ -57,7 +57,7 @@ public static class TutorialModel
         {
             var lines = tutorial.Steps is { Count: > 0 } steps ? steps : tutorial.CivilopediaText.Select(it => it.Text).Where(it => !string.IsNullOrEmpty(it)).ToList();
             if (lines.Count == 0) continue;
-            var trigger = Enum.GetValues<TutorialTrigger>().Cast<TutorialTrigger?>().FirstOrDefault(it => NameOf(it!.Value) == name);
+            var trigger = Enum.GetValues<TutorialTrigger>().Where(it => NameOf(it) == name).Cast<TutorialTrigger?>().FirstOrDefault();
             entries.Add(new TutorialListEntry(name, string.Join("\n\n", lines), trigger != null && IsSeen(settings, trigger.Value)));
         }
         return entries;
@@ -75,7 +75,7 @@ public static class TutorialModel
         var ownUnits = snapshot.Units.Where(it => it.Own != null && it.Owner == snapshot.You).ToList();
         int ownCities = snapshot.Cities.Count(it => it.Own != null && it.Owner == snapshot.You);
 
-        if (ownUnits.Any(it => it.Own!.Health < 100)) result.Add(TutorialTrigger.InjuredUnits);
+        if (ownUnits.Any(it => it.Own is { Health: < 100 })) result.Add(TutorialTrigger.InjuredUnits);
         if (ownUnits.Any(it => ruleset.Units.TryGetValue(it.Name, out var unit) && unit.IsCivilian() && !unit.IsGreatPerson
                 && ((IHasUniques)unit).HasUnique(UniqueType.BuildImprovements, GameContext.IgnoreConditionalsState)))
             result.Add(TutorialTrigger.Workers);
@@ -96,8 +96,8 @@ public static class TutorialModel
         if (snapshot.Civs.Any(it => it.CivId != snapshot.You && it.IsMajor && snapshot.Diplomacy.Any(d => d.Status != null && (d.A == it.CivId || d.B == it.CivId))))
             result.Add(TutorialTrigger.OtherCivEncountered);
 
-        var owned = snapshot.Tiles.Where(it => it.Owner == snapshot.You && it.Resource != null)
-            .Select(it => ruleset.TileResources.GetValueOrDefault(it.Resource!)?.ResourceType).ToList();
+        var owned = snapshot.Tiles.Where(it => it.Owner == snapshot.You)
+            .Select(it => it.Resource is { } res ? ruleset.TileResources.GetValueOrDefault(res)?.ResourceType : null).ToList();
         if (owned.Contains(ResourceType.Luxury)) result.Add(TutorialTrigger.LuxuryResource);
         if (owned.Contains(ResourceType.Strategic)) result.Add(TutorialTrigger.StrategicResource);
         if (snapshot.Tiles.Any(it => it.NaturalWonder != null)) result.Add(TutorialTrigger.NaturalWonders);

@@ -266,7 +266,8 @@ public partial class UnitPanelView : PanelContainer
 
     private void AddChip(AssetKey key, string text, string tooltip)
     {
-        var chip = new IconLabel(theme!, key, text) { TooltipText = tooltip.TrText() };
+        if (theme == null) return;
+        var chip = new IconLabel(theme, key, text) { TooltipText = tooltip.TrText() };
         chips.AddChild(chip);
     }
 

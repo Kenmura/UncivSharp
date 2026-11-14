@@ -13,7 +13,7 @@ public partial class SmokeTest : Node3D
     private const int WarmupFrames = 3;
     private static readonly Vector3 PrismCenter = new(0, 0.25f, 0);
 
-    private Camera3D camera = null!; // JUSTIFY: T119 assigned in _Ready
+    private Camera3D? camera;
     private int frame;
     private int clicksReceived;
     private Vector3? lastPick;
@@ -59,7 +59,7 @@ public partial class SmokeTest : Node3D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } click)
+        if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } click && camera != null)
         {
             clicksReceived++;
             lastPick = HexPicking.PickGroundPoint(camera, click.Position);
@@ -110,7 +110,7 @@ public partial class SmokeTest : Node3D
         {
             lastPick = null;
             int before = clicksReceived;
-            InputSimulator.SimulateMouseClick(GetViewport(), camera.UnprojectPosition(target));
+            InputSimulator.SimulateMouseClick(GetViewport(), camera.NotNull().UnprojectPosition(target));
             if (clicksReceived != before + 1) failures.Add($"click at {target} was not delivered");
             else if (lastPick is not { } picked || picked.DistanceTo(target) > 0.01f) failures.Add($"pick {lastPick} != {target}");
         }

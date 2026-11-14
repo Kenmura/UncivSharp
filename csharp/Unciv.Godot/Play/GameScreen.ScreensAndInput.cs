@@ -42,8 +42,9 @@ public partial class GameScreen
         Run(Diplomacy.OpenAsync(civId));
     }
 
+    private ReadyRef<OverviewScreen> overviewRef;
     /// <summary>C023: the empire overview, opened by the Overview button.</summary>
-    public OverviewScreen Overview { get; private set; } = null!; // JUSTIFY: C023 assigned in Start before any use
+    public OverviewScreen Overview => overviewRef.Value;
 
     public bool IsOverviewVisible => Overview.Visible;
 
@@ -81,8 +82,9 @@ public partial class GameScreen
         Map.FocusOn(UnitPosition(new HexCoord(node.Unit.X, node.Unit.Y), 0));
     }
 
+    private ReadyRef<TradeScreen> tradeRef;
     /// <summary>C022: the trade screen, opened by the Trade button.</summary>
-    public TradeScreen Trade { get; private set; } = null!; // JUSTIFY: C022 assigned in Start before any use
+    public TradeScreen Trade => tradeRef.Value;
 
     public bool IsTradeVisible => Trade.Visible;
 
@@ -101,8 +103,9 @@ public partial class GameScreen
         Run(Trade.OpenAsync(civId, stageFrom));
     }
 
+    private ReadyRef<PediaScreen> pediaRef;
     /// <summary>C027: the Civilopedia, opened by the Civilopedia button.</summary>
-    public PediaScreen Pedia { get; private set; } = null!; // JUSTIFY: C027 assigned in Start before any use
+    public PediaScreen Pedia => pediaRef.Value;
 
     public bool IsPediaVisible => Pedia.Visible;
 
@@ -115,8 +118,9 @@ public partial class GameScreen
         Pedia.Open(link);
     }
 
+    private ReadyRef<EspionageScreen> espionageRef;
     /// <summary>C051: the espionage screen, opened by the Espionage button.</summary>
-    public EspionageScreen Espionage { get; private set; } = null!; // JUSTIFY: C051 assigned in Start before any use
+    public EspionageScreen Espionage => espionageRef.Value;
 
     public bool IsEspionageVisible => Espionage.Visible;
 
@@ -136,8 +140,9 @@ public partial class GameScreen
         Run(Espionage.OpenAsync());
     }
 
+    private ReadyRef<TooltipHost> tooltipsRef;
     /// <summary>C027: the one tooltip of the game screen; the map feeds it the tile under the pointer.</summary>
-    public TooltipHost Tooltips { get; private set; } = null!; // JUSTIFY: C027 assigned in Start before any use
+    public TooltipHost Tooltips => tooltipsRef.Value;
 
     /// <summary>The tile under the pointer (null over the HUD or off the map) and the BBCode its tooltip will show once the engine answered ("" until then).</summary>
     public HexCoord? HoveredTile { get; private set; }
@@ -146,7 +151,7 @@ public partial class GameScreen
 
     public override void _Input(InputEvent @event)
     {
-        if (@event is InputEventMouseMotion motion && Map != null && Tooltips != null && !DisplayProfile.Current.Touch) UpdateHover(motion.Position); // C100: a finger does not hover; a tap shows the tile tip
+        if (@event is InputEventMouseMotion motion && mapRef.IsSet && tooltipsRef.IsSet && !DisplayProfile.Current.Touch) UpdateHover(motion.Position); // C100: a finger does not hover; a tap shows the tile tip
         if (@event is InputEventMouseButton { Pressed: true } press && MarkerMenu is { Visible: true } menu && !menu.GetGlobalRect().HasPoint(press.Position)) menu.Close(); // C089: any click outside the marker menu closes it
     }
 
@@ -187,8 +192,9 @@ public partial class GameScreen
         SiteOverlay.Show([.. site.Tiles.Select(it => new HexCoord(it.X, it.Y))], TileTopAt);
     }
 
+    private ReadyRef<TechScreen> techRef;
     /// <summary>C019: the tech screen, opened by the Technology button.</summary>
-    public TechScreen Tech { get; private set; } = null!; // JUSTIFY: C019 assigned in Start before any use
+    public TechScreen Tech => techRef.Value;
 
     public bool IsTechVisible => Tech.Visible;
 
@@ -218,12 +224,14 @@ public partial class GameScreen
     /// </summary>
     public bool TaskCardEnabled { get; set; }
 
+    private ReadyRef<TutorialTaskCard> taskCardRef;
     /// <summary>C054: the floating card of the current tutorial task.</summary>
-    public TutorialTaskCard TaskCard { get; private set; } = null!; // JUSTIFY: C054 assigned in _Ready before any use
+    public TutorialTaskCard TaskCard => taskCardRef.Value;
 
     private readonly HashSet<string> reportedTasks = [];
 
-    private TutorialQueue tutorialQueue = null!; // JUSTIFY: C026 assigned in Start before any use
+    private ReadyRef<TutorialQueue> tutorialQueueRef;
+    private TutorialQueue tutorialQueue => tutorialQueueRef.Value;
 
     /// <summary>
     /// C026: queues a tutorial (shown unless tutorials are off or it was seen) and shows the first waiting one. Tutorials appear only when the screen follows client
@@ -231,7 +239,7 @@ public partial class GameScreen
     /// </summary>
     public void ShowTutorial(TutorialTrigger trigger)
     {
-        if (!TutorialsEnabled || boundSettings == null || tutorialQueue == null) return;
+        if (!TutorialsEnabled || boundSettings == null || !tutorialQueueRef.IsSet) return;
         if (tutorialQueue.Enqueue(trigger, boundSettings.Current) == TutorialEnqueue.NothingToShow) MarkTutorialSeen(trigger);
         OpenTutorialPage();
     }
@@ -286,9 +294,9 @@ public partial class GameScreen
         if (boundSettings != null) boundSettings.Changed -= ApplySettings;
         boundSettings = settings;
         settings.Changed += ApplySettings;
-        Overview?.BindSettings(settings);
+        overviewRef.OrNull?.BindSettings(settings);
         ApplySettings(settings.Current);
-        if (session != null) CheckTutorials(); // the first look at the game came before the settings were known
+        if (sessionRef.IsSet) CheckTutorials(); // the first look at the game came before the settings were known
     }
 
     private void ApplySettings(ClientSettings settings)
@@ -297,13 +305,13 @@ public partial class GameScreen
         if (!settings.ConfirmDestructiveActions)
         {
             Panel.CancelConfirmation();
-            if (City != null) City.CancelConfirmation();
-            if (Diplomacy != null) Diplomacy.CancelConfirmation();
+            if (cityRef.OrNull is { } city) city.CancelConfirmation();
+            if (diplomacyRef.OrNull is { } diplomacy) diplomacy.CancelConfirmation();
         }
-        if (City != null) City.ConfirmDestructive = settings.ConfirmDestructiveActions;
-        if (Diplomacy != null) Diplomacy.ConfirmDestructive = settings.ConfirmDestructiveActions;
-        if (session != null && snapshot != null) Run(RefreshTaskCard()); // C054: Show tutorials may have changed
-        if (session != null && snapshot != null) RefreshMarkers();
+        if (cityRef.OrNull is { } cityScreen) cityScreen.ConfirmDestructive = settings.ConfirmDestructiveActions;
+        if (diplomacyRef.OrNull is { } diplomacyScreen) diplomacyScreen.ConfirmDestructive = settings.ConfirmDestructiveActions;
+        if (sessionRef.IsSet && snapshotRef.IsSet) Run(RefreshTaskCard()); // C054: Show tutorials may have changed
+        if (sessionRef.IsSet && snapshotRef.IsSet) RefreshMarkers();
         hotkeys = settings.KeyBindings;
         World.SetKeys(KeyOf);
         Hud.EndTurnKey = KeyOf(HotkeyAction.EndTurn);
@@ -318,7 +326,7 @@ public partial class GameScreen
         if (nextMode != colorblindMode)
         {
             colorblindMode = nextMode;
-            if (session != null && snapshot != null) Refresh();
+            if (sessionRef.IsSet && snapshotRef.IsSet) Refresh();
         }
         Hud.ShowAutoPlayButton(settings.AutoPlay.ShowButton);
         if (!settings.AutoPlay.ShowButton)
@@ -334,7 +342,7 @@ public partial class GameScreen
         var preset = GraphicsModel.Preset(GraphicsRuntime.EffectiveFor(settings));
         if (preset == Map.Graphics) return;
         Map.ApplyGraphics(preset);
-        if (session != null && snapshot != null) ApplyUnitLod();
+        if (sessionRef.IsSet && snapshotRef.IsSet) ApplyUnitLod();
     }
 
     private IReadOnlyDictionary<string, string> hotkeys = new Dictionary<string, string>();
@@ -439,7 +447,7 @@ public partial class GameScreen
     /// <summary>C078: centres the camera on the viewer's capital (false when it has none).</summary>
     private bool ViewCapital()
     {
-        if (session == null || snapshot == null) return false;
+        if (!sessionRef.IsSet || !snapshotRef.IsSet) return false;
         var capital = snapshot.Cities.FirstOrDefault(it => it.Owner == session.ViewerCivId && it.IsCapital);
         if (capital == null) return false;
         Map.FocusOn(MapLayout.TileTop(capital.X, capital.Y));
@@ -474,7 +482,7 @@ public partial class GameScreen
     /// <summary>T352: keyboard map cursor navigation (Shift+Arrows) and tile activation (Enter/Space when no UI control has focus).</summary>
     private bool TryCursorKey(InputEventKey key)
     {
-        if (!IsVisibleInTree() || session == null || snapshot == null || IsEndingTurn) return false;
+        if (!IsVisibleInTree() || !sessionRef.IsSet || !snapshotRef.IsSet || IsEndingTurn) return false;
         if (GetViewport()?.GuiGetFocusOwner() is Control focused && focused is LineEdit or TextEdit) return false;
         if (Tutorials.Visible || Pedia.Visible || GameMenu.Visible || ConsolePopup.Visible || City.Visible || Diplomacy.Visible || Tech.Visible || Policies.Visible || Overview.Visible || GameOver.Visible) return false;
         if (key.ShiftPressed)
@@ -499,7 +507,7 @@ public partial class GameScreen
 
     public bool StepMapCursor(int dx, int dy)
     {
-        if (session == null || snapshot == null || snapshot.Tiles.Count == 0) return false;
+        if (!sessionRef.IsSet || !snapshotRef.IsSet || snapshot.Tiles.Count == 0) return false;
         var current = CursorTile ?? Map.Selected ?? (snapshot.Cities.FirstOrDefault(it => it.Owner == session.ViewerCivId) is { } cap ? new HexCoord(cap.X, cap.Y) : new HexCoord(snapshot.Tiles[0].X, snapshot.Tiles[0].Y));
         var next = AccessibilityModel.StepCursor(current, dx, dy);
         if (Map.TileNodeAt(next) == null) return false;
@@ -556,7 +564,7 @@ public partial class GameScreen
     /// <summary>C046: opens the developer console with the history and "Keep open" choice from the client settings (the screen's own memory when no settings are bound).</summary>
     public void OpenConsole()
     {
-        if (session == null) return;
+        if (!sessionRef.IsSet) return;
         ConsolePopup.Open(boundSettings?.Current.ConsoleHistory ?? ConsolePopup.History, boundSettings?.Current.KeepConsoleOpen ?? ConsolePopup.KeepOpen);
     }
 

@@ -272,20 +272,25 @@ public sealed class StandbyStore : IDisposable
             return RejectSnapshot("chunk-invalid");
         }
         if (part.Parts is < 1 or > 4096 || part.Part < 0 || part.Part >= part.Parts || part.Seq < 0 || data.Length > limits.SnapshotChunkBytes * 4 || part.Sha256.Length != 64) return RejectSnapshot("chunk-invalid");
+        SnapshotAssembly currentAssembly;
         if (part.Part == 0)
         {
-            assembly = new SnapshotAssembly(part.Seq, part.Parts, part.Sha256.ToLowerInvariant(), part.Reset);
+            currentAssembly = new SnapshotAssembly(part.Seq, part.Parts, part.Sha256.ToLowerInvariant(), part.Reset);
+            assembly = currentAssembly;
         }
         else if (assembly == null || assembly.Seq != part.Seq || assembly.Parts != part.Parts || assembly.NextPart != part.Part
             || !string.Equals(assembly.Sha, part.Sha256, StringComparison.OrdinalIgnoreCase) || assembly.Reset != part.Reset)
         {
             return RejectSnapshot("chunk-order");
         }
-        // JUSTIFY: T272 assembly is set above for part 0 and checked for the later parts.
-        if (assembly!.Bytes.Length + data.Length > limits.MaxSnapshotBytes) return RejectSnapshot("snapshot-too-large");
-        assembly.Bytes.Write(data);
-        assembly.NextPart++;
-        if (assembly.NextPart < assembly.Parts) return StandbyApply.Pending;
+        else
+        {
+            currentAssembly = assembly;
+        }
+        if (currentAssembly.Bytes.Length + data.Length > limits.MaxSnapshotBytes) return RejectSnapshot("snapshot-too-large");
+        currentAssembly.Bytes.Write(data);
+        currentAssembly.NextPart++;
+        if (currentAssembly.NextPart < currentAssembly.Parts) return StandbyApply.Pending;
 
         var complete = assembly;
         assembly = null;
@@ -381,8 +386,7 @@ public sealed class StandbyStore : IDisposable
 
     private void Append(string line)
     {
-        // JUSTIFY: T272 every caller checked that the store is open (log is null only before the first snapshot).
-        var stream = log!;
+        var stream = log ?? throw new InvalidOperationException("StandbyStore log stream is not open.");
         var before = stream.Length;
         try
         {

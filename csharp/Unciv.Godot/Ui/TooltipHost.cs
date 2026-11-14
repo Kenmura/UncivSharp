@@ -188,8 +188,8 @@ public partial class TooltipHost : Control
             }
         }
         if (touchOwner != null && (shownFor += seconds) > TouchHideSeconds) Leave();
-        if (hovered == null) return;
-        string current = textOf!();
+        if (hovered == null || textOf == null) return;
+        string current = textOf();
         if (current.Length == 0)
         {
             // nothing to say (yet): stay hidden but keep the delay served, so the tip appears as soon as the text is there

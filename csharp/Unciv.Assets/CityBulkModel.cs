@@ -95,9 +95,14 @@ public static class CityBulkModel
         foreach (var (city, list) in cities.Select(it => (it.Panel, it.List)))
         {
             var entry = list.Entries.FirstOrDefault(it => it.Name == name);
-            string why = entry == null ? $"{name} is not known here" : CityProductionModel.QueueWhy(city, entry);
+            if (entry == null)
+            {
+                steps.Add(Skip(city, name, Reason($"{name} is not known here")));
+                continue;
+            }
+            string why = CityProductionModel.QueueWhy(city, entry);
             if (why.Length > 0) steps.Add(Skip(city, name, Reason(why)));
-            else steps.Add(Do(city, name, new QueueConstruction { CityId = city.CityId, Name = name, AddToTop = toTop && entry!.Category != "Perpetual" }));
+            else steps.Add(Do(city, name, new QueueConstruction { CityId = city.CityId, Name = name, AddToTop = toTop && entry.Category != "Perpetual" }));
         }
         return new BulkPlan(steps);
     }
@@ -149,8 +154,13 @@ public static class CityBulkModel
             foreach (string name in template.Items)
             {
                 var entry = list.Entries.FirstOrDefault(it => it.Name == name);
-                string why = entry == null ? $"{name} is not known here" : CityProductionModel.QueueWhy(city, entry);
-                if (why.Length == 0 && entry!.Category != "Unit" && !queued.Add(name)) why = "already in the template";
+                if (entry == null)
+                {
+                    steps.Add(Skip(city, name, Reason($"{name} is not known here")));
+                    continue;
+                }
+                string why = CityProductionModel.QueueWhy(city, entry);
+                if (why.Length == 0 && entry.Category != "Unit" && !queued.Add(name)) why = "already in the template";
                 if (why.Length > 0) steps.Add(Skip(city, name, Reason(why)));
                 else steps.Add(Do(city, name, new QueueConstruction { CityId = city.CityId, Name = name }));
             }

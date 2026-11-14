@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using Unciv.Logic.Map.Tiles;
 using Unciv.Utils;
 
@@ -29,7 +30,7 @@ public class PathsToTilesWithinTurn : IReadOnlyDictionary<Tile, UnitMovement.Par
     }
 
     public bool ContainsKey(Tile key) => map.ContainsKey(key);
-    public bool TryGetValue(Tile key, out UnitMovement.ParentTileAndTotalMovement value) => map.TryGetValue(key, out value);
+    public bool TryGetValue(Tile key, [MaybeNullWhen(false)] out UnitMovement.ParentTileAndTotalMovement value) => map.TryGetValue(key, out value);
     public IEnumerator<KeyValuePair<Tile, UnitMovement.ParentTileAndTotalMovement>> GetEnumerator() => map.GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 

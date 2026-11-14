@@ -199,10 +199,10 @@ public static class CliRunner
         LoadRulesets(cli);
         cli.RejectUnknown();
 
-        if (!RulesetCache.Current.ContainsKey(baseName) || !RulesetCache.Current.Get(baseName)!.ModOptions.IsBaseRuleset)
+        if (RulesetCache.Current.Get(baseName) is not { } baseRuleset || !baseRuleset.ModOptions.IsBaseRuleset)
             throw new UsageException($"--ruleset '{baseName}' is not one of: {string.Join(", ", RulesetCache.Current.GetSortedBaseRulesets())}");
         foreach (var mod in modNames)
-            if (!RulesetCache.Current.ContainsKey(mod) || RulesetCache.Current.Get(mod)!.ModOptions.IsBaseRuleset)
+            if (RulesetCache.Current.Get(mod) is not { } modRuleset || modRuleset.ModOptions.IsBaseRuleset)
                 throw new UsageException($"--mods: '{mod}' is not a loaded mod (pass --mods-dir DIR)");
         if (modNames.Distinct(StringComparer.Ordinal).Count() != modNames.Length) throw new UsageException("--mods lists a mod twice");
         var parameters = new GameParameters { BaseRuleset = baseName, Mods = new LinkedHashSet<string>(modNames) };

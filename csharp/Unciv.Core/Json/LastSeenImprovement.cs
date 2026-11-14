@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -30,7 +31,7 @@ public class LastSeenImprovement : IEnumerable<KeyValuePair<HexCoord, string>>, 
 
     public bool ContainsKey(HexCoord key) => map.ContainsKey(key);
 
-    public bool TryGetValue(HexCoord key, out string value) => map.TryGetValue(key, out value!); // JUSTIFY: T119 out value is unspecified when TryGetValue returns false
+    public bool TryGetValue(HexCoord key, [MaybeNullWhen(false)] out string value) => map.TryGetValue(key, out value);
 
     public bool Remove(HexCoord key) => map.Remove(key);
 

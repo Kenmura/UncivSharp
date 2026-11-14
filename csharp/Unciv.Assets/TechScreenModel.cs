@@ -2,6 +2,7 @@ using System.Globalization;
 using Unciv.Commands;
 using Unciv.Commands.Empire;
 using Unciv.Queries.Empire;
+using Unciv.Utils;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 
 namespace Unciv.Assets;
@@ -79,11 +80,11 @@ public static class TechScreenModel
     {
         var placed = tree.Techs.Where(it => it.Column != null && it.State != Unavailable).ToList();
         if (placed.Count == 0) return new TechLayout([], [], 0, 0, []);
-        int minColumn = placed.Min(it => it.Column!.Value);
+        int minColumn = placed.Min(it => it.Column.NotNull());
         int minRow = placed.Min(it => it.Row);
         var nodes = placed
             .OrderBy(it => it.Column).ThenBy(it => it.Row).ThenBy(it => it.Name, StringComparer.Ordinal)
-            .Select(it => new TechNode(it.Name, it.Era, it.Column!.Value - minColumn, it.Row - minRow, it.State, Label(it), PlaceholderPalette.ForTechState(it.State), it.Prerequisites, it.Description)
+            .Select(it => new TechNode(it.Name, it.Era, it.Column.NotNull() - minColumn, it.Row - minRow, it.State, Label(it), PlaceholderPalette.ForTechState(it.State), it.Prerequisites, it.Description)
             {
                 Cost = it.Cost,
                 Progress = it.Progress,
@@ -202,15 +203,15 @@ public static class TechScreenModel
         };
         var path = closed == null ? PathTo(tree, techName, new HashSet<string>(StringComparer.Ordinal)) : null;
         closed ??= path == null ? "A prerequisite cannot be researched." : null;
-        if (closed != null)
-            return [Disabled("Research", "Research now", closed), Disabled("Enqueue", "Add to queue", closed), Disabled("Dequeue", "Remove from queue", closed)];
+        if (closed != null || path == null)
+            return [Disabled("Research", "Research now", closed ?? "A prerequisite cannot be researched."), Disabled("Enqueue", "Add to queue", closed ?? "A prerequisite cannot be researched."), Disabled("Dequeue", "Remove from queue", closed ?? "A prerequisite cannot be researched.")];
 
         var actions = new List<TechAction>();
-        if (path!.SequenceEqual(tree.Queue)) actions.Add(Disabled("Research", "Research now", "Already the research plan."));
-        else actions.Add(Enabled("Research", path!.Count > 1 ? PathLabel(tree, path) : "Research now", path!));
+        if (path.SequenceEqual(tree.Queue)) actions.Add(Disabled("Research", "Research now", "Already the research plan."));
+        else actions.Add(Enabled("Research", path.Count > 1 ? PathLabel(tree, path) : "Research now", path));
 
         if (tech.State == Queued) actions.Add(Disabled("Enqueue", "Add to queue", "Already queued."));
-        else actions.Add(Enabled("Enqueue", "Add to queue", [.. tree.Queue, .. PathTo(tree, techName, tree.Queue.ToHashSet(StringComparer.Ordinal))!]));
+        else actions.Add(Enabled("Enqueue", "Add to queue", [.. tree.Queue, .. PathTo(tree, techName, tree.Queue.ToHashSet(StringComparer.Ordinal)).NotNull()]));
 
         if (tech.State != Queued)
         {
@@ -227,8 +228,13 @@ public static class TechScreenModel
     /// <summary>C070: the label of the research button for a tech that needs others first: "Research path (3 techs, 12 turns)"; the turns are left out when science per turn is not positive.</summary>
     public static string PathLabel(TechTreeResult tree, IReadOnlyList<string> path)
     {
-        var turns = path.Select(it => Find(tree, it)?.Turns).ToList();
-        string total = turns.All(it => it != null) ? $", {I(turns.Sum(it => it!.Value))} turns" : "";
+        int? sum = 0;
+        foreach (var item in path)
+        {
+            if (Find(tree, item)?.Turns is not { } t) { sum = null; break; }
+            sum += t;
+        }
+        string total = sum is { } totalTurns ? $", {I(totalTurns)} turns" : "";
         return $"Research path ({I(path.Count)} techs{total})";
     }
 

@@ -13,6 +13,7 @@ using Unciv.Net.Turns;
 using Unciv.Net.Visibility;
 using Unciv.Queries;
 using Unciv.Server.Transport;
+using Unciv.Utils;
 using EngineCommandResult = Unciv.Commands.CommandResult;
 using WireCommandResult = Unciv.Net.CommandResult;
 
@@ -540,7 +541,7 @@ public sealed partial class GameHost : IAsyncDisposable
         }
 
         var marks = CaptureViewMarks();
-        var result = session.Submit(filterResult.Envelope!);
+        var result = session.Submit(filterResult.Envelope.NotNull());
 
         if (!result.Accepted)
         {
@@ -814,7 +815,7 @@ public sealed partial class GameHost : IAsyncDisposable
         var result = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         EnqueueAsync(async () => result.SetResult(await AdminCoreAsync(civId, newKey))).ContinueWith(t =>
         {
-            if (t.IsFaulted) result.TrySetException(t.Exception!.InnerExceptions);
+            if (t.IsFaulted && t.Exception != null) result.TrySetException(t.Exception.InnerExceptions);
         }, TaskScheduler.Default);
         return result.Task;
     }
@@ -916,9 +917,10 @@ public sealed partial class GameHost : IAsyncDisposable
     private (ViewDelta Delta, ClientSnapshot After) BuildDelta(HostSession hostSession, Civilization civ, ViewDeltaBuilder.ViewMark mark,
         IReadOnlyList<EngineEvent> events, long seq, TurnStatusDto turnStatus)
     {
+        var previousSnapshot = hostSession.PreviousSnapshot.NotNull();
         if (limits.IncrementalViewBuilding)
         {
-            var built = IncrementalViewBuilder.TryBuildWithDiff(session.Game, civ, hostSession.PreviousSnapshot!, mark, events, seq, turnStatus,
+            var built = IncrementalViewBuilder.TryBuildWithDiff(session.Game, civ, previousSnapshot, mark, events, seq, turnStatus,
                 hostSession.IncrementalView);
             if (built != null)
             {
@@ -928,7 +930,7 @@ public sealed partial class GameHost : IAsyncDisposable
             }
         }
         Interlocked.Increment(ref fullViewRounds);
-        var (delta, after) = ViewDeltaBuilder.BuildWithDiff(session.Game, civ, hostSession.PreviousSnapshot!, mark, events, seq, turnStatus);
+        var (delta, after) = ViewDeltaBuilder.BuildWithDiff(session.Game, civ, previousSnapshot, mark, events, seq, turnStatus);
         hostSession.IncrementalView = limits.IncrementalViewBuilding ? IncrementalViewBuilder.Seed(session.Game, civ, after) : null;
         return (delta, after);
     }

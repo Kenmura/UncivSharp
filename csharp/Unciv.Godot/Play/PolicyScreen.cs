@@ -37,21 +37,33 @@ public partial class PolicyScreen : PanelContainer
     private readonly Dictionary<string, Button> policyButtons = [];
     private readonly Dictionary<string, Control> branchCards = [];
     private readonly List<(string Branch, Control Card)> cardOrder = [];
-    private ScreenFrame frame = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
-    private Label message = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
-    private Label status = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
-    private Label goldenAgeLabel = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
-    private StatBar goldenAgeBar = null!; // JUSTIFY: T413 assigned by BuildFrame in the constructor
-    private StatBar cultureBar = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
+    private ReadyRef<ScreenFrame> frameRef;
+    private ReadyRef<Label> messageRef;
+    private ReadyRef<Label> statusRef;
+    private ReadyRef<Label> goldenAgeLabelRef;
+    private ReadyRef<StatBar> goldenAgeBarRef;
+    private ReadyRef<StatBar> cultureBarRef;
     private int goldenAgeStored;
     private int goldenAgeNeeded;
     private int goldenAgeTurns;
-    private LineEdit search = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
-    private Control branchHost = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
-    private VBoxContainer detail = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
-    private PanelContainer side = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
-    private Button sideToggle = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
-    private Button adopt = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
+    private ReadyRef<LineEdit> searchRef;
+    private ReadyRef<Control> branchHostRef;
+    private ReadyRef<VBoxContainer> detailRef;
+    private ReadyRef<PanelContainer> sideRef;
+    private ReadyRef<Button> sideToggleRef;
+    private ReadyRef<Button> adoptRef;
+    private ScreenFrame frame => frameRef.Value;
+    private Label message => messageRef.Value;
+    private Label status => statusRef.Value;
+    private Label goldenAgeLabel => goldenAgeLabelRef.Value;
+    private StatBar goldenAgeBar => goldenAgeBarRef.Value;
+    private StatBar cultureBar => cultureBarRef.Value;
+    private LineEdit search => searchRef.Value;
+    private Control branchHost => branchHostRef.Value;
+    private VBoxContainer detail => detailRef.Value;
+    private PanelContainer side => sideRef.Value;
+    private Button sideToggle => sideToggleRef.Value;
+    private Button adopt => adoptRef.Value;
     private bool compactSideOpen;
     private TabBar? tabs;
     private ScrollContainer? branchScroll;
@@ -212,21 +224,21 @@ public partial class PolicyScreen : PanelContainer
 
     private void BuildFrame()
     {
-        if (frame != null)
+        if (frameRef.OrNull is { } oldFrame)
         {
-            RemoveChild(frame); // at once: a queued free would leave the old frame in the layout until the frame ends
-            frame.QueueFree();
+            RemoveChild(oldFrame); // at once: a queued free would leave the old frame in the layout until the frame ends
+            oldFrame.QueueFree();
         }
         policyButtons.Clear();
         branchCards.Clear();
         cardOrder.Clear();
         lastTab = tabs?.SelectedIndex ?? lastTab; // a rebuild for a new layout keeps the branch in view
         tabs = null;
-        frame = new ScreenFrame(uiTheme, "Policies", closeLabel: "Close policies");
+        frameRef.Set(new ScreenFrame(uiTheme, "Policies", closeLabel: "Close policies"));
         frame.CloseRequested += Close;
         AddChild(frame);
 
-        search = new LineEdit
+        searchRef.Set(new LineEdit
         {
             Name = "PolicySearch",
             PlaceholderText = "Search".Tr(),
@@ -234,14 +246,14 @@ public partial class PolicyScreen : PanelContainer
             Text = searchText,
             CustomMinimumSize = new Vector2(uiTheme.Px(140), 0f),
             TooltipText = "Search policies by name or by what they do".Tr(),
-        };
+        });
         search.TextChanged += text =>
         {
             searchText = text;
             ApplySearch(true);
         };
         search.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        sideToggle = new Button { Name = "SideToggle", ThemeTypeVariation = UiVariants.ButtonSecondary };
+        sideToggleRef.Set(new Button { Name = "SideToggle", ThemeTypeVariation = UiVariants.ButtonSecondary });
         sideToggle.Pressed += () => SetCompactSide(!compactSideOpen);
         var strip = new HBoxContainer();
         strip.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
@@ -254,12 +266,12 @@ public partial class PolicyScreen : PanelContainer
         page.AddChild(BuildSummary());
         var body = new HBoxContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         body.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S3));
-        branchHost = new VBoxContainer { Name = "Branches", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+        branchHostRef.Set(new VBoxContainer { Name = "Branches", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill });
         body.AddChild(branchHost);
 
-        side = new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(uiTheme.Px(uiTheme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) };
+        sideRef.Set(new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(uiTheme.Px(uiTheme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) });
         var sideScroll = new ScrollContainer { Name = "SideScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
-        detail = new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        detailRef.Set(new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
         detail.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
         sideScroll.AddChild(detail);
         side.AddChild(sideScroll);
@@ -267,9 +279,9 @@ public partial class PolicyScreen : PanelContainer
         page.AddChild(body);
         frame.SetContent(page);
 
-        adopt = new Button { Name = "AdoptButton", Text = "Adopt".Tr(), Disabled = true, ThemeTypeVariation = UiVariants.ButtonPrimary, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        adoptRef.Set(new Button { Name = "AdoptButton", Text = "Adopt".Tr(), Disabled = true, ThemeTypeVariation = UiVariants.ButtonPrimary, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
         adopt.Pressed += () => Fire(AdoptSelected());
-        message = NewMessage();
+        messageRef.Set(NewMessage());
         SetCompactSide(selected != null);
     }
 
@@ -280,16 +292,16 @@ public partial class PolicyScreen : PanelContainer
         box.AddThemeConstantOverride("separation", uiTheme.Px(2));
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S3));
-        cultureBar = new StatBar(uiTheme, "Culture", Tree?.StoredCulture ?? 0, Tree?.CultureNeededForNextPolicy ?? 0, labelled: true) { Name = "CultureBar", CustomMinimumSize = new Vector2(uiTheme.Px(120), 0f) };
+        cultureBarRef.Set(new StatBar(uiTheme, "Culture", Tree?.StoredCulture ?? 0, Tree?.CultureNeededForNextPolicy ?? 0, labelled: true) { Name = "CultureBar", CustomMinimumSize = new Vector2(uiTheme.Px(120), 0f) });
         row.AddChild(cultureBar);
-        status = new Label { Name = "Header", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2f, VerticalAlignment = VerticalAlignment.Center };
+        statusRef.Set(new Label { Name = "Header", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2f, VerticalAlignment = VerticalAlignment.Center });
         row.AddChild(status);
         box.AddChild(row);
         var goldenRow = new HBoxContainer();
         goldenRow.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
-        goldenAgeBar = new StatBar(uiTheme, "Gold", goldenAgeTurns > 0 ? 1 : goldenAgeStored, goldenAgeTurns > 0 ? 1 : goldenAgeNeeded) { Name = "GoldenAgeBar", CustomMinimumSize = new Vector2(uiTheme.Px(120), 0f), Visible = goldenAgeNeeded > 0 || goldenAgeTurns > 0 };
+        goldenAgeBarRef.Set(new StatBar(uiTheme, "Gold", goldenAgeTurns > 0 ? 1 : goldenAgeStored, goldenAgeTurns > 0 ? 1 : goldenAgeNeeded) { Name = "GoldenAgeBar", CustomMinimumSize = new Vector2(uiTheme.Px(120), 0f), Visible = goldenAgeNeeded > 0 || goldenAgeTurns > 0 });
         goldenRow.AddChild(goldenAgeBar);
-        goldenAgeLabel = new Label { Name = "GoldenAge", ThemeTypeVariation = UiVariants.LabelSmall, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2f };
+        goldenAgeLabelRef.Set(new Label { Name = "GoldenAge", ThemeTypeVariation = UiVariants.LabelSmall, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2f });
         goldenRow.AddChild(goldenAgeLabel);
         box.AddChild(goldenRow);
         return box;

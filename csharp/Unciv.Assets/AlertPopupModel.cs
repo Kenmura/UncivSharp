@@ -8,6 +8,7 @@ using Unciv.Logic.Civilization;
 using Unciv.Logic.Civilization.Diplomacy;
 using Unciv.Net.Visibility;
 using Unciv.Queries.Empire;
+using Unciv.Utils;
 
 namespace Unciv.Assets;
 
@@ -150,8 +151,9 @@ public static class AlertPopupModel
                 if (buttons.Count == 0) buttons.Add(Ok(entry.Index, type, alert.Value)); // nothing the engine would accept: the alert can only be closed
                 break;
             case "respond-demand":
-                buttons.Add(new AlertButton("Accept", "Accept", new RespondToDemand { CivId = alert.Value, Demand = demand!.Name, Accept = true }));
-                buttons.Add(new AlertButton("Refuse", "Refuse", new RespondToDemand { CivId = alert.Value, Demand = demand.Name, Accept = false }));
+                var demandName = demand.NotNull().Name;
+                buttons.Add(new AlertButton("Accept", "Accept", new RespondToDemand { CivId = alert.Value, Demand = demandName, Accept = true }));
+                buttons.Add(new AlertButton("Refuse", "Refuse", new RespondToDemand { CivId = alert.Value, Demand = demandName, Accept = false }));
                 break;
             case "respond-friendship":
                 buttons.Add(new AlertButton("Accept", "Accept", new RespondToFriendship { CivId = alert.Value, Accept = true }));

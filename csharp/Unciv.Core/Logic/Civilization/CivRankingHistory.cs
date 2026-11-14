@@ -35,7 +35,7 @@ public class CivRankingHistory : IEnumerable<KeyValuePair<int, IReadOnlyDictiona
 
     public bool ContainsKey(int turn) => map.ContainsKey(turn);
 
-    public bool TryGetValue(int turn, out IReadOnlyDictionary<RankingType, int> value) => map.TryGetValue(turn, out value!); // JUSTIFY: T119 out value is unspecified when TryGetValue returns false
+    public bool TryGetValue(int turn, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out IReadOnlyDictionary<RankingType, int> value) => map.TryGetValue(turn, out value);
 
     public bool Remove(int turn) => map.Remove(turn);
 

@@ -132,24 +132,42 @@ public partial class HostScreen : Control
 
     public Button BackButton { get; }
 
-    public Button StopButton { get; private set; } = null!; // JUSTIFY: C034 assigned by BuildHostingPanel, which the constructor runs
+    private ReadyRef<Button> stopButtonRef;
+    private ReadyRef<Button> copyInviteButtonRef;
+    private ReadyRef<LineEdit> inviteFieldRef;
+    private ReadyRef<LineEdit> nameFieldRef;
+    private ReadyRef<LineEdit> seedFieldRef;
+    private ReadyRef<LineEdit> passwordFieldRef;
+    private ReadyRef<LineEdit> portFieldRef;
+    private ReadyRef<LineEdit> publicAddressFieldRef;
+    private ReadyRef<CheckBox> dynamicTimerCheckRef;
+    private ReadyRef<CheckBox> aiFillCheckRef;
+    private ReadyRef<CheckBox> listPubliclyCheckRef;
+    private ReadyRef<Label> standbyStatusLabelRef;
+    private ReadyRef<Label> relayInUseLabelRef;
+    private ReadyRef<VBoxContainer> relayInviteBoxRef;
+    private ReadyRef<LineEdit> relayInviteFieldRef;
+    private ReadyRef<Button> copyRelayInviteButtonRef;
 
-    public Button CopyInviteButton { get; private set; } = null!; // JUSTIFY: C034 assigned by BuildHostingPanel, which the constructor runs
+    public Button StopButton => stopButtonRef.Value;
 
-    public LineEdit InviteField { get; private set; } = null!; // JUSTIFY: C034 assigned by BuildHostingPanel, which the constructor runs
+    public Button CopyInviteButton => copyInviteButtonRef.Value;
 
-    public LineEdit NameField { get; private set; } = null!; // JUSTIFY: C034 assigned by FillGame, which the constructor runs
+    public LineEdit InviteField => inviteFieldRef.Value;
 
-    public LineEdit SeedField { get; private set; } = null!; // JUSTIFY: C034 assigned by FillMap, which the constructor runs
+    public LineEdit NameField => nameFieldRef.Value;
 
-    public LineEdit PasswordField { get; private set; } = null!; // JUSTIFY: C034 assigned by FillNetwork, which the constructor runs
+    public LineEdit SeedField => seedFieldRef.Value;
 
-    public LineEdit PortField { get; private set; } = null!; // JUSTIFY: C034 assigned by FillNetwork, which the constructor runs
+    public LineEdit PasswordField => passwordFieldRef.Value;
 
-    public LineEdit PublicAddressField { get; private set; } = null!; // JUSTIFY: C034 assigned by FillNetwork, which the constructor runs
+    public LineEdit PortField => portFieldRef.Value;
 
-    public CheckBox DynamicTimerCheck { get; private set; } = null!; // JUSTIFY: T252 assigned by FillNetwork, which the constructor runs
-    public CheckBox AiFillCheck { get; private set; } = null!; // JUSTIFY: C034 assigned by FillGame, which the constructor runs
+    public LineEdit PublicAddressField => publicAddressFieldRef.Value;
+
+    public CheckBox DynamicTimerCheck => dynamicTimerCheckRef.Value;
+
+    public CheckBox AiFillCheck => aiFillCheckRef.Value;
 
     /// <summary>The running host (new lobby or resumed game), or null while the settings are shown.</summary>
     public HostingSession? Session { get; private set; }
@@ -390,38 +408,38 @@ public partial class HostScreen : Control
         // T318: the invite and its copy button share a row, so the slot table stays above the fold in the framed layout
         var inviteRow = new HBoxContainer();
         inviteRow.FitConstant(theme, "separation", UiTokens.S2);
-        InviteField = new LineEdit { Name = "InviteField", Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        inviteFieldRef.Set(new LineEdit { Name = "InviteField", Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill });
         inviteRow.AddChild(InviteField);
-        CopyInviteButton = new Button { Text = "Copy invite".Tr(), Name = "CopyInviteButton" };
+        copyInviteButtonRef.Set(new Button { Text = "Copy invite".Tr(), Name = "CopyInviteButton" });
         CopyInviteButton.Pressed += CopyInvite;
         inviteRow.AddChild(CopyInviteButton);
         hostingPanel.AddChild(inviteRow);
-        RelayInviteBox = new VBoxContainer { Name = "RelayInviteBox", Visible = false };
+        relayInviteBoxRef.Set(new VBoxContainer { Name = "RelayInviteBox", Visible = false });
         RelayInviteBox.AddChild(new Label { Text = "Invite through the relay (works behind any router):".Tr() });
-        RelayInUseLabel = new Label { Name = "RelayInUseLabel", Text = "" };
+        relayInUseLabelRef.Set(new Label { Name = "RelayInUseLabel", Text = "" });
         RelayInviteBox.AddChild(RelayInUseLabel);
-        RelayInviteField = new LineEdit { Name = "RelayInviteField", Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        relayInviteFieldRef.Set(new LineEdit { Name = "RelayInviteField", Editable = false, SizeFlagsHorizontal = SizeFlags.ExpandFill });
         RelayInviteBox.AddChild(RelayInviteField);
-        CopyRelayInviteButton = new Button { Text = "Copy relay invite".Tr(), Name = "CopyRelayInviteButton" };
+        copyRelayInviteButtonRef.Set(new Button { Text = "Copy relay invite".Tr(), Name = "CopyRelayInviteButton" });
         CopyRelayInviteButton.Pressed += CopyRelayInvite;
         RelayInviteBox.AddChild(CopyRelayInviteButton);
         hostingPanel.AddChild(RelayInviteBox);
         hostingPanel.AddChild(listingStatus);
-        StandbyStatusLabel = new Label { Name = "StandbyStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        standbyStatusLabelRef.Set(new Label { Name = "StandbyStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart });
         hostingPanel.AddChild(StandbyStatusLabel);
         hostingPanel.AddChild(slotsBox);
-        StopButton = new Button { Text = "Stop hosting".Tr(), Name = "StopHostingButton", Visible = false };
+        stopButtonRef.Set(new Button { Text = "Stop hosting".Tr(), Name = "StopHostingButton", Visible = false });
         StopButton.Pressed += () => _ = StopAsync();
     }
 
     /// <summary>T339: the "List this game publicly" box on the Network tab.</summary>
-    public CheckBox ListPubliclyCheck { get; private set; } = null!; // JUSTIFY: T339 assigned by FillNetwork, which the constructor runs
+    public CheckBox ListPubliclyCheck => listPubliclyCheckRef.Value;
 
     /// <summary>T339: what the screen says about the public listing while hosting (empty when there is no relay to list on).</summary>
     public string ListingText => listingStatus.Text;
 
     /// <summary>T275: where the backup-host designation stands (empty while none).</summary>
-    public Label StandbyStatusLabel { get; private set; } = null!; // JUSTIFY: T275 assigned by BuildHostingPanel, which the constructor runs
+    public Label StandbyStatusLabel => standbyStatusLabelRef.Value;
 
     /// <summary>T275: what the screen says about the backup host, as a sentence.</summary>
     public string StandbyStatusText => StandbyStatusLabel.Text;
@@ -440,13 +458,13 @@ public partial class HostScreen : Control
     }
 
     /// <summary>T392: which relay this game is reached through (its host and port), shown above the relay invite.</summary>
-    public Label RelayInUseLabel { get; private set; } = null!; // JUSTIFY: T392 assigned by BuildHostingPanel, which the constructor runs
+    public Label RelayInUseLabel => relayInUseLabelRef.Value;
 
-    public VBoxContainer RelayInviteBox { get; private set; } = null!; // JUSTIFY: T338 assigned by BuildHostingPanel, which the constructor runs
+    public VBoxContainer RelayInviteBox => relayInviteBoxRef.Value;
 
-    public LineEdit RelayInviteField { get; private set; } = null!; // JUSTIFY: T338 assigned by BuildHostingPanel, which the constructor runs
+    public LineEdit RelayInviteField => relayInviteFieldRef.Value;
 
-    public Button CopyRelayInviteButton { get; private set; } = null!; // JUSTIFY: T338 assigned by BuildHostingPanel, which the constructor runs
+    public Button CopyRelayInviteButton => copyRelayInviteButtonRef.Value;
 
     /// <summary>The invite that reaches this host through the relay by room code; empty while not hosting through one or before the relay answered.</summary>
     public string RelayInvite => Session?.RelayInvite() ?? "";
@@ -500,7 +518,7 @@ public partial class HostScreen : Control
     {
         try
         {
-            await session.Relay!.WaitForRoomAsync(CancellationToken.None);
+            if (session.Relay is { } relay) await relay.WaitForRoomAsync(CancellationToken.None);
         }
         catch (OperationCanceledException) { return; }
         if (IsInstanceValid(this) && Session == session) SyncRelayInviteField();
@@ -573,7 +591,7 @@ public partial class HostScreen : Control
 
     private void AddHostGameTop(Container page)
     {
-        NameField = AddField(page, "Game name", "NameField", Form.GameName, "Multiplayer Game", value => Form.GameName = value, SetupTabs.UiIcon("Pencil"));
+        nameFieldRef.Set(AddField(page, "Game name", "NameField", Form.GameName, "Multiplayer Game", value => Form.GameName = value, SetupTabs.UiIcon("Pencil")));
         var counts = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         counts.FitConstant(theme, "h_separation", UiTokens.S6);
         SetupTabs.AddStepper(counts, theme, "Players", new Stepper(theme, NewGameForm.MinPlayers, Math.Max(NewGameForm.MinPlayers, Form.Game.MaxPlayers), Form.Game.Slots.Count, decreaseLabel: "Fewer civs", increaseLabel: "More civs"),
@@ -581,12 +599,12 @@ public partial class HostScreen : Control
         SetupTabs.AddStepper(counts, theme, "City-states", new Stepper(theme, 0, Form.Game.MaxCityStates, Form.Game.CityStates, decreaseLabel: "Fewer city-states", increaseLabel: "More city-states"),
             value => Form.Game.SetCityStates(value), Change);
         page.AddChild(counts);
-        AiFillCheck = new CheckBox { Name = "AiFillCheck", Text = "Fill empty civs with AI when the game starts".Tr(), ButtonPressed = Form.AiFill };
+        aiFillCheckRef.Set(new CheckBox { Name = "AiFillCheck", Text = "Fill empty civs with AI when the game starts".Tr(), ButtonPressed = Form.AiFill });
         AiFillCheck.Toggled += on => Form.AiFill = on;
         page.AddChild(AiFillCheck);
     }
 
-    private void FillMap() => SeedField = SetupTabs.FillMap(mapPage, theme, Form.Game, rows, Change, ShowProblems);
+    private void FillMap() => seedFieldRef.Set(SetupTabs.FillMap(mapPage, theme, Form.Game, rows, Change, ShowProblems));
 
     private void FillRules() => SetupTabs.FillRules(rulesPage, theme, Form.Game, rows, Change, "Mods (friends need the same ones)");
 
@@ -602,7 +620,7 @@ public partial class HostScreen : Control
         };
         rows["Timer"] = timer;
         networkPage.AddChild(timer);
-        DynamicTimerCheck = new CheckBox { Name = "DynamicTimerCheck", Text = "Scale each turn's time with the game (era, units, wars)".Tr(), ButtonPressed = Form.DynamicTurnTimer };
+        dynamicTimerCheckRef.Set(new CheckBox { Name = "DynamicTimerCheck", Text = "Scale each turn's time with the game (era, units, wars)".Tr(), ButtonPressed = Form.DynamicTurnTimer });
         DynamicTimerCheck.Toggled += on =>
         {
             Form.DynamicTurnTimer = on;
@@ -618,15 +636,15 @@ public partial class HostScreen : Control
         };
         rows["Shortest turn"] = minTimer;
         networkPage.AddChild(minTimer);
-        PasswordField = AddField(networkPage, "Password (empty for an open game)", "PasswordField", Form.Password, "none", value => Form.Password = value, SetupTabs.UiIcon("LockSmall"));
-        PortField = AddField(networkPage, "Port (TCP)", "PortField", Form.Port.ToString(CultureInfo.InvariantCulture), HostSettingsForm.DefaultPort.ToString(CultureInfo.InvariantCulture), value =>
+        passwordFieldRef.Set(AddField(networkPage, "Password (empty for an open game)", "PasswordField", Form.Password, "none", value => Form.Password = value, SetupTabs.UiIcon("LockSmall")));
+        portFieldRef.Set(AddField(networkPage, "Port (TCP)", "PortField", Form.Port.ToString(CultureInfo.InvariantCulture), HostSettingsForm.DefaultPort.ToString(CultureInfo.InvariantCulture), value =>
         {
             Form.Port = HostSettingsForm.TryParsePort(value, out int port, out _) ? port : -1;
-        }, SetupTabs.UiIcon("Link"));
-        PublicAddressField = AddField(networkPage, "Public address or name (optional, used in the invite)", "PublicAddressField", Form.PublicAddress, "e.g. 203.0.113.7", value => Form.PublicAddress = value, SetupTabs.UiIcon("Multiplayer"));
+        }, SetupTabs.UiIcon("Link")));
+        publicAddressFieldRef.Set(AddField(networkPage, "Public address or name (optional, used in the invite)", "PublicAddressField", Form.PublicAddress, "e.g. 203.0.113.7", value => Form.PublicAddress = value, SetupTabs.UiIcon("Multiplayer")));
 
         if (!CanList) Form.ListPublicly = false; // nothing to list on
-        ListPubliclyCheck = new CheckBox { Name = "ListPubliclyCheck", Text = "List this game publicly".Tr(), ButtonPressed = Form.ListPublicly && CanList, Disabled = !CanList };
+        listPubliclyCheckRef.Set(new CheckBox { Name = "ListPubliclyCheck", Text = "List this game publicly".Tr(), ButtonPressed = Form.ListPublicly && CanList, Disabled = !CanList });
         ListPubliclyCheck.Toggled += on =>
         {
             Form.ListPublicly = on;

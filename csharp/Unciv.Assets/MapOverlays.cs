@@ -144,8 +144,14 @@ public static class MapOverlays
     }
 
     /// <summary>The improvements to mark: every visible or fogged tile that has one, except the city centre.</summary>
-    public static IReadOnlyList<ImprovementMarker> Improvements(IReadOnlyList<TileDto> tiles) =>
-        [.. tiles.Where(it => it.Improvement != null && it.Improvement != CityCentre).Select(it => new ImprovementMarker(it.X, it.Y, it.Improvement!, it.ImprovementPillaged == true))];
+    public static IReadOnlyList<ImprovementMarker> Improvements(IReadOnlyList<TileDto> tiles)
+    {
+        var markers = new List<ImprovementMarker>();
+        foreach (var tile in tiles)
+            if (tile.Improvement is { } imp && imp != CityCentre)
+                markers.Add(new ImprovementMarker(tile.X, tile.Y, imp, tile.ImprovementPillaged == true));
+        return markers;
+    }
 
     /// <summary>What a city banner says: the name (capital marked) with its size, then, for the viewer's own cities, what it is building, and the health when it is hurt.</summary>
     public static BannerText Banner(CityDto city)

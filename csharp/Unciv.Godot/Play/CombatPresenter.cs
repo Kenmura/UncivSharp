@@ -109,9 +109,9 @@ public partial class CombatPresenter : Node3D
         if (!Enabled) return false;
         var script = CombatPresentation.Plan(events);
         if (script.Count == 0) return false;
-        foreach (var cue in script.SelectMany(it => it).Where(it => it.Kind == CueKind.Death && it.UnitId is { }))
+        foreach (var cue in script.SelectMany(it => it))
         {
-            var id = cue.UnitId!.Value;
+            if (cue.Kind != CueKind.Death || cue.UnitId is not { } id) continue;
             if (!units.TryGetValue(id, out var node) || dying.ContainsKey(id)) continue;
             units.Remove(id);
             node.GetParent()?.RemoveChild(node);

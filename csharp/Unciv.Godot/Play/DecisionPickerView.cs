@@ -30,7 +30,8 @@ public partial class DecisionPickerView : Modal
     private bool interacted;
     private ScrollContainer? scroll; // T317: only on a window shorter than 480, so the footer stays on screen
     private VBoxContainer? content;
-    private UiTheme theme = null!; // JUSTIFY: C038 assigned by Init before the picker is opened
+    private ReadyRef<UiTheme> themeRef;
+    private UiTheme theme => themeRef.Value;
 
     public DecisionPickerView()
     {
@@ -91,7 +92,7 @@ public partial class DecisionPickerView : Modal
 
     public override void Init(UiTheme uiTheme)
     {
-        theme = uiTheme;
+        themeRef.Set(uiTheme);
         base.Init(uiTheme);
         prompt.Init(uiTheme);
         detail.Init(uiTheme);

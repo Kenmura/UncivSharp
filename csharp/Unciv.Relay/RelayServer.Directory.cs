@@ -90,20 +90,25 @@ public sealed partial class RelayServer
             var dot = cursor.IndexOf('.', StringComparison.Ordinal);
             if (dot > 0 && long.TryParse(cursor[..dot], NumberStyles.None, CultureInfo.InvariantCulture, out var time)) { cursorTime = time; cursorRoom = cursor[(dot + 1)..]; }
         }
-        List<(Room Room, Listing Listing)> matches;
+        List<(Room Room, Listing Listing)> matches = [];
         lock (gate)
         {
-            matches = rooms.Values.Where(r => r.Live && r.Listing != null).Select(r => (Room: r, Listing: r.Listing!))
-                .Where(x => (x.Listing.FirstSeen < cursorTime || (x.Listing.FirstSeen == cursorTime && string.CompareOrdinal(x.Room.Code, cursorRoom) > 0))
-                    && (q == null || x.Listing.Fields.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || x.Listing.Fields.HostName.Contains(q, StringComparison.OrdinalIgnoreCase))
-                    && (ruleset == null || x.Listing.Fields.Ruleset == ruleset)
-                    && (mod == null || x.Listing.Fields.Mods.Contains(mod))
-                    && (version == null || x.Listing.Fields.Version == version)
-                    && (!hasSlots || x.Listing.Fields.Players < x.Listing.Fields.Slots)
-                    && (password == null || x.Listing.Fields.PasswordRequired == password)
-                    && (started == null || x.Listing.Fields.Started == started))
-                .OrderByDescending(x => x.Listing.FirstSeen).ThenBy(x => x.Room.Code, StringComparer.Ordinal).ToList();
+            foreach (var r in rooms.Values)
+            {
+                if (!r.Live || r.Listing is not { } l) continue;
+                if ((l.FirstSeen < cursorTime || (l.FirstSeen == cursorTime && string.CompareOrdinal(r.Code, cursorRoom) > 0))
+                    && (q == null || l.Fields.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || l.Fields.HostName.Contains(q, StringComparison.OrdinalIgnoreCase))
+                    && (ruleset == null || l.Fields.Ruleset == ruleset)
+                    && (mod == null || l.Fields.Mods.Contains(mod))
+                    && (version == null || l.Fields.Version == version)
+                    && (!hasSlots || l.Fields.Players < l.Fields.Slots)
+                    && (password == null || l.Fields.PasswordRequired == password)
+                    && (started == null || l.Fields.Started == started))
+                    matches.Add((r, l));
+            }
         }
+        var ordered = matches.OrderByDescending(it => it.Listing.FirstSeen).ThenBy(it => it.Room.Code, StringComparer.Ordinal).ToList();
+        matches = ordered;
         var page = new JsonArray();
         foreach (var (room, listing) in matches.Take(limit)) page.Add(Entry(room, listing));
         var last = matches.Count > limit ? matches[limit - 1] : default;

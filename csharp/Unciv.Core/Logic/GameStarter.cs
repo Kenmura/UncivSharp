@@ -43,8 +43,7 @@ public sealed class GameStarter
     private readonly GameInfo gameInfo = new();
     private readonly GameRandom rng;
     private readonly RulesetObject ruleset;
-    // JUSTIFY: T099 Kotlin `lateinit var tileMap`, assigned in the constructor before any use
-    private TileMap tileMap = null!;
+    private readonly TileMap tileMap;
 
     /// <summary>
     /// Kotlin <c>GameStarter.startNewGame(gameSetupInfo)</c>.

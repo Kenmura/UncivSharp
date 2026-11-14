@@ -100,8 +100,12 @@ public static class OverviewModel
     public static OverviewTable CityTable(ClientSnapshot snapshot) => new(["City", new OverviewColumn("Pop", true), "Health", "Building", new OverviewColumn("Buildings", true), "Notes"],
         snapshot.Cities.Where(it => it.Owner == snapshot.You && it.Own != null)
             .OrderByDescending(it => it.IsCapital).ThenBy(it => it.Name, StringComparer.Ordinal)
-            .Select(it => new OverviewRow(it.Name, [it.Name, N(it.Population), $"{N(it.Health)}/{N(it.MaxHealth)}",
-                it.Own!.ConstructionQueue.Count > 0 ? it.Own.ConstructionQueue[0] : "-", N(it.Own.Buildings.Count), CityNotes(it)], it.X, it.Y)).ToList(),
+            .Select(it =>
+            {
+                var own = it.Own.NotNull();
+                return new OverviewRow(it.Name, [it.Name, N(it.Population), $"{N(it.Health)}/{N(it.MaxHealth)}",
+                    own.ConstructionQueue.Count > 0 ? own.ConstructionQueue[0] : "-", N(own.Buildings.Count), CityNotes(it)], it.X, it.Y);
+            }).ToList(),
         "You have no cities.");
 
     private static string CityNotes(CityDto city)
@@ -117,11 +121,16 @@ public static class OverviewModel
     public static OverviewTable UnitTable(ClientSnapshot snapshot) => new(["Unit", "Position", new OverviewColumn("Health", true), new OverviewColumn("Moves", true), "Order"],
         snapshot.Units.Where(it => it.Owner == snapshot.You && it.Own != null)
             .OrderBy(it => it.Name, StringComparer.Ordinal).ThenBy(it => it.Id)
-            .Select(it => new OverviewRow(N(it.Id), [it.Name, $"{N(it.X)},{N(it.Y)}", N(it.Own!.Health), F(it.Own.CurrentMovement), UnitOrder(it)], it.X, it.Y)).ToList(),
+            .Select(it =>
+            {
+                var own = it.Own.NotNull();
+                return new OverviewRow(N(it.Id), [it.Name, $"{N(it.X)},{N(it.Y)}", N(own.Health), F(own.CurrentMovement), UnitOrder(it)], it.X, it.Y);
+            }).ToList(),
         "You have no units.");
 
     private static string UnitOrder(UnitDto unit) =>
-        unit.Own!.Automated ? "Automated" : unit.Own.Action ?? (unit.IsFortified ? "Fortified" : unit.IsEmbarked ? "Embarked" : "-");
+        unit.Own is not { } own ? "-" :
+        own.Automated ? "Automated" : own.Action ?? (unit.IsFortified ? "Fortified" : unit.IsEmbarked ? "Embarked" : "-");
 
     /// <summary>The luxury and strategic resources the engine says the viewer has, in the engine's order.</summary>
     public static OverviewTable ResourceTable(EmpireTopBarResult bar) => new(["Resource", "Type", new OverviewColumn("Amount", true)],

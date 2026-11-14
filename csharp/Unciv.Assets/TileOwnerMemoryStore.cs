@@ -47,7 +47,7 @@ public sealed class TileOwnerMemoryStore(string folder)
             string path = PathFor(gameKey, viewerCivId);
             if (!File.Exists(path) || new FileInfo(path).Length > MaxFileBytes) return false;
             var file = JsonSerializer.Deserialize<StoredMemory>(File.ReadAllText(path), Options);
-            if (file == null || file.Version != FileVersion || file.Turn > currentTurn || file.Entries == null || file.Entries.Contains(null!)) return false;
+            if (file == null || file.Version != FileVersion || file.Turn > currentTurn || file.Entries == null || file.Entries.Any(it => it == null)) return false;
             var entries = file.Entries.Select(it => new RememberedOwner(it.X, it.Y, it.Owner)).ToList();
             if (file.Signature != Signature(entries, tiles)) return false;
             memory.Restore(entries);

@@ -7,6 +7,7 @@ using Unciv.Net.Identity;
 using Unciv.Net.Lobby;
 using Unciv.Net.Persistence;
 using Unciv.Net.Turns;
+using Unciv.Utils;
 
 namespace Unciv.Server;
 
@@ -194,17 +195,18 @@ public sealed class ServerLobby : IAsyncDisposable
                 if (slot.Kind != SlotKind.Human) continue;
                 // The hand-over transport, never the raw one: the lobby reader keeps reading the socket and forwards to the game.
                 // No hand-over (never connected, superseded or gone) means nobody seats it; a raw attach would bring back the two-reader race.
-                var gameTransport = slot.Connected && slot.SessionId != null ? lobbyHost.GameTransportFor(slot.SessionId) : null;
-                if (gameTransport == null)
+                var sessionId = slot.SessionId;
+                var gameTransport = slot.Connected && sessionId != null ? lobbyHost.GameTransportFor(sessionId) : null;
+                if (gameTransport == null || sessionId == null)
                 {
                     await MarkAbsentIfUnseatedAsync(gameHost, slot.Nation).ConfigureAwait(false);
                     continue;
                 }
                 lock (attachedGate)
                 {
-                    if (!attached.Add(slot.SessionId!)) continue; // a late seat in the start window already claimed it
+                    if (!attached.Add(sessionId)) continue; // a late seat in the start window already claimed it
                 }
-                await AttachIfCurrentAsync(gameHost, slot.SessionId!, slot.Nation, gameTransport, slot.PlayerKeyId).ConfigureAwait(false);
+                await AttachIfCurrentAsync(gameHost, sessionId, slot.Nation, gameTransport, slot.PlayerKeyId).ConfigureAwait(false);
             }
 
             if (disposed.IsCancellationRequested) throw new ObjectDisposedException(nameof(ServerLobby));
@@ -239,14 +241,15 @@ public sealed class ServerLobby : IAsyncDisposable
     {
         var header = CommandLogHeader.Create(started.Setup, started.Seed, started.StartClockMillis);
         if (started.Game.TurnState != null) header = header with { TurnMode = CommandLogHeader.SimultaneousTurns };
-        var saved = UncivJson.Deserialize<LobbySettings>(UncivJson.Serialize(lobbyHost.Settings))!;
+        var saved = UncivJson.Deserialize<LobbySettings>(UncivJson.Serialize(lobbyHost.Settings))
+            ?? throw new InvalidOperationException("Failed to deserialize LobbySettings");
         saved.Password = null;
         var seats = new SortedDictionary<string, SlotBinding>(StringComparer.Ordinal);
         foreach (var slot in started.Slots)
             if (slot.Kind == SlotKind.Human && slot.PlayerKeyId != null) seats[slot.Nation] = new SlotBinding { PlayerKey = slot.PlayerKeyId, DisplayName = slot.DisplayName ?? "" };
         using var settingsJson = System.Text.Json.JsonDocument.Parse(UncivJson.Serialize(saved));
         var meta = new GameMeta { Slots = seats, TimerPolicy = policy, HostFingerprint = lobbyHost.HostFingerprint, LobbySettings = settingsJson.RootElement.Clone() };
-        return FileGameStore.Create(gameDirectory!, started.Game.GameId, header, meta, started.Game);
+        return FileGameStore.Create(gameDirectory.NotNull(), started.Game.GameId, header, meta, started.Game);
     }
 
     /// <summary>

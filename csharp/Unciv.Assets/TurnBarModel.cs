@@ -32,7 +32,7 @@ public static class TurnBarModel
             .Select(it => new TurnBarRow(it.CivId, it.Name, status.Ended.Contains(it.CivId, StringComparer.Ordinal), it.Connected, it.CivId == viewer, it.GraceEndsAt))
             .ToList();
         var resolving = status.Phase == "Resolving";
-        var soonest = rows.Where(it => !it.Ended && it.GraceEndsAt != null).Select(it => it.GraceEndsAt!.Value).DefaultIfEmpty(0).Min();
+        var soonest = rows.Where(it => !it.Ended).Select(it => it.GraceEndsAt).OfType<long>().DefaultIfEmpty(0).Min();
         return new TurnBarData(rows, Headline(rows, resolving, nowMs), Countdown(status.Deadline, nowMs), resolving,
             soonest == 0 ? null : Countdown(soonest, nowMs));
     }

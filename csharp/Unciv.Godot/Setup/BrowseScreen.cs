@@ -7,6 +7,7 @@ using Unciv.GodotClient.Ui;
 using Unciv.Models.Translations;
 using Unciv.Net.Relay;
 using Unciv.Server.Transport;
+using Unciv.Utils;
 
 namespace Unciv.GodotClient.Setup;
 
@@ -272,7 +273,7 @@ public partial class BrowseScreen : Control
             ShowStatus(failed.Status, failed.Detail);
             return;
         }
-        ShowResult(result!);
+        ShowResult(result.NotNull());
     }
 
     private void ShowResult(DirectoryResult result)
@@ -403,11 +404,14 @@ public partial class BrowseScreen : Control
             PasswordField.TextSubmitted += _ => Confirm();
         }
 
+        private ReadyRef<Button> confirmButtonRef;
+        private ReadyRef<Button> cancelButtonRef;
+
         public LineEdit PasswordField { get; }
 
-        public Button ConfirmButton { get; private set; } = null!; // JUSTIFY: T339 assigned by Open, which the owner calls right after Init
+        public Button ConfirmButton => confirmButtonRef.Value;
 
-        public Button CancelButton { get; private set; } = null!; // JUSTIFY: T339 assigned by Open, which the owner calls right after Init
+        public Button CancelButton => cancelButtonRef.Value;
 
         /// <summary>The text shown above the fields.</summary>
         public string PromptText => prompt.Text;
@@ -428,11 +432,13 @@ public partial class BrowseScreen : Control
             Body.AddChild(PasswordField);
             error.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.Warning));
             Body.AddChild(error);
-            ConfirmButton = new Button { Name = "ConfirmJoinButton", Text = "Join".Tr() };
-            ConfirmButton.Pressed += Confirm;
-            CancelButton = new Button { Name = "CancelJoinButton", Text = "Cancel".Tr() };
-            CancelButton.Pressed += cancel;
-            SetActions([(CancelButton, ChoiceRole.Ghost), (ConfirmButton, ChoiceRole.Primary)]);
+            var confirm = new Button { Name = "ConfirmJoinButton", Text = "Join".Tr() };
+            confirm.Pressed += Confirm;
+            confirmButtonRef.Set(confirm);
+            var cancelButton = new Button { Name = "CancelJoinButton", Text = "Cancel".Tr() };
+            cancelButton.Pressed += cancel;
+            cancelButtonRef.Set(cancelButton);
+            SetActions([(cancelButton, ChoiceRole.Ghost), (confirm, ChoiceRole.Primary)]);
             Visible = true;
             if (PasswordField.Visible) PasswordField.GrabFocus();
         }
