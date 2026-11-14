@@ -811,6 +811,53 @@ public static class UniqueParameterTypeExtensions
         {
             UniqueParameterType.Countable =>
                 CountablesProvider.GetKnownValuesForAutocomplete(ruleset),
+            UniqueParameterType.UnitName =>
+                ToLinkedSet(ruleset.Units.Keys),
+            UniqueParameterType.GreatPerson =>
+                ToLinkedSet(ruleset.Units.Values.Where(u => u.HasGreatPersonUnique).Select(u => u.Name)),
+            UniqueParameterType.StatName =>
+                ToLinkedSet(StatExtensions.Names()),
+            UniqueParameterType.BuildingName =>
+                ToLinkedSet(ruleset.Buildings.Keys),
+            UniqueParameterType.BaseTerrain =>
+                ToLinkedSet(ruleset.Terrains.Values.Where(t => t.IsBaseTerrain).Select(t => t.Name)),
+            UniqueParameterType.TerrainName =>
+                ToLinkedSet(ruleset.Terrains.Keys),
+            UniqueParameterType.Promotion =>
+                ToLinkedSet(ruleset.UnitPromotions.Keys),
+            UniqueParameterType.Era =>
+                ToLinkedSet(ruleset.Eras.Keys),
+            UniqueParameterType.Speed =>
+                ToLinkedSet(ruleset.Speeds.Keys),
+            UniqueParameterType.Difficulty =>
+                ToLinkedSet(ruleset.Difficulties.Keys),
+            UniqueParameterType.ImprovementName =>
+                ToLinkedSet(ruleset.TileImprovements.Keys.Where(k => k != Constants.CancelImprovementOrder)),
+            UniqueParameterType.Resource =>
+                ToLinkedSet(ruleset.TileResources.Keys),
+            UniqueParameterType.StockpiledResource =>
+                ToLinkedSet(ruleset.TileResources.Values.Where(r => r.IsStockpiled).Select(r => r.Name)),
+            UniqueParameterType.Belief =>
+                ToLinkedSet(ruleset.Beliefs.Keys),
+            UniqueParameterType.Event =>
+                ToLinkedSet(ruleset.Events.Keys),
+            UniqueParameterType.Technology =>
+                ToLinkedSet(ruleset.Technologies.Keys),
+            UniqueParameterType.Specialist => ToLinkedSet(ruleset.Specialists.Keys),
+            UniqueParameterType.GreatWork => ToLinkedSet(ruleset.GreatWorks.Keys),
+            UniqueParameterType.Policy =>
+                ToLinkedSet(ruleset.Policies.Keys),
+            UniqueParameterType.VictoryT =>
+                ToLinkedSet(ruleset.Victories.Keys),
+            UniqueParameterType.UnitNameGroup =>
+                ToLinkedSet(ruleset.UnitNameGroups.Keys),
+            _ => GetCompoundKnownValuesForAutocomplete(type, ruleset),
+        };
+
+    private static IReadOnlySet<string> GetCompoundKnownValuesForAutocomplete(
+        UniqueParameterType type,
+        IRulesetParameterView ruleset) => type switch
+        {
             UniqueParameterType.CombatantFilter =>
                 UnionWith(
                     type.StaticKnownValues(),
@@ -830,20 +877,12 @@ public static class UniqueParameterTypeExtensions
                     UniqueParameterType.TechFilter.GetKnownValuesForAutocomplete(ruleset)),
             UniqueParameterType.UnitTypeFilter =>
                 UnionWith(type.StaticKnownValues(), ruleset.UnitTypes.Keys),
-            UniqueParameterType.UnitName =>
-                ToLinkedSet(ruleset.Units.Keys),
-            UniqueParameterType.GreatPerson =>
-                ToLinkedSet(ruleset.Units.Values.Where(u => u.HasGreatPersonUnique).Select(u => u.Name)),
-            UniqueParameterType.StatName =>
-                ToLinkedSet(StatExtensions.Names()),
             UniqueParameterType.CivFilter =>
                 UnionWith(
                     type.StaticKnownValues(),
                     UniqueParameterType.NationFilter.GetKnownValuesForAutocomplete(ruleset)),
             UniqueParameterType.NationFilter =>
                 UnionWith(type.StaticKnownValues(), ruleset.Nations.Keys),
-            UniqueParameterType.BuildingName =>
-                ToLinkedSet(ruleset.Buildings.Keys),
             UniqueParameterType.BuildingFilter =>
                 UnionWith(
                     type.StaticKnownValues(),
@@ -860,36 +899,18 @@ public static class UniqueParameterTypeExtensions
                     UniqueParameterType.TerrainFilter.GetKnownValuesForAutocomplete(ruleset)),
             UniqueParameterType.SimpleTerrain =>
                 UnionWith(type.StaticKnownValues(), ruleset.Terrains.Keys),
-            UniqueParameterType.BaseTerrain =>
-                ToLinkedSet(ruleset.Terrains.Values.Where(t => t.IsBaseTerrain).Select(t => t.Name)),
-            UniqueParameterType.TerrainName =>
-                ToLinkedSet(ruleset.Terrains.Keys),
             UniqueParameterType.RegionType =>
                 UnionWith(
                     type.StaticKnownValues(),
                     ruleset.Terrains.Values.Where(t => t.HasRegionUnique).Select(t => t.Name)),
-            UniqueParameterType.Promotion =>
-                ToLinkedSet(ruleset.UnitPromotions.Keys),
-            UniqueParameterType.Era =>
-                ToLinkedSet(ruleset.Eras.Keys),
             UniqueParameterType.EraFilter =>
                 UnionWith(
                     type.StaticKnownValues(),
                     ruleset.Eras.Keys.SelectMany<string, string>(it => [it, $"pre-[{it}]", $"post-[{it}]"])),
-            UniqueParameterType.Speed =>
-                ToLinkedSet(ruleset.Speeds.Keys),
-            UniqueParameterType.Difficulty =>
-                ToLinkedSet(ruleset.Difficulties.Keys),
-            UniqueParameterType.ImprovementName =>
-                ToLinkedSet(ruleset.TileImprovements.Keys.Where(k => k != Constants.CancelImprovementOrder)),
             UniqueParameterType.ImprovementFilter =>
                 UnionWith(
                     type.StaticKnownValues(),
                     UniqueParameterType.ImprovementName.GetKnownValuesForAutocomplete(ruleset)),
-            UniqueParameterType.Resource =>
-                ToLinkedSet(ruleset.TileResources.Keys),
-            UniqueParameterType.StockpiledResource =>
-                ToLinkedSet(ruleset.TileResources.Values.Where(r => r.IsStockpiled).Select(r => r.Name)),
             UniqueParameterType.Stockpile =>
                 UnionWith(
                     ruleset.TileResources.Values.Where(r => r.IsStockpiled).Select(r => r.Name),
@@ -901,30 +922,16 @@ public static class UniqueParameterTypeExtensions
                     ruleset.TileResources.Keys,
                     ResourceTypeNames,
                     StatExtensions.Names()),
-            UniqueParameterType.Belief =>
-                ToLinkedSet(ruleset.Beliefs.Keys),
-            UniqueParameterType.Event =>
-                ToLinkedSet(ruleset.Events.Keys),
-            UniqueParameterType.Technology =>
-                ToLinkedSet(ruleset.Technologies.Keys),
             UniqueParameterType.TechFilter =>
                 UnionWith(
                     type.StaticKnownValues(),
                     ruleset.Technologies.Keys,
                     UniqueParameterType.EraFilter.GetKnownValuesForAutocomplete(ruleset)),
-            UniqueParameterType.Specialist => ToLinkedSet(ruleset.Specialists.Keys),
-            UniqueParameterType.GreatWork => ToLinkedSet(ruleset.GreatWorks.Keys),
-            UniqueParameterType.Policy =>
-                ToLinkedSet(ruleset.Policies.Keys),
             UniqueParameterType.PolicyFilter =>
                 UnionWith(
                     type.StaticKnownValues(),
                     ruleset.Policies.Keys,
                     ruleset.PolicyBranches.Keys.Select(it => $"[{it}] branch")),
-            UniqueParameterType.VictoryT =>
-                ToLinkedSet(ruleset.Victories.Keys),
-            UniqueParameterType.UnitNameGroup =>
-                ToLinkedSet(ruleset.UnitNameGroups.Keys),
             _ => type.StaticKnownValues(),
         };
 

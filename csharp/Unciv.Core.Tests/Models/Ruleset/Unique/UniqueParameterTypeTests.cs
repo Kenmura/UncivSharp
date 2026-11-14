@@ -549,4 +549,20 @@ public class UniqueParameterTypeTests
         Assert.Null(UniqueParameterType.UnitNameGroup.GetErrorSeverity("Scientist", ruleset));
         Assert.Null(UniqueParameterType.UnitNameGroup.GetErrorSeverity("ScienceNames", ruleset));
     }
+
+    [Fact]
+    public void GetKnownValuesForAutocompleteCoversCompoundAndSimpleTypes()
+    {
+        var ruleset = new PopulatedRulesetView();
+        Assert.NotEmpty(UniqueParameterType.Countable.GetKnownValuesForAutocomplete(ruleset));
+        Assert.Contains("City", UniqueParameterType.CombatantFilter.GetKnownValuesForAutocomplete(ruleset));
+        Assert.Contains("unimproved", UniqueParameterType.TileFilter.GetKnownValuesForAutocomplete(ruleset));
+        Assert.NotEmpty(UniqueParameterType.SimpleTerrain.GetKnownValuesForAutocomplete(ruleset));
+        Assert.NotNull(UniqueParameterType.RegionType.GetKnownValuesForAutocomplete(ruleset));
+        Assert.NotEmpty(UniqueParameterType.EraFilter.GetKnownValuesForAutocomplete(ruleset));
+        Assert.NotEmpty(UniqueParameterType.ImprovementFilter.GetKnownValuesForAutocomplete(ruleset));
+        Assert.Contains("Stored Food", UniqueParameterType.Stockpile.GetKnownValuesForAutocomplete(ruleset));
+        Assert.NotEmpty(UniqueParameterType.ResourceFilter.GetKnownValuesForAutocomplete(ruleset));
+        Assert.NotEmpty(UniqueParameterType.PolicyFilter.GetKnownValuesForAutocomplete(ruleset));
+    }
 }

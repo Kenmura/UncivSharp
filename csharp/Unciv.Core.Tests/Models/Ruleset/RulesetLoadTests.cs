@@ -910,5 +910,25 @@ public sealed class RulesetLoadTests : IDisposable
         Assert.NotEmpty(vanilla.AllNames().ToList());
     }
 
+    [Fact]
+    public void LoadHandlesMalformedModOptionsGracefully()
+    {
+        var ruleset = Load(new Dictionary<string, object> { ["ModOptions.json"] = "{ not valid json" }, "BadMod");
+        Assert.NotNull(ruleset.ModOptions);
+    }
+
+    [Fact]
+    public void LoadPoliciesPopulatesMissingVictoryPriorities()
+    {
+        var ruleset = new RulesetClass { Name = "Test" };
+        ruleset.Victories["Cultural"] = new Unciv.Models.Ruleset.Victory { Name = "Cultural" };
+        ruleset.Eras["Ancient era"] = new Unciv.Models.Ruleset.Tech.Era { Name = "Ancient era" };
+        ruleset.Load(Folder(new Dictionary<string, object>
+        {
+            ["Policies.json"] = """[ { "name": "Tradition", "era": "Ancient era", "policies": [ { "name": "Aristocracy" } ] } ]""",
+        }));
+        Assert.Equal(0, ruleset.PolicyBranches["Tradition"].Priorities["Cultural"]);
+    }
+
     // endregion
 }

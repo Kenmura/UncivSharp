@@ -437,7 +437,6 @@ public class Building : RulesetStatsObject, INonPerpetualConstruction, ICivilope
     public IEnumerable<RejectionReason> GetRejectionReasons(CityConstructions cityConstructions)
     {
         var city = cityConstructions.City;
-        var cityCenter = city.GetCenterTile();
         var civ = city.Civ;
         var stateForConditionals = city.State;
 
@@ -453,6 +452,36 @@ public class Building : RulesetStatsObject, INonPerpetualConstruction, ICivilope
                 yield return RejectionReasonType.DisabledBySetting.ToInstance();
         }
 
+        foreach (var reason in GetUniqueRejectionReasons(cityConstructions, city, stateForConditionals))
+            yield return reason;
+
+        if (UniqueTo != null && !civ.MatchesFilter(UniqueTo, stateForConditionals))
+            yield return RejectionReasonType.UniqueToOtherNation.ToInstance($"Unique to {UniqueTo}");
+
+        if (civ.Cache.UniqueBuildings.Any(it => it.Replaces == Name))
+            yield return RejectionReasonType.ReplacedByOurUnique.ToInstance();
+
+        foreach (var requiredTech in ((IHasUniques)this).RequiredTechs())
+            if (!civ.Tech.IsResearched(requiredTech))
+                yield return RejectionReasonType.RequiresTech.ToInstance($"{requiredTech} not researched!");
+
+        foreach (var reason in GetWonderAndResourceRejectionReasons(cityConstructions, stateForConditionals))
+            yield return reason;
+
+        foreach (var unique in civ.GetMatchingUniques(UniqueType.CannotBuildBuildings, stateForConditionals))
+            if (MatchesFilter(unique.Params[0], stateForConditionals))
+            {
+                yield return RejectionReasonType.CannotBeBuilt.ToInstance();
+            }
+    }
+
+    private IEnumerable<RejectionReason> GetUniqueRejectionReasons(
+        CityConstructions cityConstructions,
+        City city,
+        GameContext stateForConditionals)
+    {
+        var cityCenter = city.GetCenterTile();
+        var civ = city.Civ;
         foreach (var unique in UniqueObjects)
         {
             // skip uniques that don't have conditionals apply
@@ -541,17 +570,13 @@ public class Building : RulesetStatsObject, INonPerpetualConstruction, ICivilope
                     break;
             }
         }
+    }
 
-        if (UniqueTo != null && !civ.MatchesFilter(UniqueTo, stateForConditionals))
-            yield return RejectionReasonType.UniqueToOtherNation.ToInstance($"Unique to {UniqueTo}");
-
-        if (civ.Cache.UniqueBuildings.Any(it => it.Replaces == Name))
-            yield return RejectionReasonType.ReplacedByOurUnique.ToInstance();
-
-        foreach (var requiredTech in ((IHasUniques)this).RequiredTechs())
-            if (!civ.Tech.IsResearched(requiredTech))
-                yield return RejectionReasonType.RequiresTech.ToInstance($"{requiredTech} not researched!");
-
+    private IEnumerable<RejectionReason> GetWonderAndResourceRejectionReasons(
+        CityConstructions cityConstructions,
+        GameContext stateForConditionals)
+    {
+        var civ = cityConstructions.City.Civ;
         // All Wonders
         if (IsAnyWonder())
         {
@@ -620,12 +645,6 @@ public class Building : RulesetStatsObject, INonPerpetualConstruction, ICivilope
             if (!containsResourceWithImprovement)
                 yield return RejectionReasonType.RequiresNearbyResource.ToInstance($"Nearby [{string.Join(", ", RequiredNearbyImprovedResources)}] required");
         }
-
-        foreach (var unique in civ.GetMatchingUniques(UniqueType.CannotBuildBuildings, stateForConditionals))
-            if (MatchesFilter(unique.Params[0], stateForConditionals))
-            {
-                yield return RejectionReasonType.CannotBeBuilt.ToInstance();
-            }
     }
 
     /// <summary>

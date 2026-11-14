@@ -1,16 +1,10 @@
-using System.Globalization;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Unciv.Core.Tests.Policy;
 
-// T120: size ratchet. Many types mirror giant Kotlin files/functions, so a hard limit would fight faithful ports.
-// Instead: a file over MaxFileLines or a method over MaxMethodLines must be listed in SizeRatchetBaseline.txt, and a
-// listed file/method may never grow past its recorded size. The test rewrites nothing: humans LOWER the numbers
-// (or delete the line once the item is under the limit). Set SIZE_RATCHET_DUMP=<path> to write a fresh baseline
-// candidate from the current tree (then lower/curate by hand; never raise a number to make a new violation pass).
-// Baseline line format:  `path|size`  (file)   or   `path::Type.Method|size`  (method; overloads: largest wins).
+// T120/T421: strict file and method size limits across Core and Harnesses (no baseline exceptions).
 public class SizeRatchetTests
 {
     private const int MaxFileLines = 1500;
@@ -18,26 +12,18 @@ public class SizeRatchetTests
     private static readonly string[] ScannedProjects = ["Unciv.Core", "Unciv.Harness", "Unciv.Godot.Harness"];
 
     [Fact]
-    public void FilesAndMethodsStayWithinLimitsOrTheirShrinkOnlyBaseline()
+    public void FilesAndMethodsStayWithinLimits()
     {
         var root = FindRoot();
-        var baseline = LoadBaseline(root);
         var current = Measure(root);
-        MaybeDump(current);
 
         var problems = new List<string>();
         foreach (var (key, size) in current.OrderBy(k => k.Key, StringComparer.Ordinal))
         {
             var limit = key.Contains("::", StringComparison.Ordinal) ? MaxMethodLines : MaxFileLines;
-            if (baseline.TryGetValue(key, out var cap))
-            {
-                if (size > cap) problems.Add($"{key} grew to {size} (baseline {cap}): split it, do not raise the baseline");
-            }
-            else if (size > limit)
-                problems.Add($"{key} is {size} lines (limit {limit}): split it, or (only for a faithful port of a giant Kotlin unit) add it to SizeRatchetBaseline.txt");
+            if (size > limit)
+                problems.Add($"{key} is {size} lines (limit {limit}): split it");
         }
-        foreach (var key in baseline.Keys.Where(k => !current.ContainsKey(k)).Order(StringComparer.Ordinal))
-            problems.Add($"{key} is in SizeRatchetBaseline.txt but no longer exists (renamed/split/deleted): remove the entry");
 
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems));
     }
@@ -102,32 +88,6 @@ public class SizeRatchetTests
             result[key] = result.TryGetValue(key, out var old) ? System.Math.Max(old, size) : size;
         }
         return result;
-    }
-
-    private static Dictionary<string, int> LoadBaseline(string root)
-    {
-        var path = Path.Combine(root, "Unciv.Core.Tests", "Policy", "SizeRatchetBaseline.txt");
-        var result = new Dictionary<string, int>(StringComparer.Ordinal);
-        foreach (var raw in File.ReadAllLines(path))
-        {
-            var line = raw.Trim();
-            if (line.Length == 0 || line.StartsWith('#')) continue;
-            var bar = line.LastIndexOf('|');
-            Assert.True(bar > 0, $"Bad baseline line: {raw}");
-            result[line[..bar]] = int.Parse(line[(bar + 1)..].Split('#')[0].Trim(), CultureInfo.InvariantCulture);
-        }
-        return result;
-    }
-
-    private static void MaybeDump(Dictionary<string, int> current)
-    {
-        var dump = Environment.GetEnvironmentVariable("SIZE_RATCHET_DUMP");
-        if (string.IsNullOrEmpty(dump)) return;
-        var lines = current
-            .Where(kv => kv.Value > (kv.Key.Contains("::", StringComparison.Ordinal) ? MaxMethodLines : MaxFileLines))
-            .OrderBy(kv => kv.Key, StringComparer.Ordinal)
-            .Select(kv => $"{kv.Key}|{kv.Value}");
-        File.WriteAllLines(dump, lines);
     }
 
     private static string FindRoot()

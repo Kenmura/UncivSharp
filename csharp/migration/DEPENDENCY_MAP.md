@@ -97,7 +97,7 @@ flowchart TD
   classDef review fill:#cfe4ff,stroke:#1f6feb,color:#000
   classDef blocked fill:#ffd6d6,stroke:#c62828,color:#000
   classDef done fill:#eeeeee,stroke:#999999,color:#666,stroke-dasharray:4 3
-  class T421 prog
+  class T421 review
   class T422 ondeck
   class T423 ondeck
 ```
@@ -181,7 +181,7 @@ xychart-beta
 | T330 | Available (waiting on ) | none | 3 | GitHub Actions does not run for csharp-migration or csharp-v tags: diagnose (account, billing, rename to Kenmura/UncivSharp, settings), restore CI, then re-run the tag workflow |
 | T278 | Available (waiting on ) | T260, T276 | 2 | Android on-device verification: TLS join, lifecycle reconnect, frame time and APK size on a mid-range phone |
 | T305 | Available (waiting on ) | T280 | 2 | Verify the Android APK job of the release workflow on a hosted runner (first tag push) |
-| T421 | In-Progress [Antigravity] | none | 2 | Size ratchet cleanup: split oversized Core files and methods and retire SizeRatchetBaseline.txt |
+| T421 | Needs-Review [Antigravity] | none | 2 | Size ratchet cleanup: split oversized Core files and methods and retire SizeRatchetBaseline.txt |
 | T325 | Available (waiting on T305) | T279, T280, T305 | 1 | Automatic release drafts: a scheduled workflow tags green csharp-migration when it has new Done work and creates a DRAFT GitHub release with generated notes; the owner publishes by hand |
 | T417 | Available (waiting on T330) | T416, T330 | 1 | Clean cutover: remove legacy Kotlin/Gradle/LibGDX code, unused assets, and legacy CI workflows |
 | T290 | Blocked | T271 | 0 | Real-device frame-time pass: Windows, macOS, Android phone |

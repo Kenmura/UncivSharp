@@ -374,38 +374,10 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
 
         // Note: Most files are loaded using createHashmap, which sets originRuleset automatically.
         // For other files containing IRulesetObject's we'll have to remember to do so manually - e.g. Tech.
-        var modOptionsFile = FileOf(RulesetFile.ModOptions);
-        if (modOptionsFile.Exists)
-        {
-            try
-            {
-                ModOptions = UncivJson.Deserialize<ModOptions>(LenientJson.QuoteBareKeys(modOptionsFile.ReadString())) ?? throw new InvalidDataException("ModOptions.json is null");
-                // BackwardCompatibility.updateDeprecations: empty upstream
-            }
-            catch (Exception ex)
-            {
-                Log.Error($"Failed to get modOptions from json file; Mod name: {folderHandle.Name}", ex);
-            }
-        }
+        LoadModOptions(folderHandle, FileOf(RulesetFile.ModOptions));
+        LoadTechs(FileOf(RulesetFile.Techs));
 
-        var techFile = FileOf(RulesetFile.Techs);
-        if (techFile.Exists)
-        {
-            foreach (var techColumn in ReadArray<TechColumn>(techFile))
-            {
-                TechColumns.Add(techColumn);
-                foreach (var tech in techColumn.Techs)
-                {
-                    if (tech.Cost == 0) tech.Cost = techColumn.TechCost;
-                    tech.Column = techColumn;
-                    tech.OriginRuleset = Name;
-                    Technologies[tech.Name] = tech;
-                }
-            }
-        }
-
-        var buildingsFile = FileOf(RulesetFile.Buildings);
-        if (buildingsFile.Exists) Buildings.PutAll(CreateHashmap(ReadArray<Building>(buildingsFile)));
+        LoadNamed(folderHandle, RulesetFile.Buildings, Buildings);
 
         var terrainsFile = FileOf(RulesetFile.Terrains);
         if (terrainsFile.Exists)
@@ -418,44 +390,26 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
             }
         }
 
-        var resourcesFile = FileOf(RulesetFile.TileResources);
-        if (resourcesFile.Exists) TileResources.PutAll(CreateHashmap(ReadArray<TileResource>(resourcesFile)));
+        LoadNamed(folderHandle, RulesetFile.TileResources, TileResources);
+        LoadNamed(folderHandle, RulesetFile.TileImprovements, TileImprovements);
 
-        var improvementsFile = FileOf(RulesetFile.TileImprovements);
-        if (improvementsFile.Exists) TileImprovements.PutAll(CreateHashmap(ReadArray<TileImprovement>(improvementsFile)));
-
-        var erasFile = FileOf(RulesetFile.Eras);
-        if (erasFile.Exists) Eras.PutAll(CreateHashmap(ReadArray<Era>(erasFile)));
+        LoadNamed(folderHandle, RulesetFile.Eras, Eras);
         var eraIndex = 0;
         foreach (var era in Eras.Values) era.EraNumber = eraIndex++;
 
-        var speedsFile = FileOf(RulesetFile.Speeds);
-        if (speedsFile.Exists) Speeds.PutAll(CreateHashmap(ReadArray<Speed>(speedsFile)));
-
-        var unitTypesFile = FileOf(RulesetFile.UnitTypes);
-        if (unitTypesFile.Exists) UnitTypes.PutAll(CreateHashmap(ReadArray<UnitType>(unitTypesFile)));
-
-        var unitsFile = FileOf(RulesetFile.Units);
-        if (unitsFile.Exists) Units.PutAll(CreateHashmap(ReadArray<BaseUnit>(unitsFile)));
-
-        var promotionsFile = FileOf(RulesetFile.UnitPromotions);
-        if (promotionsFile.Exists) UnitPromotions.PutAll(CreateHashmap(ReadArray<Promotion>(promotionsFile)));
-
-        var unitNameGroupsFile = FileOf(RulesetFile.UnitNameGroup);
-        if (unitNameGroupsFile.Exists) UnitNameGroups.PutAll(CreateHashmap(ReadArray<UnitNameGroup>(unitNameGroupsFile)));
-
+        LoadNamed(folderHandle, RulesetFile.Speeds, Speeds);
+        LoadNamed(folderHandle, RulesetFile.UnitTypes, UnitTypes);
+        LoadNamed(folderHandle, RulesetFile.Units, Units);
+        LoadNamed(folderHandle, RulesetFile.UnitPromotions, UnitPromotions);
+        LoadNamed(folderHandle, RulesetFile.UnitNameGroup, UnitNameGroups);
         LoadNamed(folderHandle, RulesetFile.Quests, Quests);
-
         LoadNamed(folderHandle, RulesetFile.Specialists, Specialists);
-
         LoadNamed(folderHandle, RulesetFile.GreatWorks, GreatWorks);
 
         var policiesFile = FileOf(RulesetFile.Policies);
         if (policiesFile.Exists) LoadPolicies(ReadArray<PolicyBranch>(policiesFile));
 
-        var beliefsFile = FileOf(RulesetFile.Beliefs);
-        if (beliefsFile.Exists)
-            Beliefs.PutAll(CreateHashmap(ReadArray<Belief>(beliefsFile)));
+        LoadNamed(folderHandle, RulesetFile.Beliefs, Beliefs);
 
         var religionsFile = FileOf(RulesetFile.Religions);
         if (religionsFile.Exists)
@@ -472,9 +426,7 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
             foreach (var nation in Nations.Values) nation.SetTransients();
         }
 
-        var difficultiesFile = FileOf(RulesetFile.Difficulties);
-        if (difficultiesFile.Exists)
-            Difficulties.PutAll(CreateHashmap(ReadArray<Difficulty>(difficultiesFile)));
+        LoadNamed(folderHandle, RulesetFile.Difficulties, Difficulties);
 
         var globalUniquesFile = FileOf(RulesetFile.GlobalUniques);
         if (globalUniquesFile.Exists)
@@ -483,22 +435,49 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
             GlobalUniques.OriginRuleset = Name;
         }
 
-        var victoryTypesFile = FileOf(RulesetFile.VictoryTypes);
-        if (victoryTypesFile.Exists)
-            Victories.PutAll(CreateHashmap(ReadArray<Victory>(victoryTypesFile)));
+        LoadNamed(folderHandle, RulesetFile.VictoryTypes, Victories);
+        LoadNamed(folderHandle, RulesetFile.CityStateTypes, CityStateTypes);
+        LoadNamed(folderHandle, RulesetFile.Personalities, Personalities);
+        LoadNamed(folderHandle, RulesetFile.Events, Events);
 
-        var cityStateTypesFile = FileOf(RulesetFile.CityStateTypes);
-        if (cityStateTypesFile.Exists)
-            CityStateTypes.PutAll(CreateHashmap(ReadArray<CityStateType>(cityStateTypesFile)));
+        LoadTutorials(folderHandle, globalJsonsFolder);
 
-        var personalitiesFile = FileOf(RulesetFile.Personalities);
-        if (personalitiesFile.Exists)
-            Personalities.PutAll(CreateHashmap(ReadArray<Personality>(personalitiesFile)));
+        if (ModOptions.IsBaseRuleset)
+            ApplyBaseRulesetFallbacks(ruinRewardsFile.Exists, globalUniquesFile.Exists);
+    }
 
-        var eventsFile = FileOf(RulesetFile.Events);
-        if (eventsFile.Exists)
-            Events.PutAll(CreateHashmap(ReadArray<Event>(eventsFile)));
+    private void LoadModOptions(IRulesetFolder folderHandle, IRulesetFolder modOptionsFile)
+    {
+        if (!modOptionsFile.Exists) return;
+        try
+        {
+            ModOptions = UncivJson.Deserialize<ModOptions>(LenientJson.QuoteBareKeys(modOptionsFile.ReadString())) ?? throw new InvalidDataException("ModOptions.json is null");
+            // BackwardCompatibility.updateDeprecations: empty upstream
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Failed to get modOptions from json file; Mod name: {folderHandle.Name}", ex);
+        }
+    }
 
+    private void LoadTechs(IRulesetFolder techFile)
+    {
+        if (!techFile.Exists) return;
+        foreach (var techColumn in ReadArray<TechColumn>(techFile))
+        {
+            TechColumns.Add(techColumn);
+            foreach (var tech in techColumn.Techs)
+            {
+                if (tech.Cost == 0) tech.Cost = techColumn.TechCost;
+                tech.Column = techColumn;
+                tech.OriginRuleset = Name;
+                Technologies[tech.Name] = tech;
+            }
+        }
+    }
+
+    private void LoadTutorials(IRulesetFolder folderHandle, IRulesetFolder? globalJsonsFolder)
+    {
         // Tutorials exist per builtin ruleset or mod, but there's also a global file that should always be loaded in a game.
         // Only load them when not running console mode, and only for base rulesets.
         // (games with extensions should get them from the base, and having them loaded in all extension mods would have the
@@ -510,48 +489,46 @@ public class Ruleset : IRulesetParameterView, IRulesetConstructionView, IRuleset
                 Tutorials.PutAll(CreateHashmap(ReadArray<Tutorial>(globalTutorialsFile)));
         }
 
-        var tutorialsFile = FileOf(RulesetFile.Tutorials);
-        if (tutorialsFile.Exists)
-            Tutorials.PutAll(CreateHashmap(ReadArray<Tutorial>(tutorialsFile)));
+        LoadNamed(folderHandle, RulesetFile.Tutorials, Tutorials);
+    }
 
+    private void ApplyBaseRulesetFallbacks(bool hasRuinRewardsFile, bool hasGlobalUniquesFile)
+    {
         // Add objects that might not be present in base ruleset mods, but are required
-        if (ModOptions.IsBaseRuleset)
+        var fallbackLazy = new KotlinLazy<Ruleset>(RulesetCache.GetVanillaRuleset); // clone at most once
+        // This one should be temporary
+        if (UnitTypes.Count == 0)
+            UnitTypes.PutAll(fallbackLazy.Value.UnitTypes);
+
+        // These should be permanent
+        if (!hasRuinRewardsFile)
+            RuinRewards.PutAll(fallbackLazy.Value.RuinRewards);
+
+        if (!hasGlobalUniquesFile)
+            GlobalUniques = fallbackLazy.Value.GlobalUniques;
+
+        // If we have no victories, add all the default victories
+        if (Victories.Count == 0) Victories.PutAll(fallbackLazy.Value.Victories);
+
+        if (Speeds.Count == 0) Speeds.PutAll(fallbackLazy.Value.Speeds);
+        if (Difficulties.Count == 0) Difficulties.PutAll(fallbackLazy.Value.Difficulties);
+
+        if (CityStateTypes.Count == 0)
         {
-            var fallbackLazy = new KotlinLazy<Ruleset>(RulesetCache.GetVanillaRuleset); // clone at most once
-            // This one should be temporary
-            if (UnitTypes.Count == 0)
-                UnitTypes.PutAll(fallbackLazy.Value.UnitTypes);
-
-            // These should be permanent
-            if (!ruinRewardsFile.Exists)
-                RuinRewards.PutAll(fallbackLazy.Value.RuinRewards);
-
-            if (!globalUniquesFile.Exists)
-                GlobalUniques = fallbackLazy.Value.GlobalUniques;
-
-            // If we have no victories, add all the default victories
-            if (Victories.Count == 0) Victories.PutAll(fallbackLazy.Value.Victories);
-
-            if (Speeds.Count == 0) Speeds.PutAll(fallbackLazy.Value.Speeds);
-            if (Difficulties.Count == 0) Difficulties.PutAll(fallbackLazy.Value.Difficulties);
-
-            if (CityStateTypes.Count == 0)
+            foreach (var cityStateType in fallbackLazy.Value.CityStateTypes.Values.ToList())
             {
-                foreach (var cityStateType in fallbackLazy.Value.CityStateTypes.Values.ToList())
+                CityStateTypes[cityStateType.Name] = new CityStateType
                 {
-                    CityStateTypes[cityStateType.Name] = new CityStateType
-                    {
-                        Name = cityStateType.Name,
-                        Color = cityStateType.Color,
-                        Uniques = cityStateType.Uniques.Where(it => IsUniqueValid(this, it)).ToList(),
-                        FriendBonusUniques = cityStateType.FriendBonusUniques.Where(it => IsUniqueValid(this, it)).ToList(),
-                        AllyBonusUniques = cityStateType.AllyBonusUniques.Where(it => IsUniqueValid(this, it)).ToList(),
-                    };
-                }
+                    Name = cityStateType.Name,
+                    Color = cityStateType.Color,
+                    Uniques = cityStateType.Uniques.Where(it => IsUniqueValid(this, it)).ToList(),
+                    FriendBonusUniques = cityStateType.FriendBonusUniques.Where(it => IsUniqueValid(this, it)).ToList(),
+                    AllyBonusUniques = cityStateType.AllyBonusUniques.Where(it => IsUniqueValid(this, it)).ToList(),
+                };
             }
-
-            UpdateResourceTransients();
         }
+
+        UpdateResourceTransients();
     }
 
     private void LoadPolicies(List<PolicyBranch> branches)

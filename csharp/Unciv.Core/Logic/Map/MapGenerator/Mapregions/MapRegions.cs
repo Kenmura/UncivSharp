@@ -287,7 +287,29 @@ public class MapRegions(Ruleset ruleset)
         if (civilizations.Count == 0) return;
 
         AssignRegionTypes();
+        GenerateTileDataAndFindStarts(tileMap);
 
+        var civsByBiasType = BucketCivsByBias(civilizations, gameParameters, out var civBiases);
+        var coastBiasCivs = CoastCivsPlacedFirstAlongOceanFirst(civsByBiasType.GetValueOrDefault(BiasTypes.Coastal) ?? []);
+        var positiveBiasCivs = civsByBiasType.GetValueOrDefault(BiasTypes.Positive)
+            ?.OrderBy(it => civBiases[it].Count).ToList() // civs with only one desired region go first
+            ?? [];
+        var negativeBiasCivs = civsByBiasType.GetValueOrDefault(BiasTypes.Negative)
+            ?.OrderByDescending(it => civBiases[it].Count).ToList() // Civs with more complex avoids go first
+            ?? [];
+        var randomCivs = civsByBiasType.GetValueOrDefault(BiasTypes.Random)
+            ?.ToList() // We might fill this up as we go
+            ?? [];
+        var unpickedRegions = regions.ToList();
+
+        AssignCoastBiasCivs(tileMap, coastBiasCivs, unpickedRegions, randomCivs);
+        AssignPositiveBiasCivs(positiveBiasCivs, civBiases, unpickedRegions, randomCivs);
+        AssignNegativeBiasCivs(negativeBiasCivs, civBiases, unpickedRegions, randomCivs);
+        AssignRandomCivs(randomCivs, unpickedRegions);
+    }
+
+    private void GenerateTileDataAndFindStarts(TileMap tileMap)
+    {
         // Generate tile data for all tiles
         tileData = new TileDataMap(tileMap.Values.Count);
         foreach (var tile in tileMap.Values)
@@ -303,8 +325,14 @@ public class MapRegions(Ruleset ruleset)
         {
             StartNormalizer.NormalizeStart(tileMap[region.StartPosition.NotNull()], tileMap, tileData, Ruleset, isMinorCiv: false);
         }
+    }
 
-        var civBiases = new Dictionary<IMapRegionsCivilization, List<string>>();
+    private Dictionary<BiasTypes, List<IMapRegionsCivilization>> BucketCivsByBias(
+        IReadOnlyList<IMapRegionsCivilization> civilizations,
+        GameParameters gameParameters,
+        out Dictionary<IMapRegionsCivilization, List<string>> civBiases)
+    {
+        civBiases = new Dictionary<IMapRegionsCivilization, List<string>>();
         foreach (var civ in civilizations) civBiases[civ] = civ.GetStartBias(Ruleset);
         // This ensures each civ can only be in one of the buckets
         var civsByBiasType = new Dictionary<BiasTypes, List<IMapRegionsCivilization>>();
@@ -320,57 +348,29 @@ public class MapRegions(Ruleset ruleset)
             if (!civsByBiasType.TryGetValue(bucket, out var list)) civsByBiasType[bucket] = list = [];
             list.Add(civ);
         }
+        return civsByBiasType;
+    }
 
-        var coastBiasCivs = CoastCivsPlacedFirstAlongOceanFirst(civsByBiasType.GetValueOrDefault(BiasTypes.Coastal) ?? []);
-        var positiveBiasCivs = civsByBiasType.GetValueOrDefault(BiasTypes.Positive)
-            ?.OrderBy(it => civBiases[it].Count).ToList() // civs with only one desired region go first
-            ?? [];
-        var negativeBiasCivs = civsByBiasType.GetValueOrDefault(BiasTypes.Negative)
-            ?.OrderByDescending(it => civBiases[it].Count).ToList() // Civs with more complex avoids go first
-            ?? [];
-        var randomCivs = civsByBiasType.GetValueOrDefault(BiasTypes.Random)
-            ?.ToList() // We might fill this up as we go
-            ?? [];
-        var positiveBiasFallbackCivs = new List<IMapRegionsCivilization>(); // Civs who couldn't get their desired region at first pass
-        var unpickedRegions = regions.ToList();
-
-        // First assign coast bias civs
+    private void AssignCoastBiasCivs(
+        TileMap tileMap,
+        IReadOnlyList<IMapRegionsCivilization> coastBiasCivs,
+        List<Region> unpickedRegions,
+        List<IMapRegionsCivilization> randomCivs)
+    {
         foreach (var civ in coastBiasCivs)
         {
-            // Try to find a coastal start, preferably a really coastal one
-            var startRegion = unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].IsAdjacentToCoast())
-                .MaxByOrNull(it => it.GetTerrainAmount("Coastal"));
-            if (startRegion != null)
-            {
-                LogAssignRegion(true, BiasTypes.Coastal, civ, startRegion);
-                AssignCivToRegion(civ, startRegion);
-                unpickedRegions.Remove(startRegion);
-                continue;
-            }
-            // Else adjacent to a lake
-            startRegion = unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].Neighbors
-                    .Any(neighbor => ((IHasUniques)neighbor.GetBaseTerrain()).HasUnique(UniqueType.FreshWater)))
-                .MaxByOrNull(it => it.GetTerrainAmount("Coastal"));
-            if (startRegion != null)
-            {
-                LogAssignRegion(true, BiasTypes.Coastal, civ, startRegion);
-                AssignCivToRegion(civ, startRegion);
-                unpickedRegions.Remove(startRegion);
-                continue;
-            }
-            // Else adjacent to a river
-            startRegion = unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].IsAdjacentToRiver())
-                .MaxByOrNull(it => it.GetTerrainAmount("Coastal"));
-            if (startRegion != null)
-            {
-                LogAssignRegion(true, BiasTypes.Coastal, civ, startRegion);
-                AssignCivToRegion(civ, startRegion);
-                unpickedRegions.Remove(startRegion);
-                continue;
-            }
-            // Else at least close to a river ????
-            startRegion = unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].Neighbors.Any(neighbor => neighbor.IsAdjacentToRiver()))
-                .MaxByOrNull(it => it.GetTerrainAmount("Coastal"));
+            // Try to find a coastal start, preferably a really coastal one; else lake, river, or near river
+            var startRegion =
+                unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].IsAdjacentToCoast())
+                    .MaxByOrNull(it => it.GetTerrainAmount("Coastal"))
+                ?? unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].Neighbors
+                        .Any(neighbor => ((IHasUniques)neighbor.GetBaseTerrain()).HasUnique(UniqueType.FreshWater)))
+                    .MaxByOrNull(it => it.GetTerrainAmount("Coastal"))
+                ?? unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].IsAdjacentToRiver())
+                    .MaxByOrNull(it => it.GetTerrainAmount("Coastal"))
+                ?? unpickedRegions.Where(it => tileMap[it.StartPosition.NotNull()].Neighbors.Any(neighbor => neighbor.IsAdjacentToRiver()))
+                    .MaxByOrNull(it => it.GetTerrainAmount("Coastal"));
+
             if (startRegion != null)
             {
                 LogAssignRegion(true, BiasTypes.Coastal, civ, startRegion);
@@ -382,8 +382,15 @@ public class MapRegions(Ruleset ruleset)
             LogAssignRegion(false, BiasTypes.Coastal, civ);
             randomCivs.Add(civ);
         }
+    }
 
-        // Next do positive bias civs
+    private void AssignPositiveBiasCivs(
+        IReadOnlyList<IMapRegionsCivilization> positiveBiasCivs,
+        Dictionary<IMapRegionsCivilization, List<string>> civBiases,
+        List<Region> unpickedRegions,
+        List<IMapRegionsCivilization> randomCivs)
+    {
+        var positiveBiasFallbackCivs = new List<IMapRegionsCivilization>(); // Civs who couldn't get their desired region at first pass
         foreach (var civ in positiveBiasCivs)
         {
             // Try to find a start that matches any of the desired regions, ideally with lots of desired terrain
@@ -416,8 +423,14 @@ public class MapRegions(Ruleset ruleset)
             AssignCivToRegion(civ, startRegion);
             unpickedRegions.Remove(startRegion);
         }
+    }
 
-        // Next do negative bias ones (ie "Avoid []")
+    private void AssignNegativeBiasCivs(
+        IReadOnlyList<IMapRegionsCivilization> negativeBiasCivs,
+        Dictionary<IMapRegionsCivilization, List<string>> civBiases,
+        List<Region> unpickedRegions,
+        List<IMapRegionsCivilization> randomCivs)
+    {
         foreach (var civ in negativeBiasCivs)
         {
             var avoidBias = civBiases[civ].Where(bias => bias.EqualsPlaceholderText("Avoid []")).ToList();
@@ -437,8 +450,10 @@ public class MapRegions(Ruleset ruleset)
             LogAssignRegion(false, BiasTypes.Negative, civ);
             randomCivs.Add(civ); // else pick a random region at the end
         }
+    }
 
-        // Finally assign the remaining civs randomly
+    private void AssignRandomCivs(IReadOnlyList<IMapRegionsCivilization> randomCivs, List<Region> unpickedRegions)
+    {
         foreach (var civ in randomCivs)
         {
             var rng = civ.StateBasedRandom("MapRegions.assignRegions");

@@ -78,304 +78,366 @@ public static class Conditionals
         if (conditional.IsOtherModifierType)
             return true; // not a filtering condition, includes e.g. ModifierHiddenFromUsers
 
-        // Helper to simplify conditional tests requiring gameInfo
-        bool CheckOnGameInfo(Func<IGameContextGameInfo, bool> predicate)
+        if (TryEvalGameAndEraConditional(unique, conditional, state, out var result)) return result;
+        if (TryEvalCivAndReligionConditional(unique, conditional, state, out result)) return result;
+        if (TryEvalCityConditional(conditional, state, out result)) return result;
+        if (TryEvalUnitAndCombatConditional(conditional, state, out result)) return result;
+        if (TryEvalTileAndCountableConditional(conditional, state, out result)) return result;
+        return false;
+    }
+
+    private static bool CheckOnGameInfo(GameContext state, Func<IGameContextGameInfo, bool> predicate) =>
+        state.GameInfo != null && predicate(state.GameInfo);
+
+    private static bool CheckOnCiv(GameContext state, Func<IGameContextCivilization, bool> predicate) =>
+        state.RelevantCiv != null && predicate(state.RelevantCiv);
+
+    private static bool CheckOnCity(GameContext state, Func<IGameContextCity, bool> predicate) =>
+        state.RelevantCity != null && predicate(state.RelevantCity);
+
+    private static bool CompareEra(GameContext state, string eraParam, Func<int, int, bool> compare)
+    {
+        if (state.GameInfo == null) return false;
+        int? era = state.GameInfo.Ruleset.GetEraNumber(eraParam);
+        if (era == null) return false;
+        return compare(state.RelevantCiv.NotNull().GetEraNumber(), era.Value);
+    }
+
+    private static bool CheckResourceOrStatAmount(
+        GameContext state,
+        string resourceOrStatName,
+        float lowerLimit,
+        float upperLimit,
+        bool modifyByGameSpeed,
+        Func<int, float, float, bool> compare)
+    {
+        if (state.GameInfo == null) return false;
+        float gameSpeedModifier = modifyByGameSpeed ? state.GameInfo.Speed.Modifier : 1f;
+
+        if (state.GameInfo.Ruleset.TileResources.ContainsKey(resourceOrStatName))
+            return compare(state.GetResourceAmount(resourceOrStatName), lowerLimit * gameSpeedModifier, upperLimit * gameSpeedModifier);
+        var stat = StatExtensions.SafeValueOf(resourceOrStatName);
+        if (stat == null) return false;
+        int statReserve = state.GetStatAmount(stat.Value);
+
+        gameSpeedModifier = modifyByGameSpeed ? state.GameInfo.Speed.GetStatCostModifier(stat.Value) : 1f;
+        return compare(statReserve, lowerLimit * gameSpeedModifier, upperLimit * gameSpeedModifier);
+    }
+
+    private static bool CompareCountables2(GameContext state, string first, string second, Func<int, int, bool> compare)
+    {
+        int? firstNumber = Countables.GetCountableAmount(first, state);
+        int? secondNumber = Countables.GetCountableAmount(second, state);
+        return firstNumber != null && secondNumber != null && compare(firstNumber.Value, secondNumber.Value);
+    }
+
+    private static bool CompareCountables3(GameContext state, string first, string second, string third, Func<int, int, int, bool> compare)
+    {
+        int? firstNumber = Countables.GetCountableAmount(first, state);
+        int? secondNumber = Countables.GetCountableAmount(second, state);
+        int? thirdNumber = Countables.GetCountableAmount(third, state);
+        return firstNumber != null && secondNumber != null && thirdNumber != null
+            && compare(firstNumber.Value, secondNumber.Value, thirdNumber.Value);
+    }
+
+    private static bool BuildingBuiltBy(IGameContextCivilization civ, string name) =>
+        civ.Cities.Any(it => it.ContainsBuildingOrEquivalent(name));
+
+    private static bool DifficultyCompare(IGameContextGameInfo gameInfo, string difficulty, Func<int, int, bool> compare)
+    {
+        if (gameInfo.Ruleset.DifficultyNames.Contains(difficulty))
         {
-            if (state.GameInfo == null) return false;
-            return predicate(state.GameInfo);
+            var difficulties = gameInfo.Ruleset.DifficultyNames;
+            return compare(IndexOf(difficulties, gameInfo.GetDifficultyName()), IndexOf(difficulties, difficulty));
         }
+        return false;
+    }
 
-        // Helper to simplify conditional tests requiring a Civilization
-        bool CheckOnCiv(Func<IGameContextCivilization, bool> predicate)
-        {
-            if (state.RelevantCiv == null) return false;
-            return predicate(state.RelevantCiv);
-        }
-
-        // Helper to simplify conditional tests requiring a City
-        bool CheckOnCity(Func<IGameContextCity, bool> predicate)
-        {
-            if (state.RelevantCity == null) return false;
-            return predicate(state.RelevantCity);
-        }
-
-        // Helper to simplify the "compare civ's current era with named era" conditions
-        bool CompareEra(string eraParam, Func<int, int, bool> compare)
-        {
-            if (state.GameInfo == null) return false;
-            int? era = state.GameInfo.Ruleset.GetEraNumber(eraParam);
-            if (era == null) return false;
-            return compare(state.RelevantCiv.NotNull().GetEraNumber(), era.Value);
-        }
-
-        // Helper for ConditionalWhenAboveAmountStatResource and its below counterpart
-        bool CheckResourceOrStatAmount(string resourceOrStatName, float lowerLimit, float upperLimit, bool modifyByGameSpeed,
-            Func<int, float, float, bool> compare)
-        {
-            if (state.GameInfo == null) return false;
-            float gameSpeedModifier = modifyByGameSpeed ? state.GameInfo.Speed.Modifier : 1f;
-
-            if (state.GameInfo.Ruleset.TileResources.ContainsKey(resourceOrStatName))
-                return compare(state.GetResourceAmount(resourceOrStatName), lowerLimit * gameSpeedModifier, upperLimit * gameSpeedModifier);
-            var stat = StatExtensions.SafeValueOf(resourceOrStatName);
-            if (stat == null) return false;
-            int statReserve = state.GetStatAmount(stat.Value);
-
-            gameSpeedModifier = modifyByGameSpeed ? state.GameInfo.Speed.GetStatCostModifier(stat.Value) : 1f;
-            return compare(statReserve, lowerLimit * gameSpeedModifier, upperLimit * gameSpeedModifier);
-        }
-
-        bool CompareCountables2(string first, string second, Func<int, int, bool> compare)
-        {
-            int? firstNumber = Countables.GetCountableAmount(first, state);
-            int? secondNumber = Countables.GetCountableAmount(second, state);
-            return firstNumber != null && secondNumber != null && compare(firstNumber.Value, secondNumber.Value);
-        }
-
-        bool CompareCountables3(string first, string second, string third, Func<int, int, int, bool> compare)
-        {
-            int? firstNumber = Countables.GetCountableAmount(first, state);
-            int? secondNumber = Countables.GetCountableAmount(second, state);
-            int? thirdNumber = Countables.GetCountableAmount(third, state);
-            return firstNumber != null && secondNumber != null && thirdNumber != null
-                && compare(firstNumber.Value, secondNumber.Value, thirdNumber.Value);
-        }
-
+    private static bool TryEvalGameAndEraConditional(Unique? unique, Unique conditional, GameContext state, out bool result)
+    {
         var parameters = conditional.Params;
-        // Kotlin evaluates params[n] lazily inside each branch, so an absent/invalid param only throws in its own branch.
         string P(int index) => parameters[index];
 
-        bool BuildingBuiltBy(IGameContextCivilization civ, string name) => civ.Cities.Any(it => it.ContainsBuildingOrEquivalent(name));
-
-        bool DifficultyCompare(IGameContextGameInfo gameInfo, Func<int, int, bool> compare)
+        result = conditional.Type switch
         {
-            string difficulty = P(0);
-            if (gameInfo.Ruleset.DifficultyNames.Contains(difficulty))
-            {
-                var difficulties = gameInfo.Ruleset.DifficultyNames;
-                return compare(IndexOf(difficulties, gameInfo.GetDifficultyName()), IndexOf(difficulties, difficulty));
-            }
-            return false;
-        }
+            UniqueType.ConditionalChance => GetStateBasedRandom(state, unique) < ToFloat(P(0)) / 100f,
+            UniqueType.ConditionalEveryTurns => CheckOnGameInfo(state, g => g.Turns % ToInt(P(0)) == 0),
+            UniqueType.ConditionalBeforeTurns => CheckOnGameInfo(state, g => g.Turns < ToInt(P(0))),
+            UniqueType.ConditionalAfterTurns => CheckOnGameInfo(state, g => g.Turns >= ToInt(P(0))),
+            UniqueType.ConditionalTutorialsEnabled => Settings.ShowTutorials,
+            UniqueType.ConditionalTutorialCompleted => Settings.IsTutorialTaskCompleted(P(0)),
+            UniqueType.ConditionalBeforeEra => CompareEra(state, P(0), (current, param) => current < param),
+            UniqueType.ConditionalStartingFromEra => CompareEra(state, P(0), (current, param) => current >= param),
+            UniqueType.ConditionalDuringEra => CompareEra(state, P(0), (current, param) => current == param),
+            UniqueType.ConditionalIfStartingInEra => CheckOnGameInfo(state, g => g.GameParameters.StartingEra == P(0)),
+            UniqueType.ConditionalSpeed => CheckOnGameInfo(state, g => g.GameParameters.Speed == P(0)),
+            UniqueType.ConditionalDifficulty => CheckOnGameInfo(state, g => g.GameParameters.Difficulty == P(0)),
+            UniqueType.ConditionalDifficultyOrHigher => CheckOnGameInfo(state, g => DifficultyCompare(g, P(0), (a, b) => a >= b)),
+            UniqueType.ConditionalDifficultyOrLower => CheckOnGameInfo(state, g => DifficultyCompare(g, P(0), (a, b) => a <= b)),
+            UniqueType.ConditionalVictoryEnabled => CheckOnGameInfo(state, g => g.GameParameters.VictoryTypes.Contains(P(0))),
+            UniqueType.ConditionalVictoryDisabled => CheckOnGameInfo(state, g => !g.GameParameters.VictoryTypes.Contains(P(0))),
+            UniqueType.ConditionalReligionEnabled => CheckOnGameInfo(state, g => g.IsReligionEnabled()),
+            UniqueType.ConditionalReligionDisabled => CheckOnGameInfo(state, g => !g.IsReligionEnabled()),
+            UniqueType.ConditionalEspionageEnabled => CheckOnGameInfo(state, g => g.IsEspionageEnabled()),
+            UniqueType.ConditionalEspionageDisabled => CheckOnGameInfo(state, g => !g.IsEspionageEnabled()),
+            UniqueType.ConditionalNuclearWeaponsEnabled => CheckOnGameInfo(state, g => g.GameParameters.NuclearWeaponsEnabled),
+            UniqueType.ConditionalNuclearWeaponsDisabled => CheckOnGameInfo(state, g => !g.GameParameters.NuclearWeaponsEnabled),
+            UniqueType.ConditionalModEnabled => CheckOnGameInfo(state, g => ModsAndBase(g).Any(it => ModCompatibility.ModNameFilter(it, P(0)))),
+            UniqueType.ConditionalModNotEnabled => CheckOnGameInfo(state, g => !ModsAndBase(g).Any(it => ModCompatibility.ModNameFilter(it, P(0)))),
+            _ => false,
+        };
+        return conditional.Type is
+            UniqueType.ConditionalChance or UniqueType.ConditionalEveryTurns or UniqueType.ConditionalBeforeTurns or
+            UniqueType.ConditionalAfterTurns or UniqueType.ConditionalTutorialsEnabled or UniqueType.ConditionalTutorialCompleted or
+            UniqueType.ConditionalBeforeEra or UniqueType.ConditionalStartingFromEra or UniqueType.ConditionalDuringEra or
+            UniqueType.ConditionalIfStartingInEra or UniqueType.ConditionalSpeed or UniqueType.ConditionalDifficulty or
+            UniqueType.ConditionalDifficultyOrHigher or UniqueType.ConditionalDifficultyOrLower or UniqueType.ConditionalVictoryEnabled or
+            UniqueType.ConditionalVictoryDisabled or UniqueType.ConditionalReligionEnabled or UniqueType.ConditionalReligionDisabled or
+            UniqueType.ConditionalEspionageEnabled or UniqueType.ConditionalEspionageDisabled or UniqueType.ConditionalNuclearWeaponsEnabled or
+            UniqueType.ConditionalNuclearWeaponsDisabled or UniqueType.ConditionalModEnabled or UniqueType.ConditionalModNotEnabled;
+    }
+
+    private static bool TryEvalCivAndReligionConditional(Unique? unique, Unique conditional, GameContext state, out bool result)
+    {
+        var parameters = conditional.Params;
+        string P(int index) => parameters[index];
 
         switch (conditional.Type)
         {
-            case UniqueType.ConditionalChance: return GetStateBasedRandom(state, unique) < ToFloat(P(0)) / 100f;
-            case UniqueType.ConditionalEveryTurns: return CheckOnGameInfo(g => g.Turns % ToInt(P(0)) == 0);
-            case UniqueType.ConditionalBeforeTurns: return CheckOnGameInfo(g => g.Turns < ToInt(P(0)));
-            case UniqueType.ConditionalAfterTurns: return CheckOnGameInfo(g => g.Turns >= ToInt(P(0)));
-            case UniqueType.ConditionalTutorialsEnabled: return Settings.ShowTutorials;
-            case UniqueType.ConditionalTutorialCompleted: return Settings.IsTutorialTaskCompleted(P(0));
-
-            case UniqueType.ConditionalCivFilter: return CheckOnCiv(c => c.MatchesFilter(P(0), state));
-            case UniqueType.ConditionalWar: return CheckOnCiv(c => c.IsAtWar());
-            case UniqueType.ConditionalNotWar: return CheckOnCiv(c => !c.IsAtWar());
-            case UniqueType.ConditionalWithResource: return state.GetResourceAmount(P(0)) > 0;
-            case UniqueType.ConditionalWithoutResource: return state.GetResourceAmount(P(0)) <= 0;
+            case UniqueType.ConditionalCivFilter: result = CheckOnCiv(state, c => c.MatchesFilter(P(0), state)); return true;
+            case UniqueType.ConditionalWar: result = CheckOnCiv(state, c => c.IsAtWar()); return true;
+            case UniqueType.ConditionalNotWar: result = CheckOnCiv(state, c => !c.IsAtWar()); return true;
+            case UniqueType.ConditionalWithResource: result = state.GetResourceAmount(P(0)) > 0; return true;
+            case UniqueType.ConditionalWithoutResource: result = state.GetResourceAmount(P(0)) <= 0; return true;
 
             case UniqueType.ConditionalWhenAboveAmountStatResource:
-                return CheckResourceOrStatAmount(P(1), ToFloat(P(0)), float.MaxValue, unique?.IsModifiedByGameSpeed() == true,
+                result = CheckResourceOrStatAmount(state, P(1), ToFloat(P(0)), float.MaxValue, unique?.IsModifiedByGameSpeed() == true,
                     (current, lowerLimit, _) => current > lowerLimit);
+                return true;
             case UniqueType.ConditionalWhenBelowAmountStatResource:
                 // Kotlin Float.MIN_VALUE is the smallest positive float, i.e. float.Epsilon (not float.MinValue)
-                return CheckResourceOrStatAmount(P(1), float.Epsilon, ToFloat(P(0)), unique?.IsModifiedByGameSpeed() == true,
+                result = CheckResourceOrStatAmount(state, P(1), float.Epsilon, ToFloat(P(0)), unique?.IsModifiedByGameSpeed() == true,
                     (current, _, upperLimit) => current < upperLimit);
+                return true;
             case UniqueType.ConditionalWhenBetweenStatResource:
-                return CheckResourceOrStatAmount(P(2), ToFloat(P(0)), ToFloat(P(1)), unique?.IsModifiedByGameSpeed() == true,
+                result = CheckResourceOrStatAmount(state, P(2), ToFloat(P(0)), ToFloat(P(1)), unique?.IsModifiedByGameSpeed() == true,
                     (current, lowerLimit, upperLimit) => current >= lowerLimit && current <= upperLimit);
+                return true;
 
-            case UniqueType.ConditionalHappy: return CheckOnCiv(c => c.Happiness >= 0);
-            case UniqueType.ConditionalGoldenAge: return CheckOnCiv(c => c.IsGoldenAge());
-            case UniqueType.ConditionalNotGoldenAge: return CheckOnCiv(c => !c.IsGoldenAge());
-
-            case UniqueType.ConditionalBeforeEra: return CompareEra(P(0), (current, param) => current < param);
-            case UniqueType.ConditionalStartingFromEra: return CompareEra(P(0), (current, param) => current >= param);
-            case UniqueType.ConditionalDuringEra: return CompareEra(P(0), (current, param) => current == param);
-            case UniqueType.ConditionalIfStartingInEra: return CheckOnGameInfo(g => g.GameParameters.StartingEra == P(0));
-            case UniqueType.ConditionalSpeed: return CheckOnGameInfo(g => g.GameParameters.Speed == P(0));
-            case UniqueType.ConditionalDifficulty: return CheckOnGameInfo(g => g.GameParameters.Difficulty == P(0));
-            case UniqueType.ConditionalDifficultyOrHigher: return CheckOnGameInfo(g => DifficultyCompare(g, (a, b) => a >= b));
-            case UniqueType.ConditionalDifficultyOrLower: return CheckOnGameInfo(g => DifficultyCompare(g, (a, b) => a <= b));
-            case UniqueType.ConditionalVictoryEnabled: return CheckOnGameInfo(g => g.GameParameters.VictoryTypes.Contains(P(0)));
-            case UniqueType.ConditionalVictoryDisabled: return CheckOnGameInfo(g => !g.GameParameters.VictoryTypes.Contains(P(0)));
-            case UniqueType.ConditionalReligionEnabled: return CheckOnGameInfo(g => g.IsReligionEnabled());
-            case UniqueType.ConditionalReligionDisabled: return CheckOnGameInfo(g => !g.IsReligionEnabled());
-            case UniqueType.ConditionalEspionageEnabled: return CheckOnGameInfo(g => g.IsEspionageEnabled());
-            case UniqueType.ConditionalEspionageDisabled: return CheckOnGameInfo(g => !g.IsEspionageEnabled());
-            case UniqueType.ConditionalNuclearWeaponsEnabled: return CheckOnGameInfo(g => g.GameParameters.NuclearWeaponsEnabled);
-            case UniqueType.ConditionalNuclearWeaponsDisabled: return CheckOnGameInfo(g => !g.GameParameters.NuclearWeaponsEnabled);
+            case UniqueType.ConditionalHappy: result = CheckOnCiv(state, c => c.Happiness >= 0); return true;
+            case UniqueType.ConditionalGoldenAge: result = CheckOnCiv(state, c => c.IsGoldenAge()); return true;
+            case UniqueType.ConditionalNotGoldenAge: result = CheckOnCiv(state, c => !c.IsGoldenAge()); return true;
             case UniqueType.ConditionalTech:
-                return CheckOnCiv(c =>
-                {
-                    string filter = P(0);
-                    if (c.GameInfo.NotNull().Ruleset.Technologies.ContainsKey(filter)) return c.IsTechResearched(P(0)); // fast common case
-                    return c.AnyResearchedTechnologyMatchesFilter(filter);
-                });
+                result = CheckOnCiv(state, c =>
+                    c.GameInfo.NotNull().Ruleset.Technologies.ContainsKey(P(0)) ? c.IsTechResearched(P(0)) : c.AnyResearchedTechnologyMatchesFilter(P(0)));
+                return true;
             case UniqueType.ConditionalNoTech:
-                return CheckOnCiv(c =>
-                {
-                    string filter = P(0);
-                    if (c.GameInfo.NotNull().Ruleset.Technologies.ContainsKey(filter)) return !c.IsTechResearched(P(0)); // fast common case
-                    return !c.AnyResearchedTechnologyMatchesFilter(filter);
-                });
-            case UniqueType.ConditionalWhileResearching: return CheckOnCiv(c => c.CurrentTechnologyMatchesFilter(P(0)));
+                result = CheckOnCiv(state, c =>
+                    c.GameInfo.NotNull().Ruleset.Technologies.ContainsKey(P(0)) ? !c.IsTechResearched(P(0)) : !c.AnyResearchedTechnologyMatchesFilter(P(0)));
+                return true;
+            case UniqueType.ConditionalWhileResearching: result = CheckOnCiv(state, c => c.CurrentTechnologyMatchesFilter(P(0))); return true;
             case UniqueType.ConditionalNoCivAdopted:
-                return CheckOnGameInfo(g => !g.Civilizations.Any(it =>
+                result = CheckOnGameInfo(state, g => !g.Civilizations.Any(it =>
                     it.IsMajorCiv() && it.IsAlive() && (it.IsPolicyAdopted(P(0)) || it.Religion?.HasBelief(P(0)) == true)));
+                return true;
             case UniqueType.ConditionalAfterPolicyOrBelief:
-                return CheckOnCiv(c => c.IsPolicyAdopted(P(0)) || c.Religion?.HasBelief(P(0)) == true);
+                result = CheckOnCiv(state, c => c.IsPolicyAdopted(P(0)) || c.Religion?.HasBelief(P(0)) == true); return true;
             case UniqueType.ConditionalBeforePolicyOrBelief:
-                return CheckOnCiv(c => !c.IsPolicyAdopted(P(0)) && c.Religion?.HasBelief(P(0)) != true);
-            case UniqueType.ConditionalBeforePantheon: return CheckOnCiv(c => c.ReligionState == ReligionState.None);
-            case UniqueType.ConditionalAfterPantheon: return CheckOnCiv(c => c.ReligionState != ReligionState.None);
-            case UniqueType.ConditionalBeforeReligion: return CheckOnCiv(c => c.ReligionState < ReligionState.Religion);
-            case UniqueType.ConditionalAfterReligion: return CheckOnCiv(c => c.ReligionState >= ReligionState.Religion);
-            case UniqueType.ConditionalBeforeEnhancingReligion: return CheckOnCiv(c => c.ReligionState < ReligionState.EnhancedReligion);
-            case UniqueType.ConditionalAfterEnhancingReligion: return CheckOnCiv(c => c.ReligionState >= ReligionState.EnhancedReligion);
-            case UniqueType.ConditionalAfterGeneratingGreatProphet: return CheckOnCiv(c => c.GreatProphetsEarned() > 0);
+                result = CheckOnCiv(state, c => !c.IsPolicyAdopted(P(0)) && c.Religion?.HasBelief(P(0)) != true); return true;
+            case UniqueType.ConditionalBeforePantheon: result = CheckOnCiv(state, c => c.ReligionState == ReligionState.None); return true;
+            case UniqueType.ConditionalAfterPantheon: result = CheckOnCiv(state, c => c.ReligionState != ReligionState.None); return true;
+            case UniqueType.ConditionalBeforeReligion: result = CheckOnCiv(state, c => c.ReligionState < ReligionState.Religion); return true;
+            case UniqueType.ConditionalAfterReligion: result = CheckOnCiv(state, c => c.ReligionState >= ReligionState.Religion); return true;
+            case UniqueType.ConditionalBeforeEnhancingReligion: result = CheckOnCiv(state, c => c.ReligionState < ReligionState.EnhancedReligion); return true;
+            case UniqueType.ConditionalAfterEnhancingReligion: result = CheckOnCiv(state, c => c.ReligionState >= ReligionState.EnhancedReligion); return true;
+            case UniqueType.ConditionalAfterGeneratingGreatProphet: result = CheckOnCiv(state, c => c.GreatProphetsEarned() > 0); return true;
 
-            case UniqueType.ConditionalBuildingBuilt: return CheckOnCiv(c => BuildingBuiltBy(c, P(0)));
-            case UniqueType.ConditionalBuildingNotBuilt: return CheckOnCiv(c => !BuildingBuiltBy(c, P(0)));
+            case UniqueType.ConditionalBuildingBuilt: result = CheckOnCiv(state, c => BuildingBuiltBy(c, P(0))); return true;
+            case UniqueType.ConditionalBuildingNotBuilt: result = CheckOnCiv(state, c => !BuildingBuiltBy(c, P(0))); return true;
             case UniqueType.ConditionalBuildingBuiltAll:
-                return CheckOnCiv(c => c.Cities.Where(it => it.MatchesFilter(P(1), null)).All(it => it.ContainsBuildingOrEquivalent(P(0))));
+                result = CheckOnCiv(state, c => c.Cities.Where(it => it.MatchesFilter(P(1), null)).All(it => it.ContainsBuildingOrEquivalent(P(0)))); return true;
             case UniqueType.ConditionalBuildingBuiltAmount:
-                return CheckOnCiv(c => c.Cities.Count(it => it.ContainsBuildingOrEquivalent(P(0)) && it.MatchesFilter(P(2), null)) >= ToInt(P(1)));
+                result = CheckOnCiv(state, c => c.Cities.Count(it => it.ContainsBuildingOrEquivalent(P(0)) && it.MatchesFilter(P(2), null)) >= ToInt(P(1))); return true;
             case UniqueType.ConditionalBuildingBuiltByAnybody:
-                return CheckOnGameInfo(g => g.GetCities().Any(it => it.ContainsBuildingOrEquivalent(P(0))));
+                result = CheckOnGameInfo(state, g => g.GetCities().Any(it => it.ContainsBuildingOrEquivalent(P(0)))); return true;
             case UniqueType.ConditionalBuildingNotBuiltByAnybody:
-                return !CheckOnGameInfo(g => g.GetCities().Any(it => it.ContainsBuildingOrEquivalent(P(0))));
+                result = !CheckOnGameInfo(state, g => g.GetCities().Any(it => it.ContainsBuildingOrEquivalent(P(0)))); return true;
 
+            case UniqueType.ConditionalFirstCivToResearch:
+                result = unique != null
+                    && unique.SourceObjectType == UniqueTarget.Tech
+                    && CheckOnGameInfo(state, g => !g.Civilizations.Any(it =>
+                        !Equals(it, state.RelevantCiv) && it.IsMajorCiv()
+                        && it.IsTechResearched(unique.SourceObjectName.NotNull()))); // guarded by the sourceObjectType check
+                return true;
+            case UniqueType.ConditionalFirstCivToAdopt:
+                result = unique != null
+                    && unique.SourceObjectType == UniqueTarget.Policy
+                    && CheckOnGameInfo(state, g => !g.Civilizations.Any(it =>
+                        !Equals(it, state.RelevantCiv) && it.IsMajorCiv()
+                        && it.IsPolicyAdopted(unique.SourceObjectName.NotNull()))); // guarded by the sourceObjectType check
+                return true;
+
+            default:
+                result = false;
+                return false;
+        }
+    }
+
+    private static bool TryEvalCityConditional(Unique conditional, GameContext state, out bool result)
+    {
+        var parameters = conditional.Params;
+        string P(int index) => parameters[index];
+
+        switch (conditional.Type)
+        {
             // Filtered via city.getMatchingUniques
-            case UniqueType.ConditionalInThisCity: return state.RelevantCity != null;
-            case UniqueType.ConditionalCityFilter: return CheckOnCity(c => c.MatchesFilter(P(0), state.RelevantCiv));
-            case UniqueType.ConditionalCityConnected: return CheckOnCity(c => c.IsConnectedToCapital());
+            case UniqueType.ConditionalInThisCity: result = state.RelevantCity != null; return true;
+            case UniqueType.ConditionalCityFilter: result = CheckOnCity(state, c => c.MatchesFilter(P(0), state.RelevantCiv)); return true;
+            case UniqueType.ConditionalCityConnected: result = CheckOnCity(state, c => c.IsConnectedToCapital()); return true;
             case UniqueType.ConditionalCityReligion:
-                return CheckOnCity(c => c.GetMajorityReligion()?.MatchesFilter(P(0), state, state.RelevantCiv) == true);
+                result = CheckOnCity(state, c => c.GetMajorityReligion()?.MatchesFilter(P(0), state, state.RelevantCiv) == true); return true;
             case UniqueType.ConditionalCityNotReligion:
-                return CheckOnCity(c => c.GetMajorityReligion()?.MatchesFilter(P(0), state, state.RelevantCiv) != true);
-            case UniqueType.ConditionalCityMajorReligion: return CheckOnCity(c => c.GetMajorityReligion()?.IsMajorReligion() == true);
-            case UniqueType.ConditionalCityEnhancedReligion: return CheckOnCity(c => c.GetMajorityReligion()?.IsEnhancedReligion() == true);
+                result = CheckOnCity(state, c => c.GetMajorityReligion()?.MatchesFilter(P(0), state, state.RelevantCiv) != true); return true;
+            case UniqueType.ConditionalCityMajorReligion: result = CheckOnCity(state, c => c.GetMajorityReligion()?.IsMajorReligion() == true); return true;
+            case UniqueType.ConditionalCityEnhancedReligion: result = CheckOnCity(state, c => c.GetMajorityReligion()?.IsEnhancedReligion() == true); return true;
             case UniqueType.ConditionalCityThisReligion:
-                return CheckOnCity(c => Equals(c.GetMajorityReligion(), state.RelevantCiv?.Religion));
-            case UniqueType.ConditionalWLTKD: return CheckOnCity(c => c.IsWeLoveTheKingDayActive());
-            case UniqueType.ConditionalCityWithBuilding: return CheckOnCity(c => c.ContainsBuildingOrEquivalent(P(0)));
-            case UniqueType.ConditionalCityWithoutBuilding: return CheckOnCity(c => !c.ContainsBuildingOrEquivalent(P(0)));
-            case UniqueType.ConditionalPopulationFilter: return CheckOnCity(c => c.GetPopulationFilterAmount(P(1)) >= ToInt(P(0)));
-            case UniqueType.ConditionalExactPopulationFilter: return CheckOnCity(c => c.GetPopulationFilterAmount(P(1)) == ToInt(P(0)));
+                result = CheckOnCity(state, c => Equals(c.GetMajorityReligion(), state.RelevantCiv?.Religion)); return true;
+            case UniqueType.ConditionalWLTKD: result = CheckOnCity(state, c => c.IsWeLoveTheKingDayActive()); return true;
+            case UniqueType.ConditionalCityWithBuilding: result = CheckOnCity(state, c => c.ContainsBuildingOrEquivalent(P(0))); return true;
+            case UniqueType.ConditionalCityWithoutBuilding: result = CheckOnCity(state, c => !c.ContainsBuildingOrEquivalent(P(0))); return true;
+            case UniqueType.ConditionalPopulationFilter: result = CheckOnCity(state, c => c.GetPopulationFilterAmount(P(1)) >= ToInt(P(0))); return true;
+            case UniqueType.ConditionalExactPopulationFilter: result = CheckOnCity(state, c => c.GetPopulationFilterAmount(P(1)) == ToInt(P(0))); return true;
             case UniqueType.ConditionalBetweenPopulationFilter:
-                return CheckOnCity(c =>
+                result = CheckOnCity(state, c =>
                 {
                     int amount = c.GetPopulationFilterAmount(P(2));
                     return amount >= ToInt(P(0)) && amount <= ToInt(P(1));
                 });
-            case UniqueType.ConditionalBelowPopulationFilter: return CheckOnCity(c => c.GetPopulationFilterAmount(P(1)) < ToInt(P(0)));
-            case UniqueType.ConditionalWhenGarrisoned: return CheckOnCity(c => c.CenterTileMilitaryUnitCanGarrison());
+                return true;
+            case UniqueType.ConditionalBelowPopulationFilter: result = CheckOnCity(state, c => c.GetPopulationFilterAmount(P(1)) < ToInt(P(0))); return true;
+            case UniqueType.ConditionalWhenGarrisoned: result = CheckOnCity(state, c => c.CenterTileMilitaryUnitCanGarrison()); return true;
+            default:
+                result = false;
+                return false;
+        }
+    }
 
-            case UniqueType.ConditionalVsCity: return state.TheirCombatant?.MatchesFilter("City", false) == true;
+    private static bool TryEvalUnitAndCombatConditional(Unique conditional, GameContext state, out bool result)
+    {
+        var parameters = conditional.Params;
+        string P(int index) => parameters[index];
+
+        switch (conditional.Type)
+        {
+            case UniqueType.ConditionalVsCity: result = state.TheirCombatant?.MatchesFilter("City", false) == true; return true;
             case UniqueType.ConditionalVsUnits:
             case UniqueType.ConditionalVsCombatant:
-                return state.TheirCombatant?.MatchesFilter(P(0), true) == true;
+                result = state.TheirCombatant?.MatchesFilter(P(0), true) == true; return true;
             case UniqueType.ConditionalOurUnit:
             case UniqueType.ConditionalOurUnitOnUnit:
-                return state.RelevantUnit?.MatchesFilter(P(0)) == true;
+                result = state.RelevantUnit?.MatchesFilter(P(0)) == true; return true;
             case UniqueType.ConditionalUnitWithPromotion:
-                return state.RelevantUnit != null && state.RelevantUnit.HasPromotionOrStatus(P(0));
+                result = state.RelevantUnit != null && state.RelevantUnit.HasPromotionOrStatus(P(0)); return true;
             case UniqueType.ConditionalUnitWithoutPromotion:
-                return state.RelevantUnit != null && !state.RelevantUnit.HasPromotionOrStatus(P(0));
-            case UniqueType.ConditionalAttacking: return state.CombatAction == CombatAction.Attack;
-            case UniqueType.ConditionalDefending: return state.CombatAction == CombatAction.Defend;
+                result = state.RelevantUnit != null && !state.RelevantUnit.HasPromotionOrStatus(P(0)); return true;
+            case UniqueType.ConditionalAttacking: result = state.CombatAction == CombatAction.Attack; return true;
+            case UniqueType.ConditionalDefending: result = state.CombatAction == CombatAction.Defend; return true;
             case UniqueType.ConditionalAboveHP:
-                return (state.RelevantUnit != null && state.RelevantUnit.Health > ToInt(P(0)))
+                result = (state.RelevantUnit != null && state.RelevantUnit.Health > ToInt(P(0)))
                     || (state.OurCombatant != null && state.OurCombatant.GetHealth() > ToInt(P(0)));
+                return true;
             case UniqueType.ConditionalBelowHP:
-                return (state.RelevantUnit != null && state.RelevantUnit.Health < ToInt(P(0)))
+                result = (state.RelevantUnit != null && state.RelevantUnit.Health < ToInt(P(0)))
                     || (state.OurCombatant != null && state.OurCombatant.GetHealth() < ToInt(P(0)));
+                return true;
             case UniqueType.ConditionalAboveMovement:
-                return state.RelevantUnit != null && state.RelevantUnit.CurrentMovement > ToInt(P(0));
+                result = state.RelevantUnit != null && state.RelevantUnit.CurrentMovement > ToInt(P(0)); return true;
             case UniqueType.ConditionalBelowMovement:
-                return state.RelevantUnit != null && state.RelevantUnit.CurrentMovement < ToInt(P(0));
+                result = state.RelevantUnit != null && state.RelevantUnit.CurrentMovement < ToInt(P(0)); return true;
             case UniqueType.ConditionalHasNotUsedOtherActions:
-                return state.Unit == null // So we get the action as a valid action in BaseUnit.hasUnique()
+                result = state.Unit == null // So we get the action as a valid action in BaseUnit.hasUnique()
                     || state.Unit.AbilityToTimesUsedIsEmpty;
+                return true;
             case UniqueType.ConditionalStackedWithUnit:
-                return state.RelevantUnit != null
+                result = state.RelevantUnit != null
                     && state.RelevantUnit.GetTile().GetUnits().Any(it => !Equals(it, state.RelevantUnit) && it.MatchesFilter(P(0)));
+                return true;
             case UniqueType.ConditionalNotStackedWithUnit:
-                return state.RelevantUnit == null
+                result = state.RelevantUnit == null
                     || !state.RelevantUnit.GetTile().GetUnits().Any(it => !Equals(it, state.RelevantUnit) && it.MatchesFilter(P(0)));
-
-            case UniqueType.ConditionalInTiles: return state.RelevantTile?.MatchesFilter(P(0), state.RelevantCiv) == true;
-            case UniqueType.ConditionalInTilesNot: return state.RelevantTile?.MatchesFilter(P(0), state.RelevantCiv) == false;
-            case UniqueType.ConditionalAdjacentTo: return state.RelevantTile?.IsAdjacentTo(P(0), state.RelevantCiv) == true;
-            case UniqueType.ConditionalNotAdjacentTo: return state.RelevantTile?.IsAdjacentTo(P(0), state.RelevantCiv) == false;
-            case UniqueType.ConditionalFightingInTiles: return state.AttackedTile?.MatchesFilter(P(0), state.RelevantCiv) == true;
-            case UniqueType.ConditionalNearTiles:
-                return state.RelevantTile != null
-                    && state.RelevantTile.GetTilesInDistance(ToInt(P(0))).Any(it => it.MatchesFilter(P(1), state.RelevantCiv));
-
-            case UniqueType.ConditionalVsLargerCiv:
+                return true;
+            case UniqueType.ConditionalWhenCarriedBy:
+                // Check if the unit is currently transported and being carried by matching filter
+                if (state.RelevantUnit == null || !state.RelevantUnit.IsTransported)
                 {
-                    int yourCities = state.RelevantCiv?.Cities.Count ?? 1;
-                    int theirCities = state.TheirCombatant?.GetCivInfo().Cities.Count ?? 0;
-                    return yourCities < theirCities;
+                    result = false;
+                    return true;
                 }
+                var carrier = state.RelevantUnit.GetTile().MilitaryUnit;
+                // Only true if: 1) carrier exists, 2) carrier is NOT the unit itself, 3) carrier matches filter
+                result = carrier != null && !Equals(carrier, state.RelevantUnit) && carrier.MatchesFilter(P(0));
+                return true;
+            default:
+                result = false;
+                return false;
+        }
+    }
+
+    private static bool TryEvalTileAndCountableConditional(Unique conditional, GameContext state, out bool result)
+    {
+        var parameters = conditional.Params;
+        string P(int index) => parameters[index];
+
+        switch (conditional.Type)
+        {
+            case UniqueType.ConditionalInTiles: result = state.RelevantTile?.MatchesFilter(P(0), state.RelevantCiv) == true; return true;
+            case UniqueType.ConditionalInTilesNot: result = state.RelevantTile?.MatchesFilter(P(0), state.RelevantCiv) == false; return true;
+            case UniqueType.ConditionalAdjacentTo: result = state.RelevantTile?.IsAdjacentTo(P(0), state.RelevantCiv) == true; return true;
+            case UniqueType.ConditionalNotAdjacentTo: result = state.RelevantTile?.IsAdjacentTo(P(0), state.RelevantCiv) == false; return true;
+            case UniqueType.ConditionalFightingInTiles: result = state.AttackedTile?.MatchesFilter(P(0), state.RelevantCiv) == true; return true;
+            case UniqueType.ConditionalNearTiles:
+                result = state.RelevantTile != null
+                    && state.RelevantTile.GetTilesInDistance(ToInt(P(0))).Any(it => it.MatchesFilter(P(1), state.RelevantCiv));
+                return true;
+            case UniqueType.ConditionalVsLargerCiv:
+                int yourCities = state.RelevantCiv?.Cities.Count ?? 1;
+                int theirCities = state.TheirCombatant?.GetCivInfo().Cities.Count ?? 0;
+                result = yourCities < theirCities;
+                return true;
             case UniqueType.ConditionalForeignContinent:
-                return CheckOnCiv(c =>
+                result = CheckOnCiv(state, c =>
                     state.RelevantTile != null && (
                         c.Cities.Count == 0 || c.GetCapital() == null
                         || c.GetCapital().NotNull().GetCenterTileOrNull().NotNull().GetContinent() != state.RelevantTile.GetContinent()));
+                return true;
             case UniqueType.ConditionalAdjacentUnit:
-                return state.RelevantCiv != null
+                result = state.RelevantCiv != null
                     && state.RelevantUnit != null
                     && state.RelevantTile.NotNull().Neighbors.Any(tile => tile.GetUnits().Any(it =>
                         !Equals(it, state.RelevantUnit) && Equals(it.Civ, state.RelevantCiv) && it.MatchesFilter(P(0))));
-
+                return true;
             case UniqueType.ConditionalNeighborTiles:
-                if (state.RelevantTile == null) return false;
+                if (state.RelevantTile == null)
                 {
-                    int count = state.RelevantTile.Neighbors.Count(it => it.MatchesFilter(P(2), state.RelevantCiv));
-                    return count >= ToInt(P(0)) && count <= ToInt(P(1));
+                    result = false;
+                    return true;
                 }
-
-            case UniqueType.ConditionalOnWaterMaps: return state.Region?.ContinentId == -1;
-            case UniqueType.ConditionalInRegionOfType: return state.Region?.Type == P(0);
-            case UniqueType.ConditionalInRegionExceptOfType: return state.Region?.Type != P(0);
-
-            case UniqueType.ConditionalFirstCivToResearch:
-                return unique != null
-                    && unique.SourceObjectType == UniqueTarget.Tech
-                    && CheckOnGameInfo(g => !g.Civilizations.Any(it =>
-                        !Equals(it, state.RelevantCiv) && it.IsMajorCiv()
-                        && it.IsTechResearched(unique.SourceObjectName.NotNull()))); // guarded by the sourceObjectType check
-            case UniqueType.ConditionalFirstCivToAdopt:
-                return unique != null
-                    && unique.SourceObjectType == UniqueTarget.Policy
-                    && CheckOnGameInfo(g => !g.Civilizations.Any(it =>
-                        !Equals(it, state.RelevantCiv) && it.IsMajorCiv()
-                        && it.IsPolicyAdopted(unique.SourceObjectName.NotNull()))); // guarded by the sourceObjectType check
-
-            case UniqueType.ConditionalCountableEqualTo: return CompareCountables2(P(0), P(1), (a, b) => a == b);
-            case UniqueType.ConditionalCountableDifferentThan: return CompareCountables2(P(0), P(1), (a, b) => a != b);
-            case UniqueType.ConditionalCountableMoreThan: return CompareCountables2(P(0), P(1), (a, b) => a > b);
-            case UniqueType.ConditionalCountableLessThan: return CompareCountables2(P(0), P(1), (a, b) => a < b);
+                int count = state.RelevantTile.Neighbors.Count(it => it.MatchesFilter(P(2), state.RelevantCiv));
+                result = count >= ToInt(P(0)) && count <= ToInt(P(1));
+                return true;
+            case UniqueType.ConditionalOnWaterMaps: result = state.Region?.ContinentId == -1; return true;
+            case UniqueType.ConditionalInRegionOfType: result = state.Region?.Type == P(0); return true;
+            case UniqueType.ConditionalInRegionExceptOfType: result = state.Region?.Type != P(0); return true;
+            case UniqueType.ConditionalCountableEqualTo: result = CompareCountables2(state, P(0), P(1), (a, b) => a == b); return true;
+            case UniqueType.ConditionalCountableDifferentThan: result = CompareCountables2(state, P(0), P(1), (a, b) => a != b); return true;
+            case UniqueType.ConditionalCountableMoreThan: result = CompareCountables2(state, P(0), P(1), (a, b) => a > b); return true;
+            case UniqueType.ConditionalCountableLessThan: result = CompareCountables2(state, P(0), P(1), (a, b) => a < b); return true;
             case UniqueType.ConditionalCountableBetween:
-                return CompareCountables3(P(0), P(1), P(2), (first, second, third) => first >= second && first <= third);
-
-            case UniqueType.ConditionalWhenCarriedBy:
-                {
-                    // Check if the unit is currently transported and being carried by matching filter
-                    if (state.RelevantUnit == null || !state.RelevantUnit.IsTransported) return false;
-                    var carrier = state.RelevantUnit.GetTile().MilitaryUnit;
-                    // Only true if: 1) carrier exists, 2) carrier is NOT the unit itself, 3) carrier matches filter
-                    return carrier != null && !Equals(carrier, state.RelevantUnit) && carrier.MatchesFilter(P(0));
-                }
-
-            case UniqueType.ConditionalModEnabled:
-                return CheckOnGameInfo(g => ModsAndBase(g).Any(it => ModCompatibility.ModNameFilter(it, P(0))));
-            case UniqueType.ConditionalModNotEnabled:
-                return CheckOnGameInfo(g => !ModsAndBase(g).Any(it => ModCompatibility.ModNameFilter(it, P(0))));
-
-            default: return false;
+                result = CompareCountables3(state, P(0), P(1), P(2), (first, second, third) => first >= second && first <= third); return true;
+            default:
+                result = false;
+                return false;
         }
     }
 
