@@ -22,7 +22,7 @@ public partial class PediaScreen : PanelContainer
     private readonly UiTheme theme;
     private readonly TooltipHost tooltips;
     private readonly LineEdit search = new() { Name = "PediaSearch", PlaceholderText = "Search".Tr(), ClearButtonEnabled = true };
-    private readonly Button back = new() { Name = "PediaBack", Text = "Back".Tr(), Disabled = true, ThemeTypeVariation = UiVariants.ButtonGhost, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+    private readonly Button back = new() { Name = "PediaBack", Text = "Back".Tr(), Disabled = true, Visible = false, ThemeTypeVariation = UiVariants.ButtonGhost, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
     private readonly Button clear = new() { Name = "PediaSearchClear", Text = "Clear".Tr(), Visible = false, ThemeTypeVariation = UiVariants.ButtonGhost };
     private readonly List<PediaEntry> shown = [];
     private readonly Stack<PediaEntry> history = new();
@@ -168,6 +168,7 @@ public partial class PediaScreen : PanelContainer
         pageScroll.AddChild(pageColumn);
         middle.AddChild(pageScroll);
         pageColumn.AddChild(back);
+        UpdateBackButton();
 
         card = new PanelContainer { Name = "PediaCard", ThemeTypeVariation = UiVariants.PanelCard, Visible = false };
         var cardRow = new HBoxContainer();
@@ -263,7 +264,7 @@ public partial class PediaScreen : PanelContainer
     {
         Visible = true;
         history.Clear();
-        back.Disabled = true;
+        UpdateBackButton();
         if (link != null && PediaModel.Resolve(ruleset, link) is { } target) Show(target.Entry, remember: false);
         else if (current == null) ShowCategory(categoryButtons.Keys.First());
     }
@@ -355,7 +356,14 @@ public partial class PediaScreen : PanelContainer
     {
         if (history.Count == 0) return;
         Show(history.Pop(), remember: false);
-        back.Disabled = history.Count == 0;
+        UpdateBackButton();
+    }
+
+    private void UpdateBackButton()
+    {
+        bool can = history.Count > 0;
+        back.Disabled = !can;
+        back.Visible = can;
     }
 
     public void ShowCategory(CivilopediaCategories category)
@@ -370,7 +378,7 @@ public partial class PediaScreen : PanelContainer
         if (remember && current != null && current.Link != entry.Link)
         {
             history.Push(current);
-            back.Disabled = false;
+            UpdateBackButton();
         }
         if (Category != entry.Category) ShowList(entry.Category);
         current = entry;
@@ -420,6 +428,12 @@ public partial class PediaScreen : PanelContainer
         {
             var line = page.Lines[i];
             if (i == 0 && line.Header > 0 && line.Link.Length == 0) continue; // the title line, which the card shows (its text may be the translated name)
+            if (cardChips.GetChildCount() > 0)
+            {
+                var trimmed = PediaModel.WithoutHeaderCost(line);
+                if (trimmed == null) continue; // production or science cost already appears as the header card chip
+                line = trimmed;
+            }
             if (line.Header > 0 && line.Link.Length == 0 && line.Text.Length > 0 && i > 0)
             {
                 Flush();

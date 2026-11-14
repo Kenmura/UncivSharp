@@ -6,7 +6,7 @@ using Unciv.GodotClient.Localization;
 namespace Unciv.GodotClient.Ui;
 
 /// <summary>A column of a <see cref="DataTable"/>: the untranslated header, whether its cells are numbers (right-aligned, tabular, sorted by value) and, when not 0, the width in pixels its cells keep (C077: a long entry is not cut to an ellipsis).</summary>
-public readonly record struct DataColumn(string Header, bool Numeric = false, int MinWidth = 0);
+public readonly record struct DataColumn(string Header, bool Numeric = false, int MinWidth = 0, float Stretch = 0f);
 
 /// <summary>
 /// C065: a table in an Inset well. The header row is clickable (first click sorts ascending, the next descending, shown by a triangle), numbers are
@@ -152,22 +152,29 @@ public partial class DataTable : PanelContainer
         }
         headers.Clear();
         cells.Clear();
+        float[] weights = ColumnWeights();
         for (int c = 0; c < columns.Count; c++)
         {
             int column = c;
+            string translatedHeader = columns[c].Header.TrText();
             string arrow = SortColumn != c ? "" : SortAscending ? " ▲" : " ▼";
             var header = new Button
             {
-                Text = columns[c].Header.TrText() + arrow,
+                Text = translatedHeader + arrow,
+                TooltipText = translatedHeader,
                 ThemeTypeVariation = UiVariants.ButtonGhost,
                 Alignment = columns[c].Numeric ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+                ClipText = true,
+                TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
                 SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                SizeFlagsStretchRatio = weights[c],
             };
+            if (columns[c].MinWidth > 0) header.CustomMinimumSize = new Vector2(columns[c].MinWidth, 0f);
             header.Pressed += () => OnHeaderPressed(column);
             headers.Add(header);
             grid.AddChild(header);
         }
-        if (hasActions) grid.AddChild(new Control());
+        if (hasActions) grid.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ShrinkEnd });
         order = SortColumn < 0 ? Enumerable.Range(0, rows.Count).ToList() : TableSorter.Order(rows, SortColumn, SortAscending);
         for (int r = 0; r < order.Count; r++)
         {
@@ -188,7 +195,7 @@ public partial class DataTable : PanelContainer
                 int inputRow = order[r];
                 if (inputRow == SelectedRow || selectedRows.Contains(inputRow)) label.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.Accent));
                 else if (RowTone?.Invoke(inputRow) is { } tone) label.AddThemeColorOverride("font_color", tone);
-                var cell = new PanelContainer { ThemeTypeVariation = r % 2 == 0 ? UiVariants.PanelCellEven : UiVariants.PanelCellOdd, SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = selectable ? MouseFilterEnum.Pass : MouseFilterEnum.Stop };
+                var cell = new PanelContainer { ThemeTypeVariation = r % 2 == 0 ? UiVariants.PanelCellEven : UiVariants.PanelCellOdd, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = weights[c], MouseFilter = selectable ? MouseFilterEnum.Pass : MouseFilterEnum.Stop };
                 if (selectable)
                 {
                     cell.GuiInput += input =>
@@ -215,11 +222,33 @@ public partial class DataTable : PanelContainer
             }
             if (hasActions)
             {
-                var cell = new PanelContainer { ThemeTypeVariation = r % 2 == 0 ? UiVariants.PanelCellEven : UiVariants.PanelCellOdd };
+                var cell = new PanelContainer { ThemeTypeVariation = r % 2 == 0 ? UiVariants.PanelCellEven : UiVariants.PanelCellOdd, SizeFlagsHorizontal = SizeFlags.ShrinkEnd };
                 if (RowAction(order[r]) is { } action) cell.AddChild(action);
                 grid.AddChild(cell);
             }
             cells.Add(line);
         }
+    }
+
+    private float[] ColumnWeights()
+    {
+        var weights = new float[columns.Count];
+        for (int c = 0; c < columns.Count; c++)
+        {
+            if (columns[c].Stretch > 0f)
+            {
+                weights[c] = columns[c].Stretch;
+                continue;
+            }
+            int headerChars = columns[c].Header.TrText().Length + 2;
+            int cellChars = 0;
+            for (int r = 0; r < rows.Count; r++)
+                if (c < rows[r].Count && rows[r][c].Length > cellChars) cellChars = rows[r][c].Length;
+            int minByWidth = columns[c].MinWidth > 0 ? columns[c].MinWidth / 8 : 0;
+            int headerCap = columns[c].Numeric ? 8 : 10;
+            int desired = Math.Max(4, Math.Max(minByWidth, Math.Max(Math.Min(headerChars, headerCap), Math.Min(cellChars, 22))));
+            weights[c] = desired;
+        }
+        return weights;
     }
 }

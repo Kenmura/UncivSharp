@@ -28,7 +28,6 @@ public partial class OverviewScreen : PanelContainer
     private readonly Dictionary<string, List<OverviewTable>> tables = [];
     private readonly Dictionary<string, List<DataTable>> dataTables = [];
     private readonly Dictionary<string, Button> jumpButtons = [];
-    private readonly Dictionary<string, Button> spyButtons = [];
     private readonly Dictionary<string, string> notices = [];
     private ScreenFrame frame = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
     private Label message = null!; // JUSTIFY: C074 assigned by BuildFrame in the constructor
@@ -46,6 +45,8 @@ public partial class OverviewScreen : PanelContainer
     private string bulkTemplateName = "";
     private CityFocus bulkFocus = CityFocus.ProductionFocus;
     private bool bulkBusy;
+    private bool bulkExpanded;
+    private EspionageBoard? spyBoard;
 
     public OverviewScreen(IGameSession gameSession, UiTheme uiTheme)
     {
@@ -79,7 +80,6 @@ public partial class OverviewScreen : PanelContainer
         }
         pages.Clear();
         jumpButtons.Clear(); // the controls of the old frame are gone; the next refresh fills them again
-        spyButtons.Clear();
         tables.Clear();
         dataTables.Clear();
         notices.Clear();
@@ -141,8 +141,11 @@ public partial class OverviewScreen : PanelContainer
     /// <summary>The jump button of a row of the cities (key = city name) or units (key = unit id) tab.</summary>
     public Button? JumpButton(string tab, string key) => jumpButtons.GetValueOrDefault(tab + "/" + key);
 
-    /// <summary>The button of a spy's move (<paramref name="index"/> 0 is the first the engine offers) or the coup button (index -1).</summary>
-    public Button? SpyButton(string spy, int index) => spyButtons.GetValueOrDefault(spy + "/" + index);
+    /// <summary>The button of a spy's coup action (index -1).</summary>
+    public Button? SpyButton(string spy, int index) => index == -1 ? spyBoard?.CoupButton(spy) : null;
+
+    /// <summary>T415: the unified inline espionage board embedded in the Espionage tab.</summary>
+    public EspionageBoard? Spies => spyBoard;
 
     public Button? TabButton(string tab) => tabs.FindChild("Tab_" + tab, true, false) as Button;
 
@@ -198,7 +201,6 @@ public partial class OverviewScreen : PanelContainer
             if (await queries.CityPanel(city.Own!.Id) is { } panel && await queries.ConstructionList(city.Own.Id) is { } list) bulk[city.Name] = new BulkCity(panel, list);
         if (ticket != generation) return; // closed or refreshed meanwhile
         jumpButtons.Clear();
-        spyButtons.Clear();
         tables.Clear();
         dataTables.Clear();
         notices.Clear();
@@ -219,8 +221,9 @@ public partial class OverviewScreen : PanelContainer
         if (rankings == null) ShowNotice(OverviewModel.Ranking, "Rankings are not shown in this game.");
         else
         {
-            var ranking = new HBoxContainer();
-            ranking.AddThemeConstantOverride("separation", theme.Px(UiTokens.S3));
+            var ranking = new GridContainer { Name = "RankingGrid", Columns = theme.Breakpoint == UiBreakpoint.Compact ? 1 : 2, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            ranking.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S3));
+            ranking.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S3));
             pages[OverviewModel.Ranking].AddChild(ranking);
             foreach (var (title, table) in OverviewModel.RankingTables(rankings))
             {
@@ -231,8 +234,7 @@ public partial class OverviewScreen : PanelContainer
         }
         if (religion == null) ShowNotice(OverviewModel.Religion, "The engine would not show religion.");
         else AddLines(OverviewModel.Religion, OverviewModel.ReligionLines(religion));
-        if (spies == null) ShowNotice(OverviewModel.Espionage, "Espionage is not enabled in this game.");
-        else BuildSpies(OverviewModel.SpyRows(spies));
+        BuildSpies(spies);
         if (overview == null) ShowNotice(OverviewModel.Politics, "The engine would not show the empire overview.");
         else
         {
@@ -314,7 +316,12 @@ public partial class OverviewScreen : PanelContainer
         var panel = new PanelContainer { Name = "BulkPanel", ThemeTypeVariation = UiVariants.PanelCard, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
-        box.AddChild(new SectionHeader("Bulk actions"));
+        var headerRow = new HBoxContainer();
+        headerRow.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
+        headerRow.AddChild(new SectionHeader("Bulk actions") { SizeFlagsHorizontal = SizeFlags.ExpandFill });
+        var bulkToggle = new Button { Name = "BulkToggle", ThemeTypeVariation = UiVariants.ButtonGhost };
+        headerRow.AddChild(bulkToggle);
+        box.AddChild(headerRow);
         var all = new BulkRow(theme);
         var count = new Label { Name = "BulkCount", VerticalAlignment = VerticalAlignment.Center };
         var selectAll = new Button { Name = "BulkSelectAll", Text = "Select all".Tr(), ThemeTypeVariation = UiVariants.ButtonChip };
@@ -323,6 +330,9 @@ public partial class OverviewScreen : PanelContainer
         clear.Pressed += () => data.SetSelectedRows([], notify: true);
         all.Add(count, selectAll, clear);
         box.AddChild(all);
+        var bulkBody = new VBoxContainer { Name = "BulkBody" };
+        bulkBody.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
+        box.AddChild(bulkBody);
         var cities = bulkCities.Values.ToList();
 
         var focusRow = new BulkRow(theme);
@@ -335,7 +345,7 @@ public partial class OverviewScreen : PanelContainer
         var focusApply = new Button { Name = "BulkFocusApply", Text = "Set focus".Tr() };
         focusApply.Pressed += () => RunBulk(CityBulkModel.SetFocus(SelectedBulk(table), bulkFocus));
         focusRow.Add(new Label { Text = "Citizen focus".Tr(), VerticalAlignment = VerticalAlignment.Center }, focus, focusApply);
-        box.AddChild(focusRow);
+        bulkBody.AddChild(focusRow);
 
         var itemRow = new BulkRow(theme);
         var choices = CityBulkModel.QueueChoices(cities);
@@ -351,7 +361,7 @@ public partial class OverviewScreen : PanelContainer
         var buy = new Button { Name = "BulkBuy", Text = "Buy current production".Tr() };
         buy.Pressed += () => RunBulk(CityBulkModel.BuyCurrent(SelectedBulk(table), gold));
         itemRow.Add(new Label { Text = "Build item".Tr(), VerticalAlignment = VerticalAlignment.Center }, item, queue, buy);
-        box.AddChild(itemRow);
+        bulkBody.AddChild(itemRow);
 
         var templates = settings?.Current.BuildTemplates ?? [];
         var templateRow = new BulkRow(theme);
@@ -371,7 +381,7 @@ public partial class OverviewScreen : PanelContainer
         var delete = new Button { Name = "BulkTemplateDelete", Text = "Delete template".Tr(), ThemeTypeVariation = UiVariants.ButtonDanger, Disabled = templates.Count == 0 };
         delete.Pressed += () => ChangeTemplates(list => CityBulkModel.WithoutTemplate(list, bulkTemplate), $"Deleted the template {bulkTemplate}.");
         templateRow.Add(new Label { Text = "Build template".Tr(), VerticalAlignment = VerticalAlignment.Center }, template, apply, delete);
-        box.AddChild(templateRow);
+        bulkBody.AddChild(templateRow);
 
         var saveRow = new BulkRow(theme);
         var name = new LineEdit { Name = "BulkTemplateName", PlaceholderText = "Template name".Tr(), Text = bulkTemplateName, MaxLength = BuildTemplate.MaxNameLength, CustomMinimumSize = new Vector2(theme.Px(160), 0f), Editable = settings != null };
@@ -390,22 +400,31 @@ public partial class OverviewScreen : PanelContainer
             }
         };
         saveRow.Add(name, save);
-        box.AddChild(saveRow);
+        bulkBody.AddChild(saveRow);
 
         var result = new Label { Name = "BulkResult", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = bulkResult, Visible = bulkResult.Length > 0 };
-        box.AddChild(result);
+        bulkBody.AddChild(result);
         void Update()
         {
             selectedCities.Clear();
             foreach (int row in data.SelectedRows) selectedCities.Add(table.Rows[row].Key);
             count.Text = $"{"Selected".Tr()}: {selectedCities.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
             bool any = selectedCities.Count > 0;
+            clear.Visible = any;
+            bool showBody = bulkExpanded || any || bulkResult.Length > 0;
+            bulkBody.Visible = showBody;
+            bulkToggle.Text = (showBody ? "Hide actions" : "Show actions").Tr() + (showBody ? " ▼" : " ▶");
             focusApply.Disabled = !any;
             queue.Disabled = !any || choices.Count == 0;
             buy.Disabled = !any;
             apply.Disabled = !any || templates.Count == 0;
             save.Disabled = !any || settings == null;
         }
+        bulkToggle.Pressed += () =>
+        {
+            bulkExpanded = !bulkBody.Visible;
+            Update();
+        };
         data.SelectionChanged += Update;
         Update();
         panel.AddChild(box);
@@ -510,47 +529,20 @@ public partial class OverviewScreen : PanelContainer
         return box;
     }
 
-    /// <summary>The spies as a table (rank, location, action and the coup button), then one row of destination chips per spy that the engine lets move.</summary>
-    private void BuildSpies(IReadOnlyList<SpyRow> spies)
+    /// <summary>The spies page rendered by the shared inline <see cref="EspionageBoard"/>.</summary>
+    private void BuildSpies(Unciv.Queries.Empire.SpyDestinationsResult? spies)
     {
-        var page = pages[OverviewModel.Espionage];
-        if (spies.Count == 0)
+        string? keepSelected = spyBoard?.SelectedSpy;
+        spyBoard = new EspionageBoard(theme, command => Fire(Send(command)), SetMessage) { SelectedSpy = keepSelected };
+        string? notice = spyBoard.Render(spies, showHeader: false);
+        pages[OverviewModel.Espionage].AddChild(spyBoard.Root);
+        if (notice != null)
         {
-            page.AddChild(new EmptyState(theme, null, "You have no spies."));
+            notices[OverviewModel.Espionage] = notice;
             return;
         }
-        var data = new DataTable([new DataColumn("Spy"), new DataColumn("Spy rank", true), new DataColumn("Location"), new DataColumn("Action")], actions: true) { Name = "Data_Spies" };
-        data.SetRows(spies.Select(it => (IReadOnlyList<string>)[it.Name, it.Rank, it.Location.TrText(), it.Action.TrText()]).ToList(), index =>
-        {
-            var spy = spies[index];
-            if (spy.Coup is not { } coup) return null;
-            var button = CoupButton(theme, spy.Name, spy.CoupShort, spy.CoupLabel, danger: coup.Stage);
-            button.Pressed += () => Fire(Send(coup));
-            spyButtons[spy.Name + "/-1"] = button;
-            return button;
-        });
-        if (!dataTables.TryGetValue(OverviewModel.Espionage, out var controls)) dataTables[OverviewModel.Espionage] = controls = [];
-        controls.Add(data);
-        page.AddChild(data);
-        foreach (var spy in spies.Where(it => it.Moves.Count > 0))
-        {
-            var box = new VBoxContainer { Name = "Moves_" + spy.Name };
-            box.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
-            box.AddChild(new Label { Text = $"Move {spy.Name} to".TrText(), ThemeTypeVariation = UiVariants.LabelSecondary });
-            var chips = new HFlowContainer();
-            chips.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S1));
-            chips.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S1));
-            box.AddChild(chips);
-            for (int i = 0; i < spy.Moves.Count; i++)
-            {
-                var move = spy.Moves[i];
-                var button = new Button { Name = $"Spy_{spy.Name}_{i}", Text = move.Label.TrText(), ThemeTypeVariation = UiVariants.ButtonChip };
-                button.Pressed += () => Fire(Send(move.Command));
-                spyButtons[spy.Name + "/" + i] = button;
-                chips.AddChild(button);
-            }
-            page.AddChild(box);
-        }
+        if (spyBoard.SpyTable != null)
+            dataTables[OverviewModel.Espionage] = [spyBoard.SpyTable];
     }
 
     /// <summary>The coup button of a spy row: the short text ("Coup 35%") with the whole sentence as its tooltip; staging a coup (the command stages it) is a danger button, calling it off a plain one. Clipped, so a long translation cannot widen the table.</summary>

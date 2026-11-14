@@ -66,9 +66,15 @@ public partial class TradeProposalView : Modal
             byId[answer.Id] = button;
             ids.Add(answer.Id);
         }
-        var later = new Button { Name = "DecideLater", Text = "Decide later".Tr() };
+        var later = new Button
+        {
+            Name = "DecideLater",
+            Text = "Decide later".Tr(),
+            ThemeTypeVariation = UiVariants.ButtonGhost,
+            SizeFlagsHorizontal = SizeFlags.ShrinkEnd,
+        };
         later.Pressed += () => Deferred?.Invoke(popup);
-        actions.Add((later, ChoiceRole.Ghost));
+        SetHeaderAction(later);
         byId["DecideLater"] = later;
         ids.Add("DecideLater");
         SetActions(actions);

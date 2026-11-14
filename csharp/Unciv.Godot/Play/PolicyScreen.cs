@@ -542,7 +542,7 @@ public partial class PolicyScreen : PanelContainer
         detail.AddChild(new Label { Name = "State", Text = cell.Hint.TrText(), ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart });
         adopt.Text = PolicyScreenModel.AdoptLabel(cell).TrText();
         adopt.Disabled = PolicyScreenModel.AdoptCommand(cell) == null;
-        adopt.Visible = true;
+        adopt.Visible = !cell.IsAdopted;
         detail.AddChild(adopt);
         detail.AddChild(new SectionHeader("Effects"));
         foreach (var effect in cell.Effects) detail.AddChild(EffectRow(effect));

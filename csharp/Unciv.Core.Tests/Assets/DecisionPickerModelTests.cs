@@ -262,4 +262,29 @@ public class DecisionPickerModelTests
         var spec = new PickerSpec(PickerKind.Promotion, "t", "p", [new PickerSlot("s", "S", [new PickerOption("a", "Alpha", "", false)])], "ok", _ => []);
         Assert.Equal("Alpha cannot be chosen", DecisionPickerModel.Problem(spec, Pick("a")));
     }
+
+    [Fact]
+    public void OptionIconsIdentifyUnitsPromotionsReligionsBeliefsAndCivs()
+    {
+        var gp = DecisionPickerModel.FreeGreatPerson(new GreatPeopleResult([], 0, 1, ["Great Artist"]), Describe)!;
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.UnitIcon, "Great Artist"), gp.Slots[0].Options[0].Icon);
+
+        var found = DecisionPickerModel.FoundReligion(Religion(), Describe)!;
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.ActionIcon, "FoundReligion"), found.Slots[0].Options[0].Icon);
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.StatIcon, "Faith"), found.Slots[1].Options[0].Icon);
+
+        var beliefs = DecisionPickerModel.ChooseBeliefs(Religion("Religion", ["Follower"]), false, Describe)!;
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.StatIcon, "Faith"), beliefs.Slots[0].Options[0].Icon);
+
+        var spies = DecisionPickerModel.MoveSpies(new SpyDestinationsResult(
+            [new SpyEntry("Ann", 3, "Idle", "Hideout", true, true, [new SpyDestination("c1", "Rome", "Rome", false), new SpyDestination("c2", "Sparta", "", true)], false, null)]));
+        Assert.Equal([AssetKey.Of(RulesetAssetKeys.UiIcon, "Spy"), AssetKey.Of(RulesetAssetKeys.NationIcon, "Rome"), AssetKey.Of(RulesetAssetKeys.UiIcon, "Cities")],
+            spies.Slots[0].Options.Select(it => it.Icon));
+
+        var vote = DecisionPickerModel.DiplomaticVote(new DiplomaticVoteResult(true, ["Rome"]), it => it)!;
+        Assert.Equal([AssetKey.Of(RulesetAssetKeys.NationIcon, "Rome"), null], vote.Slots[0].Options.Select(it => it.Icon));
+
+        var promo = DecisionPickerModel.Promotion(new PromotionChoicesResult(7, 15, 30, true, false, [new PromotionChoice("Shock I", true, [], [])]), "Warrior")!;
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.PromotionIcon, "Shock I"), promo.Slots[0].Options[0].Icon);
+    }
 }

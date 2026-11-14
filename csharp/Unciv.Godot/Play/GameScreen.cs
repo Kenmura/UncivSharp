@@ -427,18 +427,6 @@ public partial class GameScreen : Control
         Run(Espionage.OpenAsync());
     }
 
-    /// <summary>"Assign spies" on the espionage screen: the multi-spy picker over it, built from the engine's answer. The screen is refreshed once the picker is answered.</summary>
-    private async Task OpenSpyAssignment()
-    {
-        var spies = await queries.SpyDestinations();
-        if (spies == null)
-        {
-            SetStatus("Espionage is not enabled in this game.");
-            return;
-        }
-        Picker.Open(DecisionPickerModel.MoveSpies(spies));
-    }
-
     /// <summary>C027: the one tooltip of the game screen; the map feeds it the tile under the pointer.</summary>
     public TooltipHost Tooltips { get; private set; } = null!; // JUSTIFY: C027 assigned in Start before any use
 
@@ -1356,7 +1344,6 @@ public partial class GameScreen : Control
         Espionage = new EspionageScreen(session, theme);
         AddChild(Espionage);
         Espionage.CommandAccepted += Refresh;
-        Espionage.AssignRequested += () => Run(OpenSpyAssignment());
         foreach (Control screen in new Control[] { City, Diplomacy, Trade, Tech, Overview, Policies, Pedia, Espionage, MarkerEditor })
             DismissBannerOnShow(screen);
         Panel.Init(theme);

@@ -1,5 +1,4 @@
 using Godot;
-using Unciv.Assets;
 using Unciv.Commands;
 using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
@@ -39,8 +38,7 @@ public sealed class EspionageScenario : Scenario
         var rect = screen.Espionage.CoupButton(spy).NotNull().GetGlobalRect();
         float width = screen.GetViewportRect().Size.X;
         return table != null && table.RowCount == 2 && table.Cell(0, 1).HorizontalAlignment == HorizontalAlignment.Right && table.GetGlobalRect().End.X <= width
-            && rect.Position.X >= 0 && rect.End.X <= width && rect.Size.X > 0 && screen.Espionage.Frame.TitleText == "Espionage"
-            && screen.Espionage.Frame.FooterActions.Contains(screen.Espionage.AssignButton) && screen.Espionage.AssignButton.ThemeTypeVariation == UiVariants.ButtonPrimary;
+            && rect.Position.X >= 0 && rect.End.X <= width && rect.Size.X > 0 && screen.Espionage.Frame.TitleText == "Espionage";
     }
 
     public override IReadOnlyList<ScenarioStep> Build(Control host, GameSession session)
@@ -78,7 +76,7 @@ public sealed class EspionageScenario : Scenario
                     && spec.Locations.Where(it => it.CityId != null).Select(it => it.CityId.NotNull()).Order(StringComparer.Ordinal).SequenceEqual(offered)
                     && spec.Locations.Any(it => it.CityId == romeCity.Id && it.Civ == ScenarioGame.Ai) && spec.Locations.All(it => it.Civ != ScenarioGame.HumanB)
                     && spec.Locations.Single(it => it.IsHideout).SpiesPresent == hidden.Name && spec.Locations.Single(it => it.CityId == null && it.Name == cityStateCity.Name).SpiesPresent == resident.Name
-                    && !screen.Espionage.AssignButton.Disabled && screen.Espionage.MoveButton(hidden.Name)?.Disabled == false;
+                    && screen.Espionage.SelectedSpy == null && screen.Espionage.HereButton(romeCity.Id) == null && screen.Espionage.MoveButton(hidden.Name)?.Disabled == false;
             }),
             new AssertQuery("only the spy in the city-state has a coup button: the short text with the engine's odds, the whole sentence as its tooltip", () =>
             {
@@ -86,7 +84,7 @@ public sealed class EspionageScenario : Scenario
                 var button = screen.Espionage.CoupButton(resident.Name);
                 return screen.Espionage.CoupButton(hidden.Name) == null && button?.Text == $"Coup {percent}%" && button.TooltipText == $"Stage a coup ({percent}% chance)";
             }),
-            new AssertQuery("the spy table sits in a frame, fits the 640px screen with every row action inside it and the footer holds the primary Assign spies button", () => FrameAndTable(screen, resident.Name)),
+            new AssertQuery("the spy table sits in a frame, fits the 640px screen with every row action inside it", () => FrameAndTable(screen, resident.Name)),
             // C059 review, kept in C074: the coup text is short, but a long translation must still not widen the row past the screen (the button clips instead)
             new Act("give the coup button a long translated-length text", () => screen.Espionage.CoupButton(resident.Name).NotNull().Text =
                 "Stage a coup (35% chance) in this city-state, a long translated label that has to be clipped instead of widening the table past the screen"),
@@ -99,7 +97,7 @@ public sealed class EspionageScenario : Scenario
             }),
             new Act("restore the coup text", () => screen.Espionage.CoupButton(resident.Name).NotNull().Text = $"Coup {KotlinMath.RoundToInt(Entry(resident).CoupChance.NotNull() * 100f)}%"),
             new WaitFrames(3),
-            new Capture("screen", "The espionage screen in its frame: a table of the spies with rank, location and action, a Move button and a red coup button at the end of the spy in the city-state, then the table of places and the Assign spies button in the footer"),
+            new Capture("screen", "The espionage screen in its frame: a single table of the spies with rank, location and action, and Move / Coup row actions (destinations appear inline only on Move)"),
 
             new Act("remember the command log", () => logged = session.Log.Count),
             new Click(() => Centre(screen.Espionage.MoveButton(hidden.Name))),
@@ -140,19 +138,15 @@ public sealed class EspionageScenario : Scenario
             new AssertQuery("calling it off sent SetSpyCoup with Stage false", () =>
                 session.Log.Count == logged + 3 && session.Log[^1].Type == "set-spy-coup" && !session.Log[^1].Payload.GetProperty("Stage").GetBoolean() && resident.Action == SpyAction.CounterIntelligence),
 
-            new Click(() => Centre(screen.Espionage.AssignButton)),
-            new WaitFrames(3),
-            new AssertQuery("Assign spies opens the engine's multi-spy picker with one slot per living spy; nothing is sent yet", () =>
-                screen.Picker.Visible && screen.Picker.Spec is { Kind: PickerKind.MoveSpies } spec && spec.Slots.Select(it => it.Id).Order(StringComparer.Ordinal).SequenceEqual(new[] { hidden.Name, resident.Name }.Order(StringComparer.Ordinal))
-                && screen.Picker.ConfirmButton.Disabled && session.Log.Count == logged + 3 && screen.IsEspionageVisible),
-            new Click(() => Centre(screen.Picker.OptionButton(screen.Picker.Spec.NotNull().Slots.ToList().FindIndex(it => it.Id == resident.Name), DecisionPickerModel.Hideout))),
+            new Click(() => Centre(screen.Espionage.MoveButton(resident.Name))),
             new WaitFrames(2),
-            new Capture("assign", "The assignment picker over the screen: the second spy is chosen to return to the hideout"),
-            new Press("Move spies"),
+            new AssertQuery("Move opens the inline destinations for the second spy including Hideout", () =>
+                screen.Espionage.SelectedSpy == resident.Name && screen.Espionage.HereButton("") != null),
+            new Click(() => Centre(screen.Espionage.HereButton(""))),
             new WaitFrames(3),
-            new AssertQuery("Confirm sent one MoveSpy to the hideout; the picker closed and the screen shows the spy there", () =>
+            new AssertQuery("Move here on Hideout sent one MoveSpy to the hideout and updated the spy location inline", () =>
                 session.Log.Count == logged + 4 && session.Log[^1].Type == "move-spy" && session.Log[^1].Payload.GetProperty("Spy").GetString() == resident.Name
-                && !screen.Picker.Visible && resident.GetCityOrNull() == null && screen.IsEspionageVisible
+                && resident.GetCityOrNull() == null && screen.IsEspionageVisible && screen.Espionage.SelectedSpy == null
                 && screen.Espionage.Spec.NotNull().Spies.Single(it => it.Name == resident.Name).Location == Constants.SpyHideout),
             new Press("Close espionage"),
             new AssertQuery("the close button closes the screen", () => !screen.IsEspionageVisible),

@@ -49,7 +49,6 @@ public sealed class OverviewEspionageScenario : Scenario
         Vector2 Centre(Button? button) => button?.GetGlobalRect().GetCenter() ?? Vector2.Zero;
         T Ask<T>(Unciv.Queries.IQuery<T> query) where T : class => recording.QueryAsync(query).GetAwaiter().GetResult().NotNull();
         SpyEntry Entry(Spy spy) => Ask(new SpyDestinationsQuery()).Spies.Single(it => it.Name == spy.Name);
-        int RomeMove(Spy spy) => Entry(spy).Destinations.ToList().FindIndex(it => it.CityId == romeCity.Id) + (Entry(spy).CanMoveToHideout ? 1 : 0);
 
         return
         [
@@ -57,15 +56,12 @@ public sealed class OverviewEspionageScenario : Scenario
             new Act("dismiss the start banner", () => screen.Hud.HideBanner()),
             new Act("open the overview on the espionage tab", () => screen.OpenOverviewScreen(OverviewModel.Espionage)),
             new WaitFrames(3),
-            new AssertQuery("the Move buttons are exactly the destinations the engine offers (hideout first, then cities), nothing else", () =>
+            new AssertQuery("the inline board starts collapsed without destination chips until Move is clicked", () =>
             {
                 var spies = Ask(new SpyDestinationsQuery()).Spies;
-                bool buttonsMatch = spies.All(spy =>
-                {
-                    int expected = spy.Destinations.Count + (spy.CanMoveToHideout ? 1 : 0);
-                    return Enumerable.Range(0, expected).All(i => screen.Overview.SpyButton(spy.Name, i) != null) && screen.Overview.SpyButton(spy.Name, expected) == null;
-                });
-                return screen.Overview.SelectedTab == OverviewModel.Espionage && screen.Overview.Notice(OverviewModel.Espionage) == null && spies.Count == 2 && buttonsMatch
+                var board = screen.Overview.Spies.NotNull();
+                return screen.Overview.SelectedTab == OverviewModel.Espionage && screen.Overview.Notice(OverviewModel.Espionage) == null && spies.Count == 2
+                    && board.SelectedSpy == null && board.HereButton(romeCity.Id) == null && board.MoveButton(hidden.Name)?.Disabled == false
                     && !Entry(hidden).CanMoveToHideout && Entry(resident).CanMoveToHideout;
             }),
             new AssertQuery("only the spy in the city-state can stage a coup, and its button shows the engine's odds", () =>
@@ -83,10 +79,20 @@ public sealed class OverviewEspionageScenario : Scenario
                 return data.RowCount == 2 && data.Cell(0, 1).HorizontalAlignment == HorizontalAlignment.Right && data.GetGlobalRect().End.X <= screen.GetViewportRect().Size.X
                     && coup.Position.X >= data.GetGlobalRect().Position.X && coup.End.X <= data.GetGlobalRect().End.X && coup.Size.X > 0;
             }),
-            new Capture("espionage", "Espionage tab: a table of the two spies with rank, location and action and a red coup button on the spy in the city-state, then a chip for each place a spy may move to"),
+            new Capture("espionage", "Espionage tab: the unified table of the two spies with rank, location, action, Move button and red coup button"),
 
             new Act("remember the command log", () => logged = session.Log.Count),
-            new Click(() => Centre(screen.Overview.SpyButton(hidden.Name, RomeMove(hidden)))),
+            new Click(() => Centre(screen.Overview.Spies.NotNull().MoveButton(hidden.Name))),
+            new WaitFrames(2),
+            new AssertQuery("clicking Move expands the exact destinations offered by the engine without sending a command", () =>
+            {
+                var destinations = Entry(hidden).Destinations.Select(it => it.CityId).Order(StringComparer.Ordinal).ToList();
+                var board = screen.Overview.Spies.NotNull();
+                var spec = board.Spec.NotNull();
+                var shown = spec.Locations.Where(it => it.CityId != null && board.HereButton(it.CityId) != null).Select(it => it.CityId.NotNull()).Order(StringComparer.Ordinal).ToList();
+                return session.Log.Count == logged && board.SelectedSpy == hidden.Name && shown.SequenceEqual(destinations) && board.HereButton("") == null;
+            }),
+            new Click(() => Centre(screen.Overview.Spies.NotNull().HereButton(romeCity.Id))),
             new WaitFrames(3),
             new AssertQuery("'Move to' Rome's city sends one MoveSpy and the engine's spy is on its way there", () =>
                 session.Log.Count == logged + 1 && session.Log[^1].Type == "move-spy" && session.Log[^1].Payload.GetProperty("CityId").GetString() == romeCity.Id

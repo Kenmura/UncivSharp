@@ -1,7 +1,6 @@
 using Godot;
-using Unciv.Commands;
-using Unciv.Utils;
 using Unciv.Assets;
+using Unciv.Commands;
 using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Ui;
@@ -9,6 +8,7 @@ using Unciv.Harness;
 using Unciv.Net.Visibility;
 using Unciv.Queries;
 using Unciv.Queries.Empire;
+using Unciv.Utils;
 
 namespace Unciv.GodotHarness;
 
@@ -86,7 +86,7 @@ public sealed class DiplomacyScenario : Scenario
                 recording.Queries.All(it => it is not DiplomacyPanelQuery p || (p.CivName != ScenarioGame.HumanB && p.CivName != ScenarioGame.HumanA))
                 && recording.Queries.All(it => it is not DiplomacyActionsQuery a || (a.CivName != ScenarioGame.HumanB && a.CivName != ScenarioGame.HumanA))),
             new AssertQuery("Rome's panel is the engine's: peace, our attitude, war and denounce offered", () =>
-                screen.Diplomacy.Panel is { Status: "Peace", IsCityState: false } && screen.Diplomacy.InfoText.Contains("Status: Peace", StringComparison.Ordinal)
+                screen.Diplomacy.Panel is { Status: "Peace", IsCityState: false } && !screen.Diplomacy.InfoText.Contains("Status:", StringComparison.Ordinal)
                 && screen.Diplomacy.TitleText == "Rome" && screen.Diplomacy.Buttons.Select(it => it.Id).SequenceEqual(["DeclareWar", "Denounce"])),
             new AssertQuery("every button is enabled exactly as the engine's legal set says", () => ButtonsEqualQuery(rome.CivId) && Legal(rome.CivId).DeclareWar && Legal(rome.CivId).Denounce),
             new AssertQuery("the screen is a frame (titled, close button), the civ rows are list rows with a flag and the chosen one is pressed, the status pill shows Peace", () =>

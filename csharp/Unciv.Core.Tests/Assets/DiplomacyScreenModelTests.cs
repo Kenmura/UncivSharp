@@ -120,18 +120,18 @@ public class DiplomacyScreenModelTests
     [Fact]
     public void InfoLinesForAMajorCiv()
     {
-        Assert.Equal(["Status: Peace", "Attitude: Friend"], DiplomacyScreenModel.InfoLines(Panel(relationship: "Friend")));
+        Assert.Equal(["Attitude: Friend"], DiplomacyScreenModel.InfoLines(Panel(relationship: "Friend")));
         var busy = DiplomacyScreenModel.InfoLines(Panel(treaty: 7, openOurs: true, openTheirs: true, offersFromThem: 2, offerFromUs: true));
-        Assert.Equal(["Status: Peace", "Attitude: Neutral", "Peace treaty: war is forbidden for 7 more turns", "Your units may cross their borders",
+        Assert.Equal(["Attitude: Neutral", "Peace treaty: war is forbidden for 7 more turns", "Your units may cross their borders",
             "Their units may cross your borders", "They sent you 2 trade offer(s)", "Your offer waits for their answer"], busy);
     }
 
     [Fact]
     public void InfoLinesForACityStateShowInfluenceAndAlly()
     {
-        Assert.Equal(["Status: Peace", "Influence: 35.5 (Friend)"], DiplomacyScreenModel.InfoLines(Panel(cityState: true, influence: 35.5f, relationship: "Friend")));
-        Assert.Equal(["Status: Peace", "Influence: 70 (Ally)", "You are its ally"], DiplomacyScreenModel.InfoLines(Panel(cityState: true, influence: 70f, ally: true, relationship: "Ally")));
-        Assert.Equal(["Status: Peace", "Influence: 0 (Neutral)"], DiplomacyScreenModel.InfoLines(Panel(cityState: true, influence: null)));
+        Assert.Equal(["Influence: 35.5 (Friend)"], DiplomacyScreenModel.InfoLines(Panel(cityState: true, influence: 35.5f, relationship: "Friend")));
+        Assert.Equal(["Influence: 70 (Ally)", "You are its ally"], DiplomacyScreenModel.InfoLines(Panel(cityState: true, influence: 70f, ally: true, relationship: "Ally")));
+        Assert.Equal(["Influence: 0 (Neutral)"], DiplomacyScreenModel.InfoLines(Panel(cityState: true, influence: null)));
     }
 
     [Fact]
@@ -275,9 +275,9 @@ public class DiplomacyScreenModelTests
         Assert.DoesNotContain(DiplomacyScreenModel.InfoLines(Panel(treaty: 0)), it => it.StartsWith("Peace treaty", StringComparison.Ordinal));
         Assert.Contains("They sent you 1 trade offer(s)", DiplomacyScreenModel.InfoLines(Panel(offersFromThem: 1)));
         Assert.DoesNotContain(DiplomacyScreenModel.InfoLines(Panel(offersFromThem: 0)), it => it.StartsWith("They sent", StringComparison.Ordinal));
-        Assert.Equal(["Status: Peace", "Attitude: Neutral", "Your units may cross their borders"], DiplomacyScreenModel.InfoLines(Panel(openOurs: true)));
-        Assert.Equal(["Status: Peace", "Attitude: Neutral", "Their units may cross your borders"], DiplomacyScreenModel.InfoLines(Panel(openTheirs: true)));
-        Assert.Equal(["Status: Peace", "Attitude: Neutral", "Your offer waits for their answer"], DiplomacyScreenModel.InfoLines(Panel(offerFromUs: true)));
+        Assert.Equal(["Attitude: Neutral", "Your units may cross their borders"], DiplomacyScreenModel.InfoLines(Panel(openOurs: true)));
+        Assert.Equal(["Attitude: Neutral", "Their units may cross your borders"], DiplomacyScreenModel.InfoLines(Panel(openTheirs: true)));
+        Assert.Equal(["Attitude: Neutral", "Your offer waits for their answer"], DiplomacyScreenModel.InfoLines(Panel(offerFromUs: true)));
     }
 
     [Fact]

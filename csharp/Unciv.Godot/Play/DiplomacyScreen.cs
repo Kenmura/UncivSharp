@@ -132,9 +132,8 @@ public partial class DiplomacyScreen : PanelContainer
         detail.AddChild(quests);
         actionHeader = new SectionHeader("Actions") { Visible = false };
         detail.AddChild(actionHeader);
-        actions = new HFlowContainer { Name = "Actions", SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        actions.AddThemeConstantOverride("h_separation", gap);
-        actions.AddThemeConstantOverride("v_separation", gap);
+        actions = new VBoxContainer { Name = "Actions", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        actions.AddThemeConstantOverride("separation", gap);
         detail.AddChild(actions);
         frame.SetContent(column);
     }
@@ -156,8 +155,8 @@ public partial class DiplomacyScreen : PanelContainer
     /// <summary>The detail column (the harness checks that it fits the screen).</summary>
     public Control DetailColumn => detail;
 
-    /// <summary>The cells of the action area, in order: each a column of the button and, when it is disabled, the reason under it.</summary>
-    public IReadOnlyList<Control> ActionCells => actions.GetChildren().OfType<Control>().ToList();
+    /// <summary>The cells of the action area, in order: enabled action buttons, then disabled actions with full-width wrapped reasons.</summary>
+    public IReadOnlyList<Control> ActionCells => actions.GetChildren().SelectMany(it => it.GetChildren().OfType<Control>()).ToList();
 
     /// <summary>The civs on the list (the met ones).</summary>
     public IReadOnlyList<DiplomacyRow> Rows { get; private set; } = [];
@@ -358,6 +357,11 @@ public partial class DiplomacyScreen : PanelContainer
         actionButtons.Clear();
         buttons = DiplomacyScreenModel.Buttons(row, panel, legal);
         actionHeader.Visible = buttons.Count > 0;
+        var enabledFlow = new HFlowContainer { Name = "EnabledActions", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        enabledFlow.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S2));
+        enabledFlow.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S2));
+        var disabledList = new VBoxContainer { Name = "DisabledActions", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        disabledList.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
         foreach (var entry in buttons)
         {
             var button = new Button
@@ -367,21 +371,37 @@ public partial class DiplomacyScreen : PanelContainer
                 Disabled = !entry.Enabled,
                 TooltipText = entry.Enabled ? "" : entry.Hint.TrText(),
                 ThemeTypeVariation = entry.Danger ? UiVariants.ButtonDanger : UiVariants.ButtonSecondary,
-                SizeFlagsHorizontal = SizeFlags.ExpandFill,
             };
             var chosen = entry;
             button.Pressed += () => OnPressed(chosen);
             actionButtons[entry.Id] = button;
-            var cell = new VBoxContainer { Name = "Cell_" + entry.Id, CustomMinimumSize = new Vector2(theme.Px(150), 0f) };
-            cell.AddThemeConstantOverride("separation", 0);
-            cell.AddChild(button);
-            if (!entry.Enabled)
+            if (entry.Enabled)
             {
-                // the reason a button is off is shown, not only hovered (design 4: disabled-with-reason)
-                cell.AddChild(new Label { Name = "Reason_" + entry.Id, Text = entry.Hint.TrText(), ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(100f, 0f) });
+                var cell = new VBoxContainer { Name = "Cell_" + entry.Id };
+                cell.AddChild(button);
+                enabledFlow.AddChild(cell);
             }
-            actions.AddChild(cell);
+            else
+            {
+                var cell = new VBoxContainer { Name = "Cell_" + entry.Id, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+                cell.AddThemeConstantOverride("separation", theme.Px(2));
+                button.SizeFlagsHorizontal = SizeFlags.ShrinkBegin;
+                cell.AddChild(button);
+                // the reason a button is off wraps smoothly across the panel width without creating ragged flow-grid gaps
+                cell.AddChild(new Label
+                {
+                    Name = "Reason_" + entry.Id,
+                    Text = entry.Hint.TrText(),
+                    ThemeTypeVariation = UiVariants.LabelSmall,
+                    AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                    SizeFlagsHorizontal = SizeFlags.ExpandFill,
+                    CustomMinimumSize = new Vector2(theme.Px(140), 0f),
+                });
+                disabledList.AddChild(cell);
+            }
         }
+        if (enabledFlow.GetChildCount() > 0) actions.AddChild(enabledFlow);
+        if (disabledList.GetChildCount() > 0) actions.AddChild(disabledList);
         SetMessage("");
     }
 

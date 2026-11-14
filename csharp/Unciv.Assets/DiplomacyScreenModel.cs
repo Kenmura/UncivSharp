@@ -87,10 +87,10 @@ public static class DiplomacyScreenModel
 
     public static string Title(DiplomacyPanelResult panel) => panel.IsCityState ? panel.CivName + " (city-state)" : panel.CivName;
 
-    /// <summary>Status, attitude (or influence for a city-state), treaty and border lines.</summary>
+    /// <summary>Attitude (or influence for a city-state), treaty and border lines (status lives in the list subtitle and header pill).</summary>
     public static IReadOnlyList<string> InfoLines(DiplomacyPanelResult panel)
     {
-        var lines = new List<string> { "Status: " + panel.Status };
+        var lines = new List<string>();
         if (panel.IsCityState)
         {
             lines.Add($"Influence: {Number(panel.Influence ?? 0f)} ({panel.Relationship})");

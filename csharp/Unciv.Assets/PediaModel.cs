@@ -161,6 +161,14 @@ public static class PediaModel
         _ => null,
     };
 
+    /// <summary>Trims the leading production or science cost from a <c>{Cost}: ...</c> line when already shown as a card chip; null when nothing remains.</summary>
+    public static PediaLine? WithoutHeaderCost(PediaLine line)
+    {
+        if (!line.Text.StartsWith("{Cost}: ", StringComparison.Ordinal)) return line;
+        int slash = line.Text.IndexOf('/', StringComparison.Ordinal);
+        return slash < 0 ? null : line with { Text = "{Cost}: " + line.Text[(slash + 1)..] };
+    }
+
     /// <summary>
     /// A line as BBCode for a RichTextLabel. <paramref name="translate"/> turns the line's text into the player's language. An internal link becomes <c>[url=Category/Name]</c>,
     /// an external one <c>[url=https://...]</c>; the client opens the former in the pedia and ignores the latter. C076: a separator is a small gap, not a row of dashes, and a link

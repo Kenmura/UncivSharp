@@ -75,7 +75,7 @@ public sealed class PhoneTablesScenario : Scenario
         steps.Add(new Act("open espionage", () => screen.OpenEspionageScreen()));
         steps.Add(new WaitFrames(5));
         steps.AddRange(Check("espionage screen", () => screen.Espionage));
-        steps.Add(new Capture("espionage", "Espionage on a phone: the spy table with 48 dp Move and Coup buttons, Assign spies below"));
+        steps.Add(new Capture("espionage", "Espionage on a phone: the spy table with 48 dp Move and Coup buttons"));
         return steps;
     }
 }

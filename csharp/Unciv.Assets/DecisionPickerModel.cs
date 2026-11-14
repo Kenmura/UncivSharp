@@ -41,8 +41,8 @@ public enum DecisionRoute
     NextUnit,
 }
 
-/// <summary>One thing to choose. <see cref="Reason"/> says why a disabled option is; <see cref="Detail"/> is shown when it is highlighted.</summary>
-public sealed record PickerOption(string Id, string Label, string Detail, bool Enabled = true, string? Reason = null);
+/// <summary>One thing to choose. <see cref="Reason"/> says why a disabled option is; <see cref="Detail"/> is shown when it is highlighted; <see cref="Icon"/> carries an optional option icon.</summary>
+public sealed record PickerOption(string Id, string Label, string Detail, bool Enabled = true, string? Reason = null, AssetKey? Icon = null);
 
 /// <summary>One choice of the picker (a belief of one kind, a spy's destination...). A slot that is <see cref="Optional"/> may stay unchosen.</summary>
 public sealed record PickerSlot(string Id, string Title, IReadOnlyList<PickerOption> Options, bool Optional = false);
@@ -110,7 +110,7 @@ public static class DecisionPickerModel
     public static PickerSpec? FreeGreatPerson(GreatPeopleResult people, Func<string, string> describe)
     {
         if (people.FreeGreatPeople <= 0 || people.FreeOptions.Count == 0) return null;
-        var options = people.FreeOptions.Select(it => new PickerOption(it, it, describe(it))).ToList();
+        var options = people.FreeOptions.Select(it => new PickerOption(it, it, describe(it), Icon: AssetKey.Of(RulesetAssetKeys.UnitIcon, it))).ToList();
         return new PickerSpec(PickerKind.FreeGreatPerson, "Choose a free great person", $"Free great people left: {Int(people.FreeGreatPeople)}",
             [new PickerSlot("unit", "Great person", options)], "Choose",
             choice => [new ChooseFreeGreatPerson { Unit = choice.Selected[0].NotNullOrEmpty() }]);
@@ -133,7 +133,7 @@ public static class DecisionPickerModel
         if (!religion.Enabled || religion.State != "FoundingReligion") return null;
         var slots = new List<PickerSlot>
         {
-            new("icon", "Religion", religion.AvailableIcons.Select(it => new PickerOption(it, it, "")).ToList()),
+            new("icon", "Religion", religion.AvailableIcons.Select(it => new PickerOption(it, it, "", Icon: AssetKey.Of(RulesetAssetKeys.ActionIcon, "FoundReligion"))).ToList()),
         };
         slots.AddRange(BeliefSlots(religion, describe));
         return new PickerSpec(PickerKind.FoundReligion, "Found a religion", $"Faith: {Int(religion.Faith)}", slots, "Found religion",
@@ -158,9 +158,10 @@ public static class DecisionPickerModel
         foreach (var spy in spies.Spies.Where(it => it.IsAlive))
         {
             var options = new List<PickerOption>();
-            if (spy.CanMoveToHideout) options.Add(new PickerOption(Hideout, "Hideout", "Back to the hideout"));
+            if (spy.CanMoveToHideout) options.Add(new PickerOption(Hideout, "Hideout", "Back to the hideout", Icon: AssetKey.Of(RulesetAssetKeys.UiIcon, "Spy")));
             foreach (var city in spy.Destinations)
-                options.Add(new PickerOption(city.CityId, city.Civ.Length == 0 ? city.CityName : $"{city.CityName} ({city.Civ})", city.IsCityState ? "A city-state" : ""));
+                options.Add(new PickerOption(city.CityId, city.Civ.Length == 0 ? city.CityName : $"{city.CityName} ({city.Civ})", city.IsCityState ? "A city-state" : "",
+                    Icon: city.Civ.Length > 0 ? AssetKey.Of(RulesetAssetKeys.NationIcon, city.Civ) : AssetKey.Of(RulesetAssetKeys.UiIcon, "Cities")));
             slots.Add(new PickerSlot(spy.Name, $"{spy.Name} (rank {Int(spy.Rank)}, {spy.Location})", options, Optional: true));
         }
         return new PickerSpec(PickerKind.MoveSpies, "Move spies", slots.Count == 0 ? "None of your spies can move." : "Choose where to send each spy; a spy left alone stays.", slots,
@@ -174,7 +175,8 @@ public static class DecisionPickerModel
     public static PickerSpec? DiplomaticVote(DiplomaticVoteResult vote, Func<string, string> civName)
     {
         if (!vote.CanVote) return null;
-        var options = vote.Candidates.Select(it => new PickerOption(it, civName(it), "")).Append(new PickerOption(Abstain, "Abstain", "Vote for nobody")).ToList();
+        var options = vote.Candidates.Select(it => new PickerOption(it, civName(it), "", Icon: AssetKey.Of(RulesetAssetKeys.NationIcon, it)))
+            .Append(new PickerOption(Abstain, "Abstain", "Vote for nobody")).ToList();
         return new PickerSpec(PickerKind.DiplomaticVote, "World Congress", "Vote for the civilization that should lead the world.", [new PickerSlot("civ", "Vote for", options)],
             "Vote", choice => [new VoteDiplomatic { CivId = choice.Selected[0] is { Length: > 0 } id ? id : null }]);
     }
@@ -188,7 +190,7 @@ public static class DecisionPickerModel
         if (promotions.Promotions.Count == 0) return null;
         var options = promotions.Promotions.Select(it => new PickerOption(it.Name, it.Name,
             string.Join("\n", it.Prerequisites.Count == 0 ? it.Uniques : it.Uniques.Prepend("Requires: " + string.Join(" or ", it.Prerequisites))),
-            it.Selectable, it.Selectable ? null : "Not enough experience")).ToList();
+            it.Selectable, it.Selectable ? null : "Not enough experience", AssetKey.Of(RulesetAssetKeys.PromotionIcon, it.Name))).ToList();
         return new PickerSpec(PickerKind.Promotion, $"Promote {unitName}", $"Experience: {Int(promotions.Xp)} / {Int(promotions.XpForNextPromotion)}",
             [new PickerSlot("promotion", "Promotion", options)], "Take promotion",
             choice => [new PromoteUnit { UnitId = promotions.UnitId, Promotion = choice.Selected[0].NotNullOrEmpty(), SaveAsDefault = choice.Flag }],
@@ -237,7 +239,7 @@ public static class DecisionPickerModel
     public static IReadOnlyList<GameCommand> Commands(PickerSpec spec, PickerChoice choice) => Problem(spec, choice) == null ? spec.Build(choice) : [];
 
     private static List<PickerOption> Beliefs(ReligionResult religion, string type, Func<string, string> describe) =>
-        (religion.Available.TryGetValue(type, out var names) ? names : []).Select(it => new PickerOption(it, it, describe(it))).ToList();
+        (religion.Available.TryGetValue(type, out var names) ? names : []).Select(it => new PickerOption(it, it, describe(it), Icon: AssetKey.Of(RulesetAssetKeys.StatIcon, "Faith"))).ToList();
 
     /// <summary>One slot per belief the engine wants, in its order; a slot of kind "Any" takes any belief that is not a pantheon.</summary>
     private static List<PickerSlot> BeliefSlots(ReligionResult religion, Func<string, string> describe)

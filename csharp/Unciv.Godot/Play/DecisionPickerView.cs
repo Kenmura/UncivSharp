@@ -27,6 +27,7 @@ public partial class DecisionPickerView : Modal
     private readonly Dictionary<(int Slot, string Id), Button> optionButtons = [];
     private string?[] selected = [];
     private bool nameEdited;
+    private bool interacted;
     private ScrollContainer? scroll; // T317: only on a window shorter than 480, so the footer stays on screen
     private VBoxContainer? content;
     private UiTheme theme = null!; // JUSTIFY: C038 assigned by Init before the picker is opened
@@ -35,7 +36,7 @@ public partial class DecisionPickerView : Modal
     {
         Name = "DecisionPicker";
         TitleLabel.Name = "PickerTitle";
-        problem.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.DangerText));
+        problem.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.TextSecondary));
         Body.AddChild(prompt);
         Body.AddChild(columns);
         Body.AddChild(detail);
@@ -47,10 +48,15 @@ public partial class DecisionPickerView : Modal
         later.Pressed += () => Dismissed?.Invoke(Spec.NotNull());
         nameField.TextChanged += _ =>
         {
+            interacted = true;
             nameEdited = true;
             Update();
         };
-        flagBox.Toggled += _ => Update();
+        flagBox.Toggled += _ =>
+        {
+            interacted = true;
+            Update();
+        };
     }
 
     public PickerSpec? Spec { get; private set; }
@@ -96,6 +102,7 @@ public partial class DecisionPickerView : Modal
         Spec = spec;
         selected = new string?[spec.Slots.Count];
         nameEdited = false;
+        interacted = false;
         float width = Fit(560, prompt, detail); // T328: the wrap width follows a live resize/scale change
         SetHeader(spec.Title);
         prompt.CustomMinimumSize = new Vector2(width, 0);
@@ -171,6 +178,7 @@ public partial class DecisionPickerView : Modal
         if (Spec == null) return;
         var option = Spec.Slots[slot].Options.FirstOrDefault(it => it.Id == id);
         if (option == null) return;
+        interacted = true;
         selected[slot] = selected[slot] == id && Spec.Slots[slot].Optional ? null : id;
         detail.Set((option.Detail.Length > 0 ? option.Detail : option.Label).TrText());
         if (Spec.TextFollowsSlot == slot && !nameEdited) nameField.Text = (DecisionPickerModel.DefaultText(Spec, Choice()));
@@ -206,6 +214,12 @@ public partial class DecisionPickerView : Modal
                 Alignment = HorizontalAlignment.Left,
                 TooltipText = UiText.StripGlyphs((option.Reason ?? "").TrText()),
             };
+            if (option.Icon is { } iconKey)
+            {
+                button.Icon = theme.Icon(iconKey);
+                button.ExpandIcon = true;
+                button.AddThemeConstantOverride("icon_max_width", theme.Px(20));
+            }
             string id = option.Id;
             string shownDetail = (option.Detail.Length > 0 ? option.Detail : option.Label).TrText();
             button.Pressed += () =>
@@ -225,6 +239,7 @@ public partial class DecisionPickerView : Modal
         if (Spec == null) return;
         foreach (var ((slot, id), button) in optionButtons) button.SetPressedNoSignal(selected[slot] == id);
         string? why = DecisionPickerModel.Problem(Spec, Choice());
+        problem.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(interacted && why != null ? UiTokens.DangerText : UiTokens.TextSecondary));
         problem.Text = UiText.StripGlyphs((why ?? "").TrText());
         confirm.Disabled = why != null;
     }

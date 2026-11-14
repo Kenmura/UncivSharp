@@ -1,4 +1,5 @@
 using Godot;
+using Unciv.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Translations;
@@ -17,8 +18,10 @@ public partial class TutorialTaskCard : Control
     private readonly PanelContainer panel = new() { Name = "TaskPanel", MouseFilter = MouseFilterEnum.Stop };
     private readonly VBoxContainer shell = new() { Name = "TaskShell" };
     private readonly VBoxContainer column = new() { Name = "TaskColumn" };
-    private readonly HBoxContainer header = new() { Name = "TaskHeader" };
-    private readonly Button closeButton = new() { Name = "TaskClose" };
+    private readonly HBoxContainer header = new() { Name = "TaskHeader", MouseFilter = MouseFilterEnum.Pass };
+    private readonly Label titleLabel = new() { Name = "TaskTitle", ThemeTypeVariation = UiVariants.LabelHeading, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center, MouseFilter = MouseFilterEnum.Pass };
+    private readonly Button collapseButton = new() { Name = "TaskCollapse", Text = "▼", ThemeTypeVariation = UiVariants.ButtonGhost };
+    private readonly Button closeButton = new() { Name = "TaskClose", ThemeTypeVariation = UiVariants.ButtonGhost };
     private readonly Button neverButton = new() { Name = "TaskNever" };
     private readonly Button collapsedButton = new() { Name = "TaskCollapsed", Text = "?", Visible = false };
     private UiTheme theme = null!; // JUSTIFY: C054 assigned by Init before the card is shown
@@ -29,18 +32,21 @@ public partial class TutorialTaskCard : Control
         Name = "TutorialTaskCard";
         MouseFilter = MouseFilterEnum.Ignore;
         Visible = false;
-        neverButton.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        collapseButton.TooltipText = "Collapse tutorial".Tr();
+        closeButton.TooltipText = "Hide tutorial".Tr();
+        neverButton.SizeFlagsHorizontal = SizeFlags.ShrinkEnd;
         neverButton.ThemeTypeVariation = UiVariants.ButtonGhost;
-        neverButton.AutowrapMode = TextServer.AutowrapMode.WordSmart; // a narrow phone card wraps the text instead of growing wider than its budget
-        neverButton.CustomMinimumSize = new Vector2(1f, 0f);
-        header.AddChild(neverButton);
+        header.AddChild(titleLabel);
+        header.AddChild(collapseButton);
         header.AddChild(closeButton);
         shell.AddChild(header);
         shell.AddChild(column);
+        shell.AddChild(neverButton);
         panel.AddChild(shell);
         AddChild(panel);
         AddChild(collapsedButton);
         panel.GuiInput += OnPanelInput;
+        collapseButton.Pressed += () => SetCollapsed(true);
         collapsedButton.Pressed += () => SetCollapsed(false);
         closeButton.Pressed += () =>
         {
@@ -83,6 +89,8 @@ public partial class TutorialTaskCard : Control
     {
         theme = uiTheme;
         Theme = uiTheme.Theme;
+        shell.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S1));
+        column.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S1));
     }
 
     /// <summary>Shows the task (null or an empty Event name hides the card). The fold is kept while the task stays the same.</summary>
@@ -106,13 +114,16 @@ public partial class TutorialTaskCard : Control
         if (task != null) Build();
     }
 
-    /// <summary>Centres the card under <paramref name="top"/> (the HUD's bottom edge) in a screen of <paramref name="screen"/> size.</summary>
+    /// <summary>Centres the card under <paramref name="top"/> (the HUD's bottom edge) in a screen of <paramref name="screen"/> size, keeping it above the bottom edge.</summary>
     public void LayoutIn(Vector2 screen, float top)
     {
         float width = CardWidth(screen.X);
         panel.CustomMinimumSize = new Vector2(width, 0f);
         panel.Size = new Vector2(width, 0f); // a container never shrinks below its minimum, so this is the content's own height
-        panel.Position = new Vector2((screen.X - panel.Size.X) / 2f, top);
+        float height = Math.Max(panel.Size.Y, panel.GetCombinedMinimumSize().Y);
+        float margin = theme?.Px(UiTokens.S2) ?? 8f;
+        float clampedTop = Math.Min(top, Math.Max(margin, screen.Y - height - margin));
+        panel.Position = new Vector2((screen.X - panel.Size.X) / 2f, clampedTop);
         collapsedButton.Size = collapsedButton.GetCombinedMinimumSize();
         collapsedButton.Position = new Vector2((screen.X - collapsedButton.Size.X) / 2f, top);
         Position = Vector2.Zero;
@@ -128,6 +139,9 @@ public partial class TutorialTaskCard : Control
             column.RemoveChild(child);
             child.QueueFree();
         }
+        titleLabel.Text = "Tutorial".Tr();
+        collapseButton.TooltipText = "Collapse tutorial".Tr();
+        closeButton.TooltipText = "Hide tutorial".Tr();
         neverButton.Text = "Never show tutorials".Tr();
         closeButton.Text = "X".Tr();
         panel.Visible = !Collapsed;

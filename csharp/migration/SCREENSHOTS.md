@@ -1075,29 +1075,25 @@ Scenario `overview-espionage`.
 
 ## C051 Espionage overview screen and spy coup/action buttons
 
-Espionage screen: the spies and the places they can go, Move/Cancel/Move here, the coup button, and the multi-spy assignment picker.
+Espionage screen: the spies and inline destinations on move, Move/Cancel/Move here, and the coup button.
 
 Scenario `espionage`.
 
-![The espionage screen in its frame: a table of the spies with rank, location, action, a Move button and, for the spy in the city-state, a red Coup 35% button; the places table below and the primary Assign spies button in the footer.](../Unciv.Godot.Harness/golden/espionage/screen.png)
+![The espionage screen in its frame: a table of the spies with rank, location, action, Move button and, for the spy in the city-state, a red Coup button.](../Unciv.Godot.Harness/golden/espionage/screen.png)
 
-*The espionage screen in its frame: a table of the spies with rank, location, action, a Move button and, for the spy in the city-state, a red Coup 35% button; the places table below and the primary Assign spies button in the footer.* (`espionage/screen.png`)
+*The espionage screen in its frame: a table of the spies with rank, location, action, Move button and, for the spy in the city-state, a red Coup button.* (`espionage/screen.png`)
 
-![Move was pressed on the first spy: Move became Cancel and the places the engine offers it show a Move here button at the end of their rows.](../Unciv.Godot.Harness/golden/espionage/selecting.png)
+![Move was pressed on the first spy: Move became Cancel and valid destination places expand inline with a Move here button.](../Unciv.Godot.Harness/golden/espionage/selecting.png)
 
-*Move was pressed on the first spy: Move became Cancel and the places the engine offers it show a Move here button at the end of their rows.* (`espionage/selecting.png`)
+*Move was pressed on the first spy: Move became Cancel and valid destination places expand inline with a Move here button.* (`espionage/selecting.png`)
 
-![The first spy was sent to Rome's capital: its row and the city's Spy present column show it.](../Unciv.Godot.Harness/golden/espionage/moved.png)
+![The first spy was sent to Rome's capital: its row and the spy board show it.](../Unciv.Godot.Harness/golden/espionage/moved.png)
 
-*The first spy was sent to Rome's capital: its row and the city's Spy present column show it.* (`espionage/moved.png`)
+*The first spy was sent to Rome's capital: its row and the spy board show it.* (`espionage/moved.png`)
 
 ![The spy in the city-state is staging a coup; its button now says Call off.](../Unciv.Godot.Harness/golden/espionage/coup.png)
 
 *The spy in the city-state is staging a coup; its button now says Call off.* (`espionage/coup.png`)
-
-![Assign spies: the multi-spy picker over the screen with the second spy chosen to return to the hideout.](../Unciv.Godot.Harness/golden/espionage/assign.png)
-
-*Assign spies: the multi-spy picker over the screen with the second spy chosen to return to the hideout.* (`espionage/assign.png`)
 
 ## C052 Scenario coverage for religion (found, enhance, reform), spy and vote pickers, and open pickers from notifications
 

@@ -436,27 +436,23 @@
   },
   "C051": {
     "scenario": "espionage",
-    "about": "Espionage screen: the spies and the places they can go, Move/Cancel/Move here, the coup button, and the multi-spy assignment picker.",
+    "about": "Espionage screen: the spies and inline destinations on move, Move/Cancel/Move here, and the coup button.",
     "shots": [
       {
         "golden": "espionage/screen.png",
-        "caption": "The espionage screen in its frame: a table of the spies with rank, location, action, a Move button and, for the spy in the city-state, a red Coup 35% button; the places table below and the primary Assign spies button in the footer."
+        "caption": "The espionage screen in its frame: a table of the spies with rank, location, action, Move button and, for the spy in the city-state, a red Coup button."
       },
       {
         "golden": "espionage/selecting.png",
-        "caption": "Move was pressed on the first spy: Move became Cancel and the places the engine offers it show a Move here button at the end of their rows."
+        "caption": "Move was pressed on the first spy: Move became Cancel and valid destination places expand inline with a Move here button."
       },
       {
         "golden": "espionage/moved.png",
-        "caption": "The first spy was sent to Rome's capital: its row and the city's Spy present column show it."
+        "caption": "The first spy was sent to Rome's capital: its row and the spy board show it."
       },
       {
         "golden": "espionage/coup.png",
         "caption": "The spy in the city-state is staging a coup; its button now says Call off."
-      },
-      {
-        "golden": "espionage/assign.png",
-        "caption": "Assign spies: the multi-spy picker over the screen with the second spy chosen to return to the hideout."
       }
     ]
   },

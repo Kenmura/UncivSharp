@@ -36,6 +36,7 @@ public partial class Modal : Control
     private readonly Label subtitle = new() { Name = "ModalSubtitle", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, Visible = false };
     private readonly VBoxContainer body = new() { Name = "ModalBody" };
     private readonly VBoxContainer footer = new() { Name = "ModalFooter" };
+    private Control? headerAction;
     private UiTheme? theme;
     private bool opaque;
     private int preferredWidth;
@@ -130,6 +131,21 @@ public partial class Modal : Control
         title.Text = titleText.TrText();
         subtitle.Text = (subtitleText ?? "").TrText();
         subtitle.Visible = !string.IsNullOrEmpty(subtitleText);
+    }
+
+    /// <summary>T415: places or clears an optional compact control (such as "Decide later") on the right edge of the modal header, keeping footer actions unstacked.</summary>
+    public void SetHeaderAction(Control? action)
+    {
+        if (headerAction != null)
+        {
+            headerRow.RemoveChild(headerAction);
+            headerAction.QueueFree();
+            headerAction = null;
+        }
+        if (action == null) return;
+        action.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+        headerRow.AddChild(action);
+        headerAction = action;
     }
 
     /// <summary>

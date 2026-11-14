@@ -302,8 +302,11 @@ public partial class TradeScreen : PanelContainer
         }
         var outgoing = SelectedCivId == null ? null : TradeScreenModel.Outgoing(session.Snapshot, SelectedCivId, NameLookup);
         bool waiting = builder != null && (builder.Options.HasPendingOfferFromUs || outgoing != null);
+        pending.Visible = waiting;
         pending.Text = outgoing == null ? (waiting ? "Your offer waits for their answer".Tr() : "")
             : $"Your offer waits for their answer: you give {Join(outgoing.Gives)}; you ask {Join(outgoing.Asks)}";
+        bool emptyDraft = builder == null || (builder.StagedChoices(TradeSide.Give).Count == 0 && builder.StagedChoices(TradeSide.Ask).Count == 0);
+        summary.Visible = !(waiting && emptyDraft);
         summary.Text = builder == null ? "" : string.Join("\n", builder.Summary());
         propose.Disabled = builder == null || builder.IsEmpty || waiting;
         propose.TooltipText = waiting ? "Retract your offer first".Tr() : "";
@@ -325,7 +328,12 @@ public partial class TradeScreen : PanelContainer
             {
                 var line = new HBoxContainer();
                 line.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
-                var offer = new ListRow(theme, choice.Text, icon: choice.Icon, disabledReason: choice.Entry.Tradable ? null : "Not possible") { Name = choice.Id, TooltipText = choice.Label, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+                string offerText = choice.Entry.Tradable
+                    ? choice.Text
+                    : choice.Entry.Type is "Gold" or "Gold_Per_Turn"
+                        ? TradeScreenModel.NameOf(choice.Entry)
+                        : TradeScreenModel.OfferText(TradeScreenModel.NameOf(choice.Entry), choice.Entry.Type, choice.Entry.Amount, choice.Entry.Duration);
+                var offer = new ListRow(theme, offerText, icon: choice.Icon, disabledReason: choice.Entry.Tradable ? null : "Not possible") { Name = choice.Id, TooltipText = choice.Label, SizeFlagsHorizontal = SizeFlags.ExpandFill };
                 offer.SetPressedNoSignal(choice.Staged);
                 var chosen = choice;
                 offer.Pressed += () =>

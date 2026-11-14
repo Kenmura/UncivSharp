@@ -259,4 +259,13 @@ public class PediaModelTests
             }
         }
     }
+
+    [Fact]
+    public void WithoutHeaderCost_DropsLeadingCostOrWholeLineWhenUnpaired()
+    {
+        var plain = Line("Requires Pottery");
+        Assert.Same(plain, PediaModel.WithoutHeaderCost(plain));
+        Assert.Null(PediaModel.WithoutHeaderCost(Line("{Cost}: 40[Production]")));
+        Assert.Equal("{Cost}: 400[Gold]", PediaModel.WithoutHeaderCost(Line("{Cost}: 75[Production]/400[Gold]")).NotNull().Text);
+    }
 }
