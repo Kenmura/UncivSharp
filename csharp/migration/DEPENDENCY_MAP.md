@@ -102,7 +102,7 @@ flowchart TD
 Unlinked tickets (no open dependency in either direction), by state:
 
 - ready: T423 T424 T425 T426 T427
-- in progress: T422
+- in review: T422
 - blocked: T290 T355 T357 T394 T404
 - waiting: T313 T332 T362
 
@@ -170,4 +170,4 @@ xychart-beta
 | T404 | Blocked | T301 | 0 | T301 follow-up: window maximize/resize on Wayland-native, Windows, macOS and with UiScale != 1 in the real app |
 | T418 | Available (waiting on T417) | T416, T417 | 0 | Clean cutover docs: rewrite root README.md, archive legacy changelog, and update contributor/modding docs for C#/.NET + Godot |
 | T419 | Available (waiting on T325, T330) | T325, T330, T280, T416 | 0 | Automated releases: one-click version bump, changelog generation, optional Android release signing, and main-branch workflow alignment |
-| T422 | In-Progress [Antigravity] | T421 | 0 | Size ratchet expansion: split GameScreen.cs and ClientSession.cs and enforce SizeRatchetTests across all projects |
+| T422 | Needs-Review [Antigravity] | T421 | 0 | Size ratchet expansion: split GameScreen.cs and ClientSession.cs and enforce SizeRatchetTests across all projects |

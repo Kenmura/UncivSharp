@@ -4,12 +4,23 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Unciv.Core.Tests.Policy;
 
-// T120/T421: strict file and method size limits across Core and Harnesses (no baseline exceptions).
+// T120/T421/T422: strict file and method size limits across all non-test projects (no baseline exceptions).
 public class SizeRatchetTests
 {
     private const int MaxFileLines = 1500;
     private const int MaxMethodLines = 120;
-    private static readonly string[] ScannedProjects = ["Unciv.Core", "Unciv.Harness", "Unciv.Godot.Harness"];
+    private static readonly string[] ScannedProjects =
+    [
+        "Unciv.Core",
+        "Unciv.Harness",
+        "Unciv.Godot.Harness",
+        "Unciv.Assets",
+        "Unciv.Server",
+        "Unciv.Client.Net",
+        "Unciv.Relay",
+        "Unciv.Cli",
+        "Unciv.Godot"
+    ];
 
     [Fact]
     public void FilesAndMethodsStayWithinLimits()
