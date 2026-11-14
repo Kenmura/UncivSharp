@@ -96,7 +96,7 @@ public partial class VoteResultScreen : Modal
         thresholds.AddThemeConstantOverride("separation", Ui.Px(UiTokens.S1));
         thresholds.AddChild(new Label
         {
-            Text = $"World Leader threshold: {view.VotesNeeded.ToString(CultureInfo.InvariantCulture)} votes".TrText(),
+            Text = $"{"World Leader threshold".Tr()}: {view.VotesNeeded.ToString(CultureInfo.InvariantCulture)}",
             ThemeTypeVariation = UiVariants.LabelSmall,
         });
         foreach (var entry in rows)

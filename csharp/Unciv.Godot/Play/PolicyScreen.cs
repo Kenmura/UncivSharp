@@ -287,9 +287,9 @@ public partial class PolicyScreen : PanelContainer
         box.AddChild(row);
         var goldenRow = new HBoxContainer();
         goldenRow.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
-        goldenAgeBar = new StatBar(uiTheme, "Gold", goldenAgeTurns > 0 ? 1 : goldenAgeStored, goldenAgeTurns > 0 ? 1 : goldenAgeNeeded) { Name = "GoldenAgeBar", CustomMinimumSize = new Vector2(uiTheme.Px(90), 0f), Visible = goldenAgeNeeded > 0 || goldenAgeTurns > 0 };
+        goldenAgeBar = new StatBar(uiTheme, "Gold", goldenAgeTurns > 0 ? 1 : goldenAgeStored, goldenAgeTurns > 0 ? 1 : goldenAgeNeeded) { Name = "GoldenAgeBar", CustomMinimumSize = new Vector2(uiTheme.Px(120), 0f), Visible = goldenAgeNeeded > 0 || goldenAgeTurns > 0 };
         goldenRow.AddChild(goldenAgeBar);
-        goldenAgeLabel = new Label { Name = "GoldenAge", ThemeTypeVariation = UiVariants.LabelSmall, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        goldenAgeLabel = new Label { Name = "GoldenAge", ThemeTypeVariation = UiVariants.LabelSmall, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2f };
         goldenRow.AddChild(goldenAgeLabel);
         box.AddChild(goldenRow);
         return box;

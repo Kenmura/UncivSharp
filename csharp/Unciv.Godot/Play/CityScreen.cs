@@ -393,21 +393,21 @@ public partial class CityScreen : PanelContainer
 
     private void BuildStatusStrip(CityPanelResult panel)
     {
-        var badges = CityScreenModel.StatusBadges(panel);
+        var badges = CityScreenModel.StatusBadges(panel, static s => s.Tr());
         if (badges.Count == 0) return;
         var strip = new HFlowContainer { Name = "StatusBadges" };
         strip.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S1));
         strip.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S1));
         foreach (var badge in badges)
         {
-            var pill = new PanelContainer { Name = "Status_" + badge.Id, ThemeTypeVariation = UiVariants.PanelCard, TooltipText = badge.Tooltip.TrText() };
+            var pill = new PanelContainer { Name = "Status_" + badge.Id, ThemeTypeVariation = UiVariants.PanelCard, TooltipText = badge.Tooltip };
             var tint = badge.Tone switch
             {
                 CityScreenModel.CityStatusTone.Danger => UiTokens.DangerText,
                 CityScreenModel.CityStatusTone.Accent => UiTokens.AccentHi,
                 _ => UiTokens.Warning,
             };
-            var chip = new IconLabel(theme, badge.Icon, badge.Label.TrText());
+            var chip = new IconLabel(theme, badge.Icon, badge.Label);
             chip.LabelNode.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(tint));
             pill.AddChild(chip);
             strip.AddChild(pill);
@@ -453,8 +453,14 @@ public partial class CityScreen : PanelContainer
         }
 
         // Preserve scenario handles SpecialistButton(name, add: true/false) across 0/N and N/N boundary states
-        specialistButtons[(row.Name, true)] = addBtn ?? new Button { Visible = false, Disabled = true };
-        specialistButtons[(row.Name, false)] = removeBtn ?? new Button { Visible = false, Disabled = true };
+        Button BoundaryButton(bool add)
+        {
+            var hidden = new Button { Name = $"SpecBoundary_{row.Name}_{(add ? "Add" : "Remove")}", Visible = false, Disabled = true };
+            pipRow.AddChild(hidden);
+            return hidden;
+        }
+        specialistButtons[(row.Name, true)] = addBtn ?? BoundaryButton(true);
+        specialistButtons[(row.Name, false)] = removeBtn ?? BoundaryButton(false);
 
         if (wrapPips)
         {

@@ -166,10 +166,13 @@ public static class JoinModel
     }
 
     /// <summary>T413: human-readable mod sync download status with file and byte counts.</summary>
-    public static string ModDownloadProgressText(int completedFiles, int totalFiles, long completedBytes, long totalBytes, string modName) =>
-        totalFiles > 0
-            ? $"Downloading {modName}: {completedFiles.ToString(CultureInfo.InvariantCulture)}/{totalFiles.ToString(CultureInfo.InvariantCulture)} ({FormatBytes(completedBytes)} / {FormatBytes(totalBytes)})"
-            : $"Downloading {modName}...";
+    public static string ModDownloadProgressText(int completedFiles, int totalFiles, long completedBytes, long totalBytes, string modName, Func<string, string>? tr = null)
+    {
+        string verb = (tr ?? (static s => s))("Downloading");
+        return totalFiles > 0
+            ? $"{verb} {modName}: {completedFiles.ToString(CultureInfo.InvariantCulture)}/{totalFiles.ToString(CultureInfo.InvariantCulture)} ({FormatBytes(completedBytes)} / {FormatBytes(totalBytes)})"
+            : $"{verb} {modName}...";
+    }
 
     private static string FormatBytes(long bytes) => bytes < 1024 ? $"{bytes} B" : bytes < 1024 * 1024 ? $"{bytes / 1024} KB" : $"{bytes / (1024 * 1024)} MB";
 

@@ -329,6 +329,11 @@ public class DiplomacyScreenModelTests
 
         var hostile = DiplomacyScreenModel.InfluenceMeter(Panel(cityState: true, influence: -100f))!;
         Assert.Equal(0f, hostile.Fraction);
+
+        var nonFinite = DiplomacyScreenModel.InfluenceMeter(Panel(cityState: true, influence: float.NaN))!;
+        Assert.Equal(0f, nonFinite.Influence);
+        Assert.Equal(90f, nonFinite.Max);
+        Assert.True(float.IsFinite(nonFinite.Fraction));
     }
 
     [Fact]

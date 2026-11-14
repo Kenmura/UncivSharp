@@ -40,7 +40,7 @@ public partial class InfluenceMeter : Control
 
     private void UpdateSize()
     {
-        CustomMinimumSize = new Vector2(theme.Px(140), theme.Px(26));
+        CustomMinimumSize = new Vector2(theme.Px(140), theme.Px(30));
     }
 
     public override void _Draw()

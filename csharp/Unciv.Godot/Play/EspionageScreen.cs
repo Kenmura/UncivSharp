@@ -192,7 +192,7 @@ public partial class EspionageScreen : PanelContainer
             it.Name,
             $"{EspionageModel.RankIcons(it.RankValue)} {it.Rank}",
             it.Location.TrText(),
-            it.TurnsRemaining > 0 ? $"{it.Action.TrText()} ({it.TurnsRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture)}t)" : it.Action.TrText(),
+            it.TurnsRemaining > 0 ? EspionageModel.FormatAction(it.Action.TrText(), it.TurnsRemaining) : it.Action.TrText(),
         ]).ToList(), index =>
         {
             var spy = page.Spies[index];

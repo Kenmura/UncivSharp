@@ -121,7 +121,7 @@ public static class DiplomacyScreenModel
     public static InfluenceMeterSpec? InfluenceMeter(DiplomacyPanelResult panel)
     {
         if (!panel.IsCityState) return null;
-        float influence = panel.Influence ?? 0f;
+        float influence = panel.Influence is float v && float.IsFinite(v) ? v : 0f;
         const int friend = 30;
         const int ally = 60;
         const float min = -60f;

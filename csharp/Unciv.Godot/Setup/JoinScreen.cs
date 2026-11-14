@@ -516,7 +516,7 @@ public partial class JoinScreen : Control
             double total = progress.TotalBytes > 0 ? progress.TotalBytes : Math.Max(1, progress.TotalFiles);
             double done = progress.TotalBytes > 0 ? progress.CompletedBytes : progress.CompletedFiles;
             modProgressBar.SetProgress(done, total);
-            messageLabel.Text = JoinModel.ModDownloadProgressText(progress.CompletedFiles, progress.TotalFiles, progress.CompletedBytes, progress.TotalBytes, progress.ModName);
+            messageLabel.Text = JoinModel.ModDownloadProgressText(progress.CompletedFiles, progress.TotalFiles, progress.CompletedBytes, progress.TotalBytes, progress.ModName, static s => s.Tr());
         }
         if (context == null) Callable.From(Apply).CallDeferred();
         else context.Post(static state => ((Action)state!)(), (Action)Apply);

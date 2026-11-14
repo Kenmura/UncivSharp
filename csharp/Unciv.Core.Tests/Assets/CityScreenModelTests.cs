@@ -231,5 +231,6 @@ public class CityScreenModelTests
         var demandBadge = Assert.Single(CityScreenModel.StatusBadges(demanded));
         Assert.Equal(("Wants Silk", CityScreenModel.CityStatusTone.Warning, AssetKey.Of(RulesetAssetKeys.ResourceIcon, "Silk")),
             (demandBadge.Label, demandBadge.Tone, demandBadge.Icon));
+        Assert.Equal("LOC:Wants LOC:Silk", Assert.Single(CityScreenModel.StatusBadges(demanded, static s => "LOC:" + s)).Label);
     }
 }

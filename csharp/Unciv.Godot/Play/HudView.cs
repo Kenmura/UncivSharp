@@ -319,7 +319,7 @@ public partial class HudView : Control
 
         public void SetProgress(double value, double max)
         {
-            fraction = max <= 0 ? 0f : (float)Math.Clamp(value / max, 0.0, 1.0);
+            fraction = !double.IsFinite(value) || !double.IsFinite(max) || max <= 0 ? 0f : (float)Math.Clamp(value / max, 0.0, 1.0);
             QueueRedraw();
         }
 

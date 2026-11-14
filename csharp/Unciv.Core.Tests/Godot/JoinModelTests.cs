@@ -286,5 +286,6 @@ public sealed class JoinModelTests
     {
         Assert.Equal("Downloading TestMod...", JoinModel.ModDownloadProgressText(0, 0, 0, 0, "TestMod"));
         Assert.Equal("Downloading TestMod: 2/4 (15 KB / 2 MB)", JoinModel.ModDownloadProgressText(2, 4, 15 * 1024, 2 * 1024 * 1024, "TestMod"));
+        Assert.Equal("Lade TestMod...", JoinModel.ModDownloadProgressText(0, 0, 0, 0, "TestMod", static _ => "Lade"));
     }
 }

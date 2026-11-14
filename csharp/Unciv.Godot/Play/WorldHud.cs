@@ -271,7 +271,6 @@ public partial class WorldHud : Control
         Menu = Make(NavTarget.Menu, Ui("Options"), "Menu", hotkey: "Esc");
         hud.Leading.AddChild(Menu);
         Technology = Make(NavTarget.Technology, AssetKey.Of(RulesetAssetKeys.StatIcon, "Science"), "Technology", "Technology", variation: UiVariants.ButtonSecondary);
-        Technology.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
         technologyBar = new StatBar(theme, "Science", 0, 1)
         {
             Name = "TechnologyBar",
