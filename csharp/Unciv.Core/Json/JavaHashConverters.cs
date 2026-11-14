@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Unciv.Utils;
@@ -76,9 +77,18 @@ public class JavaHashMapConverter<TValue> : JsonConverter<JavaHashMap<string, TV
                 throw new JsonException($"Expected PropertyName, got {reader.TokenType}");
             string key = reader.GetString().NotNull();
             reader.Read();
-            TValue value = typeof(TValue) == typeof(int)
-                ? (TValue)(object)JsonValueReader.ReadInt(ref reader, "JavaHashMap value")
-                : JsonSerializer.Deserialize<TValue>(ref reader, options) ?? new TValue[1].ElementAt(0);
+            TValue value;
+            if (typeof(TValue) == typeof(int))
+                value = (TValue)(object)JsonValueReader.ReadInt(ref reader, "JavaHashMap value");
+            else
+            {
+                var raw = JsonSerializer.Deserialize<TValue>(ref reader, options);
+                value = raw is { } nonNull
+                    ? nonNull
+                    : default(TValue) is null
+                        ? Unsafe.As<TValue?, TValue>(ref raw)
+                        : throw new JsonException($"Unexpected null value for key '{key}' in JavaHashMap<string,{typeof(TValue).Name}>");
+            }
             map.Put(key, value);
         }
         throw new JsonException("Unexpected end of JSON while reading JavaHashMap");

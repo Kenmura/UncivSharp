@@ -112,7 +112,9 @@ public sealed partial class RelayServer : IAsyncDisposable
         publicNames.AddRange(options.PublicNames);
         if (mode == RelayTlsMode.Certificate)
         {
-            certificate = RelayCertificates.LoadPem(options.CertFile ?? "", options.KeyFile ?? "");
+            certificate = RelayCertificates.LoadPem(
+                options.CertFile ?? throw new InvalidOperationException("CertFile missing in Certificate TLS mode"),
+                options.KeyFile ?? throw new InvalidOperationException("KeyFile missing in Certificate TLS mode"));
             certificateStamp = CertificateStamp();
             if (publicNames.Count == 0) publicNames.AddRange(RelayCertificates.DnsNames(certificate));
             if (publicNames.Count == 0) throw new RelayUsageException("the certificate has no DNS names: give --public-name");

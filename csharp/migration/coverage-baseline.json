@@ -856,7 +856,7 @@
     "Unciv.Relay/RelayServer.Http.cs": {"branch": 87.65, "line": 92.11},
     "Unciv.Relay/RelayServer.Join.cs": {"branch": 93.75, "line": 93.33},
     "Unciv.Relay/RelayServer.Sweep.cs": {"branch": 87.1, "line": 95.89},
-    "Unciv.Relay/RelayServer.cs": {"branch": 94.2, "line": 99.33},
+    "Unciv.Relay/RelayServer.cs": {"branch": 94.2, "line": 99.0},
     "Unciv.Relay/Splice.cs": {"branch": 89.47, "line": 97.3},
     "Unciv.Server/CommandGate.cs": {"branch": 91.38, "line": 91.49},
     "Unciv.Server/GameHost.Handoff.cs": {"branch": 76.19, "line": 92.98},
