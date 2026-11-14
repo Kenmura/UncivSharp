@@ -162,6 +162,6 @@ xychart-beta
 | T362 | Available (waiting on ) | T334 | 0 | Two real client processes host and join on the real GPU (manual two-profile smoke) |
 | T394 | Blocked | T356 | 0 | Owner-run independent verification of the civsharp relay (CONNECTIVITY.md rows R2-R4, R7-R9, R13) and record results |
 | T404 | Blocked | T301 | 0 | T301 follow-up: window maximize/resize on Wayland-native, Windows, macOS and with UiScale != 1 in the real app |
-| T413 | Needs-Review [Antigravity] | none | 0 | UX polish: add 'show, don't tell' progress bars, segmented gauges, threshold markers, slot pips, and connection timers |
+| T413 | In-Review [Antigravity] | none | 0 | UX polish: add 'show, don't tell' progress bars, segmented gauges, threshold markers, slot pips, and connection timers |
 | T418 | Available (waiting on T417) | T416, T417 | 0 | Clean cutover docs: rewrite root README.md, archive legacy changelog, and update contributor/modding docs for C#/.NET + Godot |
 | T419 | Available (waiting on T325, T330) | T325, T330, T280, T416 | 0 | Automated releases: one-click version bump, changelog generation, optional Android release signing, and main-branch workflow alignment |
