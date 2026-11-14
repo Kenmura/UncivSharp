@@ -82,21 +82,17 @@ public sealed class NextTurnLongScenario : Scenario
                 screen.TurnOverlay.Visible && !screen.StatusText.Contains("cancelled", StringComparison.OrdinalIgnoreCase)),
             new AssertQuery("the first civ of the turn is America, one of eight", () => screen.TurnOverlay.DetailText == "America - 1 of 8"),
             new Capture("overlay", "A late-game eight-civ End turn in progress: a compact card under the navigation strip names the civ moving ('America - 1 of 8'), with a progress bar and 'Esc to cancel'"),
-            new Act("zoom the map with the wheel while the overlay is up", () =>
+            new Act("attempt map wheel zoom and menu click while the blocking turn scrim is up", () =>
             {
                 zoomBefore = screen.Map.Zoom;
                 overlayUp = screen.TurnOverlay.Visible;
                 endingWhenPanned = screen.IsEndingTurn;
                 InputSimulator.SimulateWheel(host.GetViewport(), new Vector2(80, 320), up: true);
-            }),
-            new AssertQuery("the camera still zooms under the overlay", () => overlayUp && endingWhenPanned && screen.Map.Zoom != zoomBefore),
-            new Act("open the menu while the turn runs", () =>
-            {
                 endingWhenOpened = screen.IsEndingTurn;
                 InputSimulator.SimulateMouseClick(host.GetViewport(), screen.MenuButton.GetGlobalRect().GetCenter());
             }),
-            new AssertQuery("the in-game menu opens during the turn", () => screen.GameMenu.Visible && endingWhenOpened),
-            new Act("close the menu", () => screen.GameMenu.Close()),
+            new AssertQuery("the dim turn scrim blocks map zoom and menu clicks while ending turn", () =>
+                overlayUp && endingWhenPanned && endingWhenOpened && screen.Map.Zoom == zoomBefore && !screen.GameMenu.Visible),
             new WaitUntil("the turn is processed", () => !screen.IsEndingTurn && game.Turns > startTurn, 3000),
             new Act("record the measured wall time", () =>
             {

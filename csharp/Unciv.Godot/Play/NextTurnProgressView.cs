@@ -1,22 +1,25 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
 
 namespace Unciv.GodotClient.Play;
 
 /// <summary>
-/// C040/T345: the overlay shown while End turn is processed off the UI thread: a compact card under the navigation strip with a heading, the civ being
-/// played ("Rome - 3 of 8"), a progress bar and (for a local turn) a cancel hint. It takes no input at all: the camera, the HUD and the menus stay usable
-/// while the host or the worker plays the other civs, and a turn that finishes quickly never shows it (<see cref="NextTurnOverlayState"/>).
+/// C040/T345/T412: the overlay shown while End turn is processed off the UI thread: a blocking dim scrim and a compact card under the navigation strip
+/// with a heading, the civ being played ("Rome - 3 of 8"), a progress bar (or animated indeterminate sweep when waiting on host/AI) and (for a local turn)
+/// a cancel hint.
 /// </summary>
 public partial class NextTurnProgressView : Control
 {
     private readonly NextTurnOverlayState state = new();
+    private readonly ColorRect scrim = new() { Name = "Scrim", MouseFilter = MouseFilterEnum.Stop };
     private readonly Label heading = new() { Name = "ProgressHeading", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelTitle };
     private readonly Label detail = new() { Name = "ProgressDetail", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelSecondary };
     private readonly Label hint = new() { Name = "ProgressHint", HorizontalAlignment = HorizontalAlignment.Center, ThemeTypeVariation = UiVariants.LabelSmall };
     private readonly ProgressBar bar = new() { Name = "ProgressBar", MinValue = 0, MaxValue = 1, Step = 0.001, ShowPercentage = false, ThemeTypeVariation = UiVariants.StatBarThin };
+    private readonly ColorRect sweepThumb = new() { Name = "WaitSweep", Visible = false, MouseFilter = MouseFilterEnum.Ignore };
     private readonly PanelContainer panel = new() { Name = "ProgressPanel", ThemeTypeVariation = UiVariants.PanelCard };
     private float top;
 
@@ -24,15 +27,22 @@ public partial class NextTurnProgressView : Control
     {
         Name = "NextTurnProgress";
         Visible = false;
-        MouseFilter = MouseFilterEnum.Ignore; // T345: the overlay is not a blocker; the map, HUD and menus keep working
+        MouseFilter = MouseFilterEnum.Stop; // T412: dim scrim blocks map, alert, and HUD clicks while the turn resolves
         this.Fill();
-        panel.MouseFilter = MouseFilterEnum.Ignore;
+        scrim.Fill();
+        scrim.Color = ProceduralAssets.ToColor(UiTokens.Scrim) with { A = UiTokens.ScrimPercent / 100f };
+        scrim.GuiInput += _ => { if (Visible) scrim.AcceptEvent(); };
+        AddChild(scrim);
+        panel.MouseFilter = MouseFilterEnum.Stop;
+        panel.GuiInput += _ => { if (Visible) panel.AcceptEvent(); };
         AddChild(panel);
         var column = new VBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
         column.AddThemeConstantOverride("separation", 8);
         panel.AddChild(column);
         foreach (var label in new[] { heading, detail, hint }) label.MouseFilter = MouseFilterEnum.Ignore;
         bar.MouseFilter = MouseFilterEnum.Ignore;
+        sweepThumb.Color = ProceduralAssets.ToColor(UiTokens.Accent);
+        bar.AddChild(sweepThumb);
         column.AddChild(heading);
         column.AddChild(detail);
         column.AddChild(bar);
@@ -78,6 +88,11 @@ public partial class NextTurnProgressView : Control
     public override void _Process(double delta)
     {
         if (RealTime) Advance(delta);
+    }
+
+    public override void _GuiInput(InputEvent @event)
+    {
+        if (Visible) AcceptEvent();
     }
 
     /// <summary>Adds frame time so a short turn never flashes the card (the harness steps it directly).</summary>
@@ -131,6 +146,15 @@ public partial class NextTurnProgressView : Control
         hint.Visible = state.Hint.Length > 0;
         bar.Value = state.View.Fraction;
         LayoutCard(); // the text decides the card's width, so measure it again after every change
+        sweepThumb.Visible = state.IsWaiting;
+        if (state.IsWaiting)
+        {
+            float trackW = Math.Max(bar.Size.X, bar.CustomMinimumSize.X);
+            float trackH = Math.Max(bar.Size.Y, bar.CustomMinimumSize.Y);
+            float thumbW = trackW * 0.32f;
+            sweepThumb.Position = new Vector2((trackW - thumbW) * (float)state.WaitSweepPosition, 0f);
+            sweepThumb.Size = new Vector2(thumbW, trackH);
+        }
     }
 
     private void LayoutCard()

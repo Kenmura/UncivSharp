@@ -76,18 +76,22 @@ public partial class CityScreen : PanelContainer
         tabs.ButtonFor("Production")!.Name = "ShowProduction";
         tabs.Chosen += option => SetProduction(option == "Production");
         top.AddChild(tabs);
-        top.AddChild(info);
+        top.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore });
         renameButton.Pressed += OpenRename;
         top.AddChild(renameButton);
         column.AddChild(top);
+        info.ThemeTypeVariation = UiVariants.LabelSecondary;
+        info.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        info.Visible = !Phone;
+        column.AddChild(info);
         column.AddChild(meters);
         column.AddChild(middle);
         productionView = new CityProductionView(Send, SetMessage, AskCityConfirm, uiTheme);
         column.AddChild(productionView);
         message.ClipText = true;
         column.AddChild(message);
-        side.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
-        var sideScroll = new ScrollContainer { Name = "SideScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(uiTheme.Px(200), 0f) };
+        side.AddThemeConstantOverride("separation", uiTheme.Px(Phone ? UiTokens.S1 : UiTokens.S2));
+        var sideScroll = new ScrollContainer { Name = "SideScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill, CustomMinimumSize = new Vector2(uiTheme.Px(Phone ? 240 : 200), 0f) };
         side.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         sideScroll.AddChild(side);
         middle.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S3));
@@ -296,6 +300,7 @@ public partial class CityScreen : PanelContainer
         var text = CityScreenModel.Foreign(city);
         frame.TitleLabel.Text = text.Title.TrText();
         info.Text = "";
+        info.Visible = false;
         infoText = "";
         meters.Visible = false;
         foreach (string line in text.Lines) side.AddChild(new Label { Text = line.TrText() });
@@ -308,9 +313,14 @@ public partial class CityScreen : PanelContainer
         var infoLines = CityScreenModel.InfoLines(panel);
         infoText = string.Join("\n", infoLines.Select(it => it.TrText()));
         info.Text = infoLines[2].TrText();
+        info.Visible = !Phone;
         ShowMeters(panel);
         ClearSide();
-        if (Phone) side.AddChild(MeterColumns(panel));
+        if (Phone)
+        {
+            side.AddChild(new Label { Name = "PhoneInfo", Text = info.Text, ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart });
+            side.AddChild(MeterColumns(panel));
+        }
         var chips = new HFlowContainer { Name = "Stats" };
         chips.AddThemeConstantOverride("h_separation", theme.Px(UiTokens.S2));
         chips.AddThemeConstantOverride("v_separation", theme.Px(UiTokens.S1));
@@ -363,16 +373,16 @@ public partial class CityScreen : PanelContainer
         meters.Visible = !showProduction;
     }
 
-    /// <summary>The food and border meters: side by side in the header strip, stacked in the side column on a phone.</summary>
+    /// <summary>The food and border meters: side by side in the header strip, compact side-by-side inside the phone side column so lower controls stay visible.</summary>
     private BoxContainer MeterColumns(CityPanelResult panel)
     {
-        BoxContainer row = Phone ? new VBoxContainer { Name = "PhoneMeters" } : new HBoxContainer();
+        BoxContainer row = new HBoxContainer { Name = Phone ? "PhoneMeters" : "MetersRow" };
         row.AddThemeConstantOverride("separation", theme.Px(Phone ? UiTokens.S2 : UiTokens.S4));
         foreach (var meter in new[] { CityScreenModel.FoodMeter(panel), CityScreenModel.BorderMeter(panel) })
         {
             var column = new VBoxContainer { Name = "Meter_" + meter.Stat, SizeFlagsHorizontal = SizeFlags.ExpandFill };
             column.AddThemeConstantOverride("separation", 0);
-            column.AddChild(new Label { Text = meter.Caption.TrText(), ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = Phone ? TextServer.AutowrapMode.WordSmart : TextServer.AutowrapMode.Off, TextOverrunBehavior = Phone ? TextServer.OverrunBehavior.NoTrimming : TextServer.OverrunBehavior.TrimEllipsis });
+            column.AddChild(new Label { Text = meter.Caption.TrText(), ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = TextServer.AutowrapMode.Off, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis });
             column.AddChild(new StatBar(theme, meter.Stat, meter.Value, meter.Max));
             row.AddChild(column);
         }

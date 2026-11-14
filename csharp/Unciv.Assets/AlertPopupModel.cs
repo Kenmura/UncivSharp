@@ -24,7 +24,7 @@ public enum AlertKind
 /// An alert ready to draw. <see cref="Buttons"/> are the engine's answers (a choice only appears when the engine's query said the command would accept it).
 /// <see cref="CanDefer"/> means the popup may be closed without answering (the alert stays pending and the HUD offers to review it); a blocking alert cannot.
 /// </summary>
-public sealed record AlertPopup(int Index, AlertType Type, string Value, string Title, string Body, IReadOnlyList<AlertButton> Buttons, bool Blocking, bool CanDefer)
+public sealed record AlertPopup(int Index, AlertType Type, string Value, string Title, string Body, IReadOnlyList<AlertButton> Buttons, bool Blocking, bool CanDefer, AssetKey? Icon = null)
 {
     /// <summary>C066: whether the alert interrupts the player (a modal popup) or only tells something (<see cref="AlertKind.Ambient"/>, a toast in the notification column).</summary>
     public AlertKind Kind => AlertPopupModel.KindOf(this);
@@ -161,7 +161,39 @@ public static class AlertPopupModel
                 break;
         }
         bool canDefer = !entry.Blocking && resolver != "ack-alert";
-        return new AlertPopup(entry.Index, type, alert.Value, Fill(words.Title), body, buttons, entry.Blocking, canDefer);
+        return new AlertPopup(entry.Index, type, alert.Value, Fill(words.Title), body, buttons, entry.Blocking, canDefer, IconFor(type, alert.Value, snapshot));
+    }
+
+    /// <summary>Contextual icon for an alert popup header: nation emblem for civ alerts, war emblem for war, city/tech/building icons where applicable.</summary>
+    public static AssetKey IconFor(AlertType type, string value, ClientSnapshot snapshot)
+    {
+        if (type == AlertType.WarDeclaration) return AssetKey.Of(RulesetAssetKeys.ActionIcon, "Pillage");
+        if (type is AlertType.FirstContact or AlertType.DeclarationOfFriendship or AlertType.Denounced
+            or AlertType.BorderConflict or AlertType.TilesStolen or AlertType.Defeated
+            or AlertType.AcceptingDemand or AlertType.RejectingDemand
+            or AlertType.DemandToStopSettlingCitiesNear or AlertType.CitySettledNearOtherCivDespiteOurPromise
+            or AlertType.DemandToStopSpreadingReligion or AlertType.ReligionSpreadDespiteOurPromise
+            or AlertType.DemandToStopSpyingOnUs or AlertType.SpyingOnUsDespiteOurPromise
+            or AlertType.DemandToNotAttackUs or AlertType.AttackedUsDespitePromise
+            or AlertType.BulliedProtectedMinor or AlertType.AttackedProtectedMinor or AlertType.AttackedAllyMinor)
+        {
+            string civId = value.Split('@')[0];
+            var civ = snapshot.Civs.FirstOrDefault(it => it.CivId == civId);
+            return civ != null
+                ? AssetKey.Of(RulesetAssetKeys.NationIcon, civ.IsCityState ? "CityState" : civ.Name)
+                : AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy");
+        }
+        return type switch
+        {
+            AlertType.CityConquered or AlertType.CityTraded or AlertType.DiplomaticMarriage => AssetKey.Of(RulesetAssetKeys.UiIcon, "Cities"),
+            AlertType.TechResearched => string.IsNullOrEmpty(value) ? AssetKey.Of(RulesetAssetKeys.StatIcon, "Science") : AssetKey.Of(RulesetAssetKeys.TechIcon, value),
+            AlertType.WonderBuilt => string.IsNullOrEmpty(value) ? AssetKey.Of(RulesetAssetKeys.UiIcon, "Wonders") : AssetKey.Of(RulesetAssetKeys.BuildingIcon, value),
+            AlertType.GoldenAge => AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"),
+            AlertType.StartIntro => AssetKey.Of(RulesetAssetKeys.ActionIcon, "FoundCity"),
+            AlertType.RecapturedCivilian => AssetKey.Of(RulesetAssetKeys.ActionIcon, "Escort"),
+            AlertType.GameHasBeenWon => AssetKey.Of(RulesetAssetKeys.UiIcon, "Score"),
+            _ => AssetKey.Of(RulesetAssetKeys.UiIcon, "ExclamationMark"),
+        };
     }
 
     /// <summary>The button that brings back the alerts that were put off.</summary>

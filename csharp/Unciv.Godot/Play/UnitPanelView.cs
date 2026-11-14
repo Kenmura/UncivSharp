@@ -113,6 +113,9 @@ public partial class UnitPanelView : PanelContainer
     /// <summary>The "More" button, or null when every action fits the grid.</summary>
     public Button? MoreButton => more;
 
+    /// <summary>T412: raised when the overflow popover opens.</summary>
+    public event Action? PopoverOpened;
+
     /// <summary>The stat chips row (the harness taps a chip to show its tip).</summary>
     public Control ChipsRow => chips;
 
@@ -394,8 +397,19 @@ public partial class UnitPanelView : PanelContainer
         button.Text = inGrid ? "" : entry.Label.TrText();
         button.Alignment = HorizontalAlignment.Left;
         button.ThemeTypeVariation = inGrid
-            ? entry.Kind == MenuEntryKind.Disband ? UiVariants.ButtonDanger : entry.Primary ? UiVariants.ButtonPrimary : UiVariants.ButtonIcon
+            ? entry.Primary ? UiVariants.ButtonPrimary : UiVariants.ButtonIcon
             : UiVariants.ButtonRow;
+        if (inGrid && entry.Kind == MenuEntryKind.Disband)
+        {
+            var danger = ProceduralAssets.ToColor(UiTokens.DangerText);
+            button.AddThemeColorOverride("icon_hover_color", danger);
+            button.AddThemeColorOverride("icon_pressed_color", danger);
+        }
+        else
+        {
+            button.RemoveThemeColorOverride("icon_hover_color");
+            button.RemoveThemeColorOverride("icon_pressed_color");
+        }
         button.CustomMinimumSize = inGrid ? new Vector2(Cell, Cell) : Vector2.Zero;
         button.ExpandIcon = false;
         string tip = UiText.TooltipFor(entry.Label.TrText(), KeyFor(entry));
@@ -430,6 +444,7 @@ public partial class UnitPanelView : PanelContainer
         }
         if (more == null) return;
         popover.Visible = true;
+        PopoverOpened?.Invoke();
         popover.Size = Vector2.Zero;
         var size = popover.GetCombinedMinimumSize();
         var anchor = more.GetGlobalRect();

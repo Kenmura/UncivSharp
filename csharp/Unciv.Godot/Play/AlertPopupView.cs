@@ -43,7 +43,7 @@ public partial class AlertPopupView : Modal
     public void Open(AlertPopup popup)
     {
         Current = popup;
-        SetHeader(popup.Title, icon: AssetKey.Of(RulesetAssetKeys.UiIcon, "ExclamationMark"));
+        SetHeader(popup.Title, icon: popup.Icon ?? AssetKey.Of(RulesetAssetKeys.UiIcon, "ExclamationMark"));
         Fit(440, body); // T323: re-fitted on a live resize
         body.Text = popup.Body.TrText();
         byId.Clear();

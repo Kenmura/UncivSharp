@@ -45,7 +45,10 @@ public partial class PolicyScreen : PanelContainer
     private LineEdit search = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
     private Control branchHost = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
     private VBoxContainer detail = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
+    private PanelContainer side = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
+    private Button sideToggle = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
     private Button adopt = null!; // JUSTIFY: C071 assigned by BuildFrame in the constructor
+    private bool compactSideOpen;
     private TabBar? tabs;
     private ScrollContainer? branchScroll;
     private int lastTab;
@@ -157,7 +160,20 @@ public partial class PolicyScreen : PanelContainer
                     branch = view.Name;
                 }
         if (branch != null && reveal) ShowBranch(branch);
+        SetCompactSide(selected != null);
         ShowSelection();
+    }
+
+    private void SetCompactSide(bool open)
+    {
+        compactSideOpen = open;
+        bool compact = uiTheme.Breakpoint == UiBreakpoint.Compact;
+        if (sideToggle != null)
+        {
+            sideToggle.Visible = compact;
+            sideToggle.Text = (open ? "Hide details" : "Details").Tr();
+        }
+        if (side != null) side.Visible = !compact || open;
     }
 
     /// <summary>Brings a branch's card into view: its tab, or its place in the scrolled grid.</summary>
@@ -216,7 +232,14 @@ public partial class PolicyScreen : PanelContainer
             searchText = text;
             ApplySearch(true);
         };
-        frame.SetHeaderStrip(search);
+        search.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        sideToggle = new Button { Name = "SideToggle", ThemeTypeVariation = UiVariants.ButtonSecondary };
+        sideToggle.Pressed += () => SetCompactSide(!compactSideOpen);
+        var strip = new HBoxContainer();
+        strip.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
+        strip.AddChild(search);
+        strip.AddChild(sideToggle);
+        frame.SetHeaderStrip(strip);
 
         var page = new VBoxContainer();
         page.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
@@ -226,7 +249,7 @@ public partial class PolicyScreen : PanelContainer
         branchHost = new VBoxContainer { Name = "Branches", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         body.AddChild(branchHost);
 
-        var side = new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(uiTheme.Px(uiTheme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) };
+        side = new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(uiTheme.Px(uiTheme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) };
         var sideScroll = new ScrollContainer { Name = "SideScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
         detail = new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         detail.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
@@ -239,6 +262,7 @@ public partial class PolicyScreen : PanelContainer
         adopt = new Button { Name = "AdoptButton", Text = "Adopt".Tr(), Disabled = true, ThemeTypeVariation = UiVariants.ButtonPrimary, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
         adopt.Pressed += () => Fire(AdoptSelected());
         message = NewMessage();
+        SetCompactSide(selected != null);
     }
 
     /// <summary>The band under the header: the culture bar with what is missing, and the golden-age line.</summary>

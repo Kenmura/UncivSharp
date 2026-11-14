@@ -93,4 +93,25 @@ public sealed class NextTurnOverlayStateTests
         state.Advance(0);
         Assert.True(state.ShouldShow);
     }
+
+    [Fact]
+    public void WaitingSweepAnimatesDeterministicallyOnlyWhileWaiting()
+    {
+        var state = new NextTurnOverlayState { RevealDelaySeconds = 0 };
+        state.Start(NextTurnProgressModel.Begin(), "");
+        state.Advance(0.5);
+        Assert.False(state.IsWaiting);
+        Assert.Equal(0.0, state.WaitSweepPosition);
+
+        state.Close();
+        state.WaitForHost(NextTurnProgressModel.WaitingForHost());
+        state.Advance(0);
+        Assert.True(state.IsWaiting);
+        double atHalf = NextTurnOverlayState.WaitSweepPeriodSeconds / 2.0;
+        double start = state.WaitSweepPosition;
+        state.Advance(atHalf);
+        double peak = state.WaitSweepPosition;
+        Assert.True(peak > start);
+        Assert.Equal(1.0, peak, 5);
+    }
 }

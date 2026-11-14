@@ -63,6 +63,7 @@ public class AlertPopupModelTests
             var choices = type == AlertType.CityConquered ? new[] { ("annex", "annex") } : [];
             var popup = AlertPopupModel.Describe(Entry(type, value, choices: choices), Snapshot());
             Assert.NotNull(popup);
+            Assert.NotNull(popup.Icon);
             if (type != AlertType.Event) Assert.False(string.IsNullOrWhiteSpace(popup.Body), type.ToString()); // an event's text comes from the engine
             Assert.NotEmpty(popup.Buttons);
             Assert.DoesNotContain('{', popup.Title + popup.Body);
@@ -251,5 +252,19 @@ public class AlertPopupModelTests
         // so it opens as a popup straight away instead of waiting under "Review alerts"
         Assert.Equal(AlertType.WonderBuilt, AlertPopupModel.Next(Pending(Entry(AlertType.WonderBuilt, "Pyramids", blocking: true)), snapshot, new HashSet<string>())!.Type);
         Assert.Null(AlertPopupModel.Next(Pending(Entry(AlertType.WonderBuilt, "Pyramids")), snapshot, new HashSet<string>()));
+    }
+
+    [Fact]
+    public void ContextualIconsMatchAlertCategoryAndKnownCivs()
+    {
+        var snapshot = Snapshot();
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.ActionIcon, "Pillage"), AlertPopupModel.IconFor(AlertType.WarDeclaration, "rome-id", snapshot));
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.NationIcon, "Rome"), AlertPopupModel.IconFor(AlertType.DeclarationOfFriendship, "rome-id", snapshot));
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy"), AlertPopupModel.IconFor(AlertType.FirstContact, "unknown-id", snapshot));
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.UiIcon, "Cities"), AlertPopupModel.IconFor(AlertType.CityConquered, "c1", snapshot));
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.TechIcon, "Pottery"), AlertPopupModel.IconFor(AlertType.TechResearched, "Pottery", snapshot));
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.BuildingIcon, "Pyramids"), AlertPopupModel.IconFor(AlertType.WonderBuilt, "Pyramids", snapshot));
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), AlertPopupModel.IconFor(AlertType.GoldenAge, "", snapshot));
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.ActionIcon, "FoundCity"), AlertPopupModel.IconFor(AlertType.StartIntro, "", snapshot));
     }
 }

@@ -36,6 +36,9 @@ public partial class TechScreen : PanelContainer
     private Control bandRow = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
     private EdgeCanvas canvas = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
     private VBoxContainer detail = null!; // JUSTIFY: C070 assigned by BuildFrame in the constructor
+    private PanelContainer side = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
+    private Button sideToggle = null!; // JUSTIFY: T412 assigned by BuildFrame in the constructor
+    private bool compactSideOpen;
     private string titleText = "";
     private string stateText = "";
     private IReadOnlyList<TechAction> current = [];
@@ -139,12 +142,27 @@ public partial class TechScreen : PanelContainer
     }
 
     /// <summary>Chooses a node of the tree and shows its unlocks, its path and its buttons.</summary>
-    public void Select(string? tech)
+    public void Select(string? tech) => SelectCore(tech, expandCompact: true);
+
+    private void SelectCore(string? tech, bool expandCompact)
     {
         SelectedTech = tech;
         foreach (var (name, card) in nodeButtons) card.SetPressedNoSignal(name == tech);
+        if (expandCompact && tech != null) SetCompactSide(true);
         Fill();
         RefreshEdges();
+    }
+
+    private void SetCompactSide(bool open)
+    {
+        compactSideOpen = open;
+        bool compact = theme.Breakpoint == UiBreakpoint.Compact;
+        if (sideToggle != null)
+        {
+            sideToggle.Visible = compact;
+            sideToggle.Text = (open ? "Hide details" : "Details").Tr();
+        }
+        if (side != null) side.Visible = !compact || open;
     }
 
     /// <summary>Scrolls the tree so the node is inside the visible part (a click needs it there).</summary>
@@ -192,9 +210,12 @@ public partial class TechScreen : PanelContainer
             ApplySearch(true);
         };
         var strip = new HBoxContainer();
+        sideToggle = new Button { Name = "SideToggle", ThemeTypeVariation = UiVariants.ButtonSecondary };
+        sideToggle.Pressed += () => SetCompactSide(!compactSideOpen);
         strip.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
         strip.AddChild(header);
         strip.AddChild(search);
+        strip.AddChild(sideToggle);
         frame.SetHeaderStrip(strip);
 
         var body = new HBoxContainer();
@@ -213,7 +234,7 @@ public partial class TechScreen : PanelContainer
         left.AddChild(treeFrame);
         body.AddChild(left);
 
-        var side = new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) };
+        side = new PanelContainer { Name = "Side", ThemeTypeVariation = UiVariants.PanelCard, CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 170 : 280), 0f) };
         var sideScroll = new ScrollContainer { Name = "SideScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         detail = new VBoxContainer { Name = "Detail", SizeFlagsHorizontal = SizeFlags.ExpandFill };
         detail.AddThemeConstantOverride("separation", theme.Px(UiTokens.S2));
@@ -221,6 +242,7 @@ public partial class TechScreen : PanelContainer
         side.AddChild(sideScroll);
         body.AddChild(side);
         frame.SetContent(body);
+        SetCompactSide(false);
 
     }
 
@@ -242,7 +264,7 @@ public partial class TechScreen : PanelContainer
         string? pick = choose != null && Layout.Nodes.Any(it => it.Name == choose) ? choose
             : tree.CurrentTech != null && Layout.Nodes.Any(it => it.Name == tree.CurrentTech) ? tree.CurrentTech
             : Layout.Nodes.FirstOrDefault(it => it.State == TechScreenModel.Researchable)?.Name;
-        Select(pick);
+        SelectCore(pick, expandCompact: choose != null);
         ApplySearch(false);
         if (pick != null) CallDeferred(nameof(ScrollTo), pick);
     }

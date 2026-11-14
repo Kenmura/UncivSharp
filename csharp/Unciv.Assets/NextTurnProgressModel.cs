@@ -50,6 +50,9 @@ public sealed class NextTurnOverlayState
     /// <summary>How long a turn may take before the overlay appears; below it the turn is over before the player notices.</summary>
     public const double DefaultRevealDelaySeconds = 0.4;
 
+    /// <summary>T345: how long one back-and-forth sweep of the indeterminate waiting indicator takes.</summary>
+    public const double WaitSweepPeriodSeconds = 1.6;
+
     /// <summary>The overlay's own delay; scenarios may shorten it so a capture does not depend on frames.</summary>
     public double RevealDelaySeconds { get; set; } = DefaultRevealDelaySeconds;
 
@@ -67,6 +70,20 @@ public sealed class NextTurnOverlayState
 
     /// <summary>The hint under the bar (empty when the turn cannot be cancelled from this client).</summary>
     public string Hint { get; private set; } = "";
+
+    /// <summary>Whether the overlay is showing an indeterminate host/AI wait rather than step progress.</summary>
+    public bool IsWaiting => View.Detail == NextTurnProgressModel.Waiting;
+
+    /// <summary>0..1 ping-pong position for the indeterminate wait bar, driven deterministically by <see cref="ElapsedSeconds"/>.</summary>
+    public double WaitSweepPosition
+    {
+        get
+        {
+            if (!IsWaiting || WaitSweepPeriodSeconds <= 0) return 0.0;
+            double cycle = (ElapsedSeconds % WaitSweepPeriodSeconds) / WaitSweepPeriodSeconds;
+            return cycle <= 0.5 ? cycle * 2.0 : 2.0 - cycle * 2.0;
+        }
+    }
 
     public bool ShouldShow => Active && Revealed;
 
@@ -104,12 +121,12 @@ public sealed class NextTurnOverlayState
         Hint = hint;
     }
 
-    /// <summary>Adds frame time; reveals the overlay once the delay has passed. A revealed overlay stays shown until <see cref="Close"/>.</summary>
+    /// <summary>Adds frame time; reveals the overlay once the delay has passed and keeps advancing <see cref="ElapsedSeconds"/> while active so indeterminate waiting animates deterministically.</summary>
     public void Advance(double seconds)
     {
-        if (!Active || Revealed) return;
+        if (!Active) return;
         ElapsedSeconds += seconds;
-        if (ElapsedSeconds >= RevealDelaySeconds) Revealed = true;
+        if (!Revealed && ElapsedSeconds >= RevealDelaySeconds) Revealed = true;
     }
 
     public void Close()

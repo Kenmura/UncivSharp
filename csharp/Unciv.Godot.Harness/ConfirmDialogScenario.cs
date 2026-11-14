@@ -175,6 +175,18 @@ public sealed class ConfirmDialogScenario : Scenario
 
         private static Vector2 Centre(Control? control) => control?.GetGlobalRect().GetCenter() ?? Vector2.Zero;
 
+        private static void EnsureVisible(Control? control)
+        {
+            for (Node? node = control; node != null; node = node.GetParent())
+            {
+                if (node is ScrollContainer scroller && control != null)
+                {
+                    scroller.EnsureControlVisible(control);
+                    break;
+                }
+            }
+        }
+
         public List<ScenarioStep> DefaultOnSteps()
         {
             return
@@ -205,6 +217,8 @@ public sealed class ConfirmDialogScenario : Scenario
                 new Act("open the capital's Production tab and buy a Monument", () => main.Screen.OpenCityScreen(Dto(capital))),
                 new WaitFrames(3),
                 new Act("show Production", () => main.Screen.City.SetProduction(true)),
+                new WaitFrames(2),
+                new Act("scroll Monument into view", () => EnsureVisible(main.Screen.City.Production.ButtonNamed("Build_Monument"))),
                 new WaitFrames(2),
                 new Click(() => Centre(main.Screen.City.Production.ButtonNamed("Build_Monument"))),
                 new WaitFrames(2),

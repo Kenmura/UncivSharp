@@ -1,4 +1,6 @@
 using System.Globalization;
+using Unciv.Models.Ruleset;
+using Unciv.Models.StatTypes;
 using Unciv.Net.Visibility;
 
 namespace Unciv.Assets;
@@ -85,6 +87,91 @@ public static class NotificationsModel
 
     /// <summary>The header of the list: its toggle shows the count.</summary>
     public static string ToggleLabel(int count, bool open) => (open ? "Hide notifications" : "Notifications") + " (" + count.ToString(CultureInfo.InvariantCulture) + ")";
+
+    /// <summary>Resolves the first recognizable icon from <see cref="NotificationRow.Icons"/> (or falls back by <see cref="NotificationRow.Category"/>) into a pack <see cref="AssetKey"/>.</summary>
+    public static AssetKey IconFor(NotificationRow row, Ruleset? ruleset = null)
+    {
+        foreach (string icon in row.Icons)
+        {
+            if (ResolveIcon(icon, ruleset) is { } key) return key;
+        }
+        return CategoryIcon(row.Category);
+    }
+
+    private static AssetKey? ResolveIcon(string icon, Ruleset? ruleset)
+    {
+        if (string.IsNullOrEmpty(icon)) return null;
+        int slash = icon.IndexOf('/', StringComparison.Ordinal);
+        if (slash > 0 && slash + 1 < icon.Length)
+        {
+            string prefix = icon[..slash];
+            string name = icon[(slash + 1)..];
+            return prefix switch
+            {
+                "StatIcons" => name switch
+                {
+                    "Population" or "Growth" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Cities"),
+                    "Acquire" => AssetKey.Of(RulesetAssetKeys.StatIcon, "Gold"),
+                    _ => Enum.TryParse<Stat>(name, out _) ? AssetKey.Of(RulesetAssetKeys.StatIcon, name) : AssetKey.Of(RulesetAssetKeys.UiIcon, "Notifications"),
+                },
+                "OtherIcons" => name switch
+                {
+                    "Diplomacy" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy"),
+                    "Pillage" => AssetKey.Of(RulesetAssetKeys.ActionIcon, "Pillage"),
+                    "DisbandUnit" => AssetKey.Of(RulesetAssetKeys.ActionIcon, "DisbandUnit"),
+                    "Spy" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Spy"),
+                    "Quest" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Star"),
+                    "CityState" => AssetKey.Of(RulesetAssetKeys.NationIcon, "CityState"),
+                    "CrosshairB" => AssetKey.Of(RulesetAssetKeys.ActionIcon, "Guard"),
+                    "Question" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Question"),
+                    _ => RulesetAssetKeys.UiIconNames.Contains(name, StringComparer.Ordinal) ? AssetKey.Of(RulesetAssetKeys.UiIcon, name)
+                        : RulesetAssetKeys.ActionIconNames.Contains(name, StringComparer.Ordinal) ? AssetKey.Of(RulesetAssetKeys.ActionIcon, name)
+                        : AssetKey.Of(RulesetAssetKeys.UiIcon, "Notifications"),
+                },
+                "ImprovementIcons" => AssetKey.Of(RulesetAssetKeys.ImprovementIcon, name),
+                "UnitIcons" => AssetKey.Of(RulesetAssetKeys.UnitIcon, name),
+                "TechIcons" => AssetKey.Of(RulesetAssetKeys.TechIcon, name),
+                "BuildingIcons" => AssetKey.Of(RulesetAssetKeys.BuildingIcon, name),
+                "ResourceIcons" => AssetKey.Of(RulesetAssetKeys.ResourceIcon, name),
+                "PolicyIcons" => AssetKey.Of(RulesetAssetKeys.PolicyIcon, name),
+                "PromotionIcons" => AssetKey.Of(RulesetAssetKeys.PromotionIcon, name),
+                "NationIcons" => AssetKey.Of(RulesetAssetKeys.NationIcon, name),
+                "NotificationIcons" => RulesetAssetKeys.NotificationIconNames.Contains(name, StringComparer.Ordinal)
+                    ? AssetKey.Of(RulesetAssetKeys.NotificationIcon, name)
+                    : AssetKey.Of(RulesetAssetKeys.UiIcon, "Notifications"),
+                "UnitActionIcons" => AssetKey.Of(RulesetAssetKeys.ActionIcon, name),
+                _ => null,
+            };
+        }
+        if (ruleset != null)
+        {
+            if (ruleset.Technologies.ContainsKey(icon)) return AssetKey.Of(RulesetAssetKeys.TechIcon, icon);
+            if (ruleset.Units.ContainsKey(icon)) return AssetKey.Of(RulesetAssetKeys.UnitIcon, icon);
+            if (ruleset.Buildings.ContainsKey(icon)) return AssetKey.Of(RulesetAssetKeys.BuildingIcon, icon);
+            if (ruleset.TileResources.ContainsKey(icon)) return AssetKey.Of(RulesetAssetKeys.ResourceIcon, icon);
+            if (ruleset.TileImprovements.ContainsKey(icon)) return AssetKey.Of(RulesetAssetKeys.ImprovementIcon, icon);
+            if (ruleset.Policies.ContainsKey(icon)) return AssetKey.Of(RulesetAssetKeys.PolicyIcon, icon);
+            if (ruleset.Nations.ContainsKey(icon)) return AssetKey.Of(RulesetAssetKeys.NationIcon, icon);
+        }
+        if (Enum.TryParse<Stat>(icon, out _)) return AssetKey.Of(RulesetAssetKeys.StatIcon, icon);
+        if (RulesetAssetKeys.UiIconNames.Contains(icon, StringComparer.Ordinal)) return AssetKey.Of(RulesetAssetKeys.UiIcon, icon);
+        if (RulesetAssetKeys.ActionIconNames.Contains(icon, StringComparer.Ordinal)) return AssetKey.Of(RulesetAssetKeys.ActionIcon, icon);
+        if (RulesetAssetKeys.NotificationIconNames.Contains(icon, StringComparer.Ordinal)) return AssetKey.Of(RulesetAssetKeys.NotificationIcon, icon);
+        return null;
+    }
+
+    private static AssetKey CategoryIcon(string category) => category switch
+    {
+        "Trade" => AssetKey.Of(RulesetAssetKeys.StatIcon, "Gold"),
+        "Diplomacy" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy"),
+        "Production" => AssetKey.Of(RulesetAssetKeys.StatIcon, "Production"),
+        "Units" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Shield"),
+        "War" => AssetKey.Of(RulesetAssetKeys.ActionIcon, "Pillage"),
+        "Religion" => AssetKey.Of(RulesetAssetKeys.StatIcon, "Faith"),
+        "Espionage" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Spy"),
+        "Cities" => AssetKey.Of(RulesetAssetKeys.UiIcon, "Cities"),
+        _ => AssetKey.Of(RulesetAssetKeys.UiIcon, "Notifications"),
+    };
 
     private static int CategoryRank(string category)
     {

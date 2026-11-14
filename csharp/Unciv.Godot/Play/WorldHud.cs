@@ -138,6 +138,7 @@ public partial class WorldHud : Control
         column.AddChild(hud.Bar);
         column.MoveChild(hud.Bar, 0);
         toastLayer.AddChild(hud.Toast);
+        hud.Toast.VisibilityChanged += LayoutOverlays;
         notificationSlot.AddChild(notifications);
         minimapDock.AddChild(minimap);
         rightDock.AddChild(minimapDock);
@@ -168,9 +169,48 @@ public partial class WorldHud : Control
         notificationSlot.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
         minimap.SetSlot(MinimapSize);
         toastLayer.Theme = uiTheme.Theme;
-        hud.Toast.SetAnchorsAndOffsetsPreset(LayoutPreset.CenterTop);
-        hud.Toast.GrowHorizontal = GrowDirection.Both;
+        hud.Toast.SetAnchorsAndOffsetsPreset(LayoutPreset.TopLeft);
         hud.Toast.OffsetTop = hud.TopBarHeight + 2 * gap + NavPx;
+        LayoutOverlays();
+    }
+
+    /// <summary>T412: keeps the notification column clear of MinimapDock and centers the turn banner strictly inside the space free of Rivals and Notifications.</summary>
+    public void LayoutOverlays()
+    {
+        if (theme == null || Size.X <= 0f || Size.Y <= 0f) return;
+        float gap = Gap;
+        if (minimapDock.Size.Y > 0f && notificationSlot.IsInsideTree())
+        {
+            float maxNotifHeight = minimapDock.GlobalPosition.Y - notificationSlot.GlobalPosition.Y - gap;
+            if (maxNotifHeight > 0f) notifications.FitAvailableHeight(maxNotifHeight);
+        }
+        if (!hud.Toast.Visible) return;
+        float top = hud.TopBarHeight + 2f * gap + NavPx;
+        float leftBound = Rivals.IsVisibleInTree() ? Rivals.GetGlobalRect().End.X + gap : gap;
+        float notifLeft = notifications.IsVisibleInTree()
+            ? (notifications.Size.X > 0f ? notifications.GetGlobalRect().Position.X : Size.X - gap - notifications.GetCombinedMinimumSize().X)
+            : Size.X;
+        float rightBound = notifications.IsVisibleInTree() ? notifLeft - gap : Size.X - gap;
+        float freeWidth = rightBound - leftBound;
+        if (freeWidth >= theme.Px(140))
+        {
+            hud.FitBannerWidth(freeWidth);
+            Vector2 toastSize = hud.Toast.Size;
+            float x = Math.Clamp((Size.X - toastSize.X) / 2f, leftBound, Math.Max(leftBound, rightBound - toastSize.X));
+            hud.Toast.Position = new Vector2(x, top);
+            hud.Toast.Size = toastSize;
+        }
+        else
+        {
+            hud.FitBannerWidth(Math.Max(theme.Px(160), Size.X - 2f * gap));
+            Vector2 toastSize = hud.Toast.Size;
+            float x = Math.Clamp((Size.X - toastSize.X) / 2f, gap, Math.Max(gap, Size.X - gap - toastSize.X));
+            float fallbackTop = notifications.IsVisibleInTree()
+                ? Math.Min(Size.Y - toastSize.Y - gap, notifications.GetGlobalRect().End.Y + gap)
+                : top;
+            hud.Toast.Position = new Vector2(x, Math.Max(top, fallbackTop));
+            hud.Toast.Size = toastSize;
+        }
     }
 
     /// <summary>Rebuilds when the breakpoint or the UI scale changed since the last build (a window resize across 1000 logical pixels, or to a size with another automatic scale, C079: the pixel sizes the build reckoned with are stale then); any other resize needs nothing, the containers follow.</summary>

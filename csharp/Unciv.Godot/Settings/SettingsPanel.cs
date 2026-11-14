@@ -506,6 +506,40 @@ public partial class SettingsPanel : HBoxContainer
 
     private void AddRow(Container page, string key, Control control)
     {
+        if (control is OptionButton option)
+        {
+            option.ClipText = true;
+            option.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+            var optionRow = new BoxContainer();
+            var optionLabel = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart, VerticalAlignment = VerticalAlignment.Center };
+            refreshers.Add(() => optionLabel.Text = key.Tr());
+            optionRow.AddChild(optionLabel);
+            optionRow.AddChild(option);
+            theme.Fit(optionRow, () =>
+            {
+                bool compact = theme.Breakpoint == UiBreakpoint.Compact;
+                optionRow.Vertical = compact;
+                optionRow.AddThemeConstantOverride("separation", theme.Px(compact ? UiTokens.S1 : UiTokens.S3));
+                if (compact)
+                {
+                    optionLabel.CustomMinimumSize = Vector2.Zero;
+                    optionLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                    option.CustomMinimumSize = Vector2.Zero;
+                    option.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                }
+                else
+                {
+                    optionLabel.CustomMinimumSize = new Vector2(theme.Px(160), 0);
+                    optionLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                    optionLabel.SizeFlagsStretchRatio = 1f;
+                    option.CustomMinimumSize = new Vector2(theme.Px(220), 0);
+                    option.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+                    option.SizeFlagsStretchRatio = 0.9f;
+                }
+            });
+            page.AddChild(optionRow);
+            return;
+        }
         var row = new HBoxContainer();
         row.FitConstant(theme, "separation", UiTokens.S3);
         var label = new Label { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1f, AutowrapMode = TextServer.AutowrapMode.WordSmart, VerticalAlignment = VerticalAlignment.Center }.FitMin(theme, 110);

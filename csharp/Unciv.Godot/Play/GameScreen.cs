@@ -983,6 +983,7 @@ public partial class GameScreen : Control
         AddChild(World);
         World.Requested += OnNav;
         World.Rivals.ExpandedChanged += _ => Run(RefreshRivals(snapshot.Turn, force: true));
+        World.Rivals.Resized += () => World.LayoutOverlays();
         Hud.ActionRequested += OnHudAction;
         Hud.EndTurnRequested += OnNextTurn;
         Hud.AutoPlayRequested += OnAutoPlayButton;
@@ -990,6 +991,7 @@ public partial class GameScreen : Control
         AddChild(AutoPlayMenu);
         AutoPlayMenu.Chosen += kind => Run(StartAutoPlayAsync(kind));
         Notifications = new NotificationListView();
+        Notifications.Resized += () => World.LayoutOverlays();
         Notifications.Chosen += OnNotificationChosen;
         Notifications.ReviewRequested += () => Run(ReviewAlerts());
         TaskCard = new TutorialTaskCard();
@@ -999,6 +1001,7 @@ public partial class GameScreen : Control
         AddChild(Panel);
         Panel.EntryChosen += OnMenuEntry;
         Panel.Confirmed += entry => Run(ExecuteEntry(entry, confirmed: true));
+        Panel.PopoverOpened += () => Hud.HideBanner();
         CombatPreview = new CombatPreviewView();
         AddChild(CombatPreview);
         CombatPreview.ConfirmRequested += () => Run(ConfirmAttack());
@@ -1067,7 +1070,14 @@ public partial class GameScreen : Control
         Map.TileClicked += OnTileClicked;
         Map.ViewChanged += ApplyUnitLod;
         Map.TileRightClicked += OnTileRightClicked;
+        foreach (Control popup in new Control[]
+                 {
+                     CombatPreview, Picker, Alerts, Proposals, AutoPlayMenu, VoteResult, GameOver, Tutorials, VictoryStatus, GameMenu, ConsolePopup, MarkerMenu,
+                 })
+            DismissBannerOnShow(popup);
     }
+
+    private void DismissBannerOnShow(Control control) => control.VisibilityChanged += () => { if (control.Visible) Hud.HideBanner(); };
 
     /// <summary>
     /// C079: a screen that rebuilt its content for a new scale or breakpoint shrinks its minimum size, but a control never shrinks by itself: it keeps the larger size it had at the old
@@ -1139,6 +1149,7 @@ public partial class GameScreen : Control
         TaskCard.LayoutIn(Size, World.NavBottom + HudMargin);
         TurnBar.LayoutIn(Size.X, TurnBarTop());
         TurnOverlay.LayoutIn(Size, OverlayTop()); // T345: a card under the navigation strip (below the multiplayer turn bar when shown), out of the way of the map and the menus
+        World.LayoutOverlays();
         Panel.LayoutIn(Size);
         if (statusPanel.Visible) LayoutStatus(); // after the unit panel and the HUD's bottom dock, whose rectangles it must avoid
         CombatPreview.LayoutIn(Size);
@@ -1346,6 +1357,8 @@ public partial class GameScreen : Control
         AddChild(Espionage);
         Espionage.CommandAccepted += Refresh;
         Espionage.AssignRequested += () => Run(OpenSpyAssignment());
+        foreach (Control screen in new Control[] { City, Diplomacy, Trade, Tech, Overview, Policies, Pedia, Espionage, MarkerEditor })
+            DismissBannerOnShow(screen);
         Panel.Init(theme);
         CombatPreview.Init(theme);
         MoveChild(Picker, -1);
@@ -1725,6 +1738,7 @@ public partial class GameScreen : Control
         int newPrimary = SelectedUnitId is { } current && members.Contains(current) ? current : members[0];
         SelectedUnitId = newPrimary;
         extraGroupIds = [.. members.Where(it => it != newPrimary)];
+        Hud.HideBanner();
         ClearPreview();
         var node = unitNodes[newPrimary];
         Map.Select(new HexCoord(node.Unit.X, node.Unit.Y));
@@ -1745,6 +1759,7 @@ public partial class GameScreen : Control
     {
         extraGroupIds = [];
         SelectedUnitId = node.Unit.Id;
+        Hud.HideBanner();
         ClearPreview();
         Map.Select(new HexCoord(node.Unit.X, node.Unit.Y));
         ApplySelectionScale();
@@ -2106,11 +2121,12 @@ public partial class GameScreen : Control
         await RefreshRivals(bar.Turn, force: false);
         Layout();
         var rows = NotificationsModel.Rows(snapshot.Notifications);
-        Notifications.Update(bar.Turn, rows);
+        Notifications.Update(bar.Turn, rows, session.Ruleset);
         if (bar.Turn != bannerTurn)
         {
             bannerTurn = bar.Turn;
             Hud.ShowBanner(HudModel.Banner(bar.Turn, bar.Year, session.ViewerCivId));
+            World.LayoutOverlays();
         }
         string viewer = session.ViewerCivId ?? "";
         if (!escortTurnHandled.TryGetValue(viewer, out int handled)) escortTurnHandled[viewer] = bar.Turn; // the first sight of a game: nothing to continue
@@ -2285,9 +2301,10 @@ public partial class GameScreen : Control
             // C067 (S2): an alert that only informs is not a popup: it shows once as a toast in the notification column and waits under "Review alerts"
             foreach (var entry in pending.Decisions)
                 if (AlertPopupModel.Describe(entry, snapshot) is { Kind: AlertKind.Ambient } ambient && ambient.Type != AlertType.StartIntro && toastedAlerts.Add(ambient.Key))
-                    Notifications.PushToast(ambient.Body.Length == 0 ? ambient.Title : ambient.Title + ": " + ambient.Body);
+                    Notifications.PushToast(ambient.Body.Length == 0 ? ambient.Title : ambient.Title + ": " + ambient.Body, ambient.Icon);
         }
         Notifications.SetWaiting(AlertPopupModel.WaitingCount(pending, snapshot, deferredAlerts) + TradeProposalModel.WaitingCount(snapshot, deferredProposals));
+        World.LayoutOverlays();
         if (next == null) Alerts.Close();
         else if (Alerts.Current?.Key != next.Key || !Alerts.Visible) Alerts.Open(next);
     }
@@ -2301,6 +2318,7 @@ public partial class GameScreen : Control
     {
         if (reopen) deferredProposals.Clear();
         Notifications.SetOffers(offerTracker.Update(snapshot));
+        World.LayoutOverlays();
         var next = TradeProposalModel.Next(snapshot, deferredProposals);
         bool covered = Alerts.Visible || Picker.Visible || City.Visible || Diplomacy.Visible || Tech.Visible || Policies.Visible || Trade.Visible || Overview.Visible || GameOver.Visible || VoteResult.Visible || Pedia.Visible;
         if (next == null || covered) Proposals.Close();
@@ -2500,7 +2518,13 @@ public partial class GameScreen : Control
         // T345: while the host (or the local worker) plays the other civs, both host and joiners see "waiting for AI/host"; a local turn owns the overlay and keeps its progress line.
         if (turnCancellation == null)
         {
-            if (bar is { Resolving: true }) TurnOverlay.WaitForHost(NextTurnProgressModel.WaitingForHost());
+            bool resolving = bar is { Resolving: true };
+            Hud.SetTurnResolving(resolving);
+            if (resolving)
+            {
+                Hud.HideBanner();
+                TurnOverlay.WaitForHost(NextTurnProgressModel.WaitingForHost());
+            }
             else TurnOverlay.Close();
         }
         TurnOverlay.LayoutIn(Size, OverlayTop()); // the bar's height decides where the card goes
@@ -2869,6 +2893,8 @@ public partial class GameScreen : Control
         turnCancellation = cancellation;
         var turnSession = session;
         SetStatus("", quiet: true); // T345: the card carries the turn's state; a previous result or cancellation line must not sit under the resumed turn
+        Hud.HideBanner();
+        Hud.SetTurnResolving(true);
         TurnOverlay.Start(NextTurnProgressModel.Begin(), NextTurnProgressModel.CancelHint);
         var progress = new Progress<TurnProgress>(report =>
         {
@@ -2888,7 +2914,11 @@ public partial class GameScreen : Control
         finally
         {
             if (turnCancellation == cancellation) turnCancellation = null;
-            if (IsInstanceValid(this) && IsInsideTree()) TurnOverlay.Close();
+            if (IsInstanceValid(this) && IsInsideTree())
+            {
+                TurnOverlay.Close();
+                Hud.SetTurnResolving(turnCancellation != null);
+            }
         }
         if (!IsInstanceValid(this) || !IsInsideTree() || session != turnSession) return; // the player left the game meanwhile
         if (outcome is { Accepted: true, HandOverTo: { } next })

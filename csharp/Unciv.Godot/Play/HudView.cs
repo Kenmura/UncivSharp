@@ -36,6 +36,7 @@ public partial class HudView : Control
     private int bannerLeft;
     private bool endTurnWanted;
     private bool autoPlayWanted;
+    private bool turnResolving;
 
     public HudView()
     {
@@ -51,6 +52,9 @@ public partial class HudView : Control
 
     /// <summary>C047: whether a run is going; the next-action button stays disabled meanwhile (Kotlin disables the next turn button during AutoPlay).</summary>
     public bool AutoPlayRunning { get; private set; }
+
+    /// <summary>T412: whether the turn is currently resolving (local End turn or multiplayer WaitForHost).</summary>
+    public bool TurnResolving => turnResolving;
 
     public Button AutoPlayButton => autoPlayButton;
 
@@ -84,8 +88,23 @@ public partial class HudView : Control
     {
         AutoPlayRunning = run != null;
         autoPlayButton.Text = AutoPlayModel.ButtonText(run).TrText();
-        actionButton.Disabled = AutoPlayRunning || !Action.Enabled;
+        ApplyActionState();
         if (AutoPlayRunning) SetEndTurnShown(false);
+    }
+
+    /// <summary>T412: locks the next-action and end-turn controls while a turn is resolving.</summary>
+    public void SetTurnResolving(bool resolving)
+    {
+        if (turnResolving == resolving) return;
+        turnResolving = resolving;
+        ApplyActionState();
+    }
+
+    private void ApplyActionState()
+    {
+        bool locked = AutoPlayRunning || turnResolving;
+        actionButton.Disabled = !Action.Enabled || locked;
+        if (endTurnButton != null) endTurnButton.Disabled = locked;
     }
 
     /// <summary>What the next-action button currently means.</summary>
@@ -147,7 +166,7 @@ public partial class HudView : Control
         dockRow.MoveChild(endTurnButton, 0);
         if (autoPlayButton != null) dock.RemoveChild(autoPlayButton);
         autoPlayButton?.QueueFree();
-        autoPlayButton = new Button { Name = "AutoPlayButton", Text = AutoPlayModel.ButtonLabel.TrText(), Visible = false, ThemeTypeVariation = UiVariants.ButtonGhost };
+        autoPlayButton = new Button { Name = "AutoPlayButton", Text = AutoPlayModel.ButtonLabel.TrText(), Visible = false, ThemeTypeVariation = UiVariants.ButtonSecondary };
         autoPlayButton.Pressed += () => AutoPlayRequested?.Invoke();
         dock.AddChild(autoPlayButton);
         dock.MoveChild(autoPlayButton, 0);
@@ -183,8 +202,26 @@ public partial class HudView : Control
         Rebuild(force: false);
         Action = action;
         actionButton.Text = action.Label.TrText();
-        actionButton.Disabled = !action.Enabled || AutoPlayRunning;
+        ApplyActionState();
         SetEndTurnShown(action.Kind != HudActionKind.EndTurn && canEndTurn && action.Enabled && !AutoPlayRunning);
+    }
+
+    /// <summary>T412: wraps the turn banner inside <paramref name="maxWidth"/> only when narrow space requires it so it never hits notifications.</summary>
+    public void FitBannerWidth(float maxWidth)
+    {
+        if (maxWidth <= 0f || theme == null) return;
+        banner.AutowrapMode = TextServer.AutowrapMode.Off;
+        banner.CustomMinimumSize = Vector2.Zero;
+        bannerPanel.ResetSize();
+        float natural = bannerPanel.GetCombinedMinimumSize().X;
+        if (natural > maxWidth)
+        {
+            float pad = Math.Max(0f, natural - banner.GetCombinedMinimumSize().X);
+            banner.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            banner.CustomMinimumSize = new Vector2(Math.Max(theme.Px(100), maxWidth - pad), 0f);
+            bannerPanel.ResetSize();
+        }
+        bannerPanel.Size = bannerPanel.GetCombinedMinimumSize();
     }
 
     private void SetEndTurnShown(bool shown)

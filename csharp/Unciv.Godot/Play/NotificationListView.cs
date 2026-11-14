@@ -2,6 +2,7 @@ using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
+using Unciv.Models.Ruleset;
 
 namespace Unciv.GodotClient.Play;
 
@@ -9,11 +10,12 @@ namespace Unciv.GodotClient.Play;
 /// C013 / C067: the notification column on the right of the world screen (<see cref="WorldHud"/> places it): a toggle that shows the count and, when open, a drop-down list
 /// of the viewer's notifications newest first (<see cref="NotificationsModel.Rows"/>) that floats over the map without moving the rest of the HUD. Pressing a row raises
 /// <see cref="Chosen"/>; the owner jumps the camera or opens the screen. Ambient alerts (<see cref="AlertKind.Ambient"/>) arrive as short-lived toasts in the column
-/// (<see cref="PushToast"/>); pressing one asks for the alert review. The view shows what it is given.
+/// (<see cref="PushToast(string)"/>); pressing one asks for the alert review. The view shows what it is given.
 /// </summary>
 public partial class NotificationListView : VBoxContainer
 {
     private readonly Button toggle = new() { Name = "NotificationsToggle" };
+    private readonly PanelContainer offerPanel = new() { Name = "OfferPanel", Visible = false, ThemeTypeVariation = UiVariants.PanelCard, MouseFilter = MouseFilterEnum.Ignore };
     private readonly Label offers = new() { Name = "OfferStatus", Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Button review = new() { Name = "ReviewAlerts", Visible = false, ThemeTypeVariation = UiVariants.ButtonDanger };
     private readonly Control dropHost = new() { Name = "NotificationDrop", MouseFilter = MouseFilterEnum.Ignore };
@@ -24,7 +26,7 @@ public partial class NotificationListView : VBoxContainer
     private readonly VBoxContainer inner = new();
     private readonly ScrollContainer scroll = new() { Name = "NotificationScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
     private readonly VBoxContainer items = new() { Name = "NotificationRows" };
-    private readonly Label summary = new() { Name = "NotificationSummary", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly Label summary = new() { Name = "NotificationSummary", Visible = false, AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Dictionary<int, Button> buttons = [];
     private UiTheme theme = null!; // JUSTIFY: C013 assigned by Init before the list is updated
     private IReadOnlyList<NotificationRow> rows = [];
@@ -41,7 +43,8 @@ public partial class NotificationListView : VBoxContainer
         AddChild(toggle);
         AddChild(dropHost);
         AddChild(extras);
-        extras.AddChild(offers);
+        offerPanel.AddChild(offers);
+        extras.AddChild(offerPanel);
         extras.AddChild(toasts);
         dropHost.AddChild(list);
         review.Pressed += () => ReviewRequested?.Invoke();
@@ -79,12 +82,17 @@ public partial class NotificationListView : VBoxContainer
     private const int MaxToasts = 3;
 
     /// <summary>Shows a non-blocking toast in the column for a few seconds; pressing it asks for the alert review. Only the newest <see cref="MaxToasts"/> stay.</summary>
-    public void PushToast(string text)
+    public void PushToast(string text) => PushToast(text, null);
+
+    /// <summary>Shows a non-blocking toast with an optional contextual icon in the column for a few seconds; pressing it asks for the alert review.</summary>
+    public void PushToast(string text, AssetKey? icon)
     {
         var button = new Button
         {
             Name = "Toast_" + toastList.Count,
             Text = text.TrText(),
+            Icon = icon is { } key ? theme.Icon(key) : null,
+            ExpandIcon = icon != null,
             ThemeTypeVariation = UiVariants.ButtonSecondary,
             Alignment = HorizontalAlignment.Left,
             ClipText = true,
@@ -92,6 +100,7 @@ public partial class NotificationListView : VBoxContainer
             CustomMinimumSize = new Vector2(RowWidth, theme.Px(28)),
             TooltipText = text.TrText(),
         };
+        if (icon != null) button.AddThemeConstantOverride("icon_max_width", theme.Px(18));
         button.Pressed += () => ReviewRequested?.Invoke();
         toasts.AddChild(button);
         toastList.Add((button, ToastFrames));
@@ -141,8 +150,22 @@ public partial class NotificationListView : VBoxContainer
     {
         offers.Text = string.Join("\n", lines.Select(it => it.TrText()));
         offers.Visible = lines.Count > 0;
+        offerPanel.Visible = lines.Count > 0;
         if (lines.Count > 0) offers.CustomMinimumSize = new Vector2(RowWidth, 0f);
-        Visible = rows.Count > 0 || deferred > 0 || lines.Count > 0 || toastList.Count > 0;
+        Visible = rows.Count > 0 || deferred > 0 || offerPanel.Visible || toastList.Count > 0;
+    }
+
+    /// <summary>T412: trims oldest closed-state toasts so the column stops cleanly above <paramref name="maxHeight"/> (e.g. above MinimapDock on compact viewports).</summary>
+    public void FitAvailableHeight(float maxHeight)
+    {
+        if (maxHeight <= 0f || IsOpen) return;
+        foreach (var entry in toastList) entry.Button.Visible = true;
+        int oldest = 0;
+        while (oldest < toastList.Count && GetCombinedMinimumSize().Y > maxHeight)
+        {
+            toastList[oldest].Button.Visible = false;
+            oldest++;
+        }
     }
 
     /// <summary>How many pending alerts wait to be reviewed (informational ones and ones put off with "Decide later"): the button that opens them shows while there are any.</summary>
@@ -151,7 +174,7 @@ public partial class NotificationListView : VBoxContainer
         deferred = count;
         review.Visible = count > 0;
         review.Text = AlertPopupModel.ReviewLabel(count).TrText();
-        Visible = rows.Count > 0 || deferred > 0 || offers.Visible || toastList.Count > 0;
+        Visible = rows.Count > 0 || deferred > 0 || offerPanel.Visible || toastList.Count > 0;
     }
 
     public void Init(UiTheme uiTheme)
@@ -162,7 +185,7 @@ public partial class NotificationListView : VBoxContainer
         toggle.Text = NotificationsModel.ToggleLabel(rows.Count, IsOpen).TrText();
     }
 
-    public void Update(int currentTurn, IReadOnlyList<NotificationRow> newRows)
+    public void Update(int currentTurn, IReadOnlyList<NotificationRow> newRows, Ruleset? ruleset = null)
     {
         turn = currentTurn;
         rows = newRows;
@@ -173,8 +196,9 @@ public partial class NotificationListView : VBoxContainer
         }
         buttons.Clear();
         summary.Text = NotificationsModel.Summary(turn, rows).TrText();
-        summary.CustomMinimumSize = new Vector2(RowWidth, theme.Px(56)); // room for three wrapped lines: an autowrapped label does not reserve them itself
+        summary.CustomMinimumSize = Vector2.Zero;
         summary.TooltipText = summary.Text;
+        toggle.TooltipText = summary.Text;
         scroll.CustomMinimumSize = new Vector2(RowWidth + theme.Px(16), theme.Px(Math.Min(rows.Count, 5) * 32));
         foreach (var row in rows)
         {
@@ -182,6 +206,8 @@ public partial class NotificationListView : VBoxContainer
             {
                 Name = "Notification_" + row.Index,
                 Text = row.Text.TrText(),
+                Icon = theme.Icon(NotificationsModel.IconFor(row, ruleset)),
+                ExpandIcon = true,
                 ThemeTypeVariation = UiVariants.ButtonRow,
                 Alignment = HorizontalAlignment.Left,
                 ClipText = true,
@@ -189,6 +215,7 @@ public partial class NotificationListView : VBoxContainer
                 CustomMinimumSize = new Vector2(RowWidth, theme.Px(28)),
                 TooltipText = (row.Category + (row.Target == null ? "" : row.Target.Kind == NotificationTargetKind.Tile ? ": click to show on the map" : ": click to open")).TrText(),
             };
+            button.AddThemeConstantOverride("icon_max_width", theme.Px(18));
             button.AddThemeFontSizeOverride("font_size", theme.Px(14));
             var chosen = row;
             button.Pressed += () => Chosen?.Invoke(chosen);
@@ -197,6 +224,6 @@ public partial class NotificationListView : VBoxContainer
         }
         toggle.Text = NotificationsModel.ToggleLabel(rows.Count, IsOpen).TrText();
         list.ResetSize();
-        Visible = rows.Count > 0 || deferred > 0 || offers.Visible || toastList.Count > 0; // nothing to list: no button either
+        Visible = rows.Count > 0 || deferred > 0 || offerPanel.Visible || toastList.Count > 0; // nothing to list: no button either
     }
 }

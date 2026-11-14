@@ -50,6 +50,7 @@ public sealed class CityBScenario : Scenario
         CityDto Dto(CityObject target) => recording.Snapshot.Cities.First(it => it.Own?.Id == target.Id);
         Vector2 Centre(Button? button) => button?.GetGlobalRect().GetCenter() ?? Vector2.Zero;
         Vector2 At(string name) => Centre(screen.City.Production.ButtonNamed(name));
+        ScenarioStep[] Scrolled(string name) => ClickScrolled(screen, name);
         List<string> Queue() => city.CityConstructions.ConstructionQueue.ToList();
         CityPanelResult Panel() => screen.City.Panel.NotNull();
         ConstructionListResult List() => recording.QueryAsync(new ConstructionListQuery(city.Id, OnlyDisplayed: false)).GetAwaiter().GetResult().NotNull();
@@ -73,9 +74,9 @@ public sealed class CityBScenario : Scenario
                 && screen.City.Production.ButtonNamed("Build_Warrior") != null && screen.City.Production.ButtonNamed("Build_Monument") != null && screen.City.Production.QueueTexts.Count == Panel().Queue.Count),
             new Capture("open", "The capital's Production tab: empty queue, the buildable list with turns and cost, and Buy buttons"),
 
-            new Click(() => At("Build_Warrior")),
-            new Click(() => At("Build_Monument")),
-            new Click(() => At("Build_Nothing")),
+            .. Scrolled("Build_Warrior"),
+            .. Scrolled("Build_Monument"),
+            .. Scrolled("Build_Nothing"),
             new AssertQuery("three clicks queued Warrior, Monument and the perpetual Nothing item, as the engine's queue shows", () =>
                 Queue().SequenceEqual(new[] { "Warrior", "Monument", "Nothing" }) && refusals.Count == 0
                 && screen.City.Production.QueueTexts.Count == 3 && screen.City.Production.QueueTexts[2].Contains("perpetual", StringComparison.Ordinal)
@@ -84,13 +85,13 @@ public sealed class CityBScenario : Scenario
                 Disabled("Up_0") && Disabled("Top_0") && Enabled("Down_0") && Disabled("Down_2") && Enabled("Up_2") && Disabled("Top_2") && Enabled("Top_1")),
             new Capture("queued", "Warrior, Monument and a perpetual Nothing item queued"),
 
-            new Click(() => At("Up_1")),
+            .. Scrolled("Up_1"),
             new AssertQuery("Up moved the Monument ahead of the Warrior", () => Queue().SequenceEqual(new[] { "Monument", "Warrior", "Nothing" }) && Panel().CurrentConstruction == "Monument"),
-            new Click(() => At("Top_1")),
+            .. Scrolled("Top_1"),
             new AssertQuery("Top moved the Warrior back to the front", () => Queue().SequenceEqual(new[] { "Warrior", "Monument", "Nothing" })),
-            new Click(() => At("Down_0")),
+            .. Scrolled("Down_0"),
             new AssertQuery("Down moved the Warrior behind the Monument", () => Queue().SequenceEqual(new[] { "Monument", "Warrior", "Nothing" })),
-            new Click(() => At("Remove_2")),
+            .. Scrolled("Remove_2"),
             new AssertQuery("Remove took the Gold item out", () => Queue().SequenceEqual(new[] { "Monument", "Warrior" }) && screen.City.Production.ButtonNamed("Remove_2") == null),
             new Capture("reordered", "Monument first, Warrior second, after reordering and removing the perpetual item"),
 
@@ -146,6 +147,24 @@ public sealed class CityBScenario : Scenario
             .. LocaleSteps.GameScreenIn(host, "Russian", "ru", "Russian at 640x480: the city screen's tab strip and headings", recording, game.Ruleset, it => it.City, it => it.OpenCityScreen(Dto(city)), opened: it => it.IsCityPanelVisible),
         ];
     }
+
+    private static ScenarioStep[] ClickScrolled(GameScreen screen, string name) =>
+    [
+        new Act($"scroll {name} into view", () =>
+        {
+            var button = screen.City.Production.ButtonNamed(name);
+            for (Node? node = button; node != null; node = node.GetParent())
+            {
+                if (node is ScrollContainer scroller && button != null)
+                {
+                    scroller.EnsureControlVisible(button);
+                    break;
+                }
+            }
+        }),
+        new WaitFrames(2),
+        new Click(() => screen.City.Production.ButtonNamed(name)?.GetGlobalRect().GetCenter() ?? Vector2.Zero),
+    ];
 
     /// <summary>C069: Ctrl+Up / Ctrl+Down on the focused queue entry, and a drop on another entry.</summary>
     private static IEnumerable<ScenarioStep> KeyboardAndDragSteps(GameScreen screen, Func<List<string>> queue) =>
