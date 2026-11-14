@@ -2218,5 +2218,27 @@
         "caption": "World Congress vote result modal displaying World Leader threshold progress bars and yellow threshold markers alongside vote tallies."
       }
     ]
+  },
+  "T414": {
+    "scenario": "setup",
+    "about": "UX polish across Setup, Host, Lobby, Options, Menu, and Save/Load: shared SetupTabs with Steppers and icons, unclipped LobbyScreen with circular civ badges, single clickable keybind chips, live Save/Load shortcut labels, contextual Main Menu SaveController states with civ crests, and EmptyState panels.",
+    "shots": [
+      {
+        "golden": "setup/game.png",
+        "caption": "Consolidated New Game Setup screen with icon-tagged tabs, Stepper controls, and circular civ badges."
+      },
+      {
+        "golden": "lobby/waiting.png",
+        "caption": "Lobby screen without nested scroll clipping, showing labeled backup host selector, styled ready indicators, and labeled color chips."
+      },
+      {
+        "golden": "options/top.png",
+        "caption": "Settings panel with icon-tagged category tabs and clickable keybind chips instead of duplicate rebind buttons."
+      },
+      {
+        "golden": "saveload/list.png",
+        "caption": "Save/Load dialog with civ crests in the table and details pane."
+      }
+    ]
   }
 }

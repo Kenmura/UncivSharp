@@ -117,7 +117,7 @@ public partial class SettingsPanel : HBoxContainer
         this.tutorialRuleset = tutorialRuleset;
         Name = "SettingsPanel";
         this.FitConstant(theme, "separation", UiTokens.S3);
-        theme.Fit(tabColumn, () => tabColumn.CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 104 : 148), 0));
+        theme.Fit(tabColumn, () => tabColumn.CustomMinimumSize = new Vector2(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? 124 : 188), 0));
         tabColumn.FitConstant(theme, "separation", UiTokens.S1);
         AddChild(tabColumn);
 
@@ -274,9 +274,10 @@ public partial class SettingsPanel : HBoxContainer
 
     // Pages
 
-    private VBoxContainer AddPage(string title)
+    private VBoxContainer AddPage(string title, string? iconName = null)
     {
-        var tab = new ListRow(theme, title, group: tabGroup);
+        var icon = iconName != null ? AssetKey.Of(RulesetAssetKeys.UiIcon, iconName) : (AssetKey?)null;
+        var tab = new ListRow(theme, title, icon: icon, group: tabGroup);
         int index = tabs.Count;
         tab.Pressed += () => SelectTab(index);
         tabColumn.AddChild(tab);
@@ -293,7 +294,7 @@ public partial class SettingsPanel : HBoxContainer
 
     private void BuildDisplay()
     {
-        var page = AddPage("Display");
+        var page = AddPage("Display", "Star");
         page.AddChild(nameLabel);
         scaleStepper = new Stepper(theme, (int)(OptionsModel.MinUiScale * 100), (int)(OptionsModel.MaxUiScale * 100), 100, (int)(OptionsModel.UiScaleStep * 100), "Smaller UI", "Bigger UI", v => v.ToString(CultureInfo.InvariantCulture) + "%") { Name = "UiScaleStepper" };
         scaleStepper.Changed += v =>
@@ -356,7 +357,7 @@ public partial class SettingsPanel : HBoxContainer
 
     private void BuildGameplay()
     {
-        var page = AddPage("Gameplay");
+        var page = AddPage("Gameplay", "Options");
         AddToggle(page, "Auto-assign city production", s => s.Player.AutoAssignCityProduction, (s, v) => s with { Player = s.Player with { AutoAssignCityProduction = v } });
         AddToggle(page, "Automated units move on turn start", s => s.Player.AutomatedUnitsMoveOnTurnStart, (s, v) => s with { Player = s.Player with { AutomatedUnitsMoveOnTurnStart = v } });
         AddToggle(page, "Cities auto bombard at end of turn", s => s.Player.CitiesAutoBombardAtEndOfTurn, (s, v) => s with { Player = s.Player with { CitiesAutoBombardAtEndOfTurn = v } });
@@ -377,7 +378,7 @@ public partial class SettingsPanel : HBoxContainer
 
     private void BuildMap()
     {
-        var page = AddPage("Map");
+        var page = AddPage("Map", "Terrains");
         AddSlider(page, "Scroll speed", scroll, (s, v) => s with { ScrollSpeed = v }, s => s.ScrollSpeed, v => v.ToString("0.00", CultureInfo.InvariantCulture));
         AddToggle(page, "Scroll the map at the window edge", s => s.EdgePan, (s, v) => s with { EdgePan = v });
         AddToggle(page, "Show resources on the map", s => s.ShowResources, (s, v) => s with { ShowResources = v });
@@ -386,7 +387,7 @@ public partial class SettingsPanel : HBoxContainer
 
     private void BuildSound()
     {
-        var page = AddPage("Sound");
+        var page = AddPage("Sound", "Notifications");
         string FormatPercent(double v) => ((int)Math.Round(v * 100, MidpointRounding.AwayFromZero)).ToString(CultureInfo.InvariantCulture) + "%";
         AddSlider(page, "Sound volume", volume, (s, v) => s with { SoundVolume = v }, s => s.SoundVolume, FormatPercent);
         AddSlider(page, "Music volume", musicVolume, (s, v) => s with { MusicVolume = v }, s => s.MusicVolume, FormatPercent);
@@ -396,7 +397,10 @@ public partial class SettingsPanel : HBoxContainer
 
     private void BuildKeys()
     {
-        var page = AddPage("Keys");
+        var page = AddPage("Keys", "Keyboard");
+        var hint = new Label { Name = "KeysHint", ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+        refreshers.Add(() => hint.Text = "Select any key chip to rebind it (Escape cancels).".Tr());
+        page.AddChild(hint);
         keyTable = new DataTable([new DataColumn("Action")], actions: true) { Name = "KeyTable" };
         keyTable.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         page.AddChild(keyTable);
@@ -421,28 +425,27 @@ public partial class SettingsPanel : HBoxContainer
     private Control KeyCell(int row)
     {
         var action = ActionLabels[row].Action;
-        var box = new HBoxContainer();
-        box.FitConstant(theme, "separation", UiTokens.S2);
-        var chip = new Button { Name = "Key_" + action, ThemeTypeVariation = UiVariants.ButtonChip }.FitMin(theme, 96);
+        var chip = new Button
+        {
+            Name = "Key_" + action,
+            ThemeTypeVariation = UiVariants.ButtonChip,
+            TooltipText = "Click to rebind".Tr(),
+        }.FitMin(theme, 96);
         chip.Pressed += () => BeginRebind(action);
         keyButtons[action] = chip;
-        var rebind = new Button { Name = "Rebind_" + action, Text = "Rebind".Tr(), ThemeTypeVariation = UiVariants.ButtonGhost };
-        rebind.Pressed += () => BeginRebind(action);
-        box.AddChild(chip);
-        box.AddChild(rebind);
-        return box;
+        return chip;
     }
 
     private void BuildLanguage(ClientLocalization localization)
     {
-        var page = AddPage("Language");
+        var page = AddPage("Language", "Chat");
         AddRow(page, "Language", new LanguagePicker(service, localization));
     }
 
     // T371: the relay address, fingerprint and switch, and the relays agreed to; absent when the owner passes no relay store (tests of the other pages).
     private void BuildMultiplayer(RelaySettingsStore relay)
     {
-        var page = AddPage("Multiplayer");
+        var page = AddPage("Multiplayer", "Multiplayer");
         Relay = new RelaySettingsEditor(theme, relay, page);
         refreshers.Add(Relay.Retranslate);
     }
@@ -452,7 +455,7 @@ public partial class SettingsPanel : HBoxContainer
 
     private void BuildAdvanced()
     {
-        var page = AddPage("Advanced");
+        var page = AddPage("Advanced", "Settings");
         foreach (var pack in packNames) packPicker.AddItem(pack);
         packPicker.ItemSelected += index =>
         {
@@ -529,10 +532,10 @@ public partial class SettingsPanel : HBoxContainer
                 }
                 else
                 {
-                    optionLabel.CustomMinimumSize = new Vector2(theme.Px(160), 0);
+                    optionLabel.CustomMinimumSize = new Vector2(theme.Px(100), 0);
                     optionLabel.SizeFlagsHorizontal = SizeFlags.ExpandFill;
                     optionLabel.SizeFlagsStretchRatio = 1f;
-                    option.CustomMinimumSize = new Vector2(theme.Px(220), 0);
+                    option.CustomMinimumSize = new Vector2(theme.Px(136), 0);
                     option.SizeFlagsHorizontal = SizeFlags.ExpandFill;
                     option.SizeFlagsStretchRatio = 0.9f;
                 }

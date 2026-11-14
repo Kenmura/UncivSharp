@@ -68,7 +68,7 @@ public static class BrowseModel
         var missingMods = info.Mods.Where(it => !context.Mods.Contains(it)).ToList();
         bool haveBase = context.BaseRulesets.Contains(info.Ruleset);
         string? disabled = null;
-        if (info.Proto != context.Proto) disabled = $"Needs another game version (protocol {Number(info.Proto)}, yours is {Number(context.Proto)})";
+        if (info.Proto != context.Proto) disabled = info.Proto > context.Proto ? "Requires a newer version of the game" : "Requires an older version of the game";
         else if (!haveBase) disabled = $"Needs the ruleset {info.Ruleset}, which you do not have";
         else if (info.Slots > 0 && info.Players >= info.Slots && !info.Started) disabled = "The game is full";
         string? note = null;
@@ -111,12 +111,12 @@ public static class BrowseModel
             info.Name,
             $"Host: {info.HostName}",
             $"Host key: {game.ShortFingerprint}... - {(known ? KnownHost : FirstTime)}",
-            $"Players: {Number(info.Players)} of {Number(info.Slots)} human slots, {Number(info.Ai)} AI (as reported by the host; the relay cannot check it)",
+            $"Players: {Number(info.Players)}/{Number(info.Slots)} human slots, {Number(info.Ai)} AI (as reported by the host)",
             $"Rules: {info.Ruleset}{(info.Mods.Count > 0 ? "; mods: " + string.Join(", ", info.Mods) : "")}",
             $"Speed: {info.Speed}; map: {info.Map}; turns: {info.TurnMode}",
             $"Password: {(info.PasswordRequired ? "required" : "none")}",
             $"State: {(info.Started ? "game in progress" : "waiting in the lobby")}",
-            $"Game version {info.Version} (protocol {Number(info.Proto)})",
+            $"Game version: {info.Version}",
             $"Listed for {AgeText(game.AgeSeconds)} (the relay's clock)",
         };
         if (disabled != null) lines.Add("Cannot join: " + disabled + ".");

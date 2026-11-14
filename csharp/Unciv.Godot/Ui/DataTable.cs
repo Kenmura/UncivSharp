@@ -59,6 +59,9 @@ public partial class DataTable : PanelContainer
     /// <summary>C075: the colour of the text of an input row (null for the default); set before <see cref="SetRows"/>. The selected row reads in the accent colour.</summary>
     public Func<int, Color?>? RowTone { get; set; }
 
+    /// <summary>T414: optional leading control (e.g. a civ crest badge) placed before a cell's text label by input row and column index.</summary>
+    public Func<int, int, Control?>? CellLeading { get; set; }
+
     /// <summary>The sorted column, or -1 while the rows are in input order.</summary>
     public int SortColumn { get; private set; } = -1;
 
@@ -193,7 +196,20 @@ public partial class DataTable : PanelContainer
                         if (input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }) Callable.From(() => { if (multiSelect) Toggle(inputRow); else Select(inputRow); }).CallDeferred(); // rebuilding frees the cell whose event is being handled, so the selection runs after it
                     };
                 }
-                cell.AddChild(label);
+                if (CellLeading?.Invoke(inputRow, c) is { } leading)
+                {
+                    var box = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+                    box.AddThemeConstantOverride("separation", UiTokens.S2);
+                    leading.MouseFilter = MouseFilterEnum.Ignore;
+                    leading.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+                    box.AddChild(leading);
+                    box.AddChild(label);
+                    cell.AddChild(box);
+                }
+                else
+                {
+                    cell.AddChild(label);
+                }
                 grid.AddChild(cell);
                 line.Add(label);
             }

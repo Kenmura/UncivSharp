@@ -1,4 +1,5 @@
 using Godot;
+using Unciv.Assets;
 using Unciv.GodotClient.Localization;
 
 namespace Unciv.GodotClient.Ui;
@@ -9,12 +10,17 @@ public partial class ChoiceRow : HFlowContainer
     private readonly ButtonGroup group = new();
     private readonly Dictionary<string, Button> buttons = [];
 
-    public ChoiceRow(IEnumerable<string> options, string? selected)
+    public ChoiceRow(IEnumerable<string> options, string? selected, UiTheme? theme = null, Func<string, AssetKey?>? iconFor = null)
     {
         SizeFlagsHorizontal = SizeFlags.ExpandFill;
         foreach (string option in options)
         {
             var button = new Button { Text = option.TrText(), ToggleMode = true, ButtonGroup = group, ButtonPressed = option == selected };
+            if (theme != null && iconFor?.Invoke(option) is { } key)
+            {
+                button.Icon = theme.Icon(key);
+                button.FitConstant(theme, "icon_max_width", 18);
+            }
             button.Pressed += () => Chosen?.Invoke(option);
             buttons[option] = button;
             AddChild(button);

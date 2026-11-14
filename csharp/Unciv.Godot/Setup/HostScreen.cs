@@ -101,12 +101,13 @@ public partial class HostScreen : Control
         settingsColumn.SizeFlagsVertical = SizeFlags.ExpandFill;
         column.AddChild(settingsColumn);
         Tabs = new TabBar { SizeFlagsVertical = SizeFlags.ExpandFill };
-        foreach (var (title, page) in new[] { ("Game", gamePage), ("Map", mapPage), ("Rules", rulesPage), ("Network", networkPage), ("Saved games", savedPage) })
+        foreach (var (title, page, icon) in new[] { ("Game", gamePage, "Score"), ("Map", mapPage, "Terrains"), ("Rules", rulesPage, "Mods"), ("Network", networkPage, "Multiplayer"), ("Saved games", savedPage, "Load") })
         {
             var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill };
             page.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+            page.FitConstant(theme, "separation", UiTokens.S2);
             scroll.AddChild(page);
-            Tabs.AddTab(title, scroll);
+            Tabs.AddTab(title, scroll, theme, SetupTabs.UiIcon(icon));
         }
         settingsColumn.AddChild(Tabs);
 
@@ -229,6 +230,7 @@ public partial class HostScreen : Control
     /// <summary>Rebuilds every settings page from the form and shows its problems.</summary>
     public void Refresh()
     {
+        rows.Clear();
         Addresses = env.Addresses();
         selectedAddress = Math.Clamp(selectedAddress, 0, Math.Max(0, Addresses.Count - 1));
         FillGame();
@@ -404,14 +406,6 @@ public partial class HostScreen : Control
         CopyRelayInviteButton.Pressed += CopyRelayInvite;
         RelayInviteBox.AddChild(CopyRelayInviteButton);
         hostingPanel.AddChild(RelayInviteBox);
-        ListedCheck = new CheckBox { Name = "ListedCheck", Text = "List this game publicly".Tr() };
-        ListedCheck.Toggled += on =>
-        {
-            Form.ListPublicly = on;
-            ListPubliclyCheck.SetPressedNoSignal(on); // the Network tab shows the same setting
-            UpdateListing();
-        };
-        hostingPanel.AddChild(ListedCheck);
         hostingPanel.AddChild(listingStatus);
         StandbyStatusLabel = new Label { Name = "StandbyStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
         hostingPanel.AddChild(StandbyStatusLabel);
@@ -420,10 +414,7 @@ public partial class HostScreen : Control
         StopButton.Pressed += () => _ = StopAsync();
     }
 
-    /// <summary>T339: the "List this game publicly" box of the hosting panel (live: ticking it publishes, unticking removes the listing).</summary>
-    public CheckBox ListedCheck { get; private set; } = null!; // JUSTIFY: T339 assigned by BuildHostingPanel, which the constructor runs
-
-    /// <summary>T339: the same box on the Network tab (before hosting starts).</summary>
+    /// <summary>T339: the "List this game publicly" box on the Network tab.</summary>
     public CheckBox ListPubliclyCheck { get; private set; } = null!; // JUSTIFY: T339 assigned by FillNetwork, which the constructor runs
 
     /// <summary>T339: what the screen says about the public listing while hosting (empty when there is no relay to list on).</summary>
@@ -441,13 +432,11 @@ public partial class HostScreen : Control
     private void UpdateListing()
     {
         bool relayed = Session is { Lobby: not null, Relay: not null };
-        ListedCheck.Visible = relayed;
         listingStatus.Visible = relayed;
         if (!relayed || Session is not { } session || hostedSettings == null) return;
-        ListedCheck.SetPressedNoSignal(Form.ListPublicly);
         var listing = Form.ListPublicly ? ListingFactory.From(hostedSettings, env.DisplayName, session.Slots) : null;
         session.SetListing(listing);
-        listingStatus.Text = (listing != null ? "Listed on the relay while you host. Untick to remove it." : Form.ListPublicly ? "This game's name cannot be listed." : BrowseModel.ListingHelp(true, true)).Tr();
+        listingStatus.Text = (listing != null ? "Listed publicly on the relay while you host." : Form.ListPublicly ? "This game's name cannot be listed." : BrowseModel.ListingHelp(true, true)).Tr();
     }
 
     /// <summary>T392: which relay this game is reached through (its host and port), shown above the relay invite.</summary>
@@ -478,7 +467,7 @@ public partial class HostScreen : Control
 
     private void RefreshInvite()
     {
-        Clear(hostingAddresses);
+        SetupTabs.Clear(hostingAddresses);
         if (Session is not { } session) return;
         if (Addresses.Count > 0)
         {
@@ -535,7 +524,7 @@ public partial class HostScreen : Control
 
     private void FillSlots()
     {
-        Clear(slotsBox);
+        SetupTabs.Clear(slotsBox);
         if (Session is not { } session) return;
         if (resumedInfo is { } game)
         {
@@ -575,143 +564,36 @@ public partial class HostScreen : Control
 
     // Pages
 
-    private static void Clear(Node page)
-    {
-        foreach (var child in page.GetChildren())
-        {
-            page.RemoveChild(child);
-            child.QueueFree();
-        }
-    }
+    private void AddHeading(Container page, string text, AssetKey? icon = null) => SetupTabs.AddHeading(page, theme, text, icon);
 
-    private Button AddButton(Container parent, string text, Action pressed, string? name = null)
-    {
-        var button = new Button { Text = text.TrText() };
-        if (name != null) button.Name = name;
-        button.Pressed += pressed;
-        parent.AddChild(button);
-        return button;
-    }
+    private LineEdit AddField(Container page, string heading, string name, string text, string placeholder, Action<string> changed, AssetKey? icon = null) =>
+        SetupTabs.AddField(page, theme, heading, name, text, placeholder, 260, changed, ShowProblems, icon);
 
-    private static void AddHeading(Container page, string text) => page.AddChild(new Label { Text = text.TrText() });
+    private void FillGame() => SetupTabs.FillGame(gamePage, theme, Form.Game, rows, Change, AddHostGameTop, includeNoBarbarians: true);
 
-    private void AddChoice(Container page, string field, string heading, IEnumerable<string> options, string selected, Action<string> chosen)
+    private void AddHostGameTop(Container page)
     {
-        AddHeading(page, heading);
-        var row = new ChoiceRow(options, selected);
-        row.Chosen += value =>
-        {
-            chosen(value);
-            Change(null);
-        };
-        rows[field] = row;
-        page.AddChild(row);
-    }
-
-    private void AddCheck(Container page, string text, bool on, Func<bool, string?> changed)
-    {
-        var box = new CheckBox { Text = text.TrText(), ButtonPressed = on };
-        box.Toggled += value => Change(changed(value));
-        page.AddChild(box);
-    }
-
-    private LineEdit AddField(Container page, string heading, string name, string text, string placeholder, Action<string> changed)
-    {
-        AddHeading(page, heading);
-        var field = new LineEdit { Name = name, Text = text, PlaceholderText = placeholder.TrText() }.FitMin(theme, 260);
-        field.TextChanged += value =>
-        {
-            changed(value);
-            ShowProblems();
-        };
-        page.AddChild(field);
-        return field;
-    }
-
-    private void FillGame()
-    {
-        Clear(gamePage);
-        rows.Clear();
-        NameField = AddField(gamePage, "Game name", "NameField", Form.GameName, "Multiplayer Game", value => Form.GameName = value);
+        NameField = AddField(page, "Game name", "NameField", Form.GameName, "Multiplayer Game", value => Form.GameName = value, SetupTabs.UiIcon("Pencil"));
         var counts = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        AddButton(counts, "Fewer civs", () => Change(Form.Game.SetPlayerCount(Form.Game.Slots.Count - 1)));
-        counts.AddChild(new Label { Text = $" {Form.Game.Slots.Count.ToString(CultureInfo.InvariantCulture)} {"civs".TrText()} " });
-        AddButton(counts, "More civs", () => Change(Form.Game.SetPlayerCount(Form.Game.Slots.Count + 1)));
-        counts.AddChild(new Label { Text = "   " });
-        AddButton(counts, "Fewer city-states", () => Change(Form.Game.SetCityStates(Form.Game.CityStates - 1)));
-        counts.AddChild(new Label { Text = $" {Form.Game.CityStates.ToString(CultureInfo.InvariantCulture)} {"city-states".TrText()} " });
-        AddButton(counts, "More city-states", () => Change(Form.Game.SetCityStates(Form.Game.CityStates + 1)));
-        gamePage.AddChild(counts);
+        counts.FitConstant(theme, "h_separation", UiTokens.S6);
+        SetupTabs.AddStepper(counts, theme, "Players", new Stepper(theme, NewGameForm.MinPlayers, Math.Max(NewGameForm.MinPlayers, Form.Game.MaxPlayers), Form.Game.Slots.Count, decreaseLabel: "Fewer civs", increaseLabel: "More civs"),
+            value => Form.Game.SetPlayerCount(value), Change);
+        SetupTabs.AddStepper(counts, theme, "City-states", new Stepper(theme, 0, Form.Game.MaxCityStates, Form.Game.CityStates, decreaseLabel: "Fewer city-states", increaseLabel: "More city-states"),
+            value => Form.Game.SetCityStates(value), Change);
+        page.AddChild(counts);
         AiFillCheck = new CheckBox { Name = "AiFillCheck", Text = "Fill empty civs with AI when the game starts".Tr(), ButtonPressed = Form.AiFill };
         AiFillCheck.Toggled += on => Form.AiFill = on;
-        gamePage.AddChild(AiFillCheck);
-        AddCheck(gamePage, "No barbarians", Form.Game.NoBarbarians, on =>
-        {
-            Form.Game.NoBarbarians = on;
-            return null;
-        });
-        var o = Form.Game.Options;
-        AddChoice(gamePage, "Difficulty", "Difficulty", o.Difficulties.Select(it => it.Name), Form.Game.Difficulty, v => Form.Game.Difficulty = v);
-        AddChoice(gamePage, "Speed", "Game speed", o.Speeds.Select(it => it.Name), Form.Game.Speed, v => Form.Game.Speed = v);
-        AddChoice(gamePage, "Era", "Starting era", o.Eras.Select(it => it.Name), Form.Game.Era, v => Form.Game.Era = v);
-        AddHeading(gamePage, "Victory types");
-        var victories = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        gamePage.AddChild(victories);
-        foreach (string victory in Form.Game.SelectableVictories)
-        {
-            string name = victory;
-            AddCheck(victories, name, Form.Game.Victories.Contains(name), on => Form.Game.SetVictory(name, on));
-        }
+        page.AddChild(AiFillCheck);
     }
 
-    private void FillMap()
-    {
-        Clear(mapPage);
-        var o = Form.Game.Options.MapOptions;
-        AddChoice(mapPage, "Type", "Map type", o.Types, Form.Game.MapType, v => Form.Game.MapType = v);
-        AddChoice(mapPage, "Shape", "Map shape", o.Shapes, Form.Game.Shape, v => Form.Game.Shape = v);
-        AddChoice(mapPage, "Size", "Map size", o.Sizes, Form.Game.Size, v => Form.Game.Size = v);
-        AddChoice(mapPage, "Resources", "Resources", o.Resources, Form.Game.Resources, v => Form.Game.Resources = v);
-        var flags = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        mapPage.AddChild(flags);
-        AddCheck(flags, "World wrap", Form.Game.WorldWrap, on =>
-        {
-            Form.Game.WorldWrap = on;
-            return null;
-        });
-        AddCheck(flags, "No ancient ruins", Form.Game.NoRuins, on =>
-        {
-            Form.Game.NoRuins = on;
-            return null;
-        });
-        AddCheck(flags, "No natural wonders", Form.Game.NoNaturalWonders, on =>
-        {
-            Form.Game.NoNaturalWonders = on;
-            return null;
-        });
-        SeedField = AddField(mapPage, "Seed (empty for a random map)", "SeedField", Form.Game.SeedText, "random", value => Form.Game.SeedText = value);
-    }
+    private void FillMap() => SeedField = SetupTabs.FillMap(mapPage, theme, Form.Game, rows, Change, ShowProblems);
 
-    private void FillRules()
-    {
-        Clear(rulesPage);
-        AddHeading(rulesPage, "Base ruleset");
-        var row = new ChoiceRow(Form.Game.BaseRulesets, Form.Game.BaseRuleset);
-        row.Chosen += value => Change(Form.Game.SetBaseRuleset(value));
-        rows["Base ruleset"] = row;
-        rulesPage.AddChild(row);
-        AddHeading(rulesPage, Form.Game.AvailableMods.Count == 0 ? "No mods installed" : "Mods (friends need the same ones)");
-        foreach (string mod in Form.Game.AvailableMods)
-        {
-            string name = mod;
-            AddCheck(rulesPage, name, Form.Game.Mods.Contains(name), on => Form.Game.SetMod(name, on));
-        }
-    }
+    private void FillRules() => SetupTabs.FillRules(rulesPage, theme, Form.Game, rows, Change, "Mods (friends need the same ones)");
 
     private void FillNetwork()
     {
-        Clear(networkPage);
-        AddHeading(networkPage, "Turn timer (turns are simultaneous)");
+        SetupTabs.Clear(networkPage);
+        AddHeading(networkPage, "Turn timer (turns are simultaneous)", SetupTabs.UiIcon("Pause"));
         var timer = new ChoiceRow(HostSettingsForm.TimerChoices.Select(HostSettingsForm.TimerLabel), HostSettingsForm.TimerLabel(Form.TurnTimerSeconds));
         timer.Chosen += label =>
         {
@@ -727,7 +609,7 @@ public partial class HostScreen : Control
             Change(null);
         };
         networkPage.AddChild(DynamicTimerCheck);
-        AddHeading(networkPage, "Shortest turn when scaling");
+        AddHeading(networkPage, "Shortest turn when scaling", SetupTabs.UiIcon("ForwardArrow"));
         var minTimer = new ChoiceRow(HostSettingsForm.MinTimerChoices.Select(HostSettingsForm.TimerLabel), HostSettingsForm.TimerLabel(Form.TurnTimerMinSeconds));
         minTimer.Chosen += label =>
         {
@@ -736,12 +618,12 @@ public partial class HostScreen : Control
         };
         rows["Shortest turn"] = minTimer;
         networkPage.AddChild(minTimer);
-        PasswordField = AddField(networkPage, "Password (empty for an open game)", "PasswordField", Form.Password, "none", value => Form.Password = value);
+        PasswordField = AddField(networkPage, "Password (empty for an open game)", "PasswordField", Form.Password, "none", value => Form.Password = value, SetupTabs.UiIcon("LockSmall"));
         PortField = AddField(networkPage, "Port (TCP)", "PortField", Form.Port.ToString(CultureInfo.InvariantCulture), HostSettingsForm.DefaultPort.ToString(CultureInfo.InvariantCulture), value =>
         {
             Form.Port = HostSettingsForm.TryParsePort(value, out int port, out _) ? port : -1;
-        });
-        PublicAddressField = AddField(networkPage, "Public address or name (optional, used in the invite)", "PublicAddressField", Form.PublicAddress, "e.g. 203.0.113.7", value => Form.PublicAddress = value);
+        }, SetupTabs.UiIcon("Link"));
+        PublicAddressField = AddField(networkPage, "Public address or name (optional, used in the invite)", "PublicAddressField", Form.PublicAddress, "e.g. 203.0.113.7", value => Form.PublicAddress = value, SetupTabs.UiIcon("Multiplayer"));
 
         if (!CanList) Form.ListPublicly = false; // nothing to list on
         ListPubliclyCheck = new CheckBox { Name = "ListPubliclyCheck", Text = "List this game publicly".Tr(), ButtonPressed = Form.ListPublicly && CanList, Disabled = !CanList };
@@ -753,7 +635,7 @@ public partial class HostScreen : Control
         networkPage.AddChild(ListPubliclyCheck);
         networkPage.AddChild(new Label { Name = "ListingHelp", Text = BrowseModel.ListingHelp(env.RelaySet(), CanList).Tr(), AutowrapMode = TextServer.AutowrapMode.WordSmart }.FitMin(theme, 420));
 
-        AddHeading(networkPage, "Addresses of this computer");
+        AddHeading(networkPage, "Addresses of this computer", SetupTabs.UiIcon("Multiplayer"));
         if (Addresses.Count == 0)
         {
             networkPage.AddChild(new Label { Text = "No network address found.".Tr() });
@@ -778,7 +660,7 @@ public partial class HostScreen : Control
 
     private void FillSaved()
     {
-        Clear(savedPage);
+        SetupTabs.Clear(savedPage);
         resumeButtons.Clear();
         IReadOnlyList<HostedGameInfo> games;
         try
@@ -787,15 +669,17 @@ public partial class HostScreen : Control
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Security.Cryptography.CryptographicException)
         {
-            savedPage.AddChild(new Label { Text = $"{"Saved games cannot be read".TrText()}: {e.Message}" });
+            savedPage.AddChild(new EmptyState(theme, SetupTabs.UiIcon("ExclamationMark"), $"{"Saved games cannot be read".TrText()}: {e.Message}", wrap: true));
             return;
         }
         if (games.Count == 0)
         {
-            savedPage.AddChild(new Label { Text = "No saved hosted games yet. A hosted game is saved when you stop hosting.".Tr() });
+            var empty = new EmptyState(theme, SetupTabs.UiIcon("Load"), "No saved hosted games yet. A hosted game is saved when you stop hosting.", wrap: true);
+            empty.FitMin(theme, 0, 150);
+            savedPage.AddChild(empty);
             return;
         }
-        AddHeading(savedPage, "Resume a hosted game (it listens on the port from the Network tab)");
+        AddHeading(savedPage, "Resume a hosted game (it listens on the port from the Network tab)", SetupTabs.UiIcon("Load"));
         foreach (var game in games)
         {
             var line = new HBoxContainer { Name = "Saved" + (resumeButtons.Count + 1).ToString(CultureInfo.InvariantCulture) };

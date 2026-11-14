@@ -58,47 +58,15 @@ public sealed class SaveLoadScenario : Scenario
         int savedTurn = -1;
         string brokenText = "";
 
-        void PinDates()
-        {
-            // The list shows file dates: fix them so the capture is reproducible. Older save first, autosaves newest.
-            var when = new DateTime(2020, 1, 1, 12, 0, 0, DateTimeKind.Utc);
-            foreach (string path in Directory.GetFiles(folder).Order(StringComparer.Ordinal))
-            {
-                string name = Path.GetFileName(path);
-                File.SetLastWriteTimeUtc(path, SaveStore.IsAutosaveName(name) ? when.AddDays(1) : name == "Broken" ? when.AddDays(2) : when);
-            }
-            controller.RefreshList();
-        }
-
-        ScenarioStep[] OpenSaves(string entry) => [new Press("Menu"), new WaitFrames(2), new Press(entry), new WaitFrames(2)];
-
-        ScenarioStep[] Row(string name) =>
-        [
-            new Act("scroll the " + name + " row into view", () =>
-            {
-                var row = FindRow(host, name);
-                for (Node? node = row; node != null; node = node.GetParent())
-                {
-                    if (node is ScrollContainer scroller)
-                    {
-                        scroller.EnsureControlVisible(row.NotNull());
-                        break;
-                    }
-                }
-            }),
-            new WaitFrames(2),
-            new Click(() => RowCentre(name)),
-            new WaitFrames(2),
-        ];
-
-        Vector2 RowCentre(string prefix) => FindRow(host, prefix)?.GetGlobalRect().GetCenter() ?? Vector2.Zero;
-
         return
         [
             new WaitFrames(3),
             new AssertQuery("no saves yet", () => store.List().Count == 0 && !Directory.Exists(folder)),
             .. OpenSaves("Save game"),
-            new AssertQuery("the dialog is open with an empty list", () => controller.IsDialogOpen && controller.ListedNames.Count == 0),
+            new AssertQuery("the dialog is open with an empty list and Resume last disabled", () =>
+                controller.IsDialogOpen &&
+                controller.ListedNames.Count == 0 &&
+                host.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => b.Text == "Resume last")?.Disabled == true),
             new Act("type a name", () => controller.NameField.NotNull().Text = "Alpha"),
             new Press("Save"),
             new AssertQuery("the save was written and listed with its turn", () => store.List() is [{ Name: "Alpha", Info.Turn: var t }] && t == startTurn && controller.Message.StartsWith("Saved", StringComparison.Ordinal)),
@@ -108,10 +76,10 @@ public sealed class SaveLoadScenario : Scenario
             new Press("Next turn"),
             new AssertQuery("the turn advanced and the state changed", () => session.Game.Turns == startTurn + 1 && ScenarioGame.StateHash(session) != savedHash),
             new AssertQuery("an autosave and a numbered autosave appeared", () => store.List().Select(it => it.Name).Order(StringComparer.Ordinal).SequenceEqual(["Alpha", "Autosave", $"Autosave-{startTurn + 1}"])),
-            new Act("pin file dates and open the list", PinDates),
+            new Act("pin file dates and open the list", () => PinDates(folder, controller)),
             .. OpenSaves("Load game"),
             new Capture("list", "The save list: Alpha, then the autosave and the numbered autosave, each with turn, civ and ruleset"),
-            .. Row("Alpha"),
+            .. SelectRow(host, "Alpha"),
             new AssertQuery("selecting a save copies its name into the name field", () => controller.NameField.NotNull().Text == "Alpha"),
             new Press("Load"),
             new AssertQuery("the loaded game's state hash equals the saved one", () => loaded != null && ScenarioGame.StateHash(loaded.Session) == savedHash),
@@ -123,19 +91,19 @@ public sealed class SaveLoadScenario : Scenario
                 brokenText = File.ReadAllText(Path.Combine(folder, "Alpha"));
                 File.WriteAllText(Path.Combine(folder, "Broken"), "this is not a save");
                 File.WriteAllText(Path.Combine(folder, "Truncated"), brokenText[..(brokenText.Length / 2)]);
-                PinDates();
+                PinDates(folder, controller);
             }),
             .. OpenSaves("Load game"),
             new AssertQuery("both damaged files are listed but not readable", () => store.List().Count(it => it.Info == null) == 2),
             new Capture("damaged", "The damaged files are listed as unreadable"),
-            .. Row("Broken"),
+            .. SelectRow(host, "Broken"),
             new Press("Load"),
             new AssertQuery("loading the damaged file was refused with a message and changed nothing", () => controller.Message.StartsWith("Cannot load", StringComparison.Ordinal) && screen.Turn == savedTurn && controller.IsDialogOpen),
-            .. Row("Truncated"),
+            .. SelectRow(host, "Truncated"),
             new Press("Load"),
             new AssertQuery("the truncated file was refused too", () => controller.Message.StartsWith("Cannot load \"Truncated\"", StringComparison.Ordinal) && screen.Turn == savedTurn),
 
-            .. Row("Alpha"),
+            .. SelectRow(host, "Alpha"),
             new Press("Delete"),
             new AssertQuery("Delete only asks: the save is still there", () => store.List().Any(it => it.Name == "Alpha") && controller.Message.Contains("Confirm delete", StringComparison.Ordinal)),
             new Press("Confirm delete"),
@@ -147,7 +115,58 @@ public sealed class SaveLoadScenario : Scenario
             .. OpenSaves("Load game"),
             new Press("Resume last"),
             new AssertQuery("Resume last loaded the newest readable save (an autosave)", () => controller.Message.StartsWith("Loaded \"Autosave", StringComparison.Ordinal) && !controller.IsDialogOpen),
+            new Act("open a detached Main Menu save dialog", () =>
+            {
+                var mainMenuController = new SaveController(store, settings, screen.SharedTheme.NotNull(), text => LocalHost.FromSave(text, () => now += 1000), _ => { });
+                host.AddChild(mainMenuController);
+                mainMenuController.OpenDialog();
+            }),
+            new WaitFrames(2),
+            new AssertQuery("main-menu save dialog hides Save and Save name while Resume last shows its target", () => HasExpectedMainMenuState(host)),
         ];
+    }
+
+    private static void PinDates(string folder, SaveController controller)
+    {
+        // The list shows file dates: fix them so the capture is reproducible. Older save first, autosaves newest.
+        var when = new DateTime(2020, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        foreach (string path in Directory.GetFiles(folder).Order(StringComparer.Ordinal))
+        {
+            string name = Path.GetFileName(path);
+            File.SetLastWriteTimeUtc(path, SaveStore.IsAutosaveName(name) ? when.AddDays(1) : name == "Broken" ? when.AddDays(2) : when);
+        }
+        controller.RefreshList();
+    }
+
+    private static ScenarioStep[] OpenSaves(string entry) => [new Press("Menu"), new WaitFrames(2), new Press(entry), new WaitFrames(2)];
+
+    private static ScenarioStep[] SelectRow(Control host, string name) =>
+    [
+        new Act("scroll the " + name + " row into view", () =>
+        {
+            var row = FindRow(host, name);
+            for (Node? node = row; node != null; node = node.GetParent())
+            {
+                if (node is ScrollContainer scroller)
+                {
+                    scroller.EnsureControlVisible(row.NotNull());
+                    break;
+                }
+            }
+        }),
+        new WaitFrames(2),
+        new Click(() => FindRow(host, name)?.GetGlobalRect().GetCenter() ?? Vector2.Zero),
+        new WaitFrames(2),
+    ];
+
+    private static bool HasExpectedMainMenuState(Control host)
+    {
+        var menuCtrl = host.GetChildren().OfType<SaveController>().Last();
+        var saveBtn = menuCtrl.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => b.Text == "Save");
+        var resumeBtn = menuCtrl.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => b.Text == "Resume last");
+        return saveBtn != null && !saveBtn.Visible &&
+            menuCtrl.NameField != null && !menuCtrl.NameField.Visible &&
+            resumeBtn != null && !resumeBtn.Disabled && resumeBtn.TooltipText.Contains("Autosave", StringComparison.Ordinal);
     }
 
     /// <summary>The name cell of a row of the open dialog's table.</summary>

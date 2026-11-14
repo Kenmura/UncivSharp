@@ -33,10 +33,9 @@ public partial class LobbyScreen : Control
     private readonly VBoxContainer slotsBox = new() { Name = "Slots" };
     private readonly Label readySummaryLabel = new() { Name = "ReadySummary", ThemeTypeVariation = UiVariants.LabelSmall, Visible = false };
     private readonly ScrollContainer bodyScroll = new() { Name = "LobbyScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
-    private readonly VBoxContainer nationBox = new() { Name = "NationPicker", SizeFlagsHorizontal = SizeFlags.ExpandFill };
-    private readonly ScrollContainer pickerScroll = new() { Name = "PickerScroll", Visible = false, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
-    private readonly HBoxContainer bottomRow = new() { Name = "SettingsAndChat", SizeFlagsVertical = SizeFlags.ExpandFill };
-    private readonly Label settingsLabel = new() { Name = "Settings", SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
+    private readonly VBoxContainer nationBox = new() { Name = "NationPicker", Visible = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+    private readonly BoxContainer bottomRow = new() { Name = "SettingsAndChat", SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
+    private readonly Label settingsLabel = new() { Name = "Settings", SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly VBoxContainer chatBox = new() { Name = "ChatLog" };
     private readonly ScrollContainer chatScroll = new() { Name = "ChatScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
     private readonly Label messageLabel = new() { Name = "LobbyMessage", AutowrapMode = TextServer.AutowrapMode.WordSmart };
@@ -56,6 +55,7 @@ public partial class LobbyScreen : Control
     private readonly VBoxContainer backupBox = new() { Name = "BackupHost" };
     private readonly Label trustLabel = new() { Name = "BackupHostNotice", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly Label standbyStatusLabel = new() { Name = "StandbyStatus", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly Label backupPickerHeader = new() { Name = "BackupHostHeader", ThemeTypeVariation = UiVariants.LabelOverline };
     private readonly HFlowContainer backupPickerBox = new() { Name = "BackupHostPicker" };
     private readonly VBoxContainer offerBox = new() { Name = "StandbyOffer", Visible = false };
     private readonly Label offerLabel = new() { Name = "StandbyOfferText", AutowrapMode = TextServer.AutowrapMode.WordSmart };
@@ -260,6 +260,7 @@ public partial class LobbyScreen : Control
         // The block collapses when there is nothing to say, so a lobby without a backup host keeps its old layout.
         standbyStatusLabel.Visible = standbyStatusLabel.Text.Length > 0;
         backupPickerBox.Visible = backupPickerBox.GetChildCount() > 0;
+        backupPickerHeader.Visible = backupPickerBox.Visible;
         backupBox.Visible = trustLabel.Visible || standbyStatusLabel.Visible || offerBox.Visible || backupPickerBox.Visible;
     }
 
@@ -295,15 +296,12 @@ public partial class LobbyScreen : Control
         frame = new ScreenFrame(theme, "Lobby", closeButton: false);
         frame.Fill();
         AddChild(frame);
-        var column = new VBoxContainer { Name = "LobbyColumn", SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var column = new VBoxContainer { Name = "LobbyColumn", SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
         column.FitConstant(theme, "separation", UiTokens.S2);
         bodyScroll.AddChild(column);
         frame.SetContent(bodyScroll);
-        // T318: on a tall window the seats/settings keep the body's height (the chat fills it); on a phone the content is taller and still scrolls
-        void FitBody() => column.CustomMinimumSize = new Vector2(0, bodyScroll.Size.Y);
-        bodyScroll.Resized += FitBody;
-        theme.Fit(this, FitBody);
         slotsBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        slotsBox.FitConstant(theme, "separation", UiTokens.S1);
         var slotsHeader = new HBoxContainer { Name = "SlotsHeader" };
         slotsHeader.AddChild(new Label { Text = "Players".Tr(), ThemeTypeVariation = UiVariants.LabelOverline, SizeFlagsHorizontal = SizeFlags.ExpandFill });
         slotsHeader.AddChild(readySummaryLabel);
@@ -316,7 +314,10 @@ public partial class LobbyScreen : Control
         column.AddChild(backupBox);
         backupBox.AddChild(trustLabel);
         backupBox.AddChild(standbyStatusLabel);
+        backupPickerHeader.Text = "Backup host".Tr();
+        backupBox.AddChild(backupPickerHeader);
         backupPickerBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        backupPickerBox.FitConstant(theme, "h_separation", UiTokens.S2);
         backupBox.AddChild(backupPickerBox);
         var offer = new VBoxContainer { Name = "StandbyOfferRow" };
         offer.FitConstant(theme, "separation", UiTokens.S1);
@@ -343,6 +344,7 @@ public partial class LobbyScreen : Control
         backupBox.AddChild(offerBox);
 
         var seat = new HBoxContainer();
+        seat.FitConstant(theme, "separation", UiTokens.S2);
         ReadyButton = new Button { Text = "Ready".Tr(), Name = "ReadyButton", ToggleMode = true, Visible = false };
         ReadyButton.Pressed += OnReady;
         NationToggle = new Button { Text = "Pick nation".Tr(), Name = "NationToggle", ToggleMode = true, Visible = false };
@@ -351,28 +353,34 @@ public partial class LobbyScreen : Control
         seat.AddChild(NationToggle);
         column.AddChild(seat);
 
-        pickerScroll.AddChild(nationBox);
-        pickerScroll.FitMin(theme, 0, 220); // T318: the picker is a pane of the scrolled body, not a collapsing scroll under it
-        column.AddChild(pickerScroll);
+        // T414: NationPicker sits directly in bodyScroll (no nested ScrollContainer fighting bodyScroll or slicing the bottom row).
+        nationBox.FitConstant(theme, "separation", UiTokens.S2);
+        column.AddChild(nationBox);
 
-        // Settings (read-only; the host edits them on the Host screen) on the left, chat on the right; hidden while the nation picker is open.
-        bottomRow.FitMin(theme, 0, 130); // T318: a pane of the scrolled body; its own scrolls keep Settings and Chat usable on a phone
+        // T414: stack Settings and Chat vertically on Compact/phone breakpoints, side-by-side on desktop; Settings is never clipped inside a nested ScrollContainer.
+        theme.Fit(bottomRow, () => bottomRow.Vertical = theme.Breakpoint == UiBreakpoint.Compact);
+        bottomRow.FitConstant(theme, "separation", UiTokens.S3);
         column.AddChild(bottomRow);
-        // C101: the settings scroll when they do not fit beside the chat; T318 keeps Start and Leave in the footer, so both stay reachable on a phone
-        var settingsScroll = new ScrollContainer { Name = "SettingsScroll", HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
+        var settingsCard = new PanelContainer { Name = "SettingsCard", ThemeTypeVariation = UiVariants.PanelCard, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 2 };
         var settings = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        settingsScroll.AddChild(settings);
-        settings.AddChild(new Label { Text = (host ? "Settings (change them on the Host screen)" : "Settings (set by the host)").Tr(), AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        settings.FitConstant(theme, "separation", UiTokens.S1);
+        settings.AddChild(new Label { Text = (host ? "Settings (change on Host)" : "Settings (by host)").Tr(), ThemeTypeVariation = UiVariants.LabelOverline, AutowrapMode = TextServer.AutowrapMode.WordSmart });
         theme.Fit(settingsLabel, () => settingsLabel.AddThemeFontSizeOverride("font_size", theme.Px(13)));
         settings.AddChild(settingsLabel);
-        bottomRow.AddChild(settingsScroll);
-        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 3 };
-        bottomRow.AddChild(right);
-        right.AddChild(new Label { Text = "Chat".Tr() });
+        settingsCard.AddChild(settings);
+        bottomRow.AddChild(settingsCard);
+        var chatCard = new PanelContainer { Name = "ChatCard", ThemeTypeVariation = UiVariants.PanelCard, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 3 };
+        var right = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
+        right.FitConstant(theme, "separation", UiTokens.S1);
+        chatCard.AddChild(right);
+        bottomRow.AddChild(chatCard);
+        right.AddChild(new Label { Text = "Chat".Tr(), ThemeTypeVariation = UiVariants.LabelOverline });
         chatBox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        chatScroll.FitMin(theme, 0, 120);
         chatScroll.AddChild(chatBox);
         right.AddChild(chatScroll);
         var send = new HBoxContainer();
+        send.FitConstant(theme, "separation", UiTokens.S1);
         ChatField = new LineEdit { Name = "ChatField", PlaceholderText = "Say something".Tr(), SizeFlagsHorizontal = SizeFlags.ExpandFill, MaxLength = SocialModel.MaxChatChars };
         ChatField.TextSubmitted += _ => SendChat();
         SendButton = new Button { Text = "Send".Tr(), Name = "SendButton" };
@@ -393,7 +401,7 @@ public partial class LobbyScreen : Control
     // The nation picker takes the place of the settings and chat while it is open (the window is small).
     private void ShowPicker(bool show)
     {
-        pickerScroll.Visible = show;
+        nationBox.Visible = show;
         bottomRow.Visible = !show;
         // T318: closing the picker goes back to the seats at the top of the scrolled body (the picker can be far down after scrolling through nations)
         if (!show) bodyScroll.ScrollVertical = 0;
@@ -416,16 +424,19 @@ public partial class LobbyScreen : Control
         {
             int index = slot.Slot;
             var line = new HBoxContainer { Name = $"Slot{(index + 1).ToString(CultureInfo.InvariantCulture)}" };
-            var text = new Label { Text = LobbyModel.SlotText(slot, ownKey, state.HostName) }.FitMin(theme, 185);
+            line.FitConstant(theme, "separation", UiTokens.S2);
+            var text = new Label { Text = LobbyModel.SlotText(slot, ownKey, state.HostName), VerticalAlignment = VerticalAlignment.Center }.FitMin(theme, 150);
             line.AddChild(text);
             slotLabels.Add(text);
             if (slot.Kind == "Human")
             {
-                var readyBadge = new IconLabel(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, slot.Ready ? "Checkmark" : "Pause"), (slot.Ready ? "Ready" : "Not ready").TrText()).FitMin(theme, 84);
-                readyBadge.LabelNode.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(slot.Ready ? UiTokens.Success : UiTokens.TextMuted));
+                var readyBadge = new IconLabel(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, slot.Ready ? "Checkmark" : "Pause"), (slot.Ready ? "Ready" : "Not ready").TrText(), iconSize: 14).FitMin(theme, 78);
+                var tone = ProceduralAssets.ToColor(slot.Ready ? UiTokens.Success : UiTokens.TextMuted);
+                readyBadge.IconNode.Modulate = tone;
+                readyBadge.LabelNode.AddThemeColorOverride("font_color", tone);
                 line.AddChild(readyBadge);
-                line.AddChild(NationLabel(slot));
-                line.AddChild(Swatch(slot.Color));
+                line.AddChild(NationBadge(slot));
+                line.AddChild(ColourChip(slot.Color));
             }
             if (IsHost) AddHostButtons(line, slot);
             slotsBox.AddChild(line);
@@ -440,18 +451,29 @@ public partial class LobbyScreen : Control
         else ShowPicker(false);
     }
 
-    private Control NationLabel(LobbySlot slot)
+    private Control NationBadge(LobbySlot slot)
     {
         string nation = slot.Nation ?? Constants.Random;
-        var label = new Label { Text = nation.TrText() }.FitMin(theme, 100);
+        var row = new HBoxContainer();
+        row.FitConstant(theme, "separation", UiTokens.S1);
+        row.AddChild(SetupTabs.NationEmblem(theme, nations, nation, 22));
+        var label = new Label { Text = nation.TrText(), VerticalAlignment = VerticalAlignment.Center }.FitMin(theme, 64);
         if (nations.NationColours(nation) is { } colours) label.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(colours.Background).Lightened(0.35f));
-        return label;
+        row.AddChild(label);
+        return row;
     }
 
-    private Control Swatch(string? colour) => new ColorRect
+    private Control ColourChip(string? colour)
     {
-        Color = ProceduralAssets.ToColor(PlaceholderPalette.ForLobbyColour(colour)),
-    }.FitMin(theme, 24, 24);
+        string labelText = string.IsNullOrEmpty(colour) ? "Default" : colour;
+        var chip = new PanelContainer { ThemeTypeVariation = UiVariants.PanelKeyHint, TooltipText = $"{"Colour".Tr()}: {labelText.TrText()}" };
+        var row = new HBoxContainer();
+        row.FitConstant(theme, "separation", UiTokens.S1);
+        row.AddChild(SetupTabs.ColourDot(theme, PlaceholderPalette.ForLobbyColour(colour), 12));
+        row.AddChild(new Label { Text = labelText.TrText(), ThemeTypeVariation = UiVariants.LabelSmall, VerticalAlignment = VerticalAlignment.Center });
+        chip.AddChild(row);
+        return chip;
+    }
 
     private void AddHostButtons(HBoxContainer line, LobbySlot slot)
     {
@@ -498,46 +520,42 @@ public partial class LobbyScreen : Control
         nationButtons.Clear();
         colourButtons.Clear();
         if (Own(state) is not { } own) return;
-        nationBox.AddChild(new Label { Text = "Nation".Tr() });
-        var grid = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        nationBox.AddChild(grid);
-        foreach (string name in new[] { Constants.Random }.Concat(nations.PlayableNations))
-        {
-            string nation = name;
-            var button = new Button { Text = name.TrText(), ToggleMode = true, ButtonPressed = string.Equals(own.Nation, name, StringComparison.OrdinalIgnoreCase) };
-            if (nations.NationColours(name) is { } colours)
-            {
-                var box = new StyleBoxFlat { BgColor = ProceduralAssets.ToColor(colours.Background), ContentMarginLeft = 8, ContentMarginRight = 8, ContentMarginTop = 4, ContentMarginBottom = 4 };
-                button.AddThemeStyleboxOverride("normal", box);
-                button.AddThemeStyleboxOverride("hover", box);
-                button.AddThemeStyleboxOverride("pressed", box);
-                button.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(colours.Text));
-                button.AddThemeColorOverride("font_pressed_color", ProceduralAssets.ToColor(colours.Text));
-                button.AddThemeColorOverride("font_hover_color", ProceduralAssets.ToColor(colours.Text));
-                button.AddThemeColorOverride("font_disabled_color", ProceduralAssets.ToColor(colours.Text).Darkened(0.4f));
-            }
-            button.Disabled = name != Constants.Random && state.Slots.Any(it => it.Slot != own.Slot && it.Kind != "Closed" && string.Equals(it.Nation, name, StringComparison.OrdinalIgnoreCase));
-            button.Pressed += () => _ = RunAsync(async () => await Session().SetLobbySlotAsync(own.Slot, nation, null, own.Ready));
-            nationButtons[name] = button;
-            grid.AddChild(button);
-        }
-        nationBox.AddChild(new Label { Text = "Colour".Tr() });
-        var colours2 = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        nationBox.AddChild(colours2);
+        SetupTabs.AddHeading(nationBox, theme, "Nation", SetupTabs.UiIcon("Nations"));
+        nationBox.AddChild(SetupTabs.CreateNationGrid(
+            theme,
+            nations,
+            nationButtons,
+            name => string.Equals(own.Nation, name, StringComparison.OrdinalIgnoreCase),
+            name => name != Constants.Random && state.Slots.Any(it => it.Slot != own.Slot && it.Kind != "Closed" && string.Equals(it.Nation, name, StringComparison.OrdinalIgnoreCase)),
+            name => _ = RunAsync(async () => await Session().SetLobbySlotAsync(own.Slot, name, null, own.Ready))));
+
+        SetupTabs.AddHeading(nationBox, theme, "Colour", SetupTabs.UiIcon("Options"));
+        var coloursRow = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        coloursRow.FitConstant(theme, "h_separation", UiTokens.S2);
+        coloursRow.FitConstant(theme, "v_separation", UiTokens.S2);
+        nationBox.AddChild(coloursRow);
         foreach (string name in PlaceholderPalette.LobbyColourNames)
         {
             string colour = name;
-            var button = new Button { Text = name.TrText(), ToggleMode = true, ButtonPressed = own.Color == name };
-            var box = new StyleBoxFlat { BgColor = ProceduralAssets.ToColor(PlaceholderPalette.ForLobbyColour(name)), ContentMarginLeft = 8, ContentMarginRight = 8, ContentMarginTop = 4, ContentMarginBottom = 4 };
-            button.AddThemeStyleboxOverride("normal", box);
-            button.AddThemeStyleboxOverride("hover", box);
-            button.AddThemeStyleboxOverride("pressed", box);
-            foreach (string stateName in new[] { "font_color", "font_hover_color", "font_pressed_color" })
-                button.AddThemeColorOverride(stateName, ProceduralAssets.ToColor(PlaceholderPalette.Background));
-            button.Disabled = state.Slots.Any(it => it.Slot != own.Slot && it.Kind == "Human" && it.Color == name);
+            var button = new Button
+            {
+                ToggleMode = true,
+                ButtonPressed = own.Color == colour,
+                ThemeTypeVariation = UiVariants.ButtonRow,
+                TooltipText = colour.TrText(),
+            };
+            button.FitMin(theme, 96, 36);
+            button.SetMeta(IconButton.LabelMeta, colour);
+            var cell = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
+            cell.SetAnchorsPreset(LayoutPreset.FullRect);
+            cell.FitConstant(theme, "separation", UiTokens.S2);
+            cell.AddChild(SetupTabs.ColourDot(theme, PlaceholderPalette.ForLobbyColour(colour), 14));
+            cell.AddChild(new Label { Text = colour.TrText(), MouseFilter = MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center });
+            button.AddChild(cell);
+            button.Disabled = state.Slots.Any(it => it.Slot != own.Slot && it.Kind == "Human" && it.Color == colour);
             button.Pressed += () => _ = RunAsync(async () => await Session().SetLobbySlotAsync(own.Slot, null, colour, own.Ready));
-            colourButtons[name] = button;
-            colours2.AddChild(button);
+            colourButtons[colour] = button;
+            coloursRow.AddChild(button);
         }
     }
 

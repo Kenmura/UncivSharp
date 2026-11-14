@@ -261,6 +261,10 @@ public static class ThemeBuilder
         return Make(m, new Box { Fill = C(colour), Border = C(colour), Radius = height / 2, BorderWidth = 0 });
     }
 
+    /// <summary>T414: circular colour swatch stylebox (so views never construct raw StyleBoxFlat instances).</summary>
+    public static StyleBoxFlat Swatch(Rgb colour, float scale) =>
+        Make(new Metrics(scale, false), new Box { Fill = C(colour), Border = C(UiTokens.BorderSubtle), BorderWidth = UiTokens.BorderWidth, Radius = 999 });
+
     private static void ApplyButton(Theme theme, Metrics m, string type, ButtonLook look)
     {
         theme.SetStylebox("normal", type, Make(m, look.Normal));

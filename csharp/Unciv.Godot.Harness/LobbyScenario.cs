@@ -220,6 +220,8 @@ public sealed class LobbyScenario : Scenario
 
         private ScenarioStep[] Hosting() =>
         [
+            new Act("scroll to slot 3", () => Host().Reveal(Host().KickButton(2).NotNull())),
+            new WaitFrames(2),
             new Click(() => Centre(() => Host().KickButton(2))),
             new WaitUntil("the kick reason popup is open", () => Host().ReasonView.Visible),
             new Click(() => Centre(() => Host().ReasonView.ConfirmButton)),
@@ -230,6 +232,8 @@ public sealed class LobbyScenario : Scenario
                     if (e is JoinRefusedEvent { Code: JoinRefusedCodes.Kicked }) bSawKick = true;
             }),
             new AssertQuery("friend B was told, the seat is free and unbound", () => bSawKick && lobby.Lobby.Slots[2].PlayerKeyId == null && Host().SlotLines[2] == "3. Open"),
+            new Act("scroll to close slot 3", () => Host().Reveal(Host().CloseButton(2).NotNull())),
+            new WaitFrames(2),
             new Click(() => Centre(() => Host().CloseButton(2))),
             new WaitUntil("the slot is closed", () => Host().State is { } s && s.Slots[2].Kind == "Closed"),
             new AssertQuery("the slot table shows it closed and Open can undo it", () => Host().SlotLines.ElementAtOrDefault(2) == "3. Closed" && Host().OpenButton(2) != null && Host().StartButton is { Disabled: false }),

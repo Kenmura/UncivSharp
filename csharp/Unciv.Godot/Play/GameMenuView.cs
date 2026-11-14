@@ -43,7 +43,7 @@ public partial class GameMenuView : Modal
 
     public event Action<GameMenuKind>? Chosen;
 
-    public void Open(IReadOnlyList<GameMenuEntry> entries)
+    public void Open(IReadOnlyList<GameMenuEntry> entries, IReadOnlyDictionary<string, string>? keyBindings = null)
     {
         Entries = entries;
         Asking = null;
@@ -66,8 +66,8 @@ public partial class GameMenuView : Modal
                 string? hint = entry.Kind switch
                 {
                     GameMenuKind.Resume => "Esc",
-                    GameMenuKind.Save => Hotkeys.Defaults[HotkeyAction.SaveGame],
-                    GameMenuKind.Load => Hotkeys.Defaults[HotkeyAction.LoadGame],
+                    GameMenuKind.Save => keyBindings != null ? Hotkeys.KeyFor(keyBindings, HotkeyAction.SaveGame) : Hotkeys.Defaults[HotkeyAction.SaveGame],
+                    GameMenuKind.Load => keyBindings != null ? Hotkeys.KeyFor(keyBindings, HotkeyAction.LoadGame) : Hotkeys.Defaults[HotkeyAction.LoadGame],
                     _ => null,
                 };
                 var icon = Icons.TryGetValue(entry.Kind, out string? name) ? AssetKey.Of(RulesetAssetKeys.UiIcon, name) : (AssetKey?)null;

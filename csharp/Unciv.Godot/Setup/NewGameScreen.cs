@@ -51,13 +51,13 @@ public partial class NewGameScreen : Control
         var column = new VBoxContainer();
         column.FitConstant(theme, "separation", UiTokens.S2);
         Tabs = new TabBar { SizeFlagsVertical = SizeFlags.ExpandFill };
-        foreach (var (title, page) in new[] { ("Players", playersPage), ("Game", gamePage), ("Map", mapPage), ("Rules", rulesPage), ("Advanced", advancedPage) })
+        foreach (var (title, page, icon) in new[] { ("Players", playersPage, "Nations"), ("Game", gamePage, "Score"), ("Map", mapPage, "Terrains"), ("Rules", rulesPage, "Mods"), ("Advanced", advancedPage, "Options") })
         {
             var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill, SizeFlagsHorizontal = SizeFlags.ExpandFill };
             page.SizeFlagsHorizontal = SizeFlags.ExpandFill;
             page.FitConstant(theme, "separation", UiTokens.S2);
             scroll.AddChild(page);
-            Tabs.AddTab(title, scroll);
+            Tabs.AddTab(title, scroll, theme, SetupTabs.UiIcon(icon));
         }
         column.AddChild(Tabs);
         column.AddChild(messageLabel);
@@ -125,6 +125,7 @@ public partial class NewGameScreen : Control
     // Rebuilds every page from the form (cheap: well under a hundred buttons) and shows the form's problems.
     public void Refresh()
     {
+        rows.Clear();
         FillPlayers();
         FillGame();
         FillMap();
@@ -167,15 +168,6 @@ public partial class NewGameScreen : Control
 
     // Pages
 
-    private static void Clear(Node page)
-    {
-        foreach (var child in page.GetChildren())
-        {
-            page.RemoveChild(child);
-            child.QueueFree();
-        }
-    }
-
     private void Change(string? error)
     {
         Refresh();
@@ -185,42 +177,12 @@ public partial class NewGameScreen : Control
         }
     }
 
-    private static void AddHeading(Container page, string text) => page.AddChild(new SectionHeader(text));
-
-    private void AddChoice(Container page, string field, string heading, IEnumerable<string> options, string selected, Action<string> chosen) =>
-        AddCheckedChoice(page, field, heading, options, selected, value =>
-        {
-            chosen(value);
-            return null;
-        });
-
-    // chosen returns the reason the choice was refused, or null
-    private void AddCheckedChoice(Container page, string field, string heading, IEnumerable<string> options, string selected, Func<string, string?> chosen)
-    {
-        AddHeading(page, heading);
-        var row = new ChoiceRow(options, selected);
-        row.Chosen += value => Change(chosen(value));
-        rows[field] = row;
-        page.AddChild(row);
-    }
-
     private void AddCheck(Container page, string text, bool on, Action<bool> changed) =>
-        AddCheckedCheck(page, text, on, value =>
-        {
-            changed(value);
-            return null;
-        });
-
-    private void AddCheckedCheck(Container page, string text, bool on, Func<bool, string?> changed)
-    {
-        var box = new CheckBox { Text = text.TrText(), ButtonPressed = on };
-        box.Toggled += value => Change(changed(value));
-        page.AddChild(box);
-    }
+        SetupTabs.AddCheck(page, text, on, changed, Change);
 
     private void FillPlayers()
     {
-        Clear(playersPage);
+        SetupTabs.Clear(playersPage);
         nationButtons.Clear();
         slotNationButtons.Clear();
         slotHumanButtons.Clear();
@@ -228,10 +190,10 @@ public partial class NewGameScreen : Control
 
         var counts = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         counts.FitConstant(theme, "h_separation", UiTokens.S6);
-        AddStepper(counts, "Players", new Stepper(theme, NewGameForm.MinPlayers, Math.Max(NewGameForm.MinPlayers, Form.MaxPlayers), Form.Slots.Count, decreaseLabel: "Fewer players", increaseLabel: "More players"),
-            value => Form.SetPlayerCount(value));
-        AddStepper(counts, "City-states", new Stepper(theme, 0, Form.MaxCityStates, Form.CityStates, decreaseLabel: "Fewer city-states", increaseLabel: "More city-states"),
-            value => Form.SetCityStates(value));
+        SetupTabs.AddStepper(counts, theme, "Players", new Stepper(theme, NewGameForm.MinPlayers, Math.Max(NewGameForm.MinPlayers, Form.MaxPlayers), Form.Slots.Count, decreaseLabel: "Fewer players", increaseLabel: "More players"),
+            value => Form.SetPlayerCount(value), Change);
+        SetupTabs.AddStepper(counts, theme, "City-states", new Stepper(theme, 0, Form.MaxCityStates, Form.CityStates, decreaseLabel: "Fewer city-states", increaseLabel: "More city-states"),
+            value => Form.SetCityStates(value), Change);
         playersPage.AddChild(counts);
 
         var body = new HBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
@@ -262,7 +224,7 @@ public partial class NewGameScreen : Control
             };
             var human = new Button { Text = (Form.Slots[i].IsHuman ? "Human" : "AI").TrText(), ThemeTypeVariation = UiVariants.ButtonChip };
             human.Pressed += () => Change(Form.SetHuman(slot, !Form.Slots[slot].IsHuman));
-            line.AddChild(Emblem(Form.Slots[i].Nation, 24));
+            line.AddChild(SetupTabs.NationEmblem(theme, Form, Form.Slots[i].Nation, 24));
             line.AddChild(nation);
             line.AddChild(human);
             list.AddChild(line);
@@ -273,59 +235,14 @@ public partial class NewGameScreen : Control
         body.AddChild(NationCard(Form.Slots[selectedSlot].Nation));
         playersPage.AddChild(body);
 
-        AddHeading(playersPage, $"Nation for player {(selectedSlot + 1).ToString(CultureInfo.InvariantCulture)}:");
-        var grid = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        grid.FitConstant(theme, "h_separation", UiTokens.S2);
-        grid.FitConstant(theme, "v_separation", UiTokens.S2);
-        playersPage.AddChild(grid);
-        foreach (string name in new[] { Constants.Random }.Concat(Form.PlayableNations))
-        {
-            var button = new Button
-            {
-                ToggleMode = true,
-                ButtonPressed = Form.Slots[selectedSlot].Nation == name,
-                ThemeTypeVariation = UiVariants.ButtonRow,
-                TooltipText = name.TrText(),
-            };
-            button.FitMin(theme, 88, 72);
-            button.SetMeta(IconButton.LabelMeta, name);
-            var cell = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
-            cell.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-            cell.FitConstant(theme, "separation", UiTokens.S1);
-            var emblem = Emblem(name, 36);
-            emblem.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
-            cell.AddChild(emblem);
-            cell.AddChild(new Label
-            {
-                Text = name.TrText(), ThemeTypeVariation = UiVariants.LabelSmall, HorizontalAlignment = HorizontalAlignment.Center,
-                TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, MouseFilter = MouseFilterEnum.Ignore,
-            });
-            button.AddChild(cell);
-            bool taken = name != Constants.Random && Form.Slots.Select((s, index) => (s, index)).Any(it => it.s.Nation == name && it.index != selectedSlot);
-            button.Disabled = taken;
-            button.Pressed += () => Change(Form.SetNation(selectedSlot, name));
-            nationButtons[name] = button;
-            grid.AddChild(button);
-        }
-    }
-
-    private void AddStepper(Container parent, string label, Stepper stepper, Func<int, string?> changed)
-    {
-        var row = new HBoxContainer();
-        row.FitConstant(theme, "separation", UiTokens.S2);
-        row.AddChild(new Label { Text = label.TrText(), ThemeTypeVariation = UiVariants.LabelSecondary, VerticalAlignment = VerticalAlignment.Center });
-        row.AddChild(stepper);
-        stepper.Changed += value => Change(changed(value));
-        parent.AddChild(row);
-    }
-
-    // A nation's emblem: its icon on a disc in the nation's colours (the neutral colours for Random).
-    private IconBadge Emblem(string nation, int size)
-    {
-        var colours = Form.NationColours(nation);
-        var fill = ProceduralAssets.ToColor(colours?.Background ?? UiTokens.Surface3);
-        var glyph = ProceduralAssets.ToColor(colours?.Text ?? UiTokens.TextPrimary);
-        return new IconBadge(theme, AssetKey.Of(RulesetAssetKeys.NationIcon, nation), fill, glyph, size);
+        SetupTabs.AddHeading(playersPage, theme, $"Nation for player {(selectedSlot + 1).ToString(CultureInfo.InvariantCulture)}:", SetupTabs.UiIcon("Nations"));
+        playersPage.AddChild(SetupTabs.CreateNationGrid(
+            theme,
+            Form,
+            nationButtons,
+            name => Form.Slots[selectedSlot].Nation == name,
+            name => name != Constants.Random && Form.Slots.Select((s, index) => (s, index)).Any(it => it.s.Nation == name && it.index != selectedSlot),
+            name => Change(Form.SetNation(selectedSlot, name))));
     }
 
     // The detail pane of the selected slot's nation: emblem and name, leader, unique ability and start preference.
@@ -337,7 +254,7 @@ public partial class NewGameScreen : Control
         box.FitConstant(theme, "separation", UiTokens.S2);
         var head = new HBoxContainer();
         head.FitConstant(theme, "separation", UiTokens.S2);
-        head.AddChild(Emblem(nation, 40));
+        head.AddChild(SetupTabs.NationEmblem(theme, Form, nation, 40));
         head.AddChild(new Label { Text = nation.TrText(), ThemeTypeVariation = UiVariants.LabelHeading, VerticalAlignment = VerticalAlignment.Center, SizeFlagsHorizontal = SizeFlags.ExpandFill, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis });
         box.AddChild(head);
         if (Form.DescribeNation(nation) is { } detail)
@@ -356,66 +273,23 @@ public partial class NewGameScreen : Control
         return card;
     }
 
-    private void FillGame()
-    {
-        Clear(gamePage);
-        AddChoice(gamePage, "Difficulty", "Difficulty", Form.Options.Difficulties.Select(it => it.Name), Form.Difficulty, v => Form.Difficulty = v);
-        AddChoice(gamePage, "Speed", "Game speed", Form.Options.Speeds.Select(it => it.Name), Form.Speed, v => Form.Speed = v);
-        AddChoice(gamePage, "Era", "Starting era", Form.Options.Eras.Select(it => it.Name), Form.Era, v => Form.Era = v);
-        AddHeading(gamePage, "Victory types");
-        var victories = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        gamePage.AddChild(victories);
-        foreach (string victory in Form.SelectableVictories)
-        {
-            string name = victory;
-            AddCheckedCheck(victories, name, Form.Victories.Contains(name), on => Form.SetVictory(name, on));
-        }
-    }
+    private void FillGame() => SetupTabs.FillGame(gamePage, theme, Form, rows, Change);
 
-    private void FillMap()
-    {
-        Clear(mapPage);
-        var o = Form.Options.MapOptions;
-        AddChoice(mapPage, "Type", "Map type", o.Types, Form.MapType, v => Form.MapType = v);
-        AddChoice(mapPage, "Shape", "Map shape", o.Shapes, Form.Shape, v => Form.Shape = v);
-        AddChoice(mapPage, "Size", "Map size", o.Sizes, Form.Size, v => Form.Size = v);
-        AddChoice(mapPage, "Resources", "Resources", o.Resources, Form.Resources, v => Form.Resources = v);
-        var flags = new HFlowContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        mapPage.AddChild(flags);
-        AddCheck(flags, "World wrap", Form.WorldWrap, on => Form.WorldWrap = on);
-        AddCheck(flags, "No ancient ruins", Form.NoRuins, on => Form.NoRuins = on);
-        AddCheck(flags, "No natural wonders", Form.NoNaturalWonders, on => Form.NoNaturalWonders = on);
-        AddHeading(mapPage, "Seed (empty for a random map)");
-                seedField = new LineEdit { Name = "SeedField", Text = Form.SeedText, PlaceholderText = "random".Tr() }.FitMin(theme, 240);
-        seedField.TextChanged += text =>
-        {
-            Form.SeedText = text;
-            ShowProblems();
-        };
-        mapPage.AddChild(seedField);
-    }
+    private void FillMap() => seedField = SetupTabs.FillMap(mapPage, theme, Form, rows, Change, ShowProblems);
 
-    private void FillRules()
-    {
-        Clear(rulesPage);
-        AddCheckedChoice(rulesPage, "Base ruleset", "Base ruleset", Form.BaseRulesets, Form.BaseRuleset, Form.SetBaseRuleset);
-        AddHeading(rulesPage, Form.AvailableMods.Count == 0 ? "No mods installed" : "Mods");
-        foreach (string mod in Form.AvailableMods)
-        {
-            string name = mod;
-            AddCheckedCheck(rulesPage, name, Form.Mods.Contains(name), on => Form.SetMod(name, on));
-        }
-    }
+    private void FillRules() => SetupTabs.FillRules(rulesPage, theme, Form, rows, Change, "Mods");
 
     private void FillAdvanced()
     {
-        Clear(advancedPage);
+        SetupTabs.Clear(advancedPage);
+        SetupTabs.AddHeading(advancedPage, theme, "World & rules", SetupTabs.UiIcon("Options"));
         AddCheck(advancedPage, "No barbarians", Form.NoBarbarians, on => Form.NoBarbarians = on);
         AddCheck(advancedPage, "Raging barbarians", Form.RagingBarbarians, on => Form.RagingBarbarians = on);
         AddCheck(advancedPage, "One city challenge", Form.OneCityChallenge, on => Form.OneCityChallenge = on);
         AddCheck(advancedPage, "No city razing", Form.NoCityRazing, on => Form.NoCityRazing = on);
         AddCheck(advancedPage, "Nuclear weapons", Form.NuclearWeapons, on => Form.NuclearWeapons = on);
         AddCheck(advancedPage, "Espionage", Form.Espionage, on => Form.Espionage = on);
-        AddCheck(advancedPage, "God mode (cheats; the developer console needs it)", Form.GodMode, on => Form.GodMode = on);
+        SetupTabs.AddHeading(advancedPage, theme, "Sandbox", SetupTabs.UiIcon("Settings"));
+        AddCheck(advancedPage, "God mode (allow cheats)", Form.GodMode, on => Form.GodMode = on);
     }
 }

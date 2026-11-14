@@ -5,9 +5,12 @@ using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
+using Unciv.Models;
+using Unciv.Models.Ruleset;
 using Unciv.Net.Visibility;
 using Unciv.Models.Translations;
 using Unciv.GodotClient.Localization;
+using RulesetNation = Unciv.Models.Ruleset.Nation.Nation;
 
 namespace Unciv.GodotClient.Saves;
 
@@ -35,14 +38,22 @@ public partial class SaveController : Control
     private Control? dialog;
     private PanelContainer? dialogPanel;
     private ScreenFrame? frame;
+    private Button? resumeButton;
+    private Button? deleteButton;
     private Button? confirmDelete;
+    private Button? loadButton;
+    private Button? saveButton;
     private DataTable? table;
     private LineEdit? search;
     private ScrollContainer? scroller;
     private EmptyState? empty;
+    private HBoxContainer? detailsHeader;
+    private Control? detailsCrestSlot;
     private Label? detailsTitle;
     private Label? detailsBody;
     private Label? detailsWarning;
+    private EmptyState? detailsEmpty;
+    private Label? saveNameLabel;
     private Label? dialogMessage;
     private string? selectedName;
     private bool compact;
@@ -276,7 +287,7 @@ public partial class SaveController : Control
 
         var content = new HBoxContainer { Name = "SaveContent" };
         content.FitConstant(theme, "separation", UiTokens.S3);
-        var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1.5f };
+        var left = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1.7f };
         left.FitConstant(theme, "separation", UiTokens.S2);
         search = new LineEdit { Name = "SaveSearch", PlaceholderText = "Search saves".Tr(), ClearButtonEnabled = true };
         search.TextChanged += _ => ApplyFilter();
@@ -286,24 +297,25 @@ public partial class SaveController : Control
         scroller = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         scroller.AddChild(table);
         left.AddChild(scroller);
-        empty = new EmptyState(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Load"), "No saves yet.") { Name = "SaveEmpty", SizeFlagsVertical = SizeFlags.ExpandFill };
+        empty = new EmptyState(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Mods"), "No saves yet.") { Name = "SaveEmpty", SizeFlagsVertical = SizeFlags.ExpandFill };
         left.AddChild(empty);
         content.AddChild(left);
         content.AddChild(BuildDetails());
         frame.SetContent(content);
 
-        var resume = new Button { Text = "Resume last".Tr() };
-        resume.Pressed += () => Run(ResumeLastAsync());
-        var delete = new Button { Text = "Delete".Tr() };
-        delete.Pressed += ArmDelete;
+        var inGame = session != null;
+        resumeButton = new Button { Text = "Resume last".Tr() };
+        resumeButton.Pressed += () => Run(ResumeLastAsync());
+        deleteButton = new Button { Text = "Delete".Tr() };
+        deleteButton.Pressed += ArmDelete;
         confirmDelete = new Button { Text = "Confirm delete".Tr(), Visible = false };
         confirmDelete.Pressed += () => { if (pendingDelete is { } name) Delete(name); };
-        var load = new Button { Text = "Load".Tr() };
-        load.Pressed += () => { if (Selected is { } name) Run(LoadAsync(name)); else Say("Select a save first."); };
-        var save = new Button { Text = "Save".Tr() };
-        save.Pressed += () => Run(SaveAsync(NameField?.Text ?? ""));
-        frame.SetFooter([(resume, ChoiceRole.Ghost), (delete, ChoiceRole.Danger), (confirmDelete, ChoiceRole.Danger), (load, ChoiceRole.Secondary), (save, ChoiceRole.Primary)]);
-        if (NameField != null) NameField.Text = $"Game-{(session?.Snapshot.Turn ?? 0).ToString(CultureInfo.InvariantCulture)}";
+        loadButton = new Button { Text = "Load".Tr() };
+        loadButton.Pressed += () => { if (Selected is { } name) Run(LoadAsync(name)); else Say("Select a save first."); };
+        saveButton = new Button { Text = "Save".Tr(), Visible = inGame, Disabled = !inGame };
+        saveButton.Pressed += () => Run(SaveAsync(NameField?.Text ?? ""));
+        frame.SetFooter([(resumeButton, ChoiceRole.Ghost), (deleteButton, ChoiceRole.Danger), (confirmDelete, ChoiceRole.Danger), (loadButton, ChoiceRole.Secondary), (saveButton, ChoiceRole.Primary)]);
+        if (NameField != null && inGame) NameField.Text = $"Game-{(session?.Snapshot.Turn ?? 0).ToString(CultureInfo.InvariantCulture)}";
         AddChild(dialog);
         RefreshList();
         Layout();
@@ -316,6 +328,7 @@ public partial class SaveController : Control
             ? [new DataColumn("Name"), new DataColumn("Turn", true), new DataColumn("Civilization")]
             : [new DataColumn("Name"), new DataColumn("Turn", true), new DataColumn("Civilization"), new DataColumn("Ruleset"), new DataColumn("Date")], selectable: true) { Name = "SaveTable" };
         built.RowTone = row => row < shown.Count && shown[row].Info == null ? ProceduralAssets.ToColor(UiTokens.Warning) : null;
+        built.CellLeading = (row, col) => col == 2 && row >= 0 && row < shown.Count ? SaveCrest(shown[row], 16) : null;
         built.RowSelected += OnRowSelected;
         built.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         return built;
@@ -335,24 +348,35 @@ public partial class SaveController : Control
 
     private Control BuildDetails()
     {
+        bool inGame = session != null;
         var card = new PanelContainer { Name = "SaveDetails", ThemeTypeVariation = UiVariants.PanelCard, SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsStretchRatio = 1f };
-        var column = new VBoxContainer();
+        var column = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ExpandFill };
         column.FitConstant(theme, "separation", UiTokens.S2);
-        detailsTitle = new Label { Name = "SaveDetailsTitle", ThemeTypeVariation = UiVariants.LabelHeading, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis };
+        detailsEmpty = new EmptyState(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Search"), "Select a save to inspect or load.", wrap: true) { Name = "SaveDetailsEmpty", SizeFlagsVertical = SizeFlags.ExpandFill };
+        column.AddChild(detailsEmpty);
+        detailsHeader = new HBoxContainer { Name = "SaveDetailsHeader" };
+        detailsHeader.FitConstant(theme, "separation", UiTokens.S2);
+        detailsCrestSlot = new HBoxContainer { Name = "SaveDetailsCrest" };
+        detailsTitle = new Label { Name = "SaveDetailsTitle", ThemeTypeVariation = UiVariants.LabelHeading, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis };
+        detailsHeader.AddChild(detailsCrestSlot);
+        detailsHeader.AddChild(detailsTitle);
         detailsBody = new Label { Name = "SaveDetailsBody", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, MaxLinesVisible = 6, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis }.FitMin(theme, 96);
         detailsWarning = new Label { Name = "SaveDetailsWarning", AutowrapMode = TextServer.AutowrapMode.WordSmart, MaxLinesVisible = 4, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, Visible = false }.FitMin(theme, 96);
         detailsWarning.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.Warning));
-        column.AddChild(detailsTitle);
+        column.AddChild(detailsHeader);
         column.AddChild(detailsBody);
         column.AddChild(detailsWarning);
-        column.AddChild(new Control().FitMin(theme, 0, UiTokens.S2));
-        column.AddChild(new Label { Text = "Save name".Tr(), ThemeTypeVariation = UiVariants.LabelOverline });
-        NameField = new LineEdit { Name = "SaveName", PlaceholderText = "Save name".Tr() };
-        column.AddChild(NameField);
+        saveNameLabel = new Label { Text = "Save name".Tr(), ThemeTypeVariation = UiVariants.LabelOverline, Visible = inGame };
+        NameField = new LineEdit { Name = "SaveName", PlaceholderText = "Save name".Tr(), Visible = inGame };
+        if (inGame)
+        {
+            column.AddChild(new Control().FitMin(theme, 0, UiTokens.S2));
+            column.AddChild(saveNameLabel);
+            column.AddChild(NameField);
+        }
         dialogMessage = new Label { Name = "SaveDialogMessage", ThemeTypeVariation = UiVariants.LabelSecondary, AutowrapMode = TextServer.AutowrapMode.WordSmart, MaxLinesVisible = 4, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis }.FitMin(theme, 96);
         column.AddChild(dialogMessage);
-        var scrolled = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled }; // the card never makes the dialog taller than the window
-        column.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var scrolled = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill }; // the card never makes the dialog taller than the window
         scrolled.AddChild(column);
         card.AddChild(scrolled);
         ShowDetails(null);
@@ -365,12 +389,15 @@ public partial class SaveController : Control
         dialog = null;
         dialogPanel = null;
         frame = null;
+        resumeButton = deleteButton = confirmDelete = loadButton = saveButton = null;
         table = null;
         search = null;
         scroller = null;
         empty = null;
-        detailsTitle = detailsBody = detailsWarning = dialogMessage = null;
-        confirmDelete = null;
+        detailsHeader = null;
+        detailsCrestSlot = null;
+        detailsTitle = detailsBody = detailsWarning = saveNameLabel = dialogMessage = null;
+        detailsEmpty = null;
         pendingDelete = null;
         selectedName = null;
         NameField = null;
@@ -417,11 +444,12 @@ public partial class SaveController : Control
         int index = shown.ToList().FindIndex(it => it.Name == selectedName);
         if (index < 0) selectedName = null;
         table.Select(index, notify: false);
-        if (frame != null) frame.TitleLabel.Text = $"{"Saves".Tr()} ({entries.Count.ToString(CultureInfo.InvariantCulture)})";
+        if (frame != null) frame.TitleLabel.Text = $"{(session != null ? "Saves" : "Load game").Tr()} ({entries.Count.ToString(CultureInfo.InvariantCulture)})";
         scroller!.Visible = shown.Count > 0;
         empty!.Visible = shown.Count == 0;
         empty.SetMessage(entries.Count == 0 ? "No saves yet." : "No save matches the search.");
         ShowDetails(index < 0 ? null : shown[index]);
+        UpdateActions();
     }
 
     private string[] Row(SaveEntry entry)
@@ -442,15 +470,85 @@ public partial class SaveController : Control
         selectedName = entry.Name;
         if (NameField != null && entry.Info != null) NameField.Text = entry.Name;
         ShowDetails(entry);
+        UpdateActions();
     }
+
+    private void UpdateActions()
+    {
+        bool hasSelection = Selected != null;
+        if (loadButton != null)
+        {
+            loadButton.Disabled = !hasSelection;
+            loadButton.TooltipText = hasSelection ? "" : "Select a save first.".Tr();
+        }
+        if (deleteButton != null)
+        {
+            deleteButton.Disabled = !hasSelection;
+            deleteButton.TooltipText = hasSelection ? "" : "Select a save first.".Tr();
+        }
+        if (resumeButton != null)
+        {
+            var latest = store.Latest();
+            resumeButton.Disabled = latest == null;
+            resumeButton.TooltipText = latest?.Info is { } latestInfo
+                ? $"{"Resume".Tr()} \"{latest.Name}\" ({"Turn".Tr()} {latestInfo.Turn.ToString(CultureInfo.InvariantCulture)})"
+                : "No saves yet.".Tr();
+        }
+    }
+
+    private IconBadge SaveCrest(SaveEntry entry, int size)
+    {
+        if (entry.Info is not { } info)
+        {
+            return new IconBadge(
+                theme,
+                AssetKey.Of(RulesetAssetKeys.UiIcon, "ExclamationMark"),
+                ProceduralAssets.ToColor(UiTokens.Surface3),
+                ProceduralAssets.ToColor(UiTokens.Warning),
+                size);
+        }
+        var nation = LookupNation(info.Civ, info.Ruleset);
+        var fill = nation != null ? ToGodotColor(nation.GetOuterColor()) : ProceduralAssets.ToColor(UiTokens.Surface3);
+        var glyph = nation != null ? ToGodotColor(nation.GetInnerColor()) : ProceduralAssets.ToColor(UiTokens.TextPrimary);
+        return new IconBadge(theme, AssetKey.Of(RulesetAssetKeys.NationIcon, info.Civ), fill, glyph, size);
+    }
+
+    private RulesetNation? LookupNation(string civName, string rulesetName)
+    {
+        if (session is { } active && string.Equals(active.Ruleset.Name, rulesetName, StringComparison.Ordinal) &&
+            active.Ruleset.Nations.TryGetValue(civName, out var activeMatch))
+        {
+            return activeMatch;
+        }
+        if (RulesetCache.ContainsKey(rulesetName) && RulesetCache.Get(rulesetName) is { } cached && cached.Nations.TryGetValue(civName, out var match)) return match;
+        return null;
+    }
+
+    private static Color ToGodotColor(EngineColor c) => new(c.R, c.G, c.B, 1f);
 
     private void ShowDetails(SaveEntry? entry)
     {
-        if (detailsTitle == null || detailsBody == null || detailsWarning == null) return;
-        detailsTitle.Text = entry?.Name ?? "Select a save".Tr();
-        detailsWarning.Visible = entry != null && entry.Info == null;
-        detailsWarning.Text = entry?.Problem is { } problem ? $"{"Damaged".Tr()}: {problem}" : "";
-        if (entry?.Info is not { } info)
+        if (detailsTitle == null || detailsBody == null || detailsWarning == null || detailsHeader == null || detailsEmpty == null || detailsCrestSlot == null) return;
+        foreach (var child in detailsCrestSlot.GetChildren())
+        {
+            detailsCrestSlot.RemoveChild(child);
+            child.QueueFree();
+        }
+        bool hasEntry = entry != null;
+        detailsEmpty.Visible = !hasEntry;
+        detailsEmpty.SetMessage(entries.Count == 0 ? "No saves yet." : "Select a save to inspect or load.");
+        detailsHeader.Visible = hasEntry;
+        detailsBody.Visible = entry?.Info != null;
+        if (entry == null)
+        {
+            detailsWarning.Visible = false;
+            return;
+        }
+        detailsCrestSlot.AddChild(SaveCrest(entry, 36));
+        detailsTitle.Text = entry.Name;
+        detailsWarning.Visible = entry.Info == null;
+        detailsWarning.Text = entry.Problem is { } problem ? $"{"Damaged".Tr()}: {problem}" : "";
+        if (entry.Info is not { } info)
         {
             detailsBody.Text = "";
             return;

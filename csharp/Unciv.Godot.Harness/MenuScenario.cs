@@ -4,9 +4,10 @@ using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Play;
 using Unciv.GodotClient.Saves;
 using Unciv.GodotClient.Settings;
+using Unciv.GodotClient.Ui;
 using Unciv.Harness;
-using Unciv.Utils;
 using Unciv.Logic.Civilization;
+using Unciv.Utils;
 
 namespace Unciv.GodotHarness;
 
@@ -42,7 +43,9 @@ public sealed class MenuScenario : Scenario
         var screen = new GameScreen();
         host.AddChild(screen);
         var registry = AssetRegistry.ForRuleset(session.Game.Ruleset);
+        screen.TutorialsEnabled = false;
         screen.Start(localHost, registry);
+        screen.BindSettings(settings);
         var controller = new SaveController(store, settings, screen.SharedTheme.NotNull(), text => LocalHost.FromSave(text, () => now += 1000), loaded => screen.Start(loaded, registry));
         screen.SharedThemeChanged += controller.UseTheme; // T405: the dialog follows the game screen's bound theme, also after a load
         host.AddChild(controller);
@@ -70,6 +73,17 @@ public sealed class MenuScenario : Scenario
             new AssertQuery("Escape opens the menu", () => screen.GameMenu.Visible),
             new PressKey(Key.Escape),
             new AssertQuery("Escape closes it again", () => !screen.GameMenu.Visible),
+            new Act("rebind Save/Load hotkeys", () => settings.Update(s => s with
+            {
+                KeyBindings = new SortedDictionary<string, string>(StringComparer.Ordinal) { ["SaveGame"] = "F11", ["LoadGame"] = "F12" },
+            })),
+            new Press("Menu"),
+            new WaitUntil("game menu opened with updated bindings", () => screen.GameMenu.Visible),
+            new AssertQuery("the menu Save and Load rows reflect live keybindings", () =>
+                screen.GameMenu.FindChild("Save", true, false) is ListRow { ShownTrailing: "F11" } &&
+                screen.GameMenu.FindChild("Load", true, false) is ListRow { ShownTrailing: "F12" }),
+            new Press("Resume game"),
+            new Act("restore default hotkeys", () => settings.Update(s => s with { KeyBindings = new SortedDictionary<string, string>(StringComparer.Ordinal) })),
 
             new Press("Menu"),
             new Press("Victory status"),

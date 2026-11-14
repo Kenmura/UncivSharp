@@ -6,18 +6,17 @@ namespace Unciv.GodotClient.Ui;
 /// <summary>A small icon followed by text, e.g. a stat icon and its number.</summary>
 public partial class IconLabel : HBoxContainer
 {
+    private readonly TextureRect picture = new();
     private readonly Label label = new();
 
     // C073, trim: the text is cut with an ellipsis (full text as tooltip) instead of widening its container, for offers whose names can be long.
-    public IconLabel(UiTheme theme, AssetKey icon, string text, bool trim = false)
+    public IconLabel(UiTheme theme, AssetKey icon, string text, bool trim = false, int iconSize = UiTheme.IconSize)
     {
-        var picture = new TextureRect
-        {
-            Texture = theme.Icon(icon),
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-            TextureFilter = TextureFilterEnum.LinearWithMipmaps,
-        }.FitMin(theme, UiTheme.IconSize, UiTheme.IconSize); // T323: follows the live scale
+        picture.Texture = theme.Icon(icon);
+        picture.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+        picture.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+        picture.TextureFilter = TextureFilterEnum.LinearWithMipmaps;
+        picture.FitMin(theme, iconSize, iconSize); // T323: follows the live scale
         AddChild(picture);
         AddChild(label);
         label.VerticalAlignment = VerticalAlignment.Center;
@@ -34,6 +33,8 @@ public partial class IconLabel : HBoxContainer
     }
 
     public AssetKey IconKey { get; }
+
+    public TextureRect IconNode => picture;
 
     public Label LabelNode => label;
 

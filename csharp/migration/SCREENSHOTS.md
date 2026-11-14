@@ -110,6 +110,7 @@
 - [T376 (ticket not Done or unknown)](#t376-ticket-not-done-or-unknown)
 - [T377 (ticket not Done or unknown)](#t377-ticket-not-done-or-unknown)
 - [T413 (ticket not Done or unknown)](#t413-ticket-not-done-or-unknown)
+- [T414 (ticket not Done or unknown)](#t414-ticket-not-done-or-unknown)
 - [Missing screenshots](#missing-screenshots)
 <!-- /toc -->
 
@@ -2293,6 +2294,28 @@ Scenario `hud`.
 ![World Congress vote result modal displaying World Leader threshold progress bars and yellow threshold markers alongside vote tallies.](../Unciv.Godot.Harness/golden/vote-result/result.png)
 
 *World Congress vote result modal displaying World Leader threshold progress bars and yellow threshold markers alongside vote tallies.* (`vote-result/result.png`)
+
+## T414 (ticket not Done or unknown)
+
+UX polish across Setup, Host, Lobby, Options, Menu, and Save/Load: shared SetupTabs with Steppers and icons, unclipped LobbyScreen with circular civ badges, single clickable keybind chips, live Save/Load shortcut labels, contextual Main Menu SaveController states with civ crests, and EmptyState panels.
+
+Scenario `setup`.
+
+![Consolidated New Game Setup screen with icon-tagged tabs, Stepper controls, and circular civ badges.](../Unciv.Godot.Harness/golden/setup/game.png)
+
+*Consolidated New Game Setup screen with icon-tagged tabs, Stepper controls, and circular civ badges.* (`setup/game.png`)
+
+![Lobby screen without nested scroll clipping, showing labeled backup host selector, styled ready indicators, and labeled color chips.](../Unciv.Godot.Harness/golden/lobby/waiting.png)
+
+*Lobby screen without nested scroll clipping, showing labeled backup host selector, styled ready indicators, and labeled color chips.* (`lobby/waiting.png`)
+
+![Settings panel with icon-tagged category tabs and clickable keybind chips instead of duplicate rebind buttons.](../Unciv.Godot.Harness/golden/options/top.png)
+
+*Settings panel with icon-tagged category tabs and clickable keybind chips instead of duplicate rebind buttons.* (`options/top.png`)
+
+![Save/Load dialog with civ crests in the table and details pane.](../Unciv.Godot.Harness/golden/saveload/list.png)
+
+*Save/Load dialog with civ crests in the table and details pane.* (`saveload/list.png`)
 
 ## Missing screenshots
 

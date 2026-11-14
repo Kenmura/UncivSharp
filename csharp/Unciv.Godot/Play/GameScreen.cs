@@ -881,7 +881,7 @@ public partial class GameScreen : Control
         }
         if (!IsInstanceValid(this) || !IsInsideTree()) return;
         bool unsaved = HasUnsavedProgress?.Invoke() ?? true;
-        GameMenu.Open(GameMenuModel.Build(status, unsaved));
+        GameMenu.Open(GameMenuModel.Build(status, unsaved), hotkeys);
     }
 
     private async Task OnMenuChosen(GameMenuKind kind)

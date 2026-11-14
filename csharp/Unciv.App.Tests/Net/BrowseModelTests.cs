@@ -48,12 +48,18 @@ public sealed class BrowseModelTests
     }
 
     [Fact]
-    public void AnotherProtocolIsGreyedOut()
+    public void AnotherProtocolIsGreyedOutWithoutProtocolJargon()
     {
-        var row = BrowseModel.Describe(Game(proto: ProtocolVersion.Current + 1), Context());
-        Assert.False(row.CanJoin);
-        Assert.Contains("another game version", row.DisabledReason, StringComparison.Ordinal);
-        Assert.Contains("Cannot join", row.Detail, StringComparison.Ordinal);
+        var newer = BrowseModel.Describe(Game(proto: ProtocolVersion.Current + 1), Context());
+        Assert.False(newer.CanJoin);
+        Assert.Contains("newer version", newer.DisabledReason, StringComparison.Ordinal);
+        Assert.Contains("Cannot join", newer.Detail, StringComparison.Ordinal);
+        Assert.DoesNotContain("protocol", newer.DisabledReason, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("protocol", newer.Detail, StringComparison.OrdinalIgnoreCase);
+
+        var older = BrowseModel.Describe(Game(proto: ProtocolVersion.Current - 1), Context());
+        Assert.False(older.CanJoin);
+        Assert.Contains("older version", older.DisabledReason, StringComparison.Ordinal);
     }
 
     [Fact]

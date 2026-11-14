@@ -1,4 +1,5 @@
 using Godot;
+using Unciv.Assets;
 using Unciv.GodotClient.Localization;
 
 namespace Unciv.GodotClient.Ui;
@@ -44,10 +45,15 @@ public partial class TabBar : VBoxContainer
 
     public event Action<int>? TabSelected;
 
-    public void AddTab(string title, Control page)
+    public void AddTab(string title, Control page, UiTheme? theme = null, AssetKey? icon = null)
     {
         int index = tabs.Count;
         var button = new Button { Name = "Tab_" + title, Text = title.TrText(), ToggleMode = true, ButtonGroup = group, ThemeTypeVariation = UiVariants.ButtonTab };
+        if (theme != null && icon is { } key)
+        {
+            button.Icon = theme.Icon(key);
+            button.FitConstant(theme, "icon_max_width", 18);
+        }
         button.Pressed += () => Select(index);
         strip.AddChild(button);
         page.Visible = false;
