@@ -1,10 +1,10 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Translations;
 using Unciv.Queries.Empire;
-using Unciv.GodotClient.Localization;
 
 namespace Unciv.GodotClient.Play;
 

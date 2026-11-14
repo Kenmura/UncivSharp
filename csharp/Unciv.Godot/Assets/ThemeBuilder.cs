@@ -104,16 +104,27 @@ public static class ThemeBuilder
         Variation(UiVariants.PanelInset, new Box { Fill = C(UiTokens.Inset), Border = C(UiTokens.BorderSubtle), Radius = UiTokens.RadiusCard, PadX = m.Px(UiTokens.S2), PadY = m.Px(UiTokens.S2) });
         Variation(UiVariants.PanelModal, new Box
         {
-            Fill = C(UiTokens.Surface1), Border = C(UiTokens.BorderStrong), Radius = UiTokens.RadiusPanel, TopBorderWidth = UiTokens.HairlineWidth,
-            PadX = m.Px(UiTokens.S4), PadY = m.Px(UiTokens.S4), Shadow = true,
+            Fill = C(UiTokens.Surface1),
+            Border = C(UiTokens.BorderStrong),
+            Radius = UiTokens.RadiusPanel,
+            TopBorderWidth = UiTokens.HairlineWidth,
+            PadX = m.Px(UiTokens.S4),
+            PadY = m.Px(UiTokens.S4),
+            Shadow = true,
         });
         var tooltip = new Box { Fill = C(UiTokens.Surface3), Border = C(UiTokens.BorderStrong), Radius = UiTokens.RadiusCard, PadX = m.Px(UiTokens.S3), PadY = m.Px(UiTokens.S2), Shadow = true };
         Variation(UiVariants.PanelTooltip, tooltip);
         Panel(theme, m, "TooltipPanel", tooltip);
         Variation(UiVariants.PanelHeader, new Box
         {
-            Fill = C(UiTokens.Surface1), Border = C(UiTokens.BorderSubtle), Radius = 0, BorderWidth = 0, TopBorderWidth = UiTokens.HairlineWidth, BottomBorderWidth = UiTokens.BorderWidth,
-            PadX = m.Px(UiTokens.S3), PadY = m.Px(UiTokens.S2),
+            Fill = C(UiTokens.Surface1),
+            Border = C(UiTokens.BorderSubtle),
+            Radius = 0,
+            BorderWidth = 0,
+            TopBorderWidth = UiTokens.HairlineWidth,
+            BottomBorderWidth = UiTokens.BorderWidth,
+            PadX = m.Px(UiTokens.S3),
+            PadY = m.Px(UiTokens.S2),
         });
         // the HUD bottom dock: rounded on top, shadowed, 1 px border
         var dock = Make(m, new Box { Fill = C(UiTokens.Surface1), Border = C(UiTokens.BorderStrong), Radius = UiTokens.RadiusPanel, PadX = pad, PadY = pad, Shadow = true });
@@ -138,7 +149,11 @@ public static class ThemeBuilder
         int padY = m.ButtonPadY;
         Box Fill(Rgb fill, Rgb border, int radius = UiTokens.RadiusControl, int borderWidth = UiTokens.BorderWidth, bool padIcon = false) => new()
         {
-            Fill = C(fill), Border = C(border), Radius = radius, BorderWidth = borderWidth, PadX = padIcon ? (m.ControlHeight - m.Px(UiTheme.IconSize)) / 2 : padX,
+            Fill = C(fill),
+            Border = C(border),
+            Radius = radius,
+            BorderWidth = borderWidth,
+            PadX = padIcon ? (m.ControlHeight - m.Px(UiTheme.IconSize)) / 2 : padX,
             PadY = padIcon ? (m.ControlHeight - m.Px(UiTheme.IconSize)) / 2 : padY,
         };
 
@@ -256,7 +271,12 @@ public static class ThemeBuilder
         // focus is always a 2 px accent ring that leaves the fill alone
         theme.SetStylebox("focus", type, Make(m, new Box
         {
-            Border = C(UiTokens.Accent), Radius = look.Normal.Radius, BorderWidth = UiTokens.RingWidth, Ring = true, PadX = look.Normal.PadX, PadY = look.Normal.PadY,
+            Border = C(UiTokens.Accent),
+            Radius = look.Normal.Radius,
+            BorderWidth = UiTokens.RingWidth,
+            Ring = true,
+            PadX = look.Normal.PadX,
+            PadY = look.Normal.PadY,
         }));
         theme.SetColor("font_color", type, C(look.Text));
         theme.SetColor("font_hover_color", type, C(look.TextHover));

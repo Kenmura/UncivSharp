@@ -200,7 +200,10 @@ public partial class DecisionPickerView : Modal
             var button = new Button
             {
                 Name = "Opt_" + slotIndex.ToString(System.Globalization.CultureInfo.InvariantCulture) + "_" + option.Id,
-                Text = UiText.StripGlyphs(option.Label.TrText()), ToggleMode = true, Disabled = !option.Enabled, Alignment = HorizontalAlignment.Left,
+                Text = UiText.StripGlyphs(option.Label.TrText()),
+                ToggleMode = true,
+                Disabled = !option.Enabled,
+                Alignment = HorizontalAlignment.Left,
                 TooltipText = UiText.StripGlyphs((option.Reason ?? "").TrText()),
             };
             string id = option.Id;

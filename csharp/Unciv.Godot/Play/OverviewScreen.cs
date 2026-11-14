@@ -1,8 +1,8 @@
 using Godot;
-using Unciv.GodotClient.Localization;
 using Unciv.Assets;
-using Unciv.GodotClient.Assets;
 using Unciv.Commands;
+using Unciv.GodotClient.Assets;
+using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
 using Unciv.Logic.City;
@@ -268,7 +268,8 @@ public partial class OverviewScreen : PanelContainer
             foreach (var entry in card.Entries)
             {
                 var row = new HBoxContainer();
-                var label = new StatText(theme, entry.Label.TrText()) { SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+                var labelText = entry.Stat.Length > 0 ? UiText.StripGlyphs(entry.Label.TrText()) : entry.Label.TrText();
+                var label = new StatText(theme, labelText) { SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
                 label.AddThemeColorOverride("default_color", ProceduralAssets.ToColor(UiTokens.TextSecondary));
                 if (entry.Indent) row.AddChild(new Control { CustomMinimumSize = new Vector2(theme.Px(UiTokens.S3), 0f) });
                 row.AddChild(label);
@@ -555,7 +556,11 @@ public partial class OverviewScreen : PanelContainer
     /// <summary>The coup button of a spy row: the short text ("Coup 35%") with the whole sentence as its tooltip; staging a coup (the command stages it) is a danger button, calling it off a plain one. Clipped, so a long translation cannot widen the table.</summary>
     public static Button CoupButton(UiTheme theme, string spy, string text, string tooltip, bool danger) => new()
     {
-        Name = $"Spy_{spy}_Coup", Text = text.TrText(), TooltipText = tooltip.TrText(), ClipText = true, ThemeTypeVariation = danger ? UiVariants.ButtonDanger : UiVariants.ButtonSecondary,
+        Name = $"Spy_{spy}_Coup",
+        Text = text.TrText(),
+        TooltipText = tooltip.TrText(),
+        ClipText = true,
+        ThemeTypeVariation = danger ? UiVariants.ButtonDanger : UiVariants.ButtonSecondary,
         CustomMinimumSize = new Vector2(theme.Px(112), 0f),
     };
 

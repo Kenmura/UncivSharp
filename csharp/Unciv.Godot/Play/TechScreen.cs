@@ -1,10 +1,10 @@
 using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Assets;
-using Unciv.GodotClient.Ui;
-using Unciv.Queries.Empire;
 using Unciv.GodotClient.Localization;
+using Unciv.GodotClient.Ui;
 using Unciv.Models.Translations;
+using Unciv.Queries.Empire;
 
 namespace Unciv.GodotClient.Play;
 
@@ -179,7 +179,11 @@ public partial class TechScreen : PanelContainer
         header = new Label { Name = "Header", ThemeTypeVariation = UiVariants.LabelSecondary, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center, Text = headerText };
         search = new LineEdit
         {
-            Name = "TechSearch", PlaceholderText = "Search".Tr(), ClearButtonEnabled = true, Text = searchText, CustomMinimumSize = new Vector2(theme.Px(140), 0f),
+            Name = "TechSearch",
+            PlaceholderText = "Search".Tr(),
+            ClearButtonEnabled = true,
+            Text = searchText,
+            CustomMinimumSize = new Vector2(theme.Px(140), 0f),
             TooltipText = "Search technologies by name, by what they unlock, or by a stat".Tr(),
         };
         search.TextChanged += text =>
@@ -447,8 +451,12 @@ public partial class TechScreen : PanelContainer
         {
             strip.AddChild(new TextureRect
             {
-                Texture = theme.Icon(unlock.Icon), CustomMinimumSize = new Vector2(theme.Px(20), theme.Px(20)), ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = TextureFilterEnum.LinearWithMipmaps, TooltipText = unlock.Name.TrText(),
+                Texture = theme.Icon(unlock.Icon),
+                CustomMinimumSize = new Vector2(theme.Px(20), theme.Px(20)),
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                TextureFilter = TextureFilterEnum.LinearWithMipmaps,
+                TooltipText = unlock.Name.TrText(),
                 MouseFilter = MouseFilterEnum.Stop,
             });
         }

@@ -4,12 +4,12 @@ using Unciv.Client.Net.Mods;
 using Unciv.Client.Net.Session;
 using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Ui;
+using Unciv.Models.Ruleset;
 using Unciv.Models.Translations;
 using Unciv.Net;
-using Unciv.Models.Ruleset;
 using Unciv.Net.Identity;
-using Unciv.Net.Relay;
 using Unciv.Net.Mods;
+using Unciv.Net.Relay;
 
 namespace Unciv.GodotClient.Setup;
 
@@ -611,12 +611,8 @@ public partial class JoinScreen : Control
         messageLabel.Text = message;
     }
 
-    private static string FormatHint(string message)
-    {
-        const string sample = "192.168.1.20:47821";
-        int index = message.IndexOf(sample, StringComparison.Ordinal);
-        return index < 0 ? message.Tr() : message[..index].Tr() + sample + message[(index + sample.Length)..].Tr();
-    }
+    private static string FormatHint(string message) =>
+        message.Tr().Replace("192.168.1.20:47,821", "192.168.1.20:47821", StringComparison.Ordinal);
 
     private void ShowPanel(Control panel)
     {

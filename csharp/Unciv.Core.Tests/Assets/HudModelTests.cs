@@ -27,6 +27,7 @@ public class HudModelTests
         Assert.Equal("9", stats[3].Text);
         Assert.Equal("-1", stats[4].Text);
         Assert.Equal("30/500", stats[5].Text);
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), stats[5].Icon);
         Assert.Equal("3", stats[6].Text);
         Assert.Equal("icon/resource/Iron", stats[6].Icon.ToString());
         Assert.Equal("Turn 12 - 3200 BC", stats[7].Text);
@@ -35,7 +36,12 @@ public class HudModelTests
     }
 
     [Fact]
-    public void ActiveGoldenAgeShowsTurnsLeft() => Assert.Equal("Golden Age 8", HudModel.TopBar(Bar(golden: 8))[5].Text);
+    public void ActiveGoldenAgeShowsTurnsLeft()
+    {
+        var golden = HudModel.TopBar(Bar(golden: 8))[5];
+        Assert.Equal("Golden Age 8", golden.Text);
+        Assert.Equal(AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), golden.Icon);
+    }
 
     [Fact]
     public void YieldStatsCarryTheirSourceBreakdown()
