@@ -2200,5 +2200,23 @@
         "caption": "The superseded-host screen: the old host fenced by the newer epoch says another host took over and to leave and join that game with the same key (recorded by the split-brain scenario)."
       }
     ]
+  },
+  "T413": {
+    "scenario": "hud",
+    "about": "Show, don't tell UX polish across HUD, Diplomacy/Congress, Tutorials, Policies, Cities, and Multiplayer screens: progress bars, segmented gauges, threshold markers, step/branch/slot pips, and connection timers.",
+    "shots": [
+      {
+        "golden": "hud/start.png",
+        "caption": "World HUD with the full-width Technology pill next to Policies and the Golden Age progress bar (0/335) under the happiness/gold readout in the top bar."
+      },
+      {
+        "golden": "diplomacy/city-state.png",
+        "caption": "City-state diplomacy detail showing the segmented Influence meter with Friend (30) and Ally (60) threshold ticks and shaded zone bands."
+      },
+      {
+        "golden": "vote-result/result.png",
+        "caption": "World Congress vote result modal displaying World Leader threshold progress bars and yellow threshold markers alongside vote tallies."
+      }
+    ]
   }
 }

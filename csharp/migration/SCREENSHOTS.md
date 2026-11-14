@@ -109,6 +109,7 @@
 - [T372 (ticket not Done or unknown)](#t372-ticket-not-done-or-unknown)
 - [T376 (ticket not Done or unknown)](#t376-ticket-not-done-or-unknown)
 - [T377 (ticket not Done or unknown)](#t377-ticket-not-done-or-unknown)
+- [T413 (ticket not Done or unknown)](#t413-ticket-not-done-or-unknown)
 - [Missing screenshots](#missing-screenshots)
 <!-- /toc -->
 
@@ -2274,6 +2275,24 @@ Scenario `borders`.
 ![Stress map, twelve crowded territories: closed outlines, shared edges in both colours, none on the ocean.](../Unciv.Godot.Harness/golden/borders-stress/whole-map.png)
 
 *Stress map, twelve crowded territories: closed outlines, shared edges in both colours, none on the ocean.* (`borders-stress/whole-map.png`)
+
+## T413 (ticket not Done or unknown)
+
+Show, don't tell UX polish across HUD, Diplomacy/Congress, Tutorials, Policies, Cities, and Multiplayer screens: progress bars, segmented gauges, threshold markers, step/branch/slot pips, and connection timers.
+
+Scenario `hud`.
+
+![World HUD with the full-width Technology pill next to Policies and the Golden Age progress bar (0/335) under the happiness/gold readout in the top bar.](../Unciv.Godot.Harness/golden/hud/start.png)
+
+*World HUD with the full-width Technology pill next to Policies and the Golden Age progress bar (0/335) under the happiness/gold readout in the top bar.* (`hud/start.png`)
+
+![City-state diplomacy detail showing the segmented Influence meter with Friend (30) and Ally (60) threshold ticks and shaded zone bands.](../Unciv.Godot.Harness/golden/diplomacy/city-state.png)
+
+*City-state diplomacy detail showing the segmented Influence meter with Friend (30) and Ally (60) threshold ticks and shaded zone bands.* (`diplomacy/city-state.png`)
+
+![World Congress vote result modal displaying World Leader threshold progress bars and yellow threshold markers alongside vote tallies.](../Unciv.Godot.Harness/golden/vote-result/result.png)
+
+*World Congress vote result modal displaying World Leader threshold progress bars and yellow threshold markers alongside vote tallies.* (`vote-result/result.png`)
 
 ## Missing screenshots
 
