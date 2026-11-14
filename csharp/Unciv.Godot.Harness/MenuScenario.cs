@@ -82,6 +82,11 @@ public sealed class MenuScenario : Scenario
             new AssertQuery("the menu Save and Load rows reflect live keybindings", () =>
                 screen.GameMenu.FindChild("Save", true, false) is ListRow { ShownTrailing: "F11" } &&
                 screen.GameMenu.FindChild("Load", true, false) is ListRow { ShownTrailing: "F12" }),
+            new Press("Resign"),
+            new Press("Cancel"),
+            new AssertQuery("canceling confirm preserves rebound Save and Load labels", () =>
+                screen.GameMenu.FindChild("Save", true, false) is ListRow { ShownTrailing: "F11" } &&
+                screen.GameMenu.FindChild("Load", true, false) is ListRow { ShownTrailing: "F12" }),
             new Press("Resume game"),
             new Act("restore default hotkeys", () => settings.Update(s => s with { KeyBindings = new SortedDictionary<string, string>(StringComparer.Ordinal) })),
 

@@ -548,9 +548,17 @@ public partial class LobbyScreen : Control
             button.SetMeta(IconButton.LabelMeta, colour);
             var cell = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center, MouseFilter = MouseFilterEnum.Ignore };
             cell.SetAnchorsPreset(LayoutPreset.FullRect);
+            theme.Fit(cell, () =>
+            {
+                int pad = theme.Px(UiTokens.S2);
+                cell.OffsetLeft = pad;
+                cell.OffsetRight = -pad;
+            });
             cell.FitConstant(theme, "separation", UiTokens.S2);
-            cell.AddChild(SetupTabs.ColourDot(theme, PlaceholderPalette.ForLobbyColour(colour), 14));
-            cell.AddChild(new Label { Text = colour.TrText(), MouseFilter = MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center });
+            var dot = SetupTabs.ColourDot(theme, PlaceholderPalette.ForLobbyColour(colour), 14);
+            dot.SizeFlagsVertical = SizeFlags.ShrinkCenter;
+            cell.AddChild(dot);
+            cell.AddChild(new Label { Text = colour.TrText(), MouseFilter = MouseFilterEnum.Ignore, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = SizeFlags.ExpandFill });
             button.AddChild(cell);
             button.Disabled = state.Slots.Any(it => it.Slot != own.Slot && it.Kind == "Human" && it.Color == colour);
             button.Pressed += () => _ = RunAsync(async () => await Session().SetLobbySlotAsync(own.Slot, null, colour, own.Ready));

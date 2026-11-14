@@ -25,6 +25,7 @@ public partial class GameMenuView : Modal
     };
 
     private readonly Dictionary<string, Button> byId = [];
+    private IReadOnlyDictionary<string, string>? lastKeyBindings;
 
     public GameMenuView()
     {
@@ -46,6 +47,7 @@ public partial class GameMenuView : Modal
     public void Open(IReadOnlyList<GameMenuEntry> entries, IReadOnlyDictionary<string, string>? keyBindings = null)
     {
         Entries = entries;
+        lastKeyBindings = keyBindings;
         Asking = null;
         Clear();
         PanelTitle = GameMenuModel.Title;
@@ -85,6 +87,7 @@ public partial class GameMenuView : Modal
     public void Close()
     {
         Entries = [];
+        lastKeyBindings = null;
         Asking = null;
         Visible = false;
         Clear();
@@ -94,7 +97,7 @@ public partial class GameMenuView : Modal
     public bool Cancel()
     {
         if (!Visible) return false;
-        if (Asking != null) Open(Entries);
+        if (Asking != null) Open(Entries, lastKeyBindings);
         else Close();
         return true;
     }
@@ -123,7 +126,7 @@ public partial class GameMenuView : Modal
         var yes = new Button { Name = "ConfirmYes", Text = confirm.ConfirmLabel.TrText() };
         yes.Pressed += () => Chosen?.Invoke(entry.Kind);
         var no = new Button { Name = "ConfirmNo", Text = GameMenuModel.CancelLabel.TrText() };
-        no.Pressed += () => Open(Entries);
+        no.Pressed += () => Open(Entries, lastKeyBindings);
         SetActions([(yes, entry.Kind == GameMenuKind.Resign ? ChoiceRole.Danger : ChoiceRole.Primary), (no, ChoiceRole.Secondary)]);
         byId["ConfirmYes"] = yes;
         byId["ConfirmNo"] = no;

@@ -297,7 +297,7 @@ public partial class SaveController : Control
         scroller = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsVertical = SizeFlags.ExpandFill };
         scroller.AddChild(table);
         left.AddChild(scroller);
-        empty = new EmptyState(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Mods"), "No saves yet.") { Name = "SaveEmpty", SizeFlagsVertical = SizeFlags.ExpandFill };
+        empty = new EmptyState(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Load"), "No saves yet.") { Name = "SaveEmpty", SizeFlagsVertical = SizeFlags.ExpandFill };
         left.AddChild(empty);
         content.AddChild(left);
         content.AddChild(BuildDetails());
@@ -366,10 +366,10 @@ public partial class SaveController : Control
         column.AddChild(detailsHeader);
         column.AddChild(detailsBody);
         column.AddChild(detailsWarning);
-        saveNameLabel = new Label { Text = "Save name".Tr(), ThemeTypeVariation = UiVariants.LabelOverline, Visible = inGame };
-        NameField = new LineEdit { Name = "SaveName", PlaceholderText = "Save name".Tr(), Visible = inGame };
         if (inGame)
         {
+            saveNameLabel = new Label { Text = "Save name".Tr(), ThemeTypeVariation = UiVariants.LabelOverline };
+            NameField = new LineEdit { Name = "SaveName", PlaceholderText = "Save name".Tr() };
             column.AddChild(new Control().FitMin(theme, 0, UiTokens.S2));
             column.AddChild(saveNameLabel);
             column.AddChild(NameField);
@@ -488,7 +488,7 @@ public partial class SaveController : Control
         }
         if (resumeButton != null)
         {
-            var latest = store.Latest();
+            var latest = entries.FirstOrDefault(it => it.Info != null);
             resumeButton.Disabled = latest == null;
             resumeButton.TooltipText = latest?.Info is { } latestInfo
                 ? $"{"Resume".Tr()} \"{latest.Name}\" ({"Turn".Tr()} {latestInfo.Turn.ToString(CultureInfo.InvariantCulture)})"
@@ -505,6 +505,15 @@ public partial class SaveController : Control
                 AssetKey.Of(RulesetAssetKeys.UiIcon, "ExclamationMark"),
                 ProceduralAssets.ToColor(UiTokens.Surface3),
                 ProceduralAssets.ToColor(UiTokens.Warning),
+                size);
+        }
+        if (string.IsNullOrEmpty(info.Civ))
+        {
+            return new IconBadge(
+                theme,
+                AssetKey.Of(RulesetAssetKeys.UiIcon, "Load"),
+                ProceduralAssets.ToColor(UiTokens.Surface3),
+                ProceduralAssets.ToColor(UiTokens.TextPrimary),
                 size);
         }
         var nation = LookupNation(info.Civ, info.Ruleset);

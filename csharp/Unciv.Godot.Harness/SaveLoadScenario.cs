@@ -165,7 +165,7 @@ public sealed class SaveLoadScenario : Scenario
         var saveBtn = menuCtrl.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => b.Text == "Save");
         var resumeBtn = menuCtrl.FindChildren("*", "Button", true, false).OfType<Button>().FirstOrDefault(b => b.Text == "Resume last");
         return saveBtn != null && !saveBtn.Visible &&
-            menuCtrl.NameField != null && !menuCtrl.NameField.Visible &&
+            menuCtrl.NameField == null &&
             resumeBtn != null && !resumeBtn.Disabled && resumeBtn.TooltipText.Contains("Autosave", StringComparison.Ordinal);
     }
 
