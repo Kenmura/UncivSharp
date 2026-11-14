@@ -124,28 +124,29 @@ public static class PediaModel
     }
 
     /// <summary>C076: the interface icon of a category, for the sidebar and for an entry that has no icon of its own.</summary>
-    public static AssetKey CategoryIcon(CivilopediaCategories category) => AssetKey.Of(RulesetAssetKeys.UiIcon, category switch
-    {
-        CivilopediaCategories.Building => "Capital",
-        CivilopediaCategories.Wonder => "Wonders",
-        CivilopediaCategories.Resource => "Resources",
-        CivilopediaCategories.Terrain => "Terrains",
-        CivilopediaCategories.Improvement => "Improvements",
-        CivilopediaCategories.Unit => "Shield",
-        CivilopediaCategories.UnitType => "Hexagon",
-        CivilopediaCategories.Nation => "Nations",
-        CivilopediaCategories.Personality => "Chat",
-        CivilopediaCategories.Technology => "Increase",
-        CivilopediaCategories.Promotion => "Star",
-        CivilopediaCategories.Policy => "Policies",
-        CivilopediaCategories.Belief => "Link",
-        CivilopediaCategories.Tutorial => "Question",
-        CivilopediaCategories.Victory => "Score",
-        CivilopediaCategories.UnitNameGroup => "Pencil",
-        CivilopediaCategories.Difficulty => "ExclamationMark",
-        CivilopediaCategories.Era => "HexagonOutline",
-        _ => "ForwardArrow",
-    });
+    public static AssetKey CategoryIcon(CivilopediaCategories category) => category == CivilopediaCategories.Technology
+        ? AssetKey.Of(RulesetAssetKeys.StatIcon, "Science")
+        : AssetKey.Of(RulesetAssetKeys.UiIcon, category switch
+        {
+            CivilopediaCategories.Building => "Capital",
+            CivilopediaCategories.Wonder => "Wonders",
+            CivilopediaCategories.Resource => "Resources",
+            CivilopediaCategories.Terrain => "Terrains",
+            CivilopediaCategories.Improvement => "Improvements",
+            CivilopediaCategories.Unit => "Shield",
+            CivilopediaCategories.UnitType => "Hexagon",
+            CivilopediaCategories.Nation => "Nations",
+            CivilopediaCategories.Personality => "Chat",
+            CivilopediaCategories.Promotion => "Star",
+            CivilopediaCategories.Policy => "Policies",
+            CivilopediaCategories.Belief => "Link",
+            CivilopediaCategories.Tutorial => "Question",
+            CivilopediaCategories.Victory => "Score",
+            CivilopediaCategories.UnitNameGroup => "Pencil",
+            CivilopediaCategories.Difficulty => "ExclamationMark",
+            CivilopediaCategories.Era => "HexagonOutline",
+            _ => "ForwardArrow",
+        });
 
     /// <summary>The icon an entry list shows next to the name, for the categories the asset registry has icons for.</summary>
     public static AssetKey? IconFor(CivilopediaCategories category, string name) => category switch

@@ -6,18 +6,20 @@ namespace Unciv.Assets;
 /// </summary>
 public static class IconTone
 {
-    /// <summary>Categories whose pack art is normalised to a light glyph.</summary>
+    /// <summary>Categories whose monochrome pack art is normalised to a light glyph.</summary>
     public static bool IsNormalised(string category) => category is RulesetAssetKeys.ResourceIcon or RulesetAssetKeys.ImprovementIcon or RulesetAssetKeys.BuildingIcon or RulesetAssetKeys.TechIcon
-        or RulesetAssetKeys.UnitIcon or RulesetAssetKeys.PolicyIcon or RulesetAssetKeys.PromotionIcon;
+        or RulesetAssetKeys.UnitIcon or RulesetAssetKeys.PolicyIcon or RulesetAssetKeys.PromotionIcon or RulesetAssetKeys.ActionIcon or RulesetAssetKeys.UiIcon;
 
-    /// <summary>True when the average brightness of the pixels that are at least half opaque is below 96 (of 255).</summary>
+    /// <summary>True when opaque pixels are monochrome (no coloured artwork) and average brightness is below 96 (of 255).</summary>
     public static bool IsDark(byte[] rgba)
     {
         long sum = 0, count = 0;
         for (var i = 0; i + 3 < rgba.Length; i += 4)
         {
             if (rgba[i + 3] < 128) continue;
-            sum += rgba[i] + rgba[i + 1] + rgba[i + 2];
+            byte r = rgba[i], g = rgba[i + 1], b = rgba[i + 2];
+            if (Math.Max(r, Math.Max(g, b)) - Math.Min(r, Math.Min(g, b)) > 32) return false;
+            sum += r + g + b;
             count++;
         }
         return count > 0 && sum / (3 * count) < 96;

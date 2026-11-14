@@ -18,16 +18,18 @@ public sealed class IconToneTests
     public void LightAndTransparentImagesAreNotDark()
     {
         Assert.False(IconTone.IsDark([250, 250, 250, 255, 0, 0, 0, 10]));
+        Assert.False(IconTone.IsDark([180, 10, 10, 255]));
         Assert.False(IconTone.IsDark([0, 0, 0, 0]));
         Assert.False(IconTone.IsDark([]));
     }
 
     [Fact]
-    public void OnlyTheGameplayCategoriesAreNormalised()
+    public void OnlyTheMonochromeCategoriesAreNormalised()
     {
         Assert.True(IconTone.IsNormalised(RulesetAssetKeys.ResourceIcon));
         Assert.True(IconTone.IsNormalised(RulesetAssetKeys.PromotionIcon));
-        Assert.False(IconTone.IsNormalised(RulesetAssetKeys.ActionIcon));
+        Assert.True(IconTone.IsNormalised(RulesetAssetKeys.ActionIcon));
+        Assert.True(IconTone.IsNormalised(RulesetAssetKeys.UiIcon));
         Assert.False(IconTone.IsNormalised(RulesetAssetKeys.StatIcon));
     }
 }

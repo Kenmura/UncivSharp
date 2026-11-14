@@ -1,6 +1,7 @@
 using Godot;
 using Unciv.GodotClient.Localization;
 using Unciv.Assets;
+using Unciv.GodotClient.Assets;
 using Unciv.Commands;
 using Unciv.GodotClient.Settings;
 using Unciv.GodotClient.Ui;
@@ -249,7 +250,7 @@ public partial class OverviewScreen : PanelContainer
 
     private void AddLines(string tab, IEnumerable<string> lines)
     {
-        foreach (string line in lines) pages[tab].AddChild(new Label { Text = line.TrText(), AutowrapMode = TextServer.AutowrapMode.WordSmart });
+        foreach (string line in lines) pages[tab].AddChild(new StatText(theme, line.TrText()) { AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill });
     }
 
     /// <summary>The stats cards in a two-column grid; a stat entry shows its stat icon (a <see cref="StatChip"/>), a breakdown entry is indented.</summary>
@@ -267,10 +268,8 @@ public partial class OverviewScreen : PanelContainer
             foreach (var entry in card.Entries)
             {
                 var row = new HBoxContainer();
-                var label = new Label
-                {
-                    Text = entry.Label.TrText().TrimStart('¤', '~'), ThemeTypeVariation = UiVariants.LabelSecondary, SizeFlagsHorizontal = SizeFlags.ExpandFill, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis,
-                };
+                var label = new StatText(theme, entry.Label.TrText()) { SizeFlagsHorizontal = SizeFlags.ExpandFill, AutowrapMode = TextServer.AutowrapMode.WordSmart };
+                label.AddThemeColorOverride("default_color", ProceduralAssets.ToColor(UiTokens.TextSecondary));
                 if (entry.Indent) row.AddChild(new Control { CustomMinimumSize = new Vector2(theme.Px(UiTokens.S3), 0f) });
                 row.AddChild(label);
                 if (entry.Stat.Length > 0)
@@ -328,7 +327,7 @@ public partial class OverviewScreen : PanelContainer
         var focusRow = new BulkRow(theme);
         var focus = new OptionButton { Name = "BulkFocus" };
         var focuses = CityFocusExtensions.Entries.Where(it => it.TableEnabled()).ToList();
-        foreach (var option in focuses) focus.AddItem(CityScreenModel.FocusLabel(option).Tr().TrimStart('¤', '~'));
+        foreach (var option in focuses) focus.AddItem(UiText.StripGlyphs(CityScreenModel.FocusLabel(option).Tr()));
         if (!focuses.Contains(bulkFocus)) bulkFocus = focuses[0];
         focus.Selected = focuses.IndexOf(bulkFocus);
         focus.ItemSelected += index => bulkFocus = focuses[(int)index];

@@ -217,24 +217,25 @@ public partial class WorldHud : Control
                 child.QueueFree();
             }
         bool compact = Compact;
-        IconButton Make(NavTarget target, string icon, string label, string? text = null, string? hotkey = null, string variation = UiVariants.ButtonIcon)
+        AssetKey Ui(string name) => AssetKey.Of(RulesetAssetKeys.UiIcon, name);
+        IconButton Make(NavTarget target, AssetKey icon, string label, string? text = null, string? hotkey = null, string variation = UiVariants.ButtonIcon)
         {
-            var button = new IconButton(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, icon), label, text, hotkey, variation) { Name = label + "Button" };
+            var button = new IconButton(theme, icon, label, text, hotkey, variation) { Name = label + "Button" };
             button.Pressed += () => Requested?.Invoke(target);
             return button;
         }
-        Menu = Make(NavTarget.Menu, "Options", "Menu", hotkey: "Esc");
+        Menu = Make(NavTarget.Menu, Ui("Options"), "Menu", hotkey: "Esc");
         hud.Leading.AddChild(Menu);
-        Technology = Make(NavTarget.Technology, "Increase", "Technology", "Technology", variation: UiVariants.ButtonSecondary);
-        Policies = Make(NavTarget.Policies, "Policies", "Policies", compact ? null : "Policies", variation: compact ? UiVariants.ButtonIcon : UiVariants.ButtonSecondary);
+        Technology = Make(NavTarget.Technology, AssetKey.Of(RulesetAssetKeys.StatIcon, "Science"), "Technology", "Technology", variation: UiVariants.ButtonSecondary);
+        Policies = Make(NavTarget.Policies, Ui("Policies"), "Policies", compact ? null : "Policies", variation: compact ? UiVariants.ButtonIcon : UiVariants.ButtonSecondary);
         navLeft.AddChild(Technology);
         navLeft.AddChild(Policies);
-        Diplomacy = Make(NavTarget.Diplomacy, "Nations", "Diplomacy");
-        Trade = Make(NavTarget.Trade, "Resources", "Trade");
-        Espionage = Make(NavTarget.Espionage, "Espionage", "Espionage");
-        Civilopedia = Make(NavTarget.Civilopedia, "Wonders", "Civilopedia");
-        Overview = Make(NavTarget.Overview, "Score", "Overview");
-        Players = Make(NavTarget.Players, "Multiplayer", "Players");
+        Diplomacy = Make(NavTarget.Diplomacy, Ui("Nations"), "Diplomacy");
+        Trade = Make(NavTarget.Trade, Ui("Resources"), "Trade");
+        Espionage = Make(NavTarget.Espionage, Ui("Espionage"), "Espionage");
+        Civilopedia = Make(NavTarget.Civilopedia, AssetKey.Of(RulesetAssetKeys.BuildingIcon, "Library"), "Civilopedia");
+        Overview = Make(NavTarget.Overview, Ui("Score"), "Overview");
+        Players = Make(NavTarget.Players, Ui("Multiplayer"), "Players");
         Players.Visible = playersShown;
         foreach (var button in new Control[] { Diplomacy, Trade, Espionage, Civilopedia, Overview, Players }) navRight.AddChild(button);
         foreach (var button in new[] { Technology, Policies, Diplomacy, Trade, Espionage, Civilopedia, Overview, Players, Menu }) button.Theme = theme.Theme;

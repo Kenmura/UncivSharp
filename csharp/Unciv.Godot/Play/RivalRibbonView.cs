@@ -2,6 +2,7 @@ using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
+using Unciv.Models.Translations;
 
 namespace Unciv.GodotClient.Play;
 
@@ -18,6 +19,8 @@ public partial class RivalRibbonView : PanelContainer
     private readonly Dictionary<string, Control> names = [];
     private readonly Dictionary<string, Dictionary<string, Control>> figures = [];
     private UiTheme theme = null!; // JUSTIFY: C087 assigned by Init before any use
+    private Texture2D? arrowClosed;
+    private Texture2D? arrowOpen;
     private IReadOnlyList<RivalRow> rows = [];
     private bool expanded;
 
@@ -69,8 +72,18 @@ public partial class RivalRibbonView : PanelContainer
     {
         theme = uiTheme;
         Theme = uiTheme.Theme;
+        arrowClosed = uiTheme.Icon(AssetKey.Of(RulesetAssetKeys.UiIcon, "ArrowRight"));
+        var openImage = arrowClosed.GetImage();
+        if (openImage != null)
+        {
+            openImage.Rotate90(ClockDirection.Clockwise);
+            arrowOpen = ImageTexture.CreateFromImage(openImage);
+        }
+        else arrowOpen = arrowClosed;
+        toggle.AddThemeConstantOverride("icon_max_width", uiTheme.Px(14));
         column.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S1));
         body.AddThemeConstantOverride("separation", uiTheme.Px(UiTokens.S2));
+        UpdateToggle();
         Rebuild();
     }
 
@@ -83,7 +96,8 @@ public partial class RivalRibbonView : PanelContainer
 
     private void UpdateToggle()
     {
-        toggle.Text = (expanded ? "v " : "> ") + "Rivals".TrText() + (rows.Count > 0 ? " " + rows.Count : "");
+        toggle.Icon = expanded ? arrowOpen : arrowClosed;
+        toggle.Text = "Rivals".Tr() + (rows.Count > 0 ? " " + rows.Count : "");
         toggle.TooltipText = (expanded ? "Hide" : "Show").TrText();
     }
 

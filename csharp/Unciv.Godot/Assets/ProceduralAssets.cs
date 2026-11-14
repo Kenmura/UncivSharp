@@ -15,6 +15,12 @@ public static class ProceduralAssets
 
     public static Color ToColor(Rgb c) => new(c.R / 255f, c.G / 255f, c.B / 255f);
 
+    /// <summary>Neutral white tint that preserves full-colour artwork inside badges.</summary>
+    public static Color NeutralGlyph => Colors.White;
+
+    /// <summary>Parses a BBCode hex colour string into a Godot <see cref="Color"/>.</summary>
+    public static Color FromHex(ReadOnlySpan<char> hex) => Color.FromHtml(hex);
+
     public static ImageTexture ToTexture(PixelImage image, bool mipmaps = false) =>
         ImageTexture.CreateFromImage(Image.CreateFromData(image.Width, image.Height, mipmaps, Image.Format.Rgba8, image.Rgba));
 

@@ -21,8 +21,8 @@ public partial class Stepper : HBoxContainer
         Max = max;
         Step = step;
         this.format = format ?? (v => v.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        Minus = new IconButton(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Reduce"), decreaseLabel);
-        Plus = new IconButton(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Increase"), increaseLabel);
+        Minus = new IconButton(theme, null, decreaseLabel, "-");
+        Plus = new IconButton(theme, null, increaseLabel, "+");
         Minus.Pressed += () => Value -= Step;
         Plus.Pressed += () => Value += Step;
         shown.FitMin(theme, UiTokens.S8 + UiTokens.S4);

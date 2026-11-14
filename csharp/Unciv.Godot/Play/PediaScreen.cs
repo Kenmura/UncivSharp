@@ -1,5 +1,6 @@
 using Godot;
 using Unciv.Assets;
+using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Ruleset;
@@ -40,7 +41,7 @@ public partial class PediaScreen : PanelContainer
     private VBoxContainer searchColumn = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
     private VBoxContainer pageColumn = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
     private PanelContainer card = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
-    private TextureRect cardIcon = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
+    private IconBadge cardIcon = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
     private Label cardName = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
     private Label cardCategory = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
     private HFlowContainer cardChips = null!; // JUSTIFY: C076 assigned by BuildFrame in the constructor
@@ -171,7 +172,7 @@ public partial class PediaScreen : PanelContainer
         card = new PanelContainer { Name = "PediaCard", ThemeTypeVariation = UiVariants.PanelCard, Visible = false };
         var cardRow = new HBoxContainer();
         cardRow.AddThemeConstantOverride("separation", gap);
-        cardIcon = new TextureRect { ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize, StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered, TextureFilter = TextureFilterEnum.LinearWithMipmaps, CustomMinimumSize = new Vector2(theme.Px(compact ? 48 : 64), theme.Px(compact ? 48 : 64)), SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        cardIcon = new IconBadge(theme, PediaModel.CategoryIcon(CivilopediaCategories.Unit), ProceduralAssets.ToColor(UiTokens.Surface3), ProceduralAssets.NeutralGlyph, compact ? 48 : 56) { SizeFlagsVertical = SizeFlags.ShrinkCenter };
         cardRow.AddChild(cardIcon);
         var texts = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         texts.AddThemeConstantOverride("separation", theme.Px(UiTokens.S1));
@@ -386,7 +387,7 @@ public partial class PediaScreen : PanelContainer
     {
         var header = PediaModel.Header(ruleset, entry);
         card.Visible = true;
-        cardIcon.Texture = theme.Icon(header.Icon ?? PediaModel.CategoryIcon(entry.Category));
+        cardIcon.SetIcon(header.Icon ?? PediaModel.CategoryIcon(entry.Category));
         cardName.Text = header.Name.TrText();
         cardCategory.Text = header.CategoryLabel.TrText();
         foreach (var chip in cardChips.GetChildren())
@@ -437,7 +438,7 @@ public partial class PediaScreen : PanelContainer
     private void AddBlock(string bbcode)
     {
         var label = new RichTextLabel { BbcodeEnabled = true, FitContent = true, ScrollActive = false, SelectionEnabled = true, MetaUnderlined = false, SizeFlagsHorizontal = SizeFlags.ExpandFill };
-        label.Text = bbcode;
+        StatText.AppendBbcode(label, theme, bbcode);
         label.MetaClicked += meta => OpenLink(meta.AsString());
         label.MetaHoverStarted += _ => label.MetaUnderlined = true;
         label.MetaHoverEnded += _ => label.MetaUnderlined = false;

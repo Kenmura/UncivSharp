@@ -12,7 +12,7 @@ public partial class IconBadge : Control
 {
     private readonly UiTheme theme;
     private readonly TextureRect picture = new();
-    private readonly Color fill;
+    private Color fill;
     private readonly Color ring;
 
     /// <param name="theme">The UI theme (scale and icon source).</param>
@@ -46,11 +46,21 @@ public partial class IconBadge : Control
         MouseFilter = MouseFilterEnum.Ignore;
     }
 
-    public AssetKey IconKey { get; }
+    public AssetKey IconKey { get; private set; }
 
     public new int Size { get; }
 
     public Color Fill => fill;
+
+    /// <summary>Replaces the badge icon (and optionally its fill or glyph tint) cleanly without rebuilding the node.</summary>
+    public void SetIcon(AssetKey icon, Color? badgeFill = null, Color? glyph = null)
+    {
+        IconKey = icon;
+        picture.Texture = theme.Icon(icon);
+        if (badgeFill is { } newFill) fill = newFill;
+        if (glyph is { } newGlyph) picture.Modulate = newGlyph;
+        QueueRedraw();
+    }
 
     private float Inset => theme.Px(Size) * 0.18f;
 

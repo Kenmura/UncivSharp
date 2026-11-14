@@ -27,7 +27,7 @@ public partial class DiplomacyScreen : PanelContainer
     private Label title = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private Label status = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private PanelContainer statusPill = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
-    private TextureRect flag = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
+    private IconBadge flag = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private Label info = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private Label modifiers = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
     private Label quests = null!; // JUSTIFY: C073 assigned by BuildFrame in the constructor
@@ -102,14 +102,7 @@ public partial class DiplomacyScreen : PanelContainer
 
         var head = new HBoxContainer { Name = "DetailHead" };
         head.AddThemeConstantOverride("separation", gap);
-        flag = new TextureRect
-        {
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-            TextureFilter = TextureFilterEnum.LinearWithMipmaps,
-            CustomMinimumSize = new Vector2(theme.Px(UiTokens.S8), theme.Px(UiTokens.S8)),
-            Visible = false,
-        };
+        flag = new IconBadge(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy"), ProceduralAssets.ToColor(UiTokens.Surface3), ProceduralAssets.NeutralGlyph, UiTokens.S8) { Visible = false };
         head.AddChild(flag);
         title = new Label { Name = "Title", ThemeTypeVariation = UiVariants.LabelHeading, TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis, SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center };
         head.AddChild(title);
@@ -317,7 +310,7 @@ public partial class DiplomacyScreen : PanelContainer
         foreach (var (id, button) in civButtons) button.SetPressedNoSignal(id == row.CivId);
         DropEmpty();
         title.Text = DiplomacyScreenModel.Title(panel).TrText();
-        flag.Texture = theme.Icon(row.Icon);
+        flag.SetIcon(row.Icon);
         flag.Visible = true;
         status.Text = panel.Status.TrText();
         statusPill.ThemeTypeVariation = panel.Status == DiplomacyScreenModel.WarStatus ? UiVariants.PanelBadge : UiVariants.PanelBadgeAccent;

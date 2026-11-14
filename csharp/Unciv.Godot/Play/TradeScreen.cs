@@ -337,8 +337,8 @@ public partial class TradeScreen : PanelContainer
                 line.AddChild(offer);
                 if (choice.Staged && choice.Quantity)
                 {
-                    AddStep(line, "Minus_" + choice.Id, "Reduce", "Less", chosen, -1);
-                    AddStep(line, "Plus_" + choice.Id, "Increase", "More", chosen, 1);
+                    AddStep(line, "Minus_" + choice.Id, "-", "Less", chosen, -1);
+                    AddStep(line, "Plus_" + choice.Id, "+", "More", chosen, 1);
                 }
                 column.AddChild(line);
             }
@@ -346,9 +346,9 @@ public partial class TradeScreen : PanelContainer
         if (builder.Groups(side).Count == 0) column.AddChild(new EmptyState(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, "Diplomacy"), "Nothing to offer") { Name = "Empty" });
     }
 
-    private void AddStep(HBoxContainer line, string name, string icon, string label, TradeChoice choice, int steps)
+    private void AddStep(HBoxContainer line, string name, string symbol, string label, TradeChoice choice, int steps)
     {
-        var button = new IconButton(theme, AssetKey.Of(RulesetAssetKeys.UiIcon, icon), label) { Name = name, SizeFlagsVertical = SizeFlags.ShrinkCenter };
+        var button = new IconButton(theme, null, label, symbol) { Name = name, SizeFlagsVertical = SizeFlags.ShrinkCenter };
         button.Pressed += () =>
         {
             Builder?.Adjust(choice.Side, choice.Entry.Type, choice.Entry.Name, steps);

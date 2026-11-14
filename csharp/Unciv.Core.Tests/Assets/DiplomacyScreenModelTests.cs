@@ -135,10 +135,12 @@ public class DiplomacyScreenModelTests
     }
 
     [Fact]
-    public void ModifierLinesSignTheOpinionAndListFlagTurns()
+    public void ModifierLinesSignTheOpinionAndHumanizeKeys()
     {
-        var lines = DiplomacyScreenModel.ModifierLines(Panel(modifiers: [new("DeclaredWarOnUs", -10f), new("Trade", 2.5f), new("Zero", 0f)], flags: [new("DeclinedPeace", 5f)]));
-        Assert.Equal(["DeclaredWarOnUs: -10", "Trade: +2.5", "Zero: +0", "DeclinedPeace: 5 turns"], lines);
+        var lines = DiplomacyScreenModel.ModifierLines(Panel(
+            modifiers: [new("DeclaredWarOnUs", -10f), new("WarMongerer", -15f), new("Trade", 2.5f), new("Zero", 0f)],
+            flags: [new("DeclinedPeace", 5f), new("DeclaredWar", 8f)]));
+        Assert.Equal(["Declared war on us: -10", "Warmongering: -15", "Trade: +2.5", "Zero: +0", "Declined peace: 5 turns", "Declared war: 8 turns"], lines);
         Assert.Empty(DiplomacyScreenModel.ModifierLines(Panel()));
     }
 

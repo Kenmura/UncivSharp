@@ -14,10 +14,15 @@ public partial class StatChip : HBoxContainer
     private readonly Label deltaLabel = new() { ThemeTypeVariation = UiVariants.LabelNumber, VerticalAlignment = VerticalAlignment.Center, Visible = false };
 
     public StatChip(UiTheme theme, string stat, string text, int? deltaValue = null)
+        : this(theme, AssetKey.Of(RulesetAssetKeys.StatIcon, stat), stat, text, deltaValue)
+    {
+    }
+
+    public StatChip(UiTheme theme, AssetKey icon, string stat, string text, int? deltaValue = null)
     {
         Stat = stat;
         this.FitConstant(theme, "separation", UiTokens.S1); // T323
-        AddChild(new IconBadge(theme, AssetKey.Of(RulesetAssetKeys.StatIcon, stat), ProceduralAssets.ToColor(PlaceholderPalette.ForStat(stat)), ProceduralAssets.ToColor(UiTokens.TextPrimary), 20));
+        AddChild(new IconBadge(theme, icon, ProceduralAssets.ToColor(PlaceholderPalette.ForStat(stat)), ProceduralAssets.ToColor(UiTokens.TextPrimary), 20));
         AddChild(valueLabel);
         AddChild(deltaLabel);
         Value = text;

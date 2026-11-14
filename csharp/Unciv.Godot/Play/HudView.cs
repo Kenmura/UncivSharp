@@ -232,6 +232,7 @@ public partial class HudView : Control
             if (stat.Id == "Turn") row.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill, MouseFilter = MouseFilterEnum.Ignore });
             Control item = stat.Id == "Turn" ? new Label { ThemeTypeVariation = UiVariants.LabelNumber, VerticalAlignment = VerticalAlignment.Center }
                 : stat.Icon is { Category: RulesetAssetKeys.StatIcon } icon ? new StatChip(theme, icon.Name, stat.Text)
+                : stat.Id == "GoldenAge" && stat.Icon is { } goldenIcon ? new StatChip(theme, goldenIcon, "Gold", stat.Text)
                 : stat.Icon is { } other ? new IconLabel(theme, other, stat.Text)
                 : new Label { VerticalAlignment = VerticalAlignment.Center };
             item.Name = stat.Id.Replace(':', '_');

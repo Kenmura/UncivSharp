@@ -3,6 +3,7 @@ using Unciv.Assets;
 using Unciv.GodotClient.Assets;
 using Unciv.GodotClient.Localization;
 using Unciv.GodotClient.Ui;
+using Unciv.Models.Translations;
 
 namespace Unciv.GodotClient.Play;
 
@@ -60,14 +61,28 @@ public partial class VictoryStatusView : Modal
             lines.AddChild(header);
             foreach (var own in section.Own)
             {
-                string mark = own.Status switch { "Completed" => "[x] ", "Partially" => "[~] ", _ => "[ ] " };
-                var label = Wrapped(mark + own.Text.TrText() + (own.Progress.Length > 0 ? " (" + own.Progress + ")" : ""));
-                label.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(own.Status switch { "Completed" => UiTokens.Success, "Partially" => UiTokens.Warning, _ => UiTokens.TextSecondary }));
-                lines.AddChild(label);
+                var tint = ProceduralAssets.ToColor(own.Status switch { "Completed" => UiTokens.Success, "Partially" => UiTokens.Warning, _ => UiTokens.TextSecondary });
+                string iconName = own.Status switch { "Completed" => "Checkmark", "Partially" => "ForwardArrow", _ => "HexagonOutline" };
+                var row = new HBoxContainer();
+                row.AddThemeConstantOverride("separation", Ui.Px(UiTokens.S1));
+                row.AddChild(new TextureRect
+                {
+                    Texture = Ui.Icon(AssetKey.Of(RulesetAssetKeys.UiIcon, iconName)),
+                    Modulate = tint,
+                    ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                    StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+                    TextureFilter = TextureFilterEnum.LinearWithMipmaps,
+                    CustomMinimumSize = new Vector2(Ui.Px(16), Ui.Px(16)),
+                    SizeFlagsVertical = SizeFlags.ShrinkCenter,
+                });
+                var label = Wrapped(own.Text.Tr() + (own.Progress.Length > 0 ? " (" + own.Progress + ")" : ""));
+                label.AddThemeColorOverride("font_color", tint);
+                row.AddChild(label);
+                lines.AddChild(row);
             }
             foreach (var civ in section.Civs)
             {
-                var label = Wrapped("  " + civ.Text.TrText() + (civ.IsDefeated ? " (defeated)".TrText() : ""));
+                var label = Wrapped("  " + TranslateCivLine(civ.Text) + (civ.IsDefeated ? " (defeated)".TrText() : ""));
                 label.Name = "Civ_" + section.Name + "_" + civ.Civ;
                 if (civ.IsViewer) label.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.Accent));
                 else if (civ.IsDefeated) label.AddThemeColorOverride("font_color", ProceduralAssets.ToColor(UiTokens.TextMuted));
@@ -85,7 +100,20 @@ public partial class VictoryStatusView : Modal
 
     public void Close() => Visible = false;
 
-    private static string LineText(Node node) => node switch { Label label => label.Text, SectionHeader header => header.ShownText, _ => "" };
+    private static string LineText(Node node) => node switch
+    {
+        Label label => label.Text,
+        SectionHeader header => header.ShownText,
+        HBoxContainer row => row.GetChildren().OfType<Label>().FirstOrDefault()?.Text ?? "",
+        _ => "",
+    };
+
+    private static string TranslateCivLine(string line)
+    {
+        const string nextMarker = ", next: ";
+        int next = line.IndexOf(nextMarker, StringComparison.Ordinal);
+        return next < 0 ? line.TrText() : line[..(next + nextMarker.Length)].TrText() + line[(next + nextMarker.Length)..].Tr();
+    }
 
     private static Label Wrapped(string text) => new() { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
 }

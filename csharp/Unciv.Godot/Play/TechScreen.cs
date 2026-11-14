@@ -419,7 +419,7 @@ public partial class TechScreen : PanelContainer
         unlockText = "Unlocks".Tr() + "\n" + string.Join("\n", lines.Select(it => it.TrText()));
         detail.AddChild(new SectionHeader("Unlocks"));
         if (node.Unlocks.Count > 0) detail.AddChild(UnlockStrip(node));
-        var unlocks = new Label { Name = "Unlocks", AutowrapMode = TextServer.AutowrapMode.WordSmart, Text = string.Join("\n", lines.Select(it => it.TrText())), SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        var unlocks = new StatText(theme, string.Join("\n", lines.Select(it => it.TrText()))) { Name = "Unlocks", AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
         detail.AddChild(unlocks);
         AddQueue(queueLines);
         message = NewMessage();

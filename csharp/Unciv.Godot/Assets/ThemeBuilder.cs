@@ -323,7 +323,10 @@ public static class ThemeBuilder
                 theme.SetStylebox(state, type, new StyleBoxEmpty());
             }
             theme.SetStylebox("focus", type, Make(m, new Box { Border = C(UiTokens.Accent), BorderWidth = UiTokens.RingWidth, Ring = true, PadX = m.Px(UiTokens.S1), PadY = m.Px(UiTokens.S1) }));
+            theme.SetConstant("h_separation", type, m.Px(UiTokens.S2));
+            theme.SetConstant("check_v_offset", type, 0);
         }
+        AddCheckBoxes(theme, m);
         AddSwitch(theme, m);
 
         foreach (var (name, height, fill) in new[] { (UiVariants.StatBarThin, UiTokens.BarThin, false), (UiVariants.StatBarLabelled, UiTokens.BarLabelled, true) })
@@ -343,6 +346,86 @@ public static class ThemeBuilder
         theme.SetStylebox("separator", "VSeparator", new StyleBoxLine { Color = C(UiTokens.BorderSubtle), Thickness = m.Border(UiTokens.BorderWidth), Vertical = true });
         theme.SetConstant("separation", "HSeparator", m.Px(UiTokens.S2));
         theme.SetConstant("separation", "VSeparator", m.Px(UiTokens.S2));
+    }
+
+    /// <summary>Distinct checked/unchecked box and radio icons so CheckBox and non-switch CheckButton never rely on Godot defaults.</summary>
+    private static void AddCheckBoxes(Theme theme, Metrics m)
+    {
+        int size = m.Px(18);
+        var checkedBox = CheckIcon(size, UiTokens.Accent, UiTokens.AccentHi, UiTokens.OnAccent, radio: false);
+        var uncheckedBox = CheckIcon(size, UiTokens.Inset, UiTokens.BorderStrong, null, radio: false);
+        var checkedDisabled = CheckIcon(size, UiTokens.AccentLo, UiTokens.BorderSubtle, UiTokens.TextDisabled, radio: false);
+        var uncheckedDisabled = CheckIcon(size, UiTokens.Surface2, UiTokens.BorderSubtle, null, radio: false);
+        var radioChecked = CheckIcon(size, UiTokens.Accent, UiTokens.AccentHi, UiTokens.OnAccent, radio: true);
+        var radioUnchecked = CheckIcon(size, UiTokens.Inset, UiTokens.BorderStrong, null, radio: true);
+        var radioCheckedDisabled = CheckIcon(size, UiTokens.AccentLo, UiTokens.BorderSubtle, UiTokens.TextDisabled, radio: true);
+        var radioUncheckedDisabled = CheckIcon(size, UiTokens.Surface2, UiTokens.BorderSubtle, null, radio: true);
+        foreach (string type in new[] { "CheckBox", "CheckButton" })
+        {
+            theme.SetIcon("checked", type, checkedBox);
+            theme.SetIcon("unchecked", type, uncheckedBox);
+            theme.SetIcon("checked_disabled", type, checkedDisabled);
+            theme.SetIcon("unchecked_disabled", type, uncheckedDisabled);
+            theme.SetIcon("radio_checked", type, radioChecked);
+            theme.SetIcon("radio_unchecked", type, radioUnchecked);
+            theme.SetIcon("radio_checked_disabled", type, radioCheckedDisabled);
+            theme.SetIcon("radio_unchecked_disabled", type, radioUncheckedDisabled);
+        }
+    }
+
+    private static ImageTexture CheckIcon(int size, Rgb fill, Rgb border, Rgb? mark, bool radio)
+    {
+        var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        float half = size / 2f;
+        float radius = radio ? half - 1f : Math.Max(3f, size * 0.22f);
+        float borderThickness = Math.Max(1.5f, size * 0.1f);
+        float stroke = Math.Max(1.25f, size * 0.1f);
+        Color fillColour = C(fill), borderColour = C(border), markColour = mark is { } m ? C(m) : Colors.Transparent;
+        // Checkmark segments in normalized [0..1] box coordinates
+        Vector2 p0 = new(0.24f * size, 0.52f * size), p1 = new(0.44f * size, 0.72f * size), p2 = new(0.76f * size, 0.30f * size);
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Vector2 p = new(x + 0.5f, y + 0.5f);
+                float signedDist;
+                if (radio)
+                {
+                    signedDist = p.DistanceTo(new Vector2(half, half)) - radius;
+                }
+                else
+                {
+                    float core = half - 1f - radius;
+                    Vector2 q = new Vector2(Math.Abs(p.X - half), Math.Abs(p.Y - half)) - new Vector2(core, core);
+                    signedDist = new Vector2(Math.Max(q.X, 0f), Math.Max(q.Y, 0f)).Length() + Math.Min(Math.Max(q.X, q.Y), 0f) - radius;
+                }
+                float outerCover = Math.Clamp(0.5f - signedDist, 0f, 1f);
+                if (outerCover <= 0f)
+                {
+                    image.SetPixel(x, y, Colors.Transparent);
+                    continue;
+                }
+                float innerCover = Math.Clamp(0.5f - (signedDist + borderThickness), 0f, 1f);
+                Color colour = borderColour.Lerp(fillColour, innerCover);
+                if (mark != null)
+                {
+                    float markCover = radio
+                        ? Math.Clamp(0.5f - (p.DistanceTo(new Vector2(half, half)) - radius * 0.42f), 0f, 1f)
+                        : Math.Max(SegmentCoverage(p, p0, p1, stroke), SegmentCoverage(p, p1, p2, stroke));
+                    colour = colour.Lerp(markColour, markCover * innerCover);
+                }
+                image.SetPixel(x, y, colour with { A = outerCover });
+            }
+        }
+        return ImageTexture.CreateFromImage(image);
+    }
+
+    private static float SegmentCoverage(Vector2 p, Vector2 a, Vector2 b, float halfWidth)
+    {
+        Vector2 ab = b - a;
+        float lenSq = ab.LengthSquared();
+        float t = lenSq > 0f ? Math.Clamp((p - a).Dot(ab) / lenSq, 0f, 1f) : 0f;
+        return Math.Clamp(halfWidth - p.DistanceTo(a + ab * t) + 0.5f, 0f, 1f);
     }
 
     /// <summary>The check button as a switch: a pill track with a round knob, drawn here at the scaled size (grey off, accent on).</summary>

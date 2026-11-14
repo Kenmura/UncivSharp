@@ -73,8 +73,8 @@ public static class HudModel
     }
 
     private static HudStat GoldenAge(EmpireTopBarResult bar) => bar.GoldenAgeTurnsLeft > 0
-        ? new HudStat("GoldenAge", StatKey(Stat.Happiness), $"Golden Age {Int(bar.GoldenAgeTurnsLeft)}", "Golden Age: turns left")
-        : new HudStat("GoldenAge", StatKey(Stat.Happiness), $"{Int(bar.GoldenAgeStored)}/{Int(bar.GoldenAgeNeeded)}", "Happiness stored towards the next Golden Age");
+        ? new HudStat("GoldenAge", AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), $"Golden Age {Int(bar.GoldenAgeTurnsLeft)}", "Golden Age: turns left")
+        : new HudStat("GoldenAge", AssetKey.Of(RulesetAssetKeys.ActionIcon, "StartGoldenAge"), $"{Int(bar.GoldenAgeStored)}/{Int(bar.GoldenAgeNeeded)}", "Happiness stored towards the next Golden Age");
 
     private static AssetKey StatKey(Stat stat) => AssetKey.Of(RulesetAssetKeys.StatIcon, stat.ToString());
 

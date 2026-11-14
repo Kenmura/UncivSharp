@@ -16,9 +16,9 @@ namespace Unciv.GodotClient.Play;
 /// </summary>
 public partial class DecisionPickerView : Modal
 {
-    private readonly Label prompt = new() { Name = "PickerPrompt", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly StatText prompt = new() { Name = "PickerPrompt", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly HBoxContainer columns = new() { Name = "PickerSlots" };
-    private readonly Label detail = new() { Name = "PickerDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart };
+    private readonly StatText detail = new() { Name = "PickerDetail", AutowrapMode = TextServer.AutowrapMode.WordSmart };
     private readonly LineEdit nameField = new() { Name = "PickerName", Visible = false };
     private readonly CheckBox flagBox = new() { Name = "PickerFlag", Visible = false };
     private readonly Label problem = new() { Name = "PickerProblem", ThemeTypeVariation = UiVariants.LabelSmall, AutowrapMode = TextServer.AutowrapMode.WordSmart };
@@ -87,6 +87,8 @@ public partial class DecisionPickerView : Modal
     {
         theme = uiTheme;
         base.Init(uiTheme);
+        prompt.Init(uiTheme);
+        detail.Init(uiTheme);
     }
 
     public void Open(PickerSpec spec)
@@ -170,7 +172,7 @@ public partial class DecisionPickerView : Modal
         var option = Spec.Slots[slot].Options.FirstOrDefault(it => it.Id == id);
         if (option == null) return;
         selected[slot] = selected[slot] == id && Spec.Slots[slot].Optional ? null : id;
-        detail.Text = (option.Detail.Length > 0 ? option.Detail : option.Label).TrText();
+        detail.Set((option.Detail.Length > 0 ? option.Detail : option.Label).TrText());
         if (Spec.TextFollowsSlot == slot && !nameEdited) nameField.Text = (DecisionPickerModel.DefaultText(Spec, Choice()));
         Update();
     }
@@ -198,14 +200,14 @@ public partial class DecisionPickerView : Modal
             var button = new Button
             {
                 Name = "Opt_" + slotIndex.ToString(System.Globalization.CultureInfo.InvariantCulture) + "_" + option.Id,
-                Text = option.Label.TrText(), ToggleMode = true, Disabled = !option.Enabled, Alignment = HorizontalAlignment.Left,
-                TooltipText = (option.Reason ?? "").TrText(),
+                Text = UiText.StripGlyphs(option.Label.TrText()), ToggleMode = true, Disabled = !option.Enabled, Alignment = HorizontalAlignment.Left,
+                TooltipText = UiText.StripGlyphs((option.Reason ?? "").TrText()),
             };
             string id = option.Id;
             string shownDetail = (option.Detail.Length > 0 ? option.Detail : option.Label).TrText();
             button.Pressed += () =>
             {
-                detail.Text = shownDetail; // C100: without hover a tap shows the detail as well as choosing
+                detail.Set(shownDetail); // C100: without hover a tap shows the detail as well as choosing
                 Choose(slotIndex, id);
             };
             button.MouseEntered += () => detail.Text = shownDetail;
@@ -220,7 +222,7 @@ public partial class DecisionPickerView : Modal
         if (Spec == null) return;
         foreach (var ((slot, id), button) in optionButtons) button.SetPressedNoSignal(selected[slot] == id);
         string? why = DecisionPickerModel.Problem(Spec, Choice());
-        problem.Text = (why ?? "").TrText();
+        problem.Text = UiText.StripGlyphs((why ?? "").TrText());
         confirm.Disabled = why != null;
     }
 }

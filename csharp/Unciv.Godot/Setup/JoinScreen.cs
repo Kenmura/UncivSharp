@@ -111,7 +111,7 @@ public partial class JoinScreen : Control
         column.AddChild(formPanel);
         formPanel.FitConstant(theme, "separation", UiTokens.S2);
         formPanel.AddChild(new Label { Text = "Address or invite".Tr() });
-        AddressField = new LineEdit { Name = "AddressField", PlaceholderText = "192.168.1.20:47821 or unciv://...".Tr(), Text = env.LastAddress };
+        AddressField = new LineEdit { Name = "AddressField", PlaceholderText = "192.168.1.20:47821 " + "or".Tr() + " unciv://...", Text = env.LastAddress };
         AddressField.TextSubmitted += _ => Join();
         formPanel.AddChild(AddressField);
         formPanel.AddChild(new Label { Text = "Password (only if the host set one)".Tr() });
@@ -316,7 +316,7 @@ public partial class JoinScreen : Control
         var parsed = JoinModel.Parse(AddressField.Text, env.Relay());
         if (parsed.Target is not { } target)
         {
-            messageLabel.Text = (parsed.Problem ?? "").Tr();
+            messageLabel.Text = FormatHint(parsed.Problem ?? "");
             return;
         }
         _ = JoinAsync(target);
@@ -609,6 +609,13 @@ public partial class JoinScreen : Control
         AddressField.Editable = !value;
         PasswordField.Editable = !value;
         messageLabel.Text = message;
+    }
+
+    private static string FormatHint(string message)
+    {
+        const string sample = "192.168.1.20:47821";
+        int index = message.IndexOf(sample, StringComparison.Ordinal);
+        return index < 0 ? message.Tr() : message[..index].Tr() + sample + message[(index + sample.Length)..].Tr();
     }
 
     private void ShowPanel(Control panel)

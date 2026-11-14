@@ -241,13 +241,22 @@ public class PediaModelTests
     }
 
     [Fact]
-    public void CategoryIcon_ExistsForEveryCategoryAndIsAUiIcon()
+    public void CategoryIcon_ExistsForEveryCategoryAndMatchesExpectedPackIcon()
     {
         foreach (var category in Enum.GetValues<CivilopediaCategories>())
         {
             var key = PediaModel.CategoryIcon(category);
-            Assert.Equal(RulesetAssetKeys.UiIcon, key.Category);
-            Assert.Contains(key.Name, RulesetAssetKeys.UiIconNames);
+            if (category == CivilopediaCategories.Technology)
+            {
+                Assert.Equal(RulesetAssetKeys.StatIcon, key.Category);
+                Assert.Equal("Science", key.Name);
+                Assert.Contains(key.Name, Enum.GetNames<Unciv.Models.StatTypes.Stat>());
+            }
+            else
+            {
+                Assert.Equal(RulesetAssetKeys.UiIcon, key.Category);
+                Assert.Contains(key.Name, RulesetAssetKeys.UiIconNames);
+            }
         }
     }
 }

@@ -28,6 +28,14 @@ public partial class IconButton : Button
             Icon = theme.Icon(key);
             this.FitConstant(theme, "icon_max_width", UiTheme.IconSize);
         }
+        else
+        {
+            theme.Fit(this, () =>
+            {
+                int side = Math.Max(theme.Px(theme.Breakpoint == UiBreakpoint.Compact ? UiTokens.CompactControlMinHeight : UiTokens.ControlMinHeight), theme.MinTargetPx);
+                CustomMinimumSize = new Vector2(side, side);
+            });
+        }
         if (text != null) Text = text.TrText();
         TooltipText = UiText.TooltipFor(label.TrText(), hotkey);
     }

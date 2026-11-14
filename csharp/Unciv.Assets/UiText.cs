@@ -21,10 +21,16 @@ public static class UiText
         ['♪'] = "Culture",
         ['⌣'] = "Happiness",
         ['☮'] = "Faith",
+        ['†'] = "Strength",
+        ['‡'] = "RangedStrength",
+        ['➡'] = "Movement",
+        ['…'] = "Range",
+        ['⏳'] = "",
+        ['☠'] = "",
     };
 
-    /// <summary>The stat a Unciv font glyph stands for (<c>Fonts.Gold</c> is Gold), or null for any other character.</summary>
-    public static string? StatForGlyph(char glyph) => GlyphStats.GetValueOrDefault(glyph);
+    /// <summary>The stat a Unciv font glyph stands for (<c>Fonts.Gold</c> is Gold), or null when not an iconised glyph.</summary>
+    public static string? StatForGlyph(char glyph) => GlyphStats.TryGetValue(glyph, out string? stat) && stat.Length > 0 ? stat : null;
 
     /// <summary>BBCode colour value (<c>#RRGGBB</c>) of a token.</summary>
     public static string Hex(Rgb colour) => string.Create(CultureInfo.InvariantCulture, $"#{colour.R:X2}{colour.G:X2}{colour.B:X2}");
@@ -44,16 +50,27 @@ public static class UiText
     /// <summary>The text of a count badge: empty at zero or below (the badge hides), the number up to 99, "99+" beyond.</summary>
     public static string BadgeText(int count) => count <= 0 ? "" : count > 99 ? "99+" : count.ToString(CultureInfo.InvariantCulture);
 
-    /// <summary>Splits a line at its stat glyphs: "3 ¤ 2 ⚙" gives "3 ", Gold, " 2 ", Production. Text without glyphs is a single run; empty text gives none.</summary>
+    /// <summary>Splits a line at its stat glyphs: "3 ¤ 2 ⚙" gives "3 ", Gold, " 2 ", Production, stripping non-iconised markers such as Turn/Death. Text without glyphs is a single run; empty text gives none.</summary>
     public static IReadOnlyList<TextRun> Runs(string text)
     {
         var runs = new List<TextRun>();
         var plain = new StringBuilder();
-        foreach (char c in text)
+        for (int i = 0; i < text.Length; i++)
         {
-            if (StatForGlyph(c) is not { } stat)
+            char c = text[i];
+            if (!GlyphStats.TryGetValue(c, out string? stat))
             {
                 plain.Append(c);
+                continue;
+            }
+            if (stat.Length == 0)
+            {
+                if (plain.Length > 0 && plain[^1] == '(' && i + 1 < text.Length && text[i + 1] == ')')
+                {
+                    plain.Length--;
+                    if (plain.Length > 0 && plain[^1] == ' ') plain.Length--;
+                    i++;
+                }
                 continue;
             }
             if (plain.Length > 0) runs.Add(new TextRun(plain.ToString(), null));
@@ -62,6 +79,17 @@ public static class UiText
         }
         if (plain.Length > 0) runs.Add(new TextRun(plain.ToString(), null));
         return runs;
+    }
+
+    /// <summary>Drops all 13 Unciv font markers from plain-text labels that cannot embed inline icons.</summary>
+    public static string StripGlyphs(string text)
+    {
+        var stripped = new StringBuilder(text.Length);
+        foreach (var run in Runs(text))
+        {
+            if (run.Stat == null) stripped.Append(run.Text);
+        }
+        return stripped.ToString().TrimStart();
     }
 }
 

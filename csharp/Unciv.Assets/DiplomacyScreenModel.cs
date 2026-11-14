@@ -103,9 +103,36 @@ public static class DiplomacyScreenModel
     public static IReadOnlyList<string> ModifierLines(DiplomacyPanelResult panel)
     {
         var lines = new List<string>();
-        foreach (var modifier in panel.Modifiers) lines.Add($"{modifier.Name}: {(modifier.Value >= 0f ? "+" : "")}{Number(modifier.Value)}");
-        foreach (var flag in panel.Flags) lines.Add($"{flag.Name}: {Number(flag.Value)} turns");
+        foreach (var modifier in panel.Modifiers) lines.Add($"{HumanizeKey(modifier.Name)}: {(modifier.Value >= 0f ? "+" : "")}{Number(modifier.Value)}");
+        foreach (var flag in panel.Flags) lines.Add($"{HumanizeKey(flag.Name)}: {Number(flag.Value)} turns");
         return lines;
+    }
+
+    /// <summary>Turns serialized diplomatic modifier/flag enum names into readable UI text.</summary>
+    public static string HumanizeKey(string key) => key switch
+    {
+        "WarMongerer" => "Warmongering",
+        _ => SplitPascalCase(key),
+    };
+
+    private static string SplitPascalCase(string key)
+    {
+        if (string.IsNullOrEmpty(key)) return key;
+        var builder = new System.Text.StringBuilder(key.Length + 6);
+        for (int i = 0; i < key.Length; i++)
+        {
+            char c = key[i];
+            if (i > 0 && char.IsUpper(c))
+            {
+                builder.Append(' ');
+                builder.Append(char.ToLowerInvariant(c));
+            }
+            else
+            {
+                builder.Append(c);
+            }
+        }
+        return builder.ToString();
     }
 
     /// <summary>A city-state's quests for the viewer, one or two lines each.</summary>

@@ -30,6 +30,12 @@ public class UiComponentsTests
     [InlineData('♪', "Culture")]
     [InlineData('⌣', "Happiness")]
     [InlineData('☮', "Faith")]
+    [InlineData('†', "Strength")]
+    [InlineData('‡', "RangedStrength")]
+    [InlineData('➡', "Movement")]
+    [InlineData('…', "Range")]
+    [InlineData('⏳', null)]
+    [InlineData('☠', null)]
     [InlineData('x', null)]
     public void GlyphsMapToStats(char glyph, string? stat) => Assert.Equal(stat, UiText.StatForGlyph(glyph));
 
@@ -39,7 +45,11 @@ public class UiComponentsTests
         Assert.Equal([new TextRun("3 ", null), new TextRun("¤", "Gold"), new TextRun(" +2 ", null), new TextRun("⚙", "Production")], UiText.Runs("3 ¤ +2 ⚙"));
         Assert.Equal([new TextRun("plain", null)], UiText.Runs("plain"));
         Assert.Equal([new TextRun("⁂", "Food"), new TextRun("⁂", "Food")], UiText.Runs("⁂⁂"));
+        Assert.Equal([new TextRun("3 ", null), new TextRun("†", "Strength"), new TextRun(" 2", null)], UiText.Runs("3⏳ † 2"));
+        Assert.Equal([new TextRun("Hurry Research", null)], UiText.Runs("Hurry Research (☠)"));
         Assert.Empty(UiText.Runs(""));
+        Assert.Equal("Happiness", UiText.StripGlyphs("⌣Happiness"));
+        Assert.Equal("12 Gold, 2 turns", UiText.StripGlyphs("12 ¤Gold, 2⏳ turns"));
     }
 
     [Theory]
