@@ -47,7 +47,7 @@ public sealed class MapPingsScenario : Scenario
         var tileC = lands[lands.Count / 2].Position;
         int logged = 0;
 
-        float Left(HexCoord tile) => screen.Pings.Single(it => it.X == tile.x && it.Y == tile.y).Remaining;
+        float Left(HexCoord tile) => screen.Pings.Single(it => it.X == tile.X && it.Y == tile.Y).Remaining;
         Vector2 Pointer(HexCoord tile) => screen.Map.ScreenPositionOf(tile);
 
         return
@@ -65,7 +65,7 @@ public sealed class MapPingsScenario : Scenario
             new Press("Ping allies: Danger"),
             new WaitFrames(2),
             new AssertQuery("the ping went to the host as asked, the host's echo is on tile A with Alice's name, and the menu closed", () =>
-                script.Sent.SequenceEqual([(tileA.x, tileA.y, MapPingKinds.Danger)]) && !screen.MarkerMenu.Visible
+                script.Sent.SequenceEqual([(tileA.X, tileA.Y, MapPingKinds.Danger)]) && !screen.MarkerMenu.Visible
                 && screen.PingLayer.Shown.ContainsKey(tileA) && screen.PingLayer.LabelAt(tileA) == "Alice: Danger"),
             new Capture("sent", "A fresh Danger ping on the tile: a red ring, a column and 'Alice: Danger' above it"),
             new Act("five seconds pass, then Bob pings another tile", () =>
@@ -81,7 +81,7 @@ public sealed class MapPingsScenario : Scenario
             new WaitFrames(2),
             new PressKey(Key.P, Ctrl: true),
             new WaitFrames(2),
-            new AssertQuery("Ctrl+P pinged tile C with Look here", () => script.Sent.Last() == (tileC.x, tileC.y, MapPingKinds.Look) && screen.PingLayer.Shown.ContainsKey(tileC)),
+            new AssertQuery("Ctrl+P pinged tile C with Look here", () => script.Sent.Last() == (tileC.X, tileC.Y, MapPingKinds.Look) && screen.PingLayer.Shown.ContainsKey(tileC)),
             new Act("a ping on a tile off the map is ignored", () => script.Receive("Bob", new HexCoord(900, 900), MapPingKinds.Help)),
             new Act("four more seconds pass", () => screen.AdvancePings(4f)),
             new WaitFrames(2),
@@ -145,7 +145,7 @@ public sealed class MapPingsScenario : Scenario
             return Task.CompletedTask;
         }
 
-        public void Receive(string sender, HexCoord tile, string kind) => PingReceived?.Invoke(new MapPingNotice { X = tile.x, Y = tile.y, Kind = kind, Sender = sender });
+        public void Receive(string sender, HexCoord tile, string kind) => PingReceived?.Invoke(new MapPingNotice { X = tile.X, Y = tile.Y, Kind = kind, Sender = sender });
 
         public IReadOnlyList<PlayerRow> Players => [];
 

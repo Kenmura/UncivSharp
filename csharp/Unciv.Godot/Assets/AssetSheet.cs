@@ -2,6 +2,7 @@ using Godot;
 using Unciv.Assets;
 using Unciv.GodotClient.Ui;
 using Unciv.Models.Ruleset;
+using Unciv.Models.Translations;
 using RulesetClass = Unciv.Models.Ruleset.Ruleset;
 
 namespace Unciv.GodotClient.Assets;
@@ -188,9 +189,9 @@ public partial class AssetSheet : Node3D
 
         var panel = new PanelContainer { Position = new Vector2(1000f, 560f) };
         var box = new VBoxContainer();
-        box.AddChild(new Godot.Label { Text = "Theme panel" });
-        box.AddChild(new Button { Text = "Theme button" });
-        box.AddChild(new Button { Text = "Disabled", Disabled = true });
+        box.AddChild(new Godot.Label { Text = "Theme panel".Tr() });
+        box.AddChild(new Button { Text = "Theme button".Tr() });
+        box.AddChild(new Button { Text = "Disabled".Tr(), Disabled = true });
         panel.AddChild(box);
         root.AddChild(panel);
 

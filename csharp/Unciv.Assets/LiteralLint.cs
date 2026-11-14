@@ -21,7 +21,7 @@ public static partial class LiteralLint
 
     private static readonly ImmutableArray<string> BuildOutput = ["bin", "obj", ".godot", ".mono"];
 
-    public static IReadOnlyList<LintViolation> Scan(string file, string text)
+    public static IReadOnlyList<LintViolation> Scan(string file, string text, bool skipAssetRules = false)
     {
         var result = new List<LintViolation>();
         var lines = text.Split('\n');
@@ -42,6 +42,7 @@ public static partial class LiteralLint
             }
             foreach (var (rule, pattern) in Rules)
             {
+                if (skipAssetRules && rule is "res:// literal" or "colour literal") continue;
                 if (pattern.IsMatch(lines[i])) result.Add(new LintViolation(file, i + 1, rule, trimmed.TrimEnd()));
             }
         }
@@ -49,7 +50,8 @@ public static partial class LiteralLint
     }
 
     /// <summary>
-    /// Scans every .cs file under <paramref name="clientRoot"/> except those under its top-level <c>Assets</c> directory and build output (bin, obj, .godot, .mono at any depth).
+    /// Scans every .cs file under <paramref name="clientRoot"/> except build output (bin, obj, .godot, .mono at any depth).
+    /// Top-level <c>Assets</c> is still scanned for untranslated UI text literals while exempting only <c>res://</c> and colour literals.
     /// Scope is <c>Unciv.Godot</c> only: the C000/C008 harness project legitimately builds its own test scenes.
     /// </summary>
     public static IReadOnlyList<LintViolation> ScanDirectory(string clientRoot)
@@ -59,9 +61,9 @@ public static partial class LiteralLint
         {
             var relative = Path.GetRelativePath(clientRoot, path).Replace('\\', '/');
             var directories = relative.Split('/')[..^1];
-            if (directories.Length > 0 && directories[0] == "Assets") continue;
             if (directories.Any(segment => BuildOutput.Contains(segment, StringComparer.Ordinal))) continue;
-            result.AddRange(Scan(relative, File.ReadAllText(path)));
+            var inAssets = directories.Length > 0 && directories[0] == "Assets";
+            result.AddRange(Scan(relative, File.ReadAllText(path), skipAssetRules: inAssets));
         }
         return result;
     }

@@ -100,7 +100,7 @@ public sealed class PhoneWorldScenario : Scenario
             new AssertQuery("a tap selected the tile through the emulated mouse", () => map.Selected == tapped && clicked == 1 && rightClicked == 0),
             new Act("wobble within 8 dp of the tile next to it", () =>
             {
-                var other = map.ScreenPositionOf(new HexCoord((tapped ?? throw new InvalidOperationException("no tile")).x + 1, tapped.Value.y));
+                var other = map.ScreenPositionOf(new HexCoord((tapped ?? throw new InvalidOperationException("no tile")).X + 1, tapped.Value.Y));
                 focusBefore = map.Focus;
                 var from = other;
                 InputSimulator.SimulateTouchDown(viewport, 0, from);

@@ -46,8 +46,8 @@ public sealed class FlatCityScenario : Scenario
         host.AddChild(screen);
         screen.Start(localHost, AssetRegistry.ForRuleset(game.Ruleset));
         var settler = human.Units.GetCivUnits().First(it => it.Name == "Settler");
-        var cityTile = new HexCoord(settler.CurrentTile.Position.x, settler.CurrentTile.Position.y);
-        var roadTile = new HexCoord(cityTile.x + 1, cityTile.y);
+        var cityTile = new HexCoord(settler.CurrentTile.Position.X, settler.CurrentTile.Position.Y);
+        var roadTile = new HexCoord(cityTile.X + 1, cityTile.Y);
         var refusals = new List<string>();
 
         void Do(GameCommand command)
@@ -63,7 +63,7 @@ public sealed class FlatCityScenario : Scenario
             new WaitFrames(3),
             new Act("zoom in on the settler", () =>
             {
-                screen.Map.FocusOn(MapLayout.TileTop(cityTile.x, cityTile.y));
+                screen.Map.FocusOn(MapLayout.TileTop(cityTile.X, cityTile.Y));
                 screen.Map.SetZoom(6f);
             }),
             new AssertQuery("before founding there is no city, border, road or improvement", () =>

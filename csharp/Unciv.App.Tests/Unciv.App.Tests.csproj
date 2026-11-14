@@ -22,7 +22,6 @@
 
   <!-- T244: Unciv.Godot needs the Godot SDK and is outside the solution; its Godot-free session classes are compiled into the tests directly. -->
   <ItemGroup>
-    <Compile Include="..\Unciv.Godot\Play\IGameSession.cs" Link="Linked\IGameSession.cs" />
     <Compile Include="..\Unciv.Godot\Play\NetGameSession.cs" Link="Linked\NetGameSession.cs" />
     <Compile Include="..\Unciv.Godot\Play\ITurnRoster.cs" Link="Linked\ITurnRoster.cs" />
     <Compile Include="..\Unciv.Godot\Play\IGameSocial.cs" Link="Linked\IGameSocial.cs" />

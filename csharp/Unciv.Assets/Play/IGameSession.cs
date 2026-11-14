@@ -73,3 +73,10 @@ public interface IGameSession
     /// </summary>
     Task<string?> ExportSaveAsync();
 }
+
+/// <summary>Bridge contract for creating local single-player or loaded game sessions without exposing engine types to the UI layer.</summary>
+public interface IGameSessionFactory
+{
+    StartOutcome Start(Unciv.GodotClient.Setup.NewGameForm form, Func<long> clock);
+    IGameSession FromSave(string saveText, Func<long> clock);
+}

@@ -85,7 +85,7 @@ public sealed class CombatPresentationScenario : Scenario
 
         private CombatPresenter Presenter => screen.Presenter;
 
-        private Vector3 Top(HexCoord at) => MapLayout.TileTop(at.x, at.y, screen.Map.TileNodeAt(at)?.Elevation ?? 1f);
+        private Vector3 Top(HexCoord at) => MapLayout.TileTop(at.X, at.Y, screen.Map.TileNodeAt(at)?.Elevation ?? 1f);
 
         private bool AllAtRest() => screen.Units.Values.All(it => it.Position.IsEqualApprox(it.RestPosition) && it.Scale.IsEqualApprox(Vector3.One * (it.Unit.Id == screen.SelectedUnitId ? 1.3f : 1f)));
 

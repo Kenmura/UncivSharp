@@ -110,7 +110,7 @@ public partial class SmokeTest : Node3D
         {
             lastPick = null;
             int before = clicksReceived;
-            InputSimulator.SimulateMouseClick(GetViewport(), camera.NotNull().UnprojectPosition(target));
+            InputSimulator.SimulateMouseClick(GetViewport(), (camera ?? throw new InvalidOperationException("camera not initialized")).UnprojectPosition(target));
             if (clicksReceived != before + 1) failures.Add($"click at {target} was not delivered");
             else if (lastPick is not { } picked || picked.DistanceTo(target) > 0.01f) failures.Add($"pick {lastPick} != {target}");
         }

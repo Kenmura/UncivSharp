@@ -55,7 +55,7 @@ public sealed class GroupMoveScenario : Scenario
         {
             try
             {
-                return queries.Path(unit.Id, tile.x, tile.y).GetAwaiter().GetResult() is { Reachable: true, CanEnter: true } path && path.Turns >= minTurns;
+                return queries.Path(unit.Id, tile.X, tile.Y).GetAwaiter().GetResult() is { Reachable: true, CanEnter: true } path && path.Turns >= minTurns;
             }
             catch (InvalidOperationException) // not a tile of the map
             {
@@ -99,7 +99,7 @@ public sealed class GroupMoveScenario : Scenario
                 screen.GroupUnitIds.Count == 3 && screen.GroupUnitIds[0] == worker.Id && screen.Escorts.Count == 1 && !screen.Panel.Entries.Any(it => it.Kind == MenuEntryKind.Group)),
             new Act("pick the farthest explored tile that takes all three more than one turn", () =>
             {
-                groupTarget = Enumerable.Range(3, 3).Reverse().SelectMany(distance => HexMath.GetHexCoordsAtDistance(Where(warrior), distance, distance, false).OrderBy(it => it.x).ThenBy(it => it.y))
+                groupTarget = Enumerable.Range(3, 3).Reverse().SelectMany(distance => HexMath.GetHexCoordsAtDistance(Where(warrior), distance, distance, false).OrderBy(it => it.X).ThenBy(it => it.Y))
                     .First(it => Free(it) && Clickable(it) && CanPath(warrior, it, 2) && CanPath(settler, it, 2) && CanPath(worker, it, 2));
                 startAt = Where(warrior);
                 logBefore = session.Log.Count;

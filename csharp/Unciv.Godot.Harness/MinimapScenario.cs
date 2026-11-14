@@ -56,7 +56,7 @@ public sealed class MinimapScenario : Scenario
                     .Select(p => (p, tile: raster.TileAt(p.x, p.y)))
                     .Where(it => it.tile != null)
                     .ToList();
-                var far = tiles.OrderByDescending(it => MapLayout.TileTop(it.tile.NotNull().x, it.tile.NotNull().y).DistanceTo(focusBefore)).First();
+                var far = tiles.OrderByDescending(it => MapLayout.TileTop(it.tile.NotNull().X, it.tile.NotNull().Y).DistanceTo(focusBefore)).First();
                 target = far.tile.NotNull();
                 var (cx, cy) = raster.CentreOf(target);
                 clickAt = minimap.GlobalPosition + minimap.PictureOffset + new Vector2(cx, cy);
@@ -66,7 +66,7 @@ public sealed class MinimapScenario : Scenario
             new AssertQuery("the camera moved", () => map.Focus.DistanceTo(focusBefore) > 1f),
             new AssertQuery("the camera now centres on the clicked minimap pixel's tile", () =>
             {
-                var expected = MapLayout.TileTop(target.x, target.y, map.TileNodeAt(target)?.Elevation ?? 1f);
+                var expected = MapLayout.TileTop(target.X, target.Y, map.TileNodeAt(target)?.Elevation ?? 1f);
                 return Math.Abs(map.Focus.X - expected.X) < 0.01f && Math.Abs(map.Focus.Z - expected.Z) < 0.01f;
             }),
             new AssertQuery("the camera's own tile at the screen centre is that tile", () => map.PickTile(viewport.GetVisibleRect().Size / 2f) is { } picked && Distance(picked, target) <= 1),

@@ -13,6 +13,16 @@ namespace Unciv.GodotClient.Play;
 /// <summary>The result of <see cref="LocalHost.Start"/>: the session, or the reasons there is none.</summary>
 public sealed record StartOutcome(LocalHost? Host, IReadOnlyList<string> Errors);
 
+/// <summary>Default <see cref="IGameSessionFactory"/> backed by <see cref="LocalHost"/>.</summary>
+public sealed class LocalGameSessionFactory : IGameSessionFactory
+{
+    public static readonly LocalGameSessionFactory Instance = new();
+
+    public StartOutcome Start(NewGameForm form, Func<long> clock) => LocalHost.Start(form, clock);
+
+    public IGameSession FromSave(string saveText, Func<long> clock) => LocalHost.FromSave(saveText, clock);
+}
+
 /// <summary>
 /// The single-player implementation of <see cref="IGameSession"/> and the only client class that holds the engine's <see cref="GameSession"/> (C037). It is the single-player authority around a <see cref="GameSession"/> (C010): the one human's commands go in as that civ, and after End turn this
 /// class issues the server commands the engine's turn flow needs (<see cref="RunAiTurn"/> per auto civ, then <see cref="BeginTurn"/> for the human),

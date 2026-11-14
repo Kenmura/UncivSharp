@@ -51,20 +51,21 @@ public class LiteralLintTests
     public void ReportsLineNumbers() => Assert.Equal(3, LiteralLint.Scan("X.cs", "a\nb\nres://c").Single().Line);
 
     [Fact]
-    public void ScanDirectorySkipsAssetsAndBuildOutput()
+    public void ScanDirectoryEnforcesTextRuleInAssetsAndSkipsBuildOutput()
     {
         var root = Directory.CreateTempSubdirectory("lint-").FullName;
         try
         {
             foreach (var dir in new[] { "Assets", "obj", "UI", "Screens/Assets", "Screens/bin" }) Directory.CreateDirectory(Path.Combine(root, dir));
-            File.WriteAllText(Path.Combine(root, "Assets", "A.cs"), "res://ok");
+            File.WriteAllText(Path.Combine(root, "Assets", "A.cs"), "var p = \"res://ok\";\nvar c = new Color(1, 0, 0);");
+            File.WriteAllText(Path.Combine(root, "Assets", "BadText.cs"), "label.Text = \"Untranslated\";");
             File.WriteAllText(Path.Combine(root, "obj", "B.cs"), "res://ok");
             File.WriteAllText(Path.Combine(root, "UI", "C.cs"), "res://bad");
             File.WriteAllText(Path.Combine(root, "D.cs"), "fine");
             File.WriteAllText(Path.Combine(root, "Screens", "Assets", "E.cs"), "res://nested assets dir is not exempt");
             File.WriteAllText(Path.Combine(root, "Screens", "bin", "F.cs"), "res://build output");
             var found = LiteralLint.ScanDirectory(root);
-            Assert.Equal(["Screens/Assets/E.cs", "UI/C.cs"], found.Select(v => v.File));
+            Assert.Equal(["Assets/BadText.cs", "Screens/Assets/E.cs", "UI/C.cs"], found.Select(v => v.File));
         }
         finally
         {
@@ -75,14 +76,32 @@ public class LiteralLintTests
     [Fact]
     public void GodotClientHasNoLiteralsOutsideAssets()
     {
-        string? client = null;
-        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null && client == null; dir = dir.Parent)
-        {
-            var candidate = Path.Combine(dir.FullName, "Unciv.Godot");
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(dir.FullName, "Unciv.sln"))) client = candidate;
-        }
-        Assert.NotNull(client);
+        var client = FindGodotClientDir();
         var violations = LiteralLint.ScanDirectory(client);
         Assert.True(violations.Count == 0, string.Join("\n", violations.Select(v => $"{v.File}:{v.Line} {v.Rule}: {v.Text}")));
+    }
+
+    [Fact]
+    public void AssetsDirectoryContainsOnlyAssetAdapters()
+    {
+        var assetsDir = Path.Combine(FindGodotClientDir(), "Assets");
+        Assert.True(Directory.Exists(assetsDir));
+        foreach (var file in Directory.EnumerateFiles(assetsDir, "*.cs", SearchOption.AllDirectories).OrderBy(p => p, StringComparer.Ordinal))
+        {
+            var text = File.ReadAllText(file);
+            Assert.DoesNotContain("IGameSession", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("GameScreen", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Unciv.Commands", text, StringComparison.Ordinal);
+        }
+    }
+
+    private static string FindGodotClientDir()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir != null; dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, "Unciv.Godot");
+            if (Directory.Exists(candidate) && File.Exists(Path.Combine(dir.FullName, "Unciv.sln"))) return candidate;
+        }
+        throw new DirectoryNotFoundException("Unciv.Godot");
     }
 }

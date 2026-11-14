@@ -2,12 +2,10 @@ using System.Text.RegularExpressions;
 
 namespace Unciv.Core.Tests.Policy;
 
-// C037 (design/CLIENT-SLICES.md principle 2): the Godot client reads the world only through IGameSession. Only the session implementation
-// (LocalHost) may name the engine's game objects.
+// C037 (design/CLIENT-SLICES.md principle 2): the Godot client reads the world only through IGameSession. Zero files in Unciv.Godot
+// may name the engine's game objects.
 public partial class ClientSessionBoundaryTests
 {
-    private static readonly string[] Allowed = ["Play/LocalHost.cs"];
-
     [GeneratedRegex(@"\b(GameInfo|GameSession|SnapshotBuilder|ViewDeltaBuilder|GameView|CommandProcessor)\b")]
     private static partial Regex ForbiddenRegex();
 
@@ -22,7 +20,6 @@ public partial class ClientSessionBoundaryTests
         {
             var relative = Path.GetRelativePath(dir, file).Replace('\\', '/');
             if (relative.StartsWith("obj/", StringComparison.Ordinal) || relative.StartsWith("bin/", StringComparison.Ordinal) || relative.StartsWith(".godot/", StringComparison.Ordinal)) continue;
-            if (Allowed.Contains(relative)) continue;
             var lines = File.ReadAllLines(file);
             for (int i = 0; i < lines.Length; i++)
             {

@@ -86,7 +86,7 @@ public sealed class TouchOrdersScenario : Scenario
                 screen.Panel.GroupToggle.Visible && screen.Panel.GroupToggle.GetGlobalRect().Size.Y + 0.5f >= UiTokens.DpToPx(UiTokens.TouchTargetDp, Dpi)),
             new Act("tap a tile that has nobody on it", () =>
             {
-                var around = HexMath.GetHexCoordsAtDistance(Where(warrior), 2, 2, false).OrderBy(it => it.x).ThenBy(it => it.y).Where(it => Free(it) && Clear(it) && map.TileNodeAt(it) != null).ToList();
+                var around = HexMath.GetHexCoordsAtDistance(Where(warrior), 2, 2, false).OrderBy(it => it.X).ThenBy(it => it.Y).Where(it => Free(it) && Clear(it) && map.TileNodeAt(it) != null).ToList();
                 tapTile = around[0];
                 otherTile = around[1];
                 InputSimulator.SimulateTap(viewport, Pointer(tapTile));
@@ -137,7 +137,7 @@ public sealed class TouchOrdersScenario : Scenario
             {
                 startAt = Where(warrior);
                 logBefore = session.Log.Count;
-                target = Enumerable.Range(2, 2).SelectMany(distance => HexMath.GetHexCoordsAtDistance(startAt, distance, distance, false).OrderBy(it => it.x).ThenBy(it => it.y))
+                target = Enumerable.Range(2, 2).SelectMany(distance => HexMath.GetHexCoordsAtDistance(startAt, distance, distance, false).OrderBy(it => it.X).ThenBy(it => it.Y))
                     .First(it => Free(it) && Clear(it) && Reachable(warrior, it));
                 clicks = 0;
                 InputSimulator.SimulateTouchDown(viewport, 0, Pointer(target));
@@ -155,7 +155,7 @@ public sealed class TouchOrdersScenario : Scenario
     {
         try
         {
-            return queries.Path(unit.Id, tile.x, tile.y).GetAwaiter().GetResult() is { Reachable: true, CanEnter: true };
+            return queries.Path(unit.Id, tile.X, tile.Y).GetAwaiter().GetResult() is { Reachable: true, CanEnter: true };
         }
         catch (InvalidOperationException) // not a tile of the map
         {

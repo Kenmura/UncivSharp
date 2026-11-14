@@ -127,22 +127,22 @@ public sealed class AlertsScenario : Scenario
             new AssertQuery("the scout seen on a tile the viewer cannot see has no jump target; the city and tech rows do", () =>
                 screen.Notifications.Rows.Single(it => it.Text.StartsWith("An enemy scout", StringComparison.Ordinal)).Target == null
                 && screen.Notifications.Rows.Single(it => it.Text.StartsWith("Your city", StringComparison.Ordinal)).Target is { Kind: NotificationTargetKind.Tile } tile
-                && tile.X == cityTile.Position.x && tile.Y == cityTile.Position.y
+                && tile.X == cityTile.Position.X && tile.Y == cityTile.Position.Y
                 && screen.Notifications.Rows.Single(it => it.Text.StartsWith("You have discovered", StringComparison.Ordinal)).Target is { Kind: NotificationTargetKind.Tech, Name: "Agriculture" }),
-            new Act("move the camera away", () => screen.Map.FocusOn(MapLayout.TileTop(cityTile.Position.x + 6, cityTile.Position.y + 6))),
+            new Act("move the camera away", () => screen.Map.FocusOn(MapLayout.TileTop(cityTile.Position.X + 6, cityTile.Position.Y + 6))),
             new Act("remember the command log", () => logged = session.Log.Count),
             new Act("scroll the row into view", () => Show("An enemy scout")),
             new WaitFrames(2),
             new Click(() => Row("An enemy scout")),
             new WaitFrames(2),
-            new AssertQuery("the row without a target moved nothing", () => MathF.Abs(screen.Map.Focus.X - MapLayout.TileTop(cityTile.Position.x + 6, cityTile.Position.y + 6).X) < 0.01f),
+            new AssertQuery("the row without a target moved nothing", () => MathF.Abs(screen.Map.Focus.X - MapLayout.TileTop(cityTile.Position.X + 6, cityTile.Position.Y + 6).X) < 0.01f),
             new Act("scroll the row into view", () => Show("Your city")),
             new WaitFrames(2),
             new Click(() => Row("Your city")),
             new WaitFrames(2),
             new AssertQuery("the city row centred the camera on the city's tile", () =>
-                MathF.Abs(screen.Map.Focus.X - MapLayout.TileTop(cityTile.Position.x, cityTile.Position.y).X) < 0.01f
-                && MathF.Abs(screen.Map.Focus.Z - MapLayout.TileTop(cityTile.Position.x, cityTile.Position.y).Z) < 0.01f),
+                MathF.Abs(screen.Map.Focus.X - MapLayout.TileTop(cityTile.Position.X, cityTile.Position.Y).X) < 0.01f
+                && MathF.Abs(screen.Map.Focus.Z - MapLayout.TileTop(cityTile.Position.X, cityTile.Position.Y).Z) < 0.01f),
             new Capture("list", "The notification list open; clicking the city row centred the camera on the city"),
             new Act("scroll the row into view", () => Show("You have discovered")),
             new WaitFrames(2),

@@ -157,7 +157,7 @@ public sealed class UnitOrdersScenario : Scenario
                 new Act("pick the farthest reachable tile", () =>
                 {
                     var far = queries.Reachable(warrior.Id).GetAwaiter().GetResult().NotNull().Tiles
-                        .Where(it => it.CanEnter && !(it.X == warriorTile.x && it.Y == warriorTile.y) && !(it.X == workerTile.x && it.Y == workerTile.y)).OrderByDescending(it => it.Cost).ThenBy(it => it.X).ThenBy(it => it.Y).First();
+                        .Where(it => it.CanEnter && !(it.X == warriorTile.X && it.Y == warriorTile.Y) && !(it.X == workerTile.X && it.Y == workerTile.Y)).OrderByDescending(it => it.Cost).ThenBy(it => it.X).ThenBy(it => it.Y).First();
                     pathTarget = new HexCoord(far.X, far.Y);
                     seqBefore = session.LastSeq;
                 }),
@@ -201,7 +201,7 @@ public sealed class UnitOrdersScenario : Scenario
                 new Click(() => screen.Map.ScreenPositionOf(enemyTile)),
                 new AssertQuery("clicking the enemy shows the combat preview that equals the battle-preview query, and sends nothing", () =>
                 {
-                    var query = localHost.QueryAsync(new AttackPreviewQuery(enemyTile.x, enemyTile.y, warrior.Id)).GetAwaiter().GetResult().NotNull();
+                    var query = localHost.QueryAsync(new AttackPreviewQuery(enemyTile.X, enemyTile.Y, warrior.Id)).GetAwaiter().GetResult().NotNull();
                     var text = UnitOrdersModel.Combat(query);
                     return screen.CombatPreview.Visible && screen.CombatPreview.TitleText == text.Title && screen.CombatPreview.BodyText == string.Join("\n", text.Lines)
                         && screen.CombatPreview.ConfirmEnabled && screen.CombatPreview.ConfirmText == "Attack" && session.LastSeq == seqBefore
@@ -209,7 +209,7 @@ public sealed class UnitOrdersScenario : Scenario
                 }),
                 new AssertQuery("T344: each strength number's tooltip is its combat-strength formula (base strength, the listed modifiers, the final figure)", () =>
                 {
-                    var query = localHost.QueryAsync(new AttackPreviewQuery(enemyTile.x, enemyTile.y, warrior.Id)).GetAwaiter().GetResult().NotNull();
+                    var query = localHost.QueryAsync(new AttackPreviewQuery(enemyTile.X, enemyTile.Y, warrior.Id)).GetAwaiter().GetResult().NotNull();
                     var card = UnitOrdersModel.Combat(query).Card.NotNull();
                     return card.Attacker != null && card.Defender != null
                         && screen.CombatPreview.StrengthTooltip(true) == TooltipModel.ToPlain(TooltipModel.CombatStrength(card.Attacker.BaseStrength, card.Attacker.Strength, card.Attacker.Modifiers), text => text.Tr())
@@ -277,7 +277,7 @@ public sealed class UnitOrdersScenario : Scenario
             [
                 new AssertQuery("the worker is selected, its menu equals the query and lists the improvements the tile query allows", () =>
                 {
-                    var options = queries.TileInfo(workerTile.x, workerTile.y, worker.Id).GetAwaiter().GetResult().NotNull().ImprovementOptions.NotNull();
+                    var options = queries.TileInfo(workerTile.X, workerTile.Y, worker.Id).GetAwaiter().GetResult().NotNull().ImprovementOptions.NotNull();
                     var improve = screen.Panel.Entries.Where(it => it.Kind == MenuEntryKind.Improve).ToList();
                     return screen.SelectedUnitId == worker.Id && MenuEqualsQuery(worker.Id) && improve.Count == options.Count && improve.Count > 0
                         && improve.Zip(options).All(pair => pair.First.Argument == pair.Second.Name && pair.First.Enabled == (pair.Second.Problems.Count == 0));
